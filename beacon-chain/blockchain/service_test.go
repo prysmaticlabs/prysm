@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -496,7 +497,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := v1.InitializeFromProto(bs)
+	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
 	require.NoError(b, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(b, err)
@@ -517,7 +518,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := v1.InitializeFromProto(bs)
+	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
 	require.NoError(b, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(b, err)

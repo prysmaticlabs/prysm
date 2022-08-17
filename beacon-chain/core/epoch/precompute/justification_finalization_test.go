@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -40,7 +40,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
 	}
-	state, err := v1.InitializeFromProto(base)
+	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
@@ -77,7 +77,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 		Balances:            []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:          blockRoots,
 	}
-	state, err := v1.InitializeFromProto(base)
+	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
@@ -113,7 +113,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 		Balances:          []uint64{a, a, a, a}, // validator total balance should be 128000000000
 		BlockRoots:        blockRoots, FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	state, err := v1.InitializeFromProto(base)
+	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
 	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}

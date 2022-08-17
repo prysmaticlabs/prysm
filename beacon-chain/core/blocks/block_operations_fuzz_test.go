@@ -6,6 +6,7 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -111,7 +112,7 @@ func TestFuzzEth1DataHasEnoughSupport_10000(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(eth1data)
 		fuzzer.Fuzz(&stateVotes)
-		s, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Eth1DataVotes: stateVotes,
 		})
 		require.NoError(t, err)

@@ -744,7 +744,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = v1.InitializeFromProto(eth1DataInDB.BeaconState)
+		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -39,7 +40,7 @@ func RunBlockOperationTest(
 	if err := preStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preState, err := v1.InitializeFromProto(preStateBase)
+	preState, err := state_native.InitializeFromProtoPhase0(preStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.

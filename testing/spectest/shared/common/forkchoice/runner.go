@@ -8,7 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -132,7 +132,7 @@ func Run(t *testing.T, config string, fork int) {
 func unmarshalPhase0State(t *testing.T, raw []byte) state.BeaconState {
 	base := &ethpb.BeaconState{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := v1.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	return st
 }

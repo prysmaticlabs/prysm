@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -21,7 +21,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	phase0State, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	phase0State, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

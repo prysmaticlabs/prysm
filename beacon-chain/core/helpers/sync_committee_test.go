@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -362,14 +362,14 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 }
 
 func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 1,
 	})
 	require.NoError(t, err)
 	err = UpdateSyncCommitteeCache(state)
 	require.ErrorContains(t, "not at the end of the epoch to update cache", err)
 
-	state, err = v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch - 1,
 	})
 	require.NoError(t, err)
@@ -378,7 +378,7 @@ func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
 }
 
 func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:              types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: params.BeaconConfig().ZeroHash[:]},
 	})

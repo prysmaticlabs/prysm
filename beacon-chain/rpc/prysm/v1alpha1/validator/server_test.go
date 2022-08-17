@@ -14,6 +14,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
@@ -49,7 +50,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})

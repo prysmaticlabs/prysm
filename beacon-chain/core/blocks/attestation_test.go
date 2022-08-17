@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -192,7 +193,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
@@ -250,7 +251,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:       5,
 		Validators: validators,
 		Fork: &ethpb.Fork{
