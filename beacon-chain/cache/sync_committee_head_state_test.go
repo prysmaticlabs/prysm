@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -27,7 +26,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	bellatrixState, err := v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
+	bellatrixState, err := state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

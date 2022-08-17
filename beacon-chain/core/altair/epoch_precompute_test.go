@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -505,7 +504,7 @@ func testStateBellatrix() (state.BeaconState, error) {
 		}
 		return b
 	}
-	return v3.InitializeFromProto(&ethpb.BeaconStateBellatrix{
+	return state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

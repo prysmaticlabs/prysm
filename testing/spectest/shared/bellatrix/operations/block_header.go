@@ -10,6 +10,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -37,7 +38,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			preBeaconStateBase := &ethpb.BeaconStateBellatrix{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			preBeaconState, err := v3.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := state_native.InitializeFromProtoBellatrix(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.

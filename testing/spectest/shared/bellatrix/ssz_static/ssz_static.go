@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -22,7 +22,7 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 	switch object.(type) {
 	case *ethpb.BeaconStateBellatrix:
 		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := v3.InitializeFromProto(s.(*ethpb.BeaconStateBellatrix))
+			beaconState, err := state_native.InitializeFromProtoBellatrix(s.(*ethpb.BeaconStateBellatrix))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})

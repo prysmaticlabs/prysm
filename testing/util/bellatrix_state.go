@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -83,7 +83,7 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	}
-	return v3.InitializeFromProto(st)
+	return state_native.InitializeFromProtoBellatrix(st)
 }
 
 func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
@@ -239,5 +239,5 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		TransactionsRoot: make([]byte, 32),
 	}
 
-	return v3.InitializeFromProto(st)
+	return state_native.InitializeFromProtoBellatrix(st)
 }
