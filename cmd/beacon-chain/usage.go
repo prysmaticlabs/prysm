@@ -62,7 +62,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
 			cmd.BackupWebhookOutputDir,
-			cmd.EnableBackupWebhookFlag,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
