@@ -513,6 +513,20 @@ func TestProposerSettings(t *testing.T) {
 			},
 			wantErr: "cannot specify both",
 		},
+		{
+			name: "Bad Gas value in JSON",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/bad-gas-value-proposer-settings.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return nil
+			},
+			wantErr: "failed to unmarshal yaml file",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
