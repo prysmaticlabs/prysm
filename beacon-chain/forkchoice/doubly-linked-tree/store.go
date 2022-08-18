@@ -304,7 +304,7 @@ func (s *Store) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	return &justifiedCheckpoint
 }
 
-// Tread safe FinalizedCheckpoint of store.
+// Thread safe FinalizedCheckpoint of store.
 func (s *Store) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	s.checkpointsLock.RLock()
 	defer s.checkpointsLock.RUnlock()
