@@ -102,7 +102,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
 		commonRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
-			return err
+			log.WithError(err).Error("Could not find common ancestor root")
+			commonRoot = params.BeaconConfig().ZeroHash
 		}
 		log.WithFields(logrus.Fields{
 			"newSlot":            fmt.Sprintf("%d", newHeadSlot),
