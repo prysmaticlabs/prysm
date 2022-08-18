@@ -26,7 +26,7 @@ var generateGenesisStateCmd = &cli.Command{
 	Usage:  "Generate a beacon chain genesis state from specified configs",
 	Action: cliActionGenerateGenesisState,
 	Flags: []cli.Flag{
-		cmd.ConfigFileFlag,
+		cmd.ChainConfigFileFlag,
 		depositJsonFileFlag,
 		configNameFlag,
 		numValidatorsFlag,
@@ -46,7 +46,7 @@ var (
 	}
 	configNameFlag = &cli.StringFlag{
 		Name:  "config-name",
-		Usage: "Config kind to be used for generating the genesis state. Default: mainnet. Options include mainnet, interop, minimal, prater, ropsten, sepolia. Cannot be used in combination with the --chain-config-file flag.",
+		Usage: "Config kind to be used for generating the genesis state. Default: mainnet. Options include mainnet, interop, minimal, prater, ropsten, sepolia. --chain-config-file will override this flag.",
 		Value: params.MainnetName,
 	}
 	numValidatorsFlag = &cli.Uint64Flag{
@@ -102,11 +102,11 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 		)
 	}
 	if err := setGlobalParams(cliCtx); err != nil {
-		log.Fatalf("Could not set config params: %v", err)
+		log.WithError(err).Fatal("Could not set config params")
 	}
 	genesisState, err := generateGenesis(cliCtx)
 	if err != nil {
-		log.Fatalf("Could not generate genesis state: %v", err)
+		log.WithError(err).Fatal("Could not generate genesis state")
 	}
 	outputJson := cliCtx.String(outputJsonFlag.Name)
 	outputYaml := cliCtx.String(outputYamlFlag.Name)
@@ -130,14 +130,8 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 func setGlobalParams(cliCtx *cli.Context) error {
 	configFilePath := cliCtx.String(cmd.ChainConfigFileFlag.Name)
 	configName := cliCtx.String(configNameFlag.Name)
-	if configFilePath != "" && configName != "" {
-		return fmt.Errorf(
-			"can only specify one of either %s or %s",
-			cmd.ChainConfigFileFlag.Name,
-			configNameFlag.Name,
-		)
-	}
 	if configFilePath != "" {
+		log.Infof("Specified a chain config file: %s", configFilePath)
 		return params.LoadChainConfigFile(configFilePath, nil)
 	}
 	cfg, err := params.ByName(configName)
