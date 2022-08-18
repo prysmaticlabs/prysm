@@ -418,6 +418,64 @@ func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest)
 	return resp, nil
 }
 
+// SetGasLimit updates GasLimt of the public key.
+func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitRequest) (*empty.Empty, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+
+	defaultOption := validatorServiceConfig.DefaultProposerOption()
+	var pBuilderConfig *validatorServiceConfig.BuilderConfig
+	if s.validatorService.ProposerSettings != nil &&
+		s.validatorService.ProposerSettings.DefaultConfig != nil &&
+		s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+		// Make a copy of BuildConfig from DefaultConfig (thus "*" then "&"), so when we change GasLimit, we do not mess up with
+		// "DefaultConfig.BuilderConfig".
+		bo := *s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
+		pBuilderConfig = &bo
+		pBuilderConfig.GasLimit = req.GasLimit
+	} else {
+		// No default BuildConfig to copy from, just create one and set "GasLimit", but keep "Enabled" to "false".
+		pBuilderConfig = &validatorServiceConfig.BuilderConfig{Enabled: false, GasLimit: req.GasLimit}
+	}
+
+	pOption := validatorServiceConfig.DefaultProposerOption()
+	// "pOption.BuildConfig" is nil from "validatorServiceConfig.DefaultProposerOption()", so set it.
+	pOption.BuilderConfig = pBuilderConfig
+
+	if s.validatorService.ProposerSettings == nil {
+		s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(validatorKey): &pOption,
+			},
+			DefaultConfig: &defaultOption,
+		}
+	} else if s.validatorService.ProposerSettings.ProposeConfig == nil {
+		s.validatorService.ProposerSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+	} else {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			if proposerOption.BuilderConfig == nil {
+				proposerOption.BuilderConfig = pBuilderConfig
+			} else {
+				proposerOption.BuilderConfig.GasLimit = req.GasLimit
+			}
+		} else {
+			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+		}
+	}
+	// override the 200 success with 202 according to the specs
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+	}
+	return &empty.Empty{}, nil
+}
+
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {

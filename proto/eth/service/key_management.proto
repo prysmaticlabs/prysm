@@ -180,6 +180,25 @@ service KeyManagement {
       get: "/internal/eth/v1/validator/{pubkey}/gas_limit"
     };
   }
+
+  // SetGasLimit sets the gas limit for the specific public key, overrides the existing one.
+  //
+  // Spec page: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/SetGasLimit
+  // 
+  // HTTP response status codes:
+  //  - 202: Successful response
+  //  - 400: Bad request
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 404: Path not found
+  //  - 500: Validator internal error
+  rpc SetGasLimit(SetGasLimitRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/{pubkey}/gas_limit",
+      body: "*"
+    };
+  }
+
 }
 
 message ListKeystoresResponse {
@@ -305,4 +324,9 @@ message GetGasLimitResponse {
     uint64 gas_limit = 2;
   }
   GasLimit data = 1;
+}
+
+message SetGasLimitRequest {
+  bytes pubkey = 1;
+  uint64 gas_limit = 2;
 }
