@@ -90,8 +90,8 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	if !cliCtx.IsSet(genesisTimeFlag.Name) {
 		log.Infof("No %s specified, defaulting to now()", genesisTimeFlag.Name)
 	}
-	hasOutputFlag := !cliCtx.IsSet(outputJsonFlag.Name) ||
-		!cliCtx.IsSet(outputYamlFlag.Name) ||
+	hasOutputFlag := !cliCtx.IsSet(outputJsonFlag.Name) &&
+		!cliCtx.IsSet(outputYamlFlag.Name) &&
 		!cliCtx.IsSet(outputSSZFlag.Name)
 	if !hasOutputFlag {
 		return fmt.Errorf(
@@ -112,19 +112,29 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	outputYaml := cliCtx.String(outputYamlFlag.Name)
 	outputSSZ := cliCtx.String(outputSSZFlag.Name)
 	if outputJson != "" {
-		return writeToOutputFile(outputJson, genesisState, json.Marshal)
+		if err := writeToOutputFile(outputJson, genesisState, json.Marshal); err != nil {
+			return err
+		}
 	}
 	if outputYaml != "" {
-		return writeToOutputFile(outputJson, genesisState, yaml.Marshal)
-	}
-	marshalFn := func(o interface{}) ([]byte, error) {
-		marshaler, ok := o.(fastssz.Marshaler)
-		if !ok {
-			return nil, errors.New("not a marshaler")
+		if err := writeToOutputFile(outputJson, genesisState, yaml.Marshal); err != nil {
+			return err
 		}
-		return marshaler.MarshalSSZ()
 	}
-	return writeToOutputFile(outputSSZ, genesisState, marshalFn)
+	if outputSSZ != "" {
+		marshalFn := func(o interface{}) ([]byte, error) {
+			marshaler, ok := o.(fastssz.Marshaler)
+			if !ok {
+				return nil, errors.New("not a marshaler")
+			}
+			return marshaler.MarshalSSZ()
+		}
+		if err := writeToOutputFile(outputSSZ, genesisState, marshalFn); err != nil {
+			return err
+		}
+	}
+	log.Info("Command completed")
+	return nil
 }
 
 func setGlobalParams(cliCtx *cli.Context) error {
