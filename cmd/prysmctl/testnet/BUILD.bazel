@@ -9,7 +9,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet",
     visibility = ["//visibility:public"],
     deps = [
-        "//cmd:go_default_library",
         "//config/params:go_default_library",
         "//io/file:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
