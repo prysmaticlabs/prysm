@@ -23,7 +23,7 @@ import (
 
 var generateGenesisStateCmd = &cli.Command{
 	Name:   "generate-genesis",
-	Usage:  "Generate a beacon chain genesis state from specified configs",
+	Usage:  "Generate a beacon chain genesis state",
 	Action: cliActionGenerateGenesisState,
 	Flags: []cli.Flag{
 		cmd.ChainConfigFileFlag,
@@ -52,7 +52,6 @@ var (
 	numValidatorsFlag = &cli.Uint64Flag{
 		Name:  "num-validators",
 		Usage: "Number of validators to deterministically generate in the genesis state",
-		Value: 0,
 	}
 	genesisTimeFlag = &cli.Uint64Flag{
 		Name:  "genesis-time",
@@ -76,7 +75,7 @@ var (
 )
 
 // Represents a json object of hex string and uint64 values for
-// validators on Ethereum. This file can be generated using the official eth2.0-deposit-cli.
+// validators on Ethereum. This file can be generated using the official staking-deposit-cli.
 type depositDataJSON struct {
 	PubKey                string `json:"pubkey"`
 	Amount                uint64 `json:"amount"`
