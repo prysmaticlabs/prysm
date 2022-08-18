@@ -3314,6 +3314,75 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 }
 
+func TestOnBlock_HandleBlockAttestations(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, root))
+
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
+	require.NoError(t, err)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+
+	// prepare another block that is not inserted
+	st3, err := transition.ExecuteStateTransition(ctx, st, wsb)
+	require.NoError(t, err)
+	b3, err := util.GenerateFullBlock(st3, keys, util.DefaultBlockGenConfig(), 3)
+	require.NoError(t, err)
+	wsb3, err := consensusblocks.NewSignedBeaconBlock(b3)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+	a := wsb.Block().Body().Attestations()[0]
+	r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
+	require.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r))
+
+	require.Equal(t, 1, len(wsb.Block().Body().Attestations()))
+	a3 := wsb3.Block().Body().Attestations()[0]
+	r3 := bytesutil.ToBytes32(a3.Data.BeaconBlockRoot)
+	require.Equal(t, false, service.cfg.ForkChoiceStore.HasNode(r3))
+
+	require.NoError(t, service.handleBlockAttestations(ctx, wsb.Block(), st)) // fine to use the same committe as st
+	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
+	require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committe as st
+	require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
+}
+
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot int64, delay int64) {
