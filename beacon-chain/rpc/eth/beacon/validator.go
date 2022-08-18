@@ -8,7 +8,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -101,7 +101,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
-		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
+		readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 		}
@@ -220,7 +220,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 		allValidators := state.Validators()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
-			readOnlyVal, err := v1.NewValidator(validator)
+			readOnlyVal, err := state_native.NewValidator(validator)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -255,7 +255,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				valIndex = types.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if _, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
+			if _, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
 				// Ignore well-formed yet unknown indexes.
 				continue
 			}
@@ -263,7 +263,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				return nil, errors.Wrap(err, "could not get validator")
 			}
 			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
-			readOnlyVal, err := v1.NewValidator(validator)
+			readOnlyVal, err := state_native.NewValidator(validator)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -284,7 +284,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 }
 
 func handleValContainerErr(err error) error {
-	if outOfRangeErr, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
+	if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {

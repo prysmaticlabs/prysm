@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -380,7 +380,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192+2 /* 2 active */)
 		for _, datum := range resp.Data {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 0)
 			require.NoError(t, err)
@@ -417,7 +417,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192+1 /* 1 active_ongoing */)
 		for _, datum := range resp.Data {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 0)
 			require.NoError(t, err)
@@ -453,7 +453,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
 			require.NoError(t, err)
@@ -488,7 +488,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 35)
 			require.NoError(t, err)
@@ -523,7 +523,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2 /* 1 pending, 1 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
 			require.NoError(t, err)

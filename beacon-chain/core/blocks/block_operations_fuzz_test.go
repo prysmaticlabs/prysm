@@ -7,7 +7,6 @@ import (
 	fuzz "github.com/google/gofuzz"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -426,7 +425,7 @@ func TestFuzzVerifyExit_10000(_ *testing.T) {
 		fuzzer.Fuzz(rawVal)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
-		val, err := v1.NewValidator(&ethpb.Validator{})
+		val, err := state_native.NewValidator(&ethpb.Validator{})
 		_ = err
 		err = VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
 		_ = err
