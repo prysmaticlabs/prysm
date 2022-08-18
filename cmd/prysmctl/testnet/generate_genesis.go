@@ -50,8 +50,9 @@ var (
 		Value: params.MainnetName,
 	}
 	numValidatorsFlag = &cli.Uint64Flag{
-		Name:  "num-validators",
-		Usage: "Number of validators to deterministically generate in the genesis state",
+		Name:     "num-validators",
+		Usage:    "Number of validators to deterministically generate in the genesis state",
+		Required: true,
 	}
 	genesisTimeFlag = &cli.Uint64Flag{
 		Name:  "genesis-time",
@@ -172,7 +173,7 @@ func generateGenesis(cliCtx *cli.Context) (*ethpb.BeaconState, error) {
 	numValidators := cliCtx.Uint64(numValidatorsFlag.Name)
 	if numValidators == 0 {
 		return nil, fmt.Errorf(
-			"expected %s to have been provided, received 0",
+			"expected %s > 0 to have been provided",
 			numValidatorsFlag.Name,
 		)
 	}
