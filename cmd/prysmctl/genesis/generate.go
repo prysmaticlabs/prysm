@@ -94,19 +94,19 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 		!cliCtx.IsSet(outputYamlFlag.Name) ||
 		!cliCtx.IsSet(outputSSZFlag.Name)
 	if !hasOutputFlag {
-		log.Fatalf(
-			"No %s, %s, or %s flag specified. At least one is required",
+		return fmt.Errorf(
+			"no %s, %s, or %s flag specified. At least one is required",
 			outputJsonFlag.Name,
 			outputYamlFlag.Name,
 			outputSSZFlag.Name,
 		)
 	}
 	if err := setGlobalParams(cliCtx); err != nil {
-		log.WithError(err).Fatal("Could not set config params")
+		return fmt.Errorf("could not set config params: %v", err)
 	}
 	genesisState, err := generateGenesis(cliCtx)
 	if err != nil {
-		log.WithError(err).Fatal("Could not generate genesis state")
+		return fmt.Errorf("could not generate genesis state: %v", err)
 	}
 	outputJson := cliCtx.String(outputJsonFlag.Name)
 	outputYaml := cliCtx.String(outputYamlFlag.Name)
