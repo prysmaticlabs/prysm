@@ -296,7 +296,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock.
+// validators' latest votes. This function requires a lock in Store.nodesLock and ForkChoice.votesLock.
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -391,28 +391,37 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.bestJustifiedCheckpoint
+	// return a copy of bestJustifiedCheckpoint
+	bestJustifiedCheckpoint := *f.store.bestJustifiedCheckpoint
+	return &bestJustifiedCheckpoint
 }
 
 // PreviousJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.prevJustifiedCheckpoint
+	// return a copy of prevJustifiedCheckpoint
+	prevJustifiedCheckpoint := *f.store.prevJustifiedCheckpoint
+	return &prevJustifiedCheckpoint
 }
 
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.justifiedCheckpoint
+	// return a copy of justifiedCheckpoint
+	justifiedCheckpoint := *f.store.justifiedCheckpoint
+	return &justifiedCheckpoint
 }
 
 // FinalizedCheckpoint of fork choice store.
 func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.finalizedCheckpoint
+	// return a copy of finalizedCheckpoint
+	finalizedCheckpoint := *f.store.finalizedCheckpoint
+	return &finalizedCheckpoint
+
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -171,7 +172,7 @@ func (s *Store) insert(ctx context.Context,
 
 		// Update best descendants
 		if err := s.treeRootNode.updateBestDescendant(ctx,
-			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
+			s.JustifiedCheckpoint().Epoch, s.FinalizedCheckpoint().Epoch); err != nil {
 			return n, err
 		}
 	}
@@ -292,4 +293,22 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 		}
 	}
 	return count, nil
+}
+
+// Thread safe JustifiedCheckpoint of store.
+func (s *Store) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+	// return a copy of justifiedCheckpoint
+	justifiedCheckpoint := *s.justifiedCheckpoint
+	return &justifiedCheckpoint
+}
+
+// Tread safe FinalizedCheckpoint of store.
+func (s *Store) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+	// return a copy of FinalizedCheckpoint
+	finalizedCheckpoint := *s.finalizedCheckpoint
+	return &finalizedCheckpoint
 }
