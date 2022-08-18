@@ -899,3 +899,116 @@ func TestServer_GetGasLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_SetGasLimit(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
+	require.NoError(t, err)
+	require.NoError(t, err2)
+
+	type want struct {
+		pubkey   []byte
+		gaslimit uint64
+	}
+
+	tests := []struct {
+		name             string
+		pubkey           []byte
+		newGasLimit      uint64
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		w                []want
+	}{
+		{
+			name:        "update existing gas limit",
+			pubkey:      pubkey1,
+			newGasLimit: 9999,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 9999,
+				},
+			},
+		},
+		{
+			name:        "insert a new gas limit",
+			pubkey:      pubkey2,
+			newGasLimit: 8888,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 123456789,
+				},
+				want{
+					pubkey:   pubkey2,
+					gaslimit: 8888,
+				},
+			},
+		},
+		{
+			name:        "create new gas limit value for nil ProposerSettings.ProposeConfig",
+			pubkey:      pubkey1,
+			newGasLimit: 8888,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 8888,
+				},
+			},
+		},
+		{
+			name:        "create new gas limit value for nil proposerSettings",
+			pubkey:      pubkey1,
+			newGasLimit: 7777,
+			// proposerSettings is not set - we need to create proposerSettings and set gaslimit properly
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 7777,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.proposerSettings,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
+			require.NoError(t, err)
+			for _, w := range tt.w {
+				assert.Equal(t, w.gaslimit, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit)
+			}
+		})
+	}
+}

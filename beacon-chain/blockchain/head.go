@@ -87,7 +87,6 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		return nil
 	}
 
-	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	s.headLock.RLock()
 	oldHeadBlock, err := s.headBlock()
 	if err != nil {
@@ -98,11 +97,21 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	headSlot := s.HeadSlot()
 	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
+
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
+		commonRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, oldHeadRoot, newHeadRoot)
+		if err != nil {
+			log.WithError(err).Error("Could not find common ancestor root")
+			commonRoot = params.BeaconConfig().ZeroHash
+		}
 		log.WithFields(logrus.Fields{
-			"newSlot": fmt.Sprintf("%d", newHeadSlot),
-			"oldSlot": fmt.Sprintf("%d", headSlot),
-		}).Debug("Chain reorg occurred")
+			"newSlot":            fmt.Sprintf("%d", newHeadSlot),
+			"newRoot":            fmt.Sprintf("%#x", newHeadRoot),
+			"oldSlot":            fmt.Sprintf("%d", headSlot),
+			"oldRoot":            fmt.Sprintf("%#x", oldHeadRoot),
+			"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
+		}).Info("Chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {
