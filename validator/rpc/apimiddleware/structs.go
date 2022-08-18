@@ -88,3 +88,7 @@ type setFeeRecipientByPubkeyRequestJson struct {
 type getGasLimitResponseJson struct {
 	Data *gasLimitJson `json:"data"`
 }
+
+type setGasLimitRequestJson struct {
+	GasLimit string `json:"gas_limit"`
+}
