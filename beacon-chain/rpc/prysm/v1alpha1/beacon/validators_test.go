@@ -1850,8 +1850,6 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
@@ -1922,8 +1920,6 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
@@ -1995,8 +1991,6 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                []types.Slot{farFuture, farFuture},
-		InclusionDistances:            []types.Slot{farFuture, farFuture},
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
@@ -2065,8 +2059,6 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                nil,
-		InclusionDistances:            nil,
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
@@ -2135,8 +2127,6 @@ func TestGetValidatorPerformanceBellatrix_OK(t *testing.T) {
 	want := &ethpb.ValidatorPerformanceResponse{
 		PublicKeys:                    [][]byte{publicKey2[:], publicKey3[:]},
 		CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
-		InclusionSlots:                nil,
-		InclusionDistances:            nil,
 		CorrectlyVotedSource:          []bool{false, false},
 		CorrectlyVotedTarget:          []bool{false, false},
 		CorrectlyVotedHead:            []bool{false, false},
