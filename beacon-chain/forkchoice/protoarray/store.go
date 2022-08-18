@@ -331,28 +331,37 @@ func (s *Store) PruneThreshold() uint64 {
 func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.bestJustifiedCheckpoint
+	// return a copy of bestJustifiedCheckpoint
+	bestJustifiedCheckpoint := *f.store.bestJustifiedCheckpoint
+	return &bestJustifiedCheckpoint
 }
 
 // PreviousJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.prevJustifiedCheckpoint
+	// return a copy of prevJustifiedCheckpoint
+	prevJustifiedCheckpoint := *f.store.prevJustifiedCheckpoint
+	return &prevJustifiedCheckpoint
 }
 
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.justifiedCheckpoint
+	// return a copy of justifiedCheckpoint
+	justifiedCheckpoint := *f.store.justifiedCheckpoint
+	return &justifiedCheckpoint
 }
 
 // FinalizedCheckpoint of fork choice store.
 func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
-	return f.store.finalizedCheckpoint
+	// return a copy of finalizedCheckpoint
+	finalizedCheckpoint := *f.store.finalizedCheckpoint
+	return &finalizedCheckpoint
+
 }
 
 // proposerBoost of fork choice store.
