@@ -52,7 +52,6 @@ var (
 	numValidatorsFlag = &cli.Uint64Flag{
 		Name:  "num-validators",
 		Usage: "Number of validators to deterministically generate in the genesis state",
-
 		Value: 0,
 	}
 	genesisTimeFlag = &cli.Uint64Flag{
