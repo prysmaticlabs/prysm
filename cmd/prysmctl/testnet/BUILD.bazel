@@ -3,10 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "generate.go",
-        "genesis.go",
+        "generate_genesis.go",
+        "testnet.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/genesis",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet",
     visibility = ["//visibility:public"],
     deps = [
         "//cmd:go_default_library",
@@ -24,7 +24,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["generate_test.go"],
+    srcs = ["generate_genesis_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//crypto/bls:go_default_library",

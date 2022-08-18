@@ -1,4 +1,4 @@
-package genesis
+package testnet
 
 import (
 	"bytes"

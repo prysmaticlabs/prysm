@@ -1,4 +1,4 @@
-package genesis
+package testnet
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 )
 
 var generateGenesisStateCmd = &cli.Command{
-	Name:   "state",
+	Name:   "generate-genesis",
 	Usage:  "Generate a beacon chain genesis state from specified configs",
 	Action: cliActionGenerateGenesisState,
 	Flags: []cli.Flag{
@@ -136,7 +136,7 @@ func setGlobalParams(cliCtx *cli.Context) error {
 	}
 	cfg, err := params.ByName(configName)
 	if err != nil {
-		log.Fatalf("Unable to find config using name %s, err=%s", configName, err.Error())
+		return fmt.Errorf("unable to find config using name %s: %v", configName, err)
 	}
 	return params.SetActive(cfg.Copy())
 }
