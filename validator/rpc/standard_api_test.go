@@ -1007,7 +1007,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
 			require.NoError(t, err)
 			for _, w := range tt.w {
-				assert.Equal(t, w.gaslimit, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit)
+				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
 			}
 		})
 	}
