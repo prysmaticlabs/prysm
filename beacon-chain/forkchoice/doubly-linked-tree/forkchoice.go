@@ -183,6 +183,9 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// Releasing here the checkpoints lock because
+			// AncestorRoot acquires a lock on nodes and that can
+			// cause a double lock.
 			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
