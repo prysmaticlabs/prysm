@@ -132,9 +132,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
-		return err
-	}
 
 	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
@@ -144,6 +141,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
+	}
+
+	if err := s.cfg.BeaconDB.SaveBlock(ctx, signed); err != nil {
+		return errors.Wrapf(err, "could not save block from slot %d", signed.Block().Slot())
+	}
+	if err := s.cfg.StateGen.SaveState(ctx, blockRoot, postState); err != nil {
+		return errors.Wrap(err, "could not save state")
 	}
 
 	// If slasher is configured, forward the attestations in the block via
@@ -525,20 +529,6 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
 		}
 	}
-}
-
-// This saves post state info to DB or cache. This also saves post state info to fork choice store.
-// Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
-	defer span.End()
-	if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
-	}
-	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-		return errors.Wrap(err, "could not save state")
-	}
-	return nil
 }
 
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,

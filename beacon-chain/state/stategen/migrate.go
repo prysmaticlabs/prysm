@@ -78,17 +78,17 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			if s.beaconDB.HasState(ctx, aRoot) {
 				// If you are migrating a state and its already part of the hot state cache saved to the db,
 				// you can just remove it from the hot state cache as it becomes redundant.
-				s.saveHotStateDB.lock.Lock()
-				roots := s.saveHotStateDB.blockRootsOfSavedStates
+				s.hotStateStatus.lock.Lock()
+				roots := s.hotStateStatus.blockRootsOfSavedStates
 				for i := 0; i < len(roots); i++ {
 					if aRoot == roots[i] {
-						s.saveHotStateDB.blockRootsOfSavedStates = append(roots[:i], roots[i+1:]...)
+						s.hotStateStatus.blockRootsOfSavedStates = append(roots[:i], roots[i+1:]...)
 						// There shouldn't be duplicated roots in `blockRootsOfSavedStates`.
 						// Break here is ok.
 						break
 					}
 				}
-				s.saveHotStateDB.lock.Unlock()
+				s.hotStateStatus.lock.Unlock()
 				continue
 			}
 

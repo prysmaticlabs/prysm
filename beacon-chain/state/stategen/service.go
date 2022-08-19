@@ -23,8 +23,6 @@ var defaultHotStateDBInterval types.Slot = 128
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
 	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
-	DisableSaveHotStateToDB(ctx context.Context) error
-	EnableSaveHotStateToDB(_ context.Context)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
@@ -43,18 +41,10 @@ type State struct {
 	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
-	saveHotStateDB          *saveHotStateDbConfig
+	hotStateStatus          *hotStateStatus
 	backfillStatus          *backfill.Status
-}
-
-// This tracks the config in the event of long non-finality,
-// how often does the node save hot states to db? what are
-// the saved hot states in db?... etc
-type saveHotStateDbConfig struct {
-	enabled                 bool
-	lock                    sync.Mutex
-	duration                types.Slot
-	blockRootsOfSavedStates [][32]byte
+	fc                      FinalizedCheckpointer
+	cs                      CurrentSlotter
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -83,7 +73,7 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		epochBoundaryStateCache: newBoundaryStateCache(),
-		saveHotStateDB: &saveHotStateDbConfig{
+		hotStateStatus: &hotStateStatus{
 			duration: defaultHotStateDBInterval,
 		},
 	}

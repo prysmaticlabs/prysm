@@ -71,16 +71,6 @@ func (_ *MockStateManager) ForceCheckpoint(_ context.Context, _ []byte) error {
 	panic("implement me")
 }
 
-// EnableSaveHotStateToDB --
-func (_ *MockStateManager) EnableSaveHotStateToDB(_ context.Context) {
-	panic("implement me")
-}
-
-// DisableSaveHotStateToDB --
-func (_ *MockStateManager) DisableSaveHotStateToDB(_ context.Context) error {
-	panic("implement me")
-}
-
 // AddStateForRoot --
 func (m *MockStateManager) AddStateForRoot(state state.BeaconState, blockRoot [32]byte) {
 	m.StatesByRoot[blockRoot] = state

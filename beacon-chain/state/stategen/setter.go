@@ -4,8 +4,10 @@ import (
 	"context"
 	"math"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -13,10 +15,20 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	errCurrentEpochBehindFinalized = errors.New("finalized epoch must always be before the current epoch")
+	errForkchoiceFinalizedNil      = errors.New("forkchoice store finalized checkpoint is nil")
+)
+var hotStateSaveThreshold = types.Epoch(100)
+
 // SaveState saves the state in the cache and/or DB.
 func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
+
+	if err := s.hotStateStatus.refresh(ctx); err != nil {
+		return errors.Wrap(err, "stategen is unable to make hot state saving decision")
+	}
 
 	return s.saveStateByRoot(ctx, blockRoot, st)
 }
@@ -52,22 +64,22 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 	defer span.End()
 
 	// Duration can't be 0 to prevent panic for division.
-	duration := uint64(math.Max(float64(s.saveHotStateDB.duration), 1))
+	duration := uint64(math.Max(float64(s.hotStateStatus.duration), 1))
 
-	s.saveHotStateDB.lock.Lock()
-	if s.saveHotStateDB.enabled && st.Slot().Mod(duration) == 0 {
+	s.hotStateStatus.lock.Lock()
+	if s.hotStateStatus.enabled && st.Slot().Mod(duration) == 0 {
 		if err := s.beaconDB.SaveState(ctx, st, blockRoot); err != nil {
-			s.saveHotStateDB.lock.Unlock()
+			s.hotStateStatus.lock.Unlock()
 			return err
 		}
-		s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
+		s.hotStateStatus.blockRootsOfSavedStates = append(s.hotStateStatus.blockRootsOfSavedStates, blockRoot)
 
 		log.WithFields(logrus.Fields{
 			"slot":                   st.Slot(),
-			"totalHotStateSavedInDB": len(s.saveHotStateDB.blockRootsOfSavedStates),
+			"totalHotStateSavedInDB": len(s.hotStateStatus.blockRootsOfSavedStates),
 		}).Info("Saving hot state to DB")
 	}
-	s.saveHotStateDB.lock.Unlock()
+	s.hotStateStatus.lock.Unlock()
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.has(blockRoot) {
@@ -91,47 +103,6 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 
 	// Store the copied state in the hot state cache.
 	s.hotStateCache.put(blockRoot, st)
-
-	return nil
-}
-
-// EnableSaveHotStateToDB enters the mode that saves hot beacon state to the DB.
-// This usually gets triggered when there's long duration since finality.
-func (s *State) EnableSaveHotStateToDB(_ context.Context) {
-	s.saveHotStateDB.lock.Lock()
-	defer s.saveHotStateDB.lock.Unlock()
-	if s.saveHotStateDB.enabled {
-		return
-	}
-
-	s.saveHotStateDB.enabled = true
-
-	log.WithFields(logrus.Fields{
-		"enabled":       s.saveHotStateDB.enabled,
-		"slotsInterval": s.saveHotStateDB.duration,
-	}).Warn("Entering mode to save hot states in DB")
-}
-
-// DisableSaveHotStateToDB exits the mode that saves beacon state to DB for the hot states.
-// This usually gets triggered once there's finality after long duration since finality.
-func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
-	s.saveHotStateDB.lock.Lock()
-	defer s.saveHotStateDB.lock.Unlock()
-	if !s.saveHotStateDB.enabled {
-		return nil
-	}
-
-	log.WithFields(logrus.Fields{
-		"enabled":          s.saveHotStateDB.enabled,
-		"deletedHotStates": len(s.saveHotStateDB.blockRootsOfSavedStates),
-	}).Warn("Exiting mode to save hot states in DB")
-
-	// Delete previous saved states in DB as we are turning this mode off.
-	s.saveHotStateDB.enabled = false
-	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.blockRootsOfSavedStates); err != nil {
-		return err
-	}
-	s.saveHotStateDB.blockRootsOfSavedStates = nil
 
 	return nil
 }

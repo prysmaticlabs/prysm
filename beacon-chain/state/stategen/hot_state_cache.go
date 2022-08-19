@@ -1,6 +1,12 @@
 package stategen
 
 import (
+	"context"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -92,4 +98,82 @@ func (c *hotStateCache) delete(blockRoot [32]byte) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.cache.Remove(blockRoot)
+}
+
+// FinalizedCheckpointer describes the forkchoice methods needed by the stategen service
+type FinalizedCheckpointer interface {
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+}
+
+// This tracks the config in the event of long non-finality,
+// how often does the node save hot states to db? what are
+// the saved hot states in db?... etc
+type hotStateStatus struct {
+	enabled                 bool
+	lock                    sync.Mutex
+	duration                types.Slot
+	blockRootsOfSavedStates [][32]byte
+	fc                      FinalizedCheckpointer
+	cs                      CurrentSlotter
+	db                      db.NoHeadAccessDatabase
+}
+
+// This checks whether it's time to start saving hot state to DB.
+func (s *hotStateStatus) refresh(ctx context.Context) error {
+	current := slots.ToEpoch(s.cs.CurrentSlot())
+	fcp := s.fc.FinalizedCheckpoint()
+	if fcp == nil {
+		return errForkchoiceFinalizedNil
+	}
+	// don't allow underflow
+	if fcp.Epoch > current {
+		return errCurrentEpochBehindFinalized
+	}
+
+	if current-fcp.Epoch >= hotStateSaveThreshold {
+		s.enableSaving()
+		return nil
+	}
+
+	return s.disableSaving(ctx)
+}
+
+// enableHotStateSaving enters the mode that saves hot beacon state to the DB.
+// This usually gets triggered when there's long duration since finality.
+func (s *hotStateStatus) enableSaving() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if s.enabled {
+		return
+	}
+	s.enabled = true
+
+	log.WithFields(logrus.Fields{
+		"enabled":       s.enabled,
+		"slotsInterval": s.duration,
+	}).Warn("Enabling hot state db persistence mode")
+}
+
+// disableHotStateSaving exits the mode that saves beacon state to DB for the hot states.
+// This usually gets triggered once there's finality after long duration since finality.
+func (s *hotStateStatus) disableSaving(ctx context.Context) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if !s.enabled {
+		return nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"enabled":          s.enabled,
+		"deletedHotStates": len(s.blockRootsOfSavedStates),
+	}).Warn("Disabling hot state db persistence mode")
+
+	// Delete previous saved states in DB as we are turning this mode off.
+	s.enabled = false
+	if err := s.db.DeleteStates(ctx, s.blockRootsOfSavedStates); err != nil {
+		return err
+	}
+	s.blockRootsOfSavedStates = nil
+
+	return nil
 }
