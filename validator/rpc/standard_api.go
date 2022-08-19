@@ -406,11 +406,11 @@ func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest)
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			if proposerOption.BuilderConfig != nil {
-				resp.Data.GasLimit = proposerOption.BuilderConfig.GasLimit
+				resp.Data.GasLimit = uint64(proposerOption.BuilderConfig.GasLimit)
 				return resp, nil
 			}
 		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
-			resp.Data.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			resp.Data.GasLimit = uint64(s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit)
 			return resp, nil
 		}
 	}
@@ -437,10 +437,10 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 		// "DefaultConfig.BuilderConfig".
 		bo := *s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
 		pBuilderConfig = &bo
-		pBuilderConfig.GasLimit = req.GasLimit
+		pBuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
 	} else {
 		// No default BuildConfig to copy from, just create one and set "GasLimit", but keep "Enabled" to "false".
-		pBuilderConfig = &validatorServiceConfig.BuilderConfig{Enabled: false, GasLimit: req.GasLimit}
+		pBuilderConfig = &validatorServiceConfig.BuilderConfig{Enabled: false, GasLimit: validatorServiceConfig.Uint64(req.GasLimit)}
 	}
 
 	pOption := validatorServiceConfig.DefaultProposerOption()
@@ -463,7 +463,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 			if proposerOption.BuilderConfig == nil {
 				proposerOption.BuilderConfig = pBuilderConfig
 			} else {
-				proposerOption.BuilderConfig.GasLimit = req.GasLimit
+				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
 			}
 		} else {
 			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
