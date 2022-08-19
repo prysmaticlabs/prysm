@@ -183,11 +183,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// Releasing here the checkpoints lock because
+			// AncestorRoot acquires a lock on nodes and that can
+			// cause a double lock.
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -296,7 +300,8 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock.
+// validators' latest votes. This function requires a lock in Store.nodesLock
+// and votesLock
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -424,6 +429,9 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -433,8 +441,6 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
 
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
