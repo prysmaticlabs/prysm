@@ -170,8 +170,11 @@ func (s *Store) insert(ctx context.Context,
 		}
 
 		// Update best descendants
-		if err := s.treeRootNode.updateBestDescendant(ctx,
-			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
+		s.checkpointsLock.RLock()
+		jEpoch := s.justifiedCheckpoint.Epoch
+		fEpoch := s.finalizedCheckpoint.Epoch
+		s.checkpointsLock.RUnlock()
+		if err := s.treeRootNode.updateBestDescendant(ctx, jEpoch, fEpoch); err != nil {
 			return n, err
 		}
 	}
