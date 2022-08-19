@@ -20,10 +20,11 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
-	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
@@ -307,11 +308,19 @@ func applyVectorizedHTRConfig(cfg *Flags) (appliedCfg *Flags) {
 	}()
 	appliedCfg = cfg
 	buffer := make([][32]byte, 2)
-	err := gohashtree.Hash(buffer, buffer)
+	err := mockSIGILL(buffer, buffer)
 	if err != nil {
 		log.WithError(err).Error("could not test if gohashtree is supported")
 		return
 	}
 	appliedCfg.EnableVectorizedHTR = true
 	return
+}
+
+func mockSIGILL(_, _ [][32]byte) error {
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+	return p.Signal(syscall.SIGILL)
 }
