@@ -185,7 +185,10 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.Depos
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	return dc.deposits
+	// Make a copy so that it's impossible to modify the internal cache.
+	deposits := make([]*ethpb.DepositContainer, len(dc.deposits))
+	copy(deposits, dc.deposits)
+	return deposits
 }
 
 // AllDeposits returns a list of historical deposits until the given block number
