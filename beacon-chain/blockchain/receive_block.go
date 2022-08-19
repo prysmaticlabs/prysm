@@ -150,11 +150,6 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 		return err
 	}
 
-	// Add block attestations to the fork choice pool to compute head.
-	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body().Attestations()); err != nil {
-		log.WithError(err).Error("Could not save block attestations for fork choice")
-		return nil
-	}
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
