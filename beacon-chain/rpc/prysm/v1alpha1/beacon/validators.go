@@ -754,8 +754,6 @@ func (bs *Server) GetValidatorPerformance(
 	beforeTransitionBalances := make([]uint64, 0, responseCap)
 	afterTransitionBalances := make([]uint64, 0, responseCap)
 	effectiveBalances := make([]uint64, 0, responseCap)
-	inclusionSlots := make([]types.Slot, 0, responseCap)
-	inclusionDistances := make([]types.Slot, 0, responseCap)
 	correctlyVotedSource := make([]bool, 0, responseCap)
 	correctlyVotedTarget := make([]bool, 0, responseCap)
 	correctlyVotedHead := make([]bool, 0, responseCap)
@@ -789,8 +787,6 @@ func (bs *Server) GetValidatorPerformance(
 
 		if headState.Version() == version.Phase0 {
 			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochAttester)
-			inclusionSlots = append(inclusionSlots, summary.InclusionSlot)
-			inclusionDistances = append(inclusionDistances, summary.InclusionDistance)
 		} else {
 			correctlyVotedSource = append(correctlyVotedSource, summary.IsPrevEpochSourceAttester)
 			inactivityScores = append(inactivityScores, summary.InactivityScore)
@@ -806,9 +802,7 @@ func (bs *Server) GetValidatorPerformance(
 		BalancesBeforeEpochTransition: beforeTransitionBalances,
 		BalancesAfterEpochTransition:  afterTransitionBalances,
 		MissingValidators:             missingValidators,
-		InclusionSlots:                inclusionSlots,     // Only populated in phase0
-		InclusionDistances:            inclusionDistances, // Only populated in phase 0
-		InactivityScores:              inactivityScores,   // Only populated in Altair
+		InactivityScores:              inactivityScores, // Only populated in Altair
 	}, nil
 }
 
