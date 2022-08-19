@@ -20,10 +20,7 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/prysmaticlabs/gohashtree"
@@ -211,22 +208,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disableVecHTR.Name) {
 		logEnabled(disableVecHTR)
 	} else {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGILL)
-		defer signal.Stop(sigc)
-		buffer := make([][32]byte, 2)
-		err := gohashtree.Hash(buffer, buffer)
-		if err != nil {
-			log.Error("could not test if gohashtree is supported")
-		} else {
-			t := time.NewTimer(time.Millisecond * 100)
-			select {
-			case <-sigc:
-				log.Error("gohashtree is not supported in this CPU")
-			case <-t.C:
-				cfg.EnableVectorizedHTR = true
-			}
-		}
+		applyVectorizedHTRConfig(cfg)
 	}
 	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(disableForkChoiceDoublyLinkedTree)
@@ -315,4 +297,21 @@ func logDisabled(flag cli.DocGenerationFlag) {
 		name = names[0]
 	}
 	log.WithField(name, flag.GetUsage()).Warn(disabledFeatureFlag)
+}
+
+func applyVectorizedHTRConfig(cfg *Flags) (appliedCfg *Flags) {
+	defer func() {
+		if x := recover(); x != nil {
+			log.Error("gohashtree is not supported in this CPU")
+		}
+	}()
+	appliedCfg = cfg
+	buffer := make([][32]byte, 2)
+	err := gohashtree.Hash(buffer, buffer)
+	if err != nil {
+		log.WithError(err).Error("could not test if gohashtree is supported")
+		return
+	}
+	appliedCfg.EnableVectorizedHTR = true
+	return
 }
