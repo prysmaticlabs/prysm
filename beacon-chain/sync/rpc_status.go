@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -75,47 +74,6 @@ func (s *Service) maintainPeerStatuses() {
 			}
 		}
 	})
-}
-
-// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
-// by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
-func (s *Service) resyncIfBehind() {
-	millisecondsPerEpoch := params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot)
-	// Run sixteen times per epoch.
-	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
-	async.RunEvery(s.ctx, interval, func() {
-		if s.shouldReSync() {
-			syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
-			// Factor number of expected minimum sync peers, to make sure that enough peers are
-			// available to resync (some peers may go away between checking non-finalized peers and
-			// actual resyncing).
-			highestEpoch, _ := s.cfg.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers*2, syncedEpoch)
-			// Check if the current node is more than 1 epoch behind.
-			if highestEpoch > (syncedEpoch + 1) {
-				log.WithFields(logrus.Fields{
-					"currentEpoch": slots.ToEpoch(s.cfg.chain.CurrentSlot()),
-					"syncedEpoch":  syncedEpoch,
-					"peersEpoch":   highestEpoch,
-				}).Info("Fallen behind peers; reverting to initial sync to catch up")
-				numberOfTimesResyncedCounter.Inc()
-				s.clearPendingSlots()
-				if err := s.cfg.initialSync.Resync(); err != nil {
-					log.WithError(err).Errorf("Could not resync chain")
-				}
-			}
-		}
-	})
-}
-
-// shouldReSync returns true if the node is not syncing and falls behind two epochs.
-func (s *Service) shouldReSync() bool {
-	syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
-	currentEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
-	prevEpoch := types.Epoch(0)
-	if currentEpoch > 1 {
-		prevEpoch = currentEpoch - 1
-	}
-	return s.cfg.initialSync != nil && !s.cfg.initialSync.Syncing() && syncedEpoch < prevEpoch
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
