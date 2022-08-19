@@ -31,7 +31,25 @@ var (
 		OutputJSON      string
 		OutputYaml      string
 	}{}
-	log                     = logrus.WithField("prefix", "genesis")
+	log           = logrus.WithField("prefix", "genesis")
+	outputSSZFlag = &cli.StringFlag{
+		Name:        "output-ssz",
+		Destination: &generateGenesisStateFlags.OutputSSZ,
+		Usage:       "Output filename of the SSZ marshaling of the generated genesis state",
+		Value:       "",
+	}
+	outputYamlFlag = &cli.StringFlag{
+		Name:        "output-yaml",
+		Destination: &generateGenesisStateFlags.OutputYaml,
+		Usage:       "Output filename of the YAML marshaling of the generated genesis state",
+		Value:       "",
+	}
+	outputJsonFlag = &cli.StringFlag{
+		Name:        "output-json",
+		Destination: &generateGenesisStateFlags.OutputJSON,
+		Usage:       "Output filename of the JSON marshaling of the generated genesis state",
+		Value:       "",
+	}
 	generateGenesisStateCmd = &cli.Command{
 		Name:   "generate-genesis",
 		Usage:  "Generate a beacon chain genesis state",
@@ -64,24 +82,9 @@ var (
 				Destination: &generateGenesisStateFlags.GenesisTime,
 				Usage:       "Unix timestamp seconds used as the genesis time in the genesis state. If unset, defaults to now()",
 			},
-			&cli.StringFlag{
-				Name:        "output-ssz",
-				Destination: &generateGenesisStateFlags.OutputSSZ,
-				Usage:       "Output filename of the SSZ marshaling of the generated genesis state",
-				Value:       "",
-			},
-			&cli.StringFlag{
-				Name:        "output-yaml",
-				Destination: &generateGenesisStateFlags.OutputYaml,
-				Usage:       "Output filename of the YAML marshaling of the generated genesis state",
-				Value:       "",
-			},
-			&cli.StringFlag{
-				Name:        "output-json",
-				Destination: &generateGenesisStateFlags.OutputJSON,
-				Usage:       "Output filename of the JSON marshaling of the generated genesis state",
-				Value:       "",
-			},
+			outputSSZFlag,
+			outputYamlFlag,
+			outputJsonFlag,
 		},
 	}
 )
@@ -105,8 +108,11 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	outputSSZ := generateGenesisStateFlags.OutputSSZ
 	noOutputFlag := outputSSZ == "" && outputJson == "" && outputYaml == ""
 	if noOutputFlag {
-		return errors.New(
-			"no --output-ssz, --output-json, or --output-yaml flag specified. At least one is required",
+		return fmt.Errorf(
+			"no %s, %s, %s flag(s) specified. At least one is required",
+			outputJsonFlag.Name,
+			outputYamlFlag.Name,
+			outputSSZFlag.Name,
 		)
 	}
 	if err := setGlobalParams(); err != nil {
