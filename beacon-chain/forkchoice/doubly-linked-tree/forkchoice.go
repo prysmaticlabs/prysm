@@ -183,11 +183,12 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
