@@ -325,7 +325,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 // IsFinalized returns true if the input root is finalized.
 // It first checks latest finalized root then checks finalized root index in DB.
 func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
-	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
+	if bytes.Equal(s.FinalizedCheckpt().Root, root[:]) {
 		return true
 	}
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)

@@ -95,8 +95,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
-	fRoot := s.ensureRootNotZeros(finalized.Root)
+	finalized := s.FinalizedCheckpt()
+	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
+	fRoot := s.ensureRootNotZeros(finalizedRoot)
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -122,7 +123,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.FinalizedCheckpt()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -241,7 +242,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.FinalizedCheckpt()
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -267,7 +268,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if root != s.ensureRootNotZeros(finalized.Root) {
+	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
 		return errNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)

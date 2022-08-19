@@ -106,8 +106,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 
 	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
-	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
+	currStoreJustifiedEpoch := s.CurrentJustifiedCheckpt().Epoch
+	currStoreFinalizedEpoch := s.FinalizedCheckpt().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
@@ -173,8 +173,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}()
 	}
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
-	balances, err := s.justifiedBalances.get(ctx, justified.Root)
+	justified := s.CurrentJustifiedCheckpt()
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
@@ -226,12 +226,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	finalized := s.FinalizedCheckpt()
+	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
 		}
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(finalized.Root)
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(finalizedRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
@@ -252,7 +253,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			// with a custom deadline, therefore using the background context instead.
 			depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 			defer cancel()
-			if err := s.insertFinalizedDeposits(depCtx, finalized.Root); err != nil {
+			if err := s.insertFinalizedDeposits(depCtx, finalizedRoot); err != nil {
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
