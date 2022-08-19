@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	common "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/ssz_static"
@@ -49,7 +49,7 @@ func ExampleRunSSZStaticTests() {
 		switch object.(type) {
 		case *ethpb.BeaconState:
 			htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-				beaconState, err := v1.InitializeFromProto(s.(*ethpb.BeaconState))
+				beaconState, err := state_native.InitializeFromProtoPhase0(s.(*ethpb.BeaconState))
 				require.NoError(t, err)
 				return beaconState.HashTreeRoot(context.TODO())
 			})
