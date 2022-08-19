@@ -33,7 +33,7 @@ jobs:
       - name: Run Gosec Security Scanner
         run: | # https://github.com/securego/gosec/issues/469
           export PATH=$PATH:$(go env GOPATH)/bin
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.12.0
           gosec -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
 
   lint:
