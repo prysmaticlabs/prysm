@@ -188,11 +188,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// release the checkpoints lock here because
+			// AncestorRoot takes a lock on nodes and that can lead
+			// to double locks
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -285,6 +289,8 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 	if r1 == r2 {
 		return r1, nil
 	}
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
@@ -406,8 +412,12 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 
 	if !s.viableForHead(bestNode) {
 		s.allTipsAreInvalid = true
+		s.checkpointsLock.RLock()
+		jEpoch := s.justifiedCheckpoint.Epoch
+		fEpoch := s.finalizedCheckpoint.Epoch
+		s.checkpointsLock.RUnlock()
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestNode.justifiedEpoch, s.justifiedCheckpoint.Epoch)
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, fEpoch, bestNode.justifiedEpoch, jEpoch)
 	}
 	s.allTipsAreInvalid = false
 
@@ -426,7 +436,8 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	return bestNode.root, nil
 }
 
-// updateCanonicalNodes updates the canonical nodes mapping given the input block root.
+// updateCanonicalNodes updates the canonical nodes mapping given the input
+// block root. This function assumes the caller holds a lock in Store.nodesLock
 func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
 	defer span.End()
@@ -548,14 +559,14 @@ func (s *Store) insert(ctx context.Context,
 	if slot > s.highestReceivedSlot {
 		s.highestReceivedSlot = slot
 	}
-
 	return n, nil
 }
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
-// the best child is then updated along with the best descendant.
+// the best child is then updated along with the best descendant. This function
+// assumes the caller holds a lock in Store.nodesLock
 func (s *Store) applyWeightChanges(
 	ctx context.Context, newBalances []uint64, delta []int,
 ) error {
@@ -900,6 +911,8 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -909,9 +922,6 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
-
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
 	}
