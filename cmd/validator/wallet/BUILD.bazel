@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "edit.go",
         "wallet.go",
+        "recover.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/cmd/validator/wallet",
     visibility = ["//visibility:public"],
@@ -26,7 +27,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["edit_test.go"],
+    srcs = [
+        "edit_test.go",
+        "recover_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//cmd/validator/flags:go_default_library",
