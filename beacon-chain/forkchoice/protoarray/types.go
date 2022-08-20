@@ -3,9 +3,9 @@ package protoarray
 import (
 	"sync"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
@@ -39,7 +39,9 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
-	allTipsAreInvalid             bool // tracks if all tips are not viable for head
+	highestReceivedSlot           types.Slot                            // The highest received slot in the chain.
+	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
+	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

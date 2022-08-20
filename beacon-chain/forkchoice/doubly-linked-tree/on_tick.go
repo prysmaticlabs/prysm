@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // NewSlot mimics the implementation of `on_tick` in fork choice consensus spec.
@@ -41,12 +41,11 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
-
+	f.store.checkpointsLock.RLock()
 	bjcp := f.store.bestJustifiedCheckpoint
 	jcp := f.store.justifiedCheckpoint
 	fcp := f.store.finalizedCheckpoint
+	f.store.checkpointsLock.RUnlock()
 	if bjcp.Epoch > jcp.Epoch {
 		finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 		if err != nil {
@@ -62,8 +61,10 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 			return err
 		}
 		if r == fcp.Root {
+			f.store.checkpointsLock.Lock()
 			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
+			f.store.checkpointsLock.Unlock()
 		}
 	}
 	if !features.Get().DisablePullTips {

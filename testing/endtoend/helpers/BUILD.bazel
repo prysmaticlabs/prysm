@@ -7,7 +7,7 @@ go_library(
         "epochTimer.go",
         "helpers.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/helpers",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//config/params:go_default_library",

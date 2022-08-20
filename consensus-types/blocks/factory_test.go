@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func Test_NewSignedBeaconBlock(t *testing.T) {
@@ -73,7 +73,8 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 					Body: &eth.BlindedBeaconBlockBodyBellatrix{}}}}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
-		assert.Equal(t, version.BellatrixBlind, b.Version())
+		assert.Equal(t, version.Bellatrix, b.Version())
+		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("SignedBlindedBeaconBlockBellatrix", func(t *testing.T) {
 		pb := &eth.SignedBlindedBeaconBlockBellatrix{
@@ -81,7 +82,8 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 				Body: &eth.BlindedBeaconBlockBodyBellatrix{}}}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
-		assert.Equal(t, version.BellatrixBlind, b.Version())
+		assert.Equal(t, version.Bellatrix, b.Version())
+		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewSignedBeaconBlock(nil)
@@ -134,13 +136,15 @@ func Test_NewBeaconBlock(t *testing.T) {
 		pb := &eth.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.BlindedBeaconBlockBellatrix{Body: &eth.BlindedBeaconBlockBodyBellatrix{}}}
 		b, err := NewBeaconBlock(pb)
 		require.NoError(t, err)
-		assert.Equal(t, version.BellatrixBlind, b.Version())
+		assert.Equal(t, version.Bellatrix, b.Version())
+		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("BlindedBeaconBlockBellatrix", func(t *testing.T) {
 		pb := &eth.BlindedBeaconBlockBellatrix{Body: &eth.BlindedBeaconBlockBodyBellatrix{}}
 		b, err := NewBeaconBlock(pb)
 		require.NoError(t, err)
-		assert.Equal(t, version.BellatrixBlind, b.Version())
+		assert.Equal(t, version.Bellatrix, b.Version())
+		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlock(nil)
@@ -183,7 +187,8 @@ func Test_NewBeaconBlockBody(t *testing.T) {
 		require.NoError(t, err)
 		b, ok := i.(*BeaconBlockBody)
 		require.Equal(t, true, ok)
-		assert.Equal(t, version.BellatrixBlind, b.version)
+		assert.Equal(t, version.Bellatrix, b.version)
+		assert.Equal(t, true, b.isBlinded)
 	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlockBody(nil)
@@ -219,11 +224,12 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 		assert.Equal(t, version.Bellatrix, sb.Version())
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		b := &BeaconBlock{version: version.BellatrixBlind, body: &BeaconBlockBody{version: version.BellatrixBlind}}
+		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix, isBlinded: true}}
 		sb, err := BuildSignedBeaconBlock(b, sig)
 		require.NoError(t, err)
 		assert.DeepEqual(t, sig, sb.Signature())
-		assert.Equal(t, version.BellatrixBlind, sb.Version())
+		assert.Equal(t, version.Bellatrix, sb.Version())
+		assert.Equal(t, true, sb.IsBlinded())
 	})
 }
 

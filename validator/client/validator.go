@@ -20,28 +20,28 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	accountsiface "github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
-	vdb "github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	accountsiface "github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	vdb "github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -66,7 +66,6 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
-	logDutyCountDown                   bool
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
@@ -372,7 +371,10 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool {
+func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount uint64) bool {
+	activationsPerEpoch :=
+		uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(activeValCount/params.BeaconConfig().ChurnLimitQuotient)))
+
 	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
 	for _, status := range statuses {
@@ -398,9 +400,13 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
+			secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+			expectedWaitingTime :=
+				time.Duration((status.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
 			if status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
 					"positionInActivationQueue": status.status.PositionInActivationQueue,
+					"expectedWaitingTime":       expectedWaitingTime.String(),
 				}).Info("Waiting to be assigned activation epoch")
 			} else {
 				log.WithFields(logrus.Fields{
@@ -1060,7 +1066,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
 			config := v.ProposerSettings.DefaultConfig.BuilderConfig
 			if config != nil && config.Enabled {
-				gasLimit = config.GasLimit // Use cli config for gas limit.
+				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
@@ -1071,7 +1077,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 				builderConfig := config.BuilderConfig
 				if builderConfig != nil {
 					if builderConfig.Enabled {
-						gasLimit = builderConfig.GasLimit // Use file config for gas limit.
+						gasLimit = uint64(builderConfig.GasLimit) // Use file config for gas limit.
 						enabled = true
 					} else {
 						enabled = false // Custom config can disable validator from register.

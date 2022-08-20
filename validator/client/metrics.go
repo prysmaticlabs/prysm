@@ -6,12 +6,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -83,17 +83,6 @@ var (
 			Namespace: "validator",
 			Name:      "balance",
 			Help:      "current validator balance.",
-		},
-		[]string{
-			"pubkey",
-		},
-	)
-	// ValidatorInclusionDistancesGaugeVec used to keep track of validator inclusion distances by public key.
-	ValidatorInclusionDistancesGaugeVec = promauto.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "validator",
-			Name:      "inclusion_distance",
-			Help:      "Inclusion distance of last attestation. Deprecated after Altair hard fork.",
 		},
 		[]string{
 			"pubkey",
@@ -332,19 +321,6 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 			"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
 		}
 
-		// These fields are deprecated after Altair.
-		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-			if index < len(resp.InclusionSlots) {
-				previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[index]
-			} else {
-				log.WithField("pubKey", truncatedKey).Warn("Missing inclusion slot")
-			}
-			if index < len(resp.InclusionDistances) {
-				previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[index]
-			} else {
-				log.WithField("pubKey", truncatedKey).Warn("Missing inclusion distance")
-			}
-		}
 		if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
 			if index < len(resp.InactivityScores) {
 				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[index]
@@ -373,13 +349,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 			}
 
 			// Phase0 specific metrics
-			if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-				if index < len(resp.InclusionDistances) {
-					ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[index]))
-				}
-			} else { // Altair specific metrics.
-				// Reset phase0 fields that no longer apply
-				ValidatorInclusionDistancesGaugeVec.DeleteLabelValues(fmtKey)
+			if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
 				if index < len(resp.InactivityScores) {
 					ValidatorInactivityScoreGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InactivityScores[index]))
 				}
@@ -396,12 +366,6 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	var attested, correctSource, correctTarget, correctHead, inactivityScore int
 
 	for i := range resp.PublicKeys {
-		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch && i < len(resp.InclusionDistances) {
-			if uint64(resp.InclusionSlots[i]) != ^uint64(0) {
-				summary.totalDistance += resp.InclusionDistances[i]
-			}
-		}
-
 		included := false
 		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
 			included = true

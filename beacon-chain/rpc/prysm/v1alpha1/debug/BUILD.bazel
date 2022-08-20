@@ -4,12 +4,11 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block.go",
-        "forkchoice.go",
         "p2p.go",
         "server.go",
         "state.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/debug",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
@@ -39,7 +38,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "block_test.go",
-        "forkchoice_test.go",
         "p2p_test.go",
         "state_test.go",
     ],
@@ -48,7 +46,6 @@ go_test(
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stategen/mock:go_default_library",

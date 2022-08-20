@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
 )
 
 type BeaconNodeStatsUpdater interface {
@@ -13,11 +13,9 @@ type BeaconNodeStatsUpdater interface {
 }
 
 type PowchainCollector struct {
-	SyncEth1Connected          *prometheus.Desc
-	SyncEth1FallbackConnected  *prometheus.Desc
-	SyncEth1FallbackConfigured *prometheus.Desc // true if flag specified: --fallback-web3provider
-	updateChan                 chan clientstats.BeaconNodeStats
-	latestStats                clientstats.BeaconNodeStats
+	SyncEth1Connected *prometheus.Desc
+	updateChan        chan clientstats.BeaconNodeStats
+	latestStats       clientstats.BeaconNodeStats
 	sync.Mutex
 	ctx        context.Context
 	finishChan chan struct{}
@@ -38,8 +36,6 @@ func (pc *PowchainCollector) Update(update clientstats.BeaconNodeStats) {
 // prometheus.Collector interface.
 func (pc *PowchainCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- pc.SyncEth1Connected
-	ch <- pc.SyncEth1FallbackConfigured
-	ch <- pc.SyncEth1FallbackConnected
 }
 
 // Collect is invoked by the prometheus collection loop.
@@ -53,26 +49,6 @@ func (pc *PowchainCollector) Describe(ch chan<- *prometheus.Desc) {
 // prometheus.Collector interface.
 func (pc *PowchainCollector) Collect(ch chan<- prometheus.Metric) {
 	bs := pc.getLatestStats()
-
-	var syncEth1FallbackConfigured float64 = 0
-	if bs.SyncEth1FallbackConfigured {
-		syncEth1FallbackConfigured = 1
-	}
-	ch <- prometheus.MustNewConstMetric(
-		pc.SyncEth1FallbackConfigured,
-		prometheus.GaugeValue,
-		syncEth1FallbackConfigured,
-	)
-
-	var syncEth1FallbackConnected float64 = 0
-	if bs.SyncEth1FallbackConnected {
-		syncEth1FallbackConnected = 1
-	}
-	ch <- prometheus.MustNewConstMetric(
-		pc.SyncEth1FallbackConnected,
-		prometheus.GaugeValue,
-		syncEth1FallbackConnected,
-	)
 
 	var syncEth1Connected float64 = 0
 	if bs.SyncEth1Connected {
@@ -120,18 +96,6 @@ func NewPowchainCollector(ctx context.Context) (*PowchainCollector, error) {
 	namespace := "powchain"
 	updateChan := make(chan clientstats.BeaconNodeStats, 2)
 	c := &PowchainCollector{
-		SyncEth1FallbackConfigured: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "sync_eth1_fallback_configured"),
-			"Boolean recording whether a fallback eth1 endpoint was configured: 0=false, 1=true.",
-			nil,
-			nil,
-		),
-		SyncEth1FallbackConnected: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "sync_eth1_fallback_connected"),
-			"Boolean indicating whether a fallback eth1 endpoint is currently connected: 0=false, 1=true.",
-			nil,
-			nil,
-		),
 		SyncEth1Connected: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "sync_eth1_connected"),
 			"Boolean indicating whether an eth1 endpoint is currently connected: 0=false, 1=true.",

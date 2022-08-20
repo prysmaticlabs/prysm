@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 )
 
 var maxKeys = 1000000
@@ -23,9 +22,6 @@ type PublicKey struct {
 
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
-	if features.Get().SkipBLSVerify {
-		return &PublicKey{}, nil
-	}
 	if len(pubKey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
@@ -52,9 +48,6 @@ func PublicKeyFromBytes(pubKey []byte) (common.PublicKey, error) {
 
 // AggregatePublicKeys aggregates the provided raw public keys into a single key.
 func AggregatePublicKeys(pubs [][]byte) (common.PublicKey, error) {
-	if features.Get().SkipBLSVerify {
-		return &PublicKey{}, nil
-	}
 	if len(pubs) == 0 {
 		return nil, errors.New("nil or empty public keys")
 	}
@@ -99,9 +92,6 @@ func (p *PublicKey) Equals(p2 common.PublicKey) bool {
 
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
-	if features.Get().SkipBLSVerify {
-		return p
-	}
 
 	agg := new(blstAggregatePublicKey)
 	// No group check here since it is checked at decompression time
@@ -114,9 +104,6 @@ func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 
 // AggregateMultiplePubkeys aggregates the provided decompressed keys into a single key.
 func AggregateMultiplePubkeys(pubkeys []common.PublicKey) common.PublicKey {
-	if features.Get().SkipBLSVerify {
-		return &PublicKey{}
-	}
 	mulP1 := make([]*blstPublicKey, 0, len(pubkeys))
 	for _, pubkey := range pubkeys {
 		mulP1 = append(mulP1, pubkey.(*PublicKey).p)

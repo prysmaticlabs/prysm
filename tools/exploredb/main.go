@@ -18,12 +18,12 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/status-im/keycard-go/hexutils"
 	bolt "go.etcd.io/bbolt"
@@ -131,7 +131,7 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 
 	// create a new KV Store.
 	dbDirectory := filepath.Dir(dbNameWithPath)
-	db, openErr := kv.NewKVStore(context.Background(), dbDirectory, &kv.Config{})
+	db, openErr := kv.NewKVStore(context.Background(), dbDirectory)
 	if openErr != nil {
 		log.WithError(openErr).Fatal("could not open db")
 	}
@@ -179,9 +179,12 @@ func readBucketStat(dbNameWithPath string, statsC chan<- *bucketStat) {
 
 	// get a list of all the existing buckets.
 	var buckets []string
+	var bucketsMut sync.Mutex
 	if viewErr1 := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
+			bucketsMut.Lock()
 			buckets = append(buckets, string(name))
+			bucketsMut.Unlock()
 			return nil
 		})
 	}); viewErr1 != nil {
@@ -379,13 +382,13 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 
 	// create the source and destination KV stores.
 	sourceDbDirectory := filepath.Dir(dbNameWithPath)
-	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory, &kv.Config{})
+	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory)
 	if openErr != nil {
 		log.WithError(openErr).Fatal("could not open sourceDB")
 	}
 
 	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
-	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
+	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory)
 	if openErr != nil {
 		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
 		// if you want to avoid this then we should pass the metric name when opening the DB which touches

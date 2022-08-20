@@ -1,15 +1,16 @@
-package main
+package testnet
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func Test_genesisStateFromJSONValidators(t *testing.T) {
@@ -17,8 +18,9 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	jsonData := createGenesisDepositData(t, numKeys)
 	jsonInput, err := json.Marshal(jsonData)
 	require.NoError(t, err)
+	ctx := context.Background()
 	genesisState, err := genesisStateFromJSONValidators(
-		bytes.NewReader(jsonInput), 0, /* genesis time defaults to time.Now() */
+		ctx, bytes.NewReader(jsonInput), 0, /* genesis time defaults to time.Now() */
 	)
 	require.NoError(t, err)
 	for i, val := range genesisState.Validators {
@@ -26,7 +28,7 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 	}
 }
 
-func createGenesisDepositData(t *testing.T, numKeys int) []*DepositDataJSON {
+func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 	pubKeys := make([]bls.PublicKey, numKeys)
 	privKeys := make([]bls.SecretKey, numKeys)
 	for i := 0; i < numKeys; i++ {
@@ -37,11 +39,11 @@ func createGenesisDepositData(t *testing.T, numKeys int) []*DepositDataJSON {
 	}
 	dataList, _, err := interop.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
-	jsonData := make([]*DepositDataJSON, numKeys)
+	jsonData := make([]*depositDataJSON, numKeys)
 	for i := 0; i < numKeys; i++ {
 		dataRoot, err := dataList[i].HashTreeRoot()
 		require.NoError(t, err)
-		jsonData[i] = &DepositDataJSON{
+		jsonData[i] = &depositDataJSON{
 			PubKey:                fmt.Sprintf("%#x", dataList[i].PublicKey),
 			Amount:                dataList[i].Amount,
 			WithdrawalCredentials: fmt.Sprintf("%#x", dataList[i].WithdrawalCredentials),

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -88,7 +88,7 @@ func ExpandSingleEndpointIfFile(ctx *cli.Context, flag *cli.StringFlag) error {
 	default:
 		web3endpoint, err := file.ExpandPath(ctx.String(flag.Name))
 		if err != nil {
-			return errors.Wrapf(err, "could not expand path for %s", web3endpoint)
+			return errors.Wrapf(err, "could not expand path for %s", ctx.String(flag.Name))
 		}
 		if err := ctx.Set(flag.Name, web3endpoint); err != nil {
 			return errors.Wrapf(err, "could not set %s to %s", flag.Name, web3endpoint)

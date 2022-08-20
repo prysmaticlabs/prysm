@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // SetCurrentSyncCommittee for the beacon state.

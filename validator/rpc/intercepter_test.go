@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -63,7 +63,7 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 func TestServer_JWTInterceptor_InvalidSigningType(t *testing.T) {
 	ss := &Server{jwtSecret: make([]byte, 32)}
 	// Use a different signing type than the expected, HMAC.
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{})
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{})
 	_, err := ss.validateJWT(token)
 	require.ErrorContains(t, "unexpected JWT signing method", err)
 }

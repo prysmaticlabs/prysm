@@ -3,9 +3,9 @@ package apimiddleware
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
 //----------------
@@ -857,6 +857,22 @@ type syncCommitteeContributionJson struct {
 	SubcommitteeIndex string `json:"subcommittee_index"`
 	AggregationBits   string `json:"aggregation_bits" hex:"true"`
 	Signature         string `json:"signature" hex:"true"`
+}
+
+type validatorRegistrationJson struct {
+	FeeRecipient string `json:"fee_recipient" hex:"true"`
+	GasLimit     string `json:"gas_limit"`
+	Timestamp    string `json:"timestamp"`
+	Pubkey       string `json:"pubkey" hex:"true"`
+}
+
+type signedValidatorRegistrationJson struct {
+	Message   validatorRegistrationJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
+}
+
+type signedValidatorRegistrationsRequestJson struct {
+	Registrations []*signedValidatorRegistrationJson `json:"registrations"`
 }
 
 //----------------

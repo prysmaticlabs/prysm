@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestWrapAttestationArray(t *testing.T) {
@@ -613,6 +613,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -627,7 +628,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -643,6 +645,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -657,7 +660,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
@@ -673,6 +677,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -687,7 +692,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {

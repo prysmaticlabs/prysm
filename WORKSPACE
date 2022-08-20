@@ -15,9 +15,9 @@ http_archive(
 
 http_archive(
     name = "com_grail_bazel_toolchain",
-    sha256 = "040b9d00b8a03e8a28e38159ad0f2d0e0de625d93f453a9f226971a8c47e757b",
-    strip_prefix = "bazel-toolchain-5f82830f9d6a1941c3eb29683c1864ccf2862454",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/5f82830f9d6a1941c3eb29683c1864ccf2862454.tar.gz"],
+    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
+    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
 )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
@@ -215,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.2.0-rc.1"
+consensus_spec_version = "v1.2.0-rc.3"
 
 bls_test_version = "v0.1.1"
 
@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9c93f87378aaa6d6fe1c67b396eac2aacc9594af2a83f028cb99c95dea5b81df",
+    sha256 = "18ca21497f41042cdbe60e2333b100d218b2994fb514964b9deb23daf615a12f",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
+    sha256 = "47b8f6fabe39b4a69f13054ba74e26ab51581ddbd359c18cf0f03317474e299c",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -263,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "022dcc0d6de7dd27b337a0d1b945077eaf5ee47000700395a693fc25e12f96df",
+    sha256 = "a061efc05429b169393c32dc2633a948269461b0fe681f11d41e170a880dcc71",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -278,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0a9c110305cbd6ebbe0d942f0f33e6ce22dd484ce4ceed277bf185a091941cde",
+    sha256 = "753d51c6a6cc6df101c897e4bea77f73b271f50aeda74440f412514d4bd88a86",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -309,9 +309,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
-    strip_prefix = "eth2-networks-f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935",
-    url = "https://github.com/eth-clients/eth2-networks/archive/f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935.tar.gz",
+    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
+    strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
+    url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
 )
 
 http_archive(
@@ -342,9 +342,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "98013b40922e54a64996da49b939e0a88fe2456f68eedc5aee4ceba0f8623f71",
+    sha256 = "e0c0b5dc609b3a221e74c720f483c595441f2ad5e38bb8aa3522636039945a6f",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.0/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.1/prysm-web-ui.tar.gz",
     ],
 )
 

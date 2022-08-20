@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	bolt "go.etcd.io/bbolt"
 )
 
 // setupDB instantiates and returns a Store instance.
 func setupDB(t testing.TB) *Store {
-	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{})
+	db, err := NewKVStore(context.Background(), t.TempDir())
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")

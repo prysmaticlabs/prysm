@@ -6,15 +6,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/slasherkv"
 )
 
 // SetupDB instantiates and returns database backed by key value store.
 func SetupDB(t testing.TB) db.Database {
-	s, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
+	s, err := kv.NewKVStore(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func SetupDB(t testing.TB) db.Database {
 
 // SetupSlasherDB --
 func SetupSlasherDB(t testing.TB) iface.SlasherDatabase {
-	s, err := slasherkv.NewKVStore(context.Background(), t.TempDir(), &slasherkv.Config{})
+	s, err := slasherkv.NewKVStore(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@ go_library(
         "transition.go",
         "transition_no_verify_sig.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/transition",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//runtime/interop:__pkg__",

@@ -25,7 +25,7 @@ import "proto/prysm/v1alpha1/sync_committee.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "ValidatorProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -133,35 +133,6 @@ service BeaconNodeValidator {
     rpc MultipleValidatorStatus(MultipleValidatorStatusRequest) returns (MultipleValidatorStatusResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/statuses"
-        };
-    }
-
-	// DEPRECATED in favor of GetBeaconBlock.
-	//
-    // Retrieves the latest valid beacon block to be proposed on the beacon chain.
-    //
-    // The server returns a new beacon block, without proposer signature, that can be
-    // proposed on the beacon chain. The block should be filled with all the necessary
-    // data for proposer to sign.
-    rpc GetBlock(BlockRequest) returns (BeaconBlock) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/validator/block"
-        };
-    }
-
-	// DEPRECATED in favor of ProposeBeaconBlock.
-	//
-    // Sends the newly signed beacon block to beacon node.
-    //
-    // The validator sends the newly signed beacon block to the beacon node so the beacon block can
-    // be included in the beacon chain. The beacon node is expected to validate and process the
-    // beacon block into its state.
-    rpc ProposeBlock(SignedBeaconBlock) returns (ProposeResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/block"
-            body: "*"
         };
     }
 
@@ -321,11 +292,6 @@ service BeaconNodeValidator {
         };
     }
 
-    
-    rpc SubmitValidatorRegistration(SignedValidatorRegistrationV1) returns (google.protobuf.Empty) {
-        option deprecated = true; // Use SubmitValidatorRegistrations
-    }
-
     rpc SubmitValidatorRegistrations(SignedValidatorRegistrationsV1) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/registration"
@@ -346,12 +312,12 @@ message SyncSubcommitteeIndexRequest {
     // The validator's public key.
     bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48"];
     // The slot of validator's assignment.
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 }
 
 message SyncCommitteeContributionRequest {
     // Slot for which the aggregation request applies.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
     // 48 byte public key of the validator.
     bytes public_key = 2 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
     // Subnet ID of where this contribution and proof should be broadcast to.
@@ -362,7 +328,7 @@ message SyncCommitteeContributionRequest {
 message SyncSubcommitteeIndexResponse {
     // The subcommittee index itself.
     // If the total validator count is not sufficient, there could be more than one index.
-    repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 }
 
 message StreamBlocksResponse {
@@ -384,7 +350,7 @@ message StreamBlocksResponse {
 
 message DomainRequest {
     // The epoch for which the domain is being requested.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // The bytes domain specified by the validator.
     bytes domain = 2;
@@ -410,7 +376,7 @@ message ValidatorActivationResponse {
         ValidatorStatusResponse status = 2;
 
         // The validators index in the beacon state.
-        uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+        uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
     }
     // A list of validator statuses mapped 1-to-1 with the public keys
     // in the request.
@@ -443,7 +409,7 @@ message ValidatorIndexRequest {
 
 message ValidatorIndexResponse {
     // The validator's index in the beacon chain state's validator registry.
-    uint64 index = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+    uint64 index = 1  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
 message ValidatorStatusRequest {
@@ -473,11 +439,11 @@ message ValidatorStatusResponse {
 
     // The slot in the beacon chain in which the validator's
     // deposit was included in a block.
-    uint64 deposit_inclusion_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 deposit_inclusion_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
     // The epoch in the beacon chain in which the validator
     // is determined as active.
-    uint64 activation_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 activation_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // The position in the activation queue of pending validators.
     uint64 position_in_activation_queue = 5;
@@ -496,12 +462,12 @@ message MultipleValidatorStatusResponse {
     // A list of ValidatorStatusResponses mapped 1-to-1 with the public keys.
     repeated ValidatorStatusResponse statuses = 2;
     // A list of validator indices.
-    repeated uint64 indices = 3  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 indices = 3  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
 message DutiesRequest {
     // Epoch at which validators should perform their duties.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Array of byte encoded BLS public keys.
     repeated bytes public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48"];
@@ -516,16 +482,16 @@ message DutiesResponse {
 
     message Duty {
         // The committee a validator is assigned to.
-        repeated uint64 committee = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+        repeated uint64 committee = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
         // The index into the committee where the validator belongs in.
-        uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+        uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 
         // Slot at which a validator must attest.
-        uint64 attester_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+        uint64 attester_slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
         // Slots at which a validator must propose a beacon chain block.
-        repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+        repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
         // 48 byte BLS public key for the validator who's assigned to perform a duty.
         bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48"];
@@ -534,7 +500,7 @@ message DutiesResponse {
         ValidatorStatus status = 6;
 
         // The index of the validator in the beacon state.
-        uint64 validator_index = 7  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+        uint64 validator_index = 7  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
         // Whether the validator belongs in the sync committee and has to perform sync committee duty.
         bool is_sync_committee = 8;
@@ -543,7 +509,7 @@ message DutiesResponse {
 
 message BlockRequest {
     // Slot for which the block should be proposed.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
     // Validator's 32 byte randao reveal secret of the current epoch.
     bytes randao_reveal = 2 [(ethereum.eth.ext.ssz_size) = "48"];
@@ -565,10 +531,10 @@ message ProposeExitResponse {
 
 message AttestationDataRequest {
     // Slot for which the attestation should be created.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
     // Committee index the attestation should be created for.
-    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 }
 
 message AttestResponse {
@@ -578,9 +544,9 @@ message AttestResponse {
 
 message AggregateSelectionRequest {
     // Slot for which the aggregation request applies.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
     // Committee index of the validator at the given slot.
-    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    uint64 committee_index = 2  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
     // 48 byte public key of the validator.
     bytes public_key = 3 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
     // 96 byte signature of the validator on the slot. This is used as proof that the validator is
@@ -605,9 +571,9 @@ message SignedAggregateSubmitResponse {
 
 message CommitteeSubnetsSubscribeRequest {
     // A list of intended slots to subscribe.
-    repeated uint64 slots = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    repeated uint64 slots = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
     // A list of intended committee ids to subscribe. It is mapped 1-to-1 with the slots
-    repeated uint64 committee_ids = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    repeated uint64 committee_ids = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
     // Whether to subscribe as an aggregator or by default attester.
     // It is mapped 1-to-1 with the slots and committee ids.
     // Subscribe as an aggregator means to join the subnet.
@@ -632,24 +598,24 @@ message Validator {
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum proof of stake genesis. This
     // field is FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was activated. This field may be zero if the
     // validator was present in the Ethereum proof of stake genesis. This field is
     // FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 activation_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was exited. This field is FAR_FUTURE_EPOCH if
     // the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
-    uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator is eligible to withdraw their funds. This field
     // is FAR_FUTURE_EPOCH if the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
-    uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 }
 
 // An Ethereum validator after Capella fork.
@@ -669,24 +635,24 @@ message ValidatorCapella {
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum proof of stake genesis. This
     // field is FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was activated. This field may be zero if the
     // validator was present in the Ethereum proof of stake genesis. This field is
     // FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 activation_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was exited. This field is FAR_FUTURE_EPOCH if
     // the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator is eligible to withdraw their funds. This field
     // is FAR_FUTURE_EPOCH if the validator has not exited.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // New in Capella.
     //
@@ -694,7 +660,7 @@ message ValidatorCapella {
     // This field is FAR_FUTURE_EPOCH if the validator's withdrawal has not been processed.
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 fully_withdrawn_epoch = 9 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 fully_withdrawn_epoch = 9 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 }
 
 // ValidatorParticipation stores participation metrics during a given epoch.
@@ -732,10 +698,10 @@ message ValidatorInfo {
     bytes public_key = 1;
 
     // The validator's index in the beacon state.
-    uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+    uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
     // The epoch for which the information pertains.
-    uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // The validator's current status.
     ValidatorStatus status = 4;
@@ -769,7 +735,7 @@ message DoppelGangerRequest {
         // The validator's 48 byte BLS public key.
         bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
         // The validator's last recorded epoch to attest.
-        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+        uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
         // The validator's last recorded signed root.
         bytes signed_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
     }
@@ -798,7 +764,7 @@ message PrepareBeaconProposerRequest {
         bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 
         // The proposer validator index.
-        uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+        uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
     }
     repeated FeeRecipientContainer recipients = 1;
 }

@@ -5,9 +5,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // depth returns the length of the path to the root of Fork Choice
@@ -41,7 +40,8 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 	return nil
 }
 
-// updateBestDescendant updates the best descendant of this node and its children.
+// updateBestDescendant updates the best descendant of this node and its
+// children. This function assumes the caller has a lock on Store.nodesLock
 func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -126,32 +126,4 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 
 	n.optimistic = false
 	return n.parent.setNodeAndParentValidated(ctx)
-}
-
-// rpcNodes is used by the RPC Debug endpoint to return information
-// about all nodes in the fork choice store
-func (n *Node) rpcNodes(ret []*pbrpc.ForkChoiceNode) []*pbrpc.ForkChoiceNode {
-	for _, child := range n.children {
-		ret = child.rpcNodes(ret)
-	}
-	r := n.root
-	p := [32]byte{}
-	if n.parent != nil {
-		copy(p[:], n.parent.root[:])
-	}
-	b := [32]byte{}
-	if n.bestDescendant != nil {
-		copy(b[:], n.bestDescendant.root[:])
-	}
-	node := &pbrpc.ForkChoiceNode{
-		Slot:           n.slot,
-		Root:           r[:],
-		Parent:         p[:],
-		JustifiedEpoch: n.justifiedEpoch,
-		FinalizedEpoch: n.finalizedEpoch,
-		Weight:         n.weight,
-		BestDescendant: b[:],
-	}
-	ret = append(ret, node)
-	return ret
 }

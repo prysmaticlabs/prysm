@@ -8,14 +8,14 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -316,14 +316,14 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 	for i, proposal := range signedBlocks {
 		slot, err := SlotFromString(proposal.Slot)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid slot: %w", slot, err)
+			return nil, fmt.Errorf("%s is not a valid slot: %w", proposal.Slot, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if proposal.SigningRoot != "" {
 			signingRoot, err = RootFromHex(proposal.SigningRoot)
 			if err != nil {
-				return nil, fmt.Errorf("%#x is not a valid root: %w", signingRoot, err)
+				return nil, fmt.Errorf("%s is not a valid root: %w", proposal.SigningRoot, err)
 			}
 		}
 		proposals[i] = kv.Proposal{
@@ -341,18 +341,18 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 	for _, attestation := range atts {
 		target, err := EpochFromString(attestation.TargetEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %w", target, err)
+			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.TargetEpoch, err)
 		}
 		source, err := EpochFromString(attestation.SourceEpoch)
 		if err != nil {
-			return nil, fmt.Errorf("%d is not a valid epoch: %w", source, err)
+			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.SourceEpoch, err)
 		}
 		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
 		if attestation.SigningRoot != "" {
 			signingRoot, err = RootFromHex(attestation.SigningRoot)
 			if err != nil {
-				return nil, fmt.Errorf("%#x is not a valid root: %w", signingRoot, err)
+				return nil, fmt.Errorf("%s is not a valid root: %w", attestation.SigningRoot, err)
 			}
 		}
 		historicalAtts = append(historicalAtts, &kv.AttestationRecord{

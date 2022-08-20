@@ -10,8 +10,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	gateway "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
-	service "github.com/prysmaticlabs/prysm/proto/eth/service"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	service "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 )

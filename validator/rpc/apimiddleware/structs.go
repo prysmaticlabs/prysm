@@ -24,7 +24,7 @@ type deleteKeystoresRequestJson struct {
 }
 
 type statusJson struct {
-	Status  string `json:"status"`
+	Status  string `json:"status" enum:"true"`
 	Message string `json:"message"`
 }
 
@@ -87,4 +87,8 @@ type setFeeRecipientByPubkeyRequestJson struct {
 
 type getGasLimitResponseJson struct {
 	Data *gasLimitJson `json:"data"`
+}
+
+type setGasLimitRequestJson struct {
+	GasLimit string `json:"gas_limit"`
 }

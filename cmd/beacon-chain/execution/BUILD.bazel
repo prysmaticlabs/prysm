@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["options.go"],
-    importpath = "github.com/prysmaticlabs/prysm/cmd/beacon-chain/execution",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/execution",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd:__subpackages__",
@@ -28,7 +28,6 @@ go_test(
         "//io/file:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
-        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
 )

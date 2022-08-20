@@ -11,16 +11,16 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remoteutils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
-	web3signerv1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	remoteutils "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-utils"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
+	web3signerv1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -152,35 +152,35 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		aggregationSlotSignRequestsTotal.Inc()
 		return json.Marshal(aggregationSlotSignRequest)
-	case *validatorpb.SignRequest_BlockV2:
-		blockv2AltairSignRequest, err := web3signerv1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlockAltair:
+		blockv2AltairSignRequest, err := web3signerv1.GetBlockAltairSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		if err = validator.StructCtx(ctx, blockv2AltairSignRequest); err != nil {
 			return nil, err
 		}
-		blockV2SignRequestsTotal.Inc()
+		blockAltairSignRequestsTotal.Inc()
 		return json.Marshal(blockv2AltairSignRequest)
-	case *validatorpb.SignRequest_BlockV3:
-		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlockBellatrix:
+		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockBellatrixSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
 			return nil, err
 		}
-		blockV3SignRequestsTotal.Inc()
+		blockBellatrixSignRequestsTotal.Inc()
 		return json.Marshal(blockv2BellatrixSignRequest)
-	case *validatorpb.SignRequest_BlindedBlockV3:
-		blindedBlockv2SignRequest, err := web3signerv1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlindedBlockBellatrix:
+		blindedBlockv2SignRequest, err := web3signerv1.GetBlockBellatrixSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
 		if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
 			return nil, err
 		}
-		blindedblockV3SignRequestsTotal.Inc()
+		blindedblockBellatrixSignRequestsTotal.Inc()
 		return json.Marshal(blindedBlockv2SignRequest)
 	// We do not support "DEPOSIT" type.
 	/*

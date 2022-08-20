@@ -6,29 +6,23 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
 func TestExecutionchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
-	fallback := cli.StringSlice{}
-	err := fallback.Set("fallback1")
-	require.NoError(t, err)
-	err = fallback.Set("fallback2")
-	require.NoError(t, err)
-	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "primary", "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	endpoints := parseExecutionChainEndpoint(ctx)
-	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
+	endpoints, err := parseExecutionChainEndpoint(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "primary", endpoints)
 }
 
 func Test_parseJWTSecretFromFile(t *testing.T) {
@@ -98,13 +92,10 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 }
 
 func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
-	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
-	fallback := cli.StringSlice{}
-	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "", "")
 	ctx := cli.NewContext(&app, set, nil)
-	parseExecutionChainEndpoint(ctx)
-	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
+	_, err := parseExecutionChainEndpoint(ctx)
+	assert.ErrorContains(t, "you need to specify", err)
 }

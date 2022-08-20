@@ -12,17 +12,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -211,6 +211,7 @@ func TestProposerSettings(t *testing.T) {
 		dir        string
 		url        string
 		defaultfee string
+		defaultgas string
 	}
 
 	type args struct {
@@ -271,14 +272,14 @@ func TestProposerSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 						bytesutil.ToBytes48(key2): {
 							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+								GasLimit: validatorserviceconfig.Uint64(35000000),
 							},
 						},
 					},
@@ -286,7 +287,7 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(40000000),
 						},
 					},
 				}
@@ -336,7 +337,7 @@ func TestProposerSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: uint64(40000000),
+								GasLimit: 40000000,
 							},
 						},
 					},
@@ -344,7 +345,7 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -386,7 +387,32 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
+			wantErr:                      "",
+			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "Happy Path Suggested Fee , validator registration enabled and default gas",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultgas: "50000000",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: nil,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
+							GasLimit: 50000000,
 						},
 					},
 				}
@@ -487,6 +513,20 @@ func TestProposerSettings(t *testing.T) {
 			},
 			wantErr: "cannot specify both",
 		},
+		{
+			name: "Bad Gas value in JSON",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/bad-gas-value-proposer-settings.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return nil
+			},
+			wantErr: "failed to unmarshal yaml file",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -513,6 +553,10 @@ func TestProposerSettings(t *testing.T) {
 			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
 				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
 				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
+			}
+			if tt.args.proposerSettingsFlagValues.defaultgas != "" {
+				set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
+				require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
 			}
 			if tt.validatorRegistrationEnabled {
 				set.Bool(flags.EnableBuilderFlag.Name, true, "")

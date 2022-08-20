@@ -5,18 +5,18 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -35,6 +35,7 @@ func New() *ForkChoice {
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
+		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
 	}
 
 	b := make([]uint64, 0)
@@ -182,11 +183,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// Releasing here the checkpoints lock because
+			// AncestorRoot acquires a lock on nodes and that can
+			// cause a double lock.
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -295,7 +300,8 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock.
+// validators' latest votes. This function requires a lock in Store.nodesLock
+// and votesLock
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -426,13 +432,6 @@ func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	return f.store.finalizedCheckpoint
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodeByRoot))
-	return f.store.treeRootNode.rpcNodes(ret)
-}
-
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
 func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
 	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, payloadHash)
@@ -442,6 +441,9 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -451,8 +453,6 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
 
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return

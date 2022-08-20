@@ -6,19 +6,19 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -87,7 +87,6 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		return nil
 	}
 
-	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	s.headLock.RLock()
 	oldHeadBlock, err := s.headBlock()
 	if err != nil {
@@ -98,11 +97,21 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	headSlot := s.HeadSlot()
 	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
+
+	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
+		commonRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, oldHeadRoot, newHeadRoot)
+		if err != nil {
+			log.WithError(err).Error("Could not find common ancestor root")
+			commonRoot = params.BeaconConfig().ZeroHash
+		}
 		log.WithFields(logrus.Fields{
-			"newSlot": fmt.Sprintf("%d", newHeadSlot),
-			"oldSlot": fmt.Sprintf("%d", headSlot),
-		}).Debug("Chain reorg occurred")
+			"newSlot":            fmt.Sprintf("%d", newHeadSlot),
+			"newRoot":            fmt.Sprintf("%#x", newHeadRoot),
+			"oldSlot":            fmt.Sprintf("%d", headSlot),
+			"oldRoot":            fmt.Sprintf("%#x", oldHeadRoot),
+			"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
+		}).Info("Chain reorg occurred")
 		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {

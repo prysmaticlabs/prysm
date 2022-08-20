@@ -22,17 +22,18 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	prysmnetwork "github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -107,7 +108,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	cfg.Discv5BootStrapAddr = dv5Nodes
 
-	ipAddr := ipAddr()
+	ipAddr := prysmnetwork.IPAddr()
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
@@ -200,8 +201,8 @@ func (s *Service) Start() {
 		}
 	}
 
-	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
-		ipAddr := ipAddr()
+	if !s.cfg.NoDiscovery {
+		ipAddr := prysmnetwork.IPAddr()
 		listener, err := s.startDiscoveryV5(
 			ipAddr,
 			s.privKey,
@@ -224,7 +225,7 @@ func (s *Service) Start() {
 	s.started = true
 
 	if len(s.cfg.StaticPeers) > 0 {
-		addrs, err := peersFromStringAddrs(s.cfg.StaticPeers)
+		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
 			log.WithError(err).Error("Could not connect to static peer")
 		}

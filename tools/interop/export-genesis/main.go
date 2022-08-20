@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
 // A basic tool to extract genesis.ssz from existing beaconchain.db.
@@ -21,7 +20,7 @@ func main() {
 
 	fmt.Printf("Reading db at %s and writing ssz output to %s.\n", os.Args[1], os.Args[2])
 
-	d, err := db.NewDB(context.Background(), os.Args[1], &kv.Config{})
+	d, err := db.NewDB(context.Background(), os.Args[1])
 	if err != nil {
 		panic(err)
 	}

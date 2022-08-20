@@ -9,40 +9,41 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/mock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	p2pmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -653,103 +654,6 @@ func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
 			syncCommitteeDutiesLastValidEpoch(params.BeaconConfig().EpochsPerSyncCommitteePeriod-1),
 		)
 	})
-}
-
-func TestProduceBlock(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
-
-	v1Alpha1Server := &v1alpha1validator.Server{
-		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:     &mockChain.ChainService{},
-		HeadUpdater:       &mockChain.ChainService{},
-		ChainStartFetcher: &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		Eth1BlockFetcher:  &mockExecution.Chain{},
-		MockEth1Votes:     true,
-		AttPool:           attestations.NewPool(),
-		SlashingsPool:     slashings.NewPool(),
-		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
-	}
-
-	proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
-	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
-		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
-			beaconState,
-			privKeys[i],
-			i, /* validator index */
-		)
-		require.NoError(t, err)
-		proposerSlashings[i] = proposerSlashing
-		err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
-		require.NoError(t, err)
-	}
-
-	attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
-	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
-		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
-			beaconState,
-			privKeys[i+params.BeaconConfig().MaxProposerSlashings],
-			types.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
-		)
-		require.NoError(t, err)
-		attSlashings[i] = attesterSlashing
-		err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
-		require.NoError(t, err)
-	}
-
-	v1Server := &Server{
-		SyncChecker:    &mockSync.Sync{IsSyncing: false},
-		V1Alpha1Server: v1Alpha1Server,
-	}
-	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
-	req := &ethpbv1.ProduceBlockRequest{
-		Slot:         1,
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti[:],
-	}
-	resp, err := v1Server.ProduceBlock(ctx, req)
-	require.NoError(t, err)
-
-	assert.Equal(t, req.Slot, resp.Data.Slot, "Expected block to have slot of 1")
-	assert.DeepEqual(t, parentRoot[:], resp.Data.ParentRoot, "Expected block to have correct parent root")
-	assert.DeepEqual(t, randaoReveal, resp.Data.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, resp.Data.Body.Graffiti, "Expected block to have correct graffiti")
-	assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(resp.Data.Body.ProposerSlashings)))
-	expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
-	for i, slash := range proposerSlashings {
-		expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
-	}
-	assert.DeepEqual(t, expectedPropSlashings, resp.Data.Body.ProposerSlashings)
-	assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(resp.Data.Body.AttesterSlashings)))
-	expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
-	for i, slash := range attSlashings {
-		expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
-	}
-	assert.DeepEqual(t, expectedAttSlashings, resp.Data.Body.AttesterSlashings)
-}
-
-func TestProduceBlock_SyncNotReady(t *testing.T) {
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	chainService := &mockChain.ChainService{State: st}
-	vs := &Server{
-		SyncChecker:           &mockSync.Sync{IsSyncing: true},
-		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
-		OptimisticModeFetcher: chainService,
-	}
-	_, err = vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
-	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceBlockV2(t *testing.T) {
@@ -3714,6 +3618,67 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			address, err := server.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
 			require.NoError(t, err)
 			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+		})
+	}
+}
+
+func TestServer_SubmitValidatorRegistrations(t *testing.T) {
+	type args struct {
+		request *ethpbv1.SubmitValidatorRegistrationsRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{
+						{
+							Message: &ethpbv1.SubmitValidatorRegistrationsRequest_ValidatorRegistration{
+								FeeRecipient: make([]byte, fieldparams.BLSPubkeyLength),
+								GasLimit:     30000000,
+								Timestamp:    uint64(time.Now().Unix()),
+								Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+							},
+							Signature: make([]byte, fieldparams.BLSSignatureLength),
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "Empty Request",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{},
+				},
+			},
+			wantErr: "Validator registration request is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			v1Server := &v1alpha1validator.Server{
+				BlockBuilder: &builderTest.MockBuilderService{
+					HasConfigured: true,
+				},
+				BeaconDB: db,
+			}
+			server := &Server{
+				V1Alpha1Server: v1Server,
+			}
+			_, err := server.SubmitValidatorRegistration(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

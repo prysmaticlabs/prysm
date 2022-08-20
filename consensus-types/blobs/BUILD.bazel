@@ -6,7 +6,7 @@ go_library(
         "sidecar.go",
         "tx.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/consensus-types/blobs",
+    importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/blocks:go_default_library",

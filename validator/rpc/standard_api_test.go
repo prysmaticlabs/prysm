@@ -12,26 +12,26 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	mocks "github.com/prysmaticlabs/prysm/validator/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc"
 )
@@ -896,6 +896,119 @@ func TestServer_GetGasLimit(t *testing.T) {
 			got, err := s.GetGasLimit(ctx, &ethpbservice.PubkeyRequest{Pubkey: tt.pubkey[:]})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got.Data.GasLimit)
+		})
+	}
+}
+
+func TestServer_SetGasLimit(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
+	require.NoError(t, err)
+	require.NoError(t, err2)
+
+	type want struct {
+		pubkey   []byte
+		gaslimit uint64
+	}
+
+	tests := []struct {
+		name             string
+		pubkey           []byte
+		newGasLimit      uint64
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		w                []want
+	}{
+		{
+			name:        "update existing gas limit",
+			pubkey:      pubkey1,
+			newGasLimit: 9999,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 9999,
+				},
+			},
+		},
+		{
+			name:        "insert a new gas limit",
+			pubkey:      pubkey2,
+			newGasLimit: 8888,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 123456789,
+				},
+				want{
+					pubkey:   pubkey2,
+					gaslimit: 8888,
+				},
+			},
+		},
+		{
+			name:        "create new gas limit value for nil ProposerSettings.ProposeConfig",
+			pubkey:      pubkey1,
+			newGasLimit: 8888,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 8888,
+				},
+			},
+		},
+		{
+			name:        "create new gas limit value for nil proposerSettings",
+			pubkey:      pubkey1,
+			newGasLimit: 7777,
+			// proposerSettings is not set - we need to create proposerSettings and set gaslimit properly
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 7777,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.proposerSettings,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
+			require.NoError(t, err)
+			for _, w := range tt.w {
+				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+			}
 		})
 	}
 }

@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	testing2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -59,7 +59,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
@@ -88,7 +88,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -119,7 +119,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -161,7 +161,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -203,7 +203,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -241,7 +241,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -310,7 +310,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")

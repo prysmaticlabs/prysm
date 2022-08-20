@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,12 +12,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)
@@ -58,9 +59,15 @@ func TestClient_Status(t *testing.T) {
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)
+			message := ErrorMessage{
+				Code:    500,
+				Message: "Internal server error",
+			}
+			resp, err := json.Marshal(message)
+			require.NoError(t, err)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Body:       io.NopCloser(bytes.NewBuffer(resp)),
 				Request:    r.Clone(ctx),
 			}, nil
 		}),
@@ -114,9 +121,15 @@ func TestClient_GetHeader(t *testing.T) {
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			require.Equal(t, expectedPath, r.URL.Path)
+			message := ErrorMessage{
+				Code:    500,
+				Message: "Internal server error",
+			}
+			resp, err := json.Marshal(message)
+			require.NoError(t, err)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Body:       io.NopCloser(bytes.NewBuffer(resp)),
 				Request:    r.Clone(ctx),
 			}, nil
 		}),
