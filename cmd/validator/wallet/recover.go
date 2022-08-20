@@ -20,8 +20,6 @@ import (
 
 const (
 	// #nosec G101 -- Not sensitive data
-	newMnemonicPassphraseYesNoText = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
-	// #nosec G101 -- Not sensitive data
 	mnemonicPassphraseYesNoText = "(Advanced) Do you have an optional '25th word' passphrase for your mnemonic? [y/n]"
 	// #nosec G101 -- Not sensitive data
 	mnemonicPassphrasePromptText = "(Advanced) Enter the '25th word' passphrase for your mnemonic"
