@@ -23,6 +23,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -535,8 +536,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_EIP4844,
-			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Eip4844Block{Eip4844Block: v2Blk},
+			Data: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_Eip4844Block{Eip4844Block: v2Blk},
 				Signature: blk.Signature(),
 			},
 			ExecutionOptimistic: isOptimistic,

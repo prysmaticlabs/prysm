@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -91,7 +92,7 @@ type blocksQueue struct {
 type blocksQueueFetchedData struct {
 	pid      peer.ID
 	blocks   []interfaces.SignedBeaconBlock
-	sidecars []*ethpb.BlobsSidecar
+	sidecars []*p2ppb.BlobsSidecar
 }
 
 // newBlocksQueue creates initialized priority queue.

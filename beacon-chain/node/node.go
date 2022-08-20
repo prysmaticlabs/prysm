@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v3/api/gateway"
+	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"

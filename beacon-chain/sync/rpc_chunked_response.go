@@ -100,7 +100,7 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 	return err
 }
 
-func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*pb.BlobsSidecar, error) {
+func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.BlobsSidecar, error) {
 	var (
 		code   uint8
 		errMsg string
@@ -127,7 +127,7 @@ func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInf
 	if len(rpcCtx) != 0 {
 		return nil, errors.New("unexpected fork digest in stream")
 	}
-	sidecar := new(pb.BlobsSidecar)
+	sidecar := new(ethpb.BlobsSidecar)
 	err = p2p.Encoding().DecodeWithMaxLength(stream, sidecar)
 	return sidecar, err
 }

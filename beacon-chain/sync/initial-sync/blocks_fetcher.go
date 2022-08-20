@@ -15,9 +15,12 @@ import (
 	prysmsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -107,7 +110,7 @@ type fetchRequestResponse struct {
 	start    types.Slot
 	count    uint64
 	blocks   []interfaces.SignedBeaconBlock
-	sidecars []*ethpb.BlobsSidecar
+	sidecars []*p2ppb.BlobsSidecar
 	err      error
 }
 
@@ -249,7 +252,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 		start:    start,
 		count:    count,
 		blocks:   []interfaces.SignedBeaconBlock{},
-		sidecars: []*ethpb.BlobsSidecar{},
+		sidecars: []*p2ppb.BlobsSidecar{},
 		err:      nil,
 	}
 
@@ -283,7 +286,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start types.Slot, count uint64,
 	peers []peer.ID,
-) ([]interfaces.SignedBeaconBlock, []*ethpb.BlobsSidecar, peer.ID, error) {
+) ([]interfaces.SignedBeaconBlock, []*p2ppb.BlobsSidecar, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -298,7 +301,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Count:     count,
 	}
 
-	var sidecars []*ethpb.BlobsSidecar
+	var sidecars []*p2ppb.BlobsSidecar
 	for i := 0; i < len(peers); i++ {
 		blocks, err := f.requestBlocks(ctx, req, peers[i])
 		if err == nil {
@@ -387,7 +390,7 @@ func (f *blocksFetcher) requestSidecars(
 	req *p2ppb.BlobsSidecarsByRangeRequest,
 	pid peer.ID,
 	blkRefs []interfaces.SignedBeaconBlock,
-) ([]*ethpb.BlobsSidecar, error) {
+) ([]*p2ppb.BlobsSidecar, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -410,7 +413,7 @@ func (f *blocksFetcher) requestSidecars(
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 
-	var sidecarProcessor func(*ethpb.BlobsSidecar) error
+	var sidecarProcessor func(*p2ppb.BlobsSidecar) error
 	if blkRefs != nil {
 		sidecarProcessor = sidecarVerifier(blkRefs)
 	}
@@ -431,9 +434,9 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 	return nil
 }
 
-func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sidecars []*ethpb.BlobsSidecar) error {
+func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sidecars []*p2ppb.BlobsSidecar) error {
 	for _, b := range blks {
-		if cb.IsPreEIP4844Version(b.Version()) {
+		if blocks.IsPreEIP4844Version(b.Version()) {
 			continue
 		}
 		blobKzgs, err := b.Block().Body().BlobKzgs()
@@ -461,10 +464,10 @@ func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sideca
 	return nil
 }
 
-func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidecar) error {
-	return func(sidecar *ethpb.BlobsSidecar) error {
+func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*p2ppb.BlobsSidecar) error {
+	return func(sidecar *p2ppb.BlobsSidecar) error {
 		for _, b := range blks {
-			if cb.IsPreEIP4844Version(b.Version()) {
+			if blocks.IsPreEIP4844Version(b.Version()) {
 				continue
 			}
 			blobKzgs, err := b.Block().Body().BlobKzgs()

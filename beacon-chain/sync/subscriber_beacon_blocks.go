@@ -30,7 +30,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 
-	var sidecar *eth.BlobsSidecar
+	var sidecar *ethpb.BlobsSidecar
 	contains, err := blobs.BlockContainsKZGs(block)
 	if err != nil {
 		return err

@@ -23,6 +23,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -281,7 +282,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return errors.New("execution payload is nil")
 	}
 
-	if b.IsPreEIP4844Version(blk.Version()) {
+	if consensusblocks.IsPreEIP4844Version(blk.Version()) {
 		return nil
 	}
 
