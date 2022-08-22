@@ -12,7 +12,7 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedBackupWebHookFlag = &cli.StringFlag{
+	deprecatedBackupWebHookFlag = &cli.BoolFlag{
 		Name:   "enable-db-backup-webhook",
 		Usage:  deprecatedUsage,
 		Hidden: true,
@@ -22,13 +22,48 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableDiscV5Flag = &cli.StringFlag{
+	deprecatedDisableDiscV5Flag = &cli.BoolFlag{
 		Name:   "disable-discv5",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedDisableAttHistoryCacheFlag = &cli.StringFlag{
+	deprecatedDisableAttHistoryCacheFlag = &cli.BoolFlag{
 		Name:   "disable-attesting-history-db-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableVectorizedHtr = &cli.BoolFlag{
+		Name:   "enable-vectorized-htr",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnablePeerScorer = &cli.BoolFlag{
+		Name:   "enable-peer-scorer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableForkchoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:   "enable-forkchoice-doubly-linked-tree",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDutyCountdown = &cli.BoolFlag{
+		Name:   "enable-duty-count-down",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedHeadSync = &cli.BoolFlag{
+		Name:   "head-sync",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedGossipBatchAggregation = &cli.BoolFlag{
+		Name:   "enable-gossip-batch-aggregation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableLargerGossipHistory = &cli.BoolFlag{
+		Name:   "enable-larger-gossip-history",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -45,6 +80,13 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedBoltMmapFlag,
 	deprecatedDisableDiscV5Flag,
 	deprecatedDisableAttHistoryCacheFlag,
+	deprecatedEnableVectorizedHtr,
+	deprecatedEnablePeerScorer,
+	deprecatedEnableForkchoiceDoublyLinkedTree,
+	deprecatedDutyCountdown,
+	deprecatedHeadSync,
+	deprecatedGossipBatchAggregation,
+	deprecatedEnableLargerGossipHistory,
 	deprecatedFallbackProvider,
 }
 
