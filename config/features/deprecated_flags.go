@@ -72,6 +72,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedFallbackProvider = &cli.StringFlag{
+		Name:   "fallback-web3provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -88,6 +93,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedHeadSync,
 	deprecatedGossipBatchAggregation,
 	deprecatedEnableLargerGossipHistory,
+	deprecatedFallbackProvider,
 }
 
 var deprecatedBeaconFlags = []cli.Flag{
