@@ -3,6 +3,7 @@
 package flags
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -346,10 +347,10 @@ var (
 	}
 
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
-	BuilderGasLimitFlag = &cli.IntFlag{
+	BuilderGasLimitFlag = &cli.StringFlag{
 		Name:  "suggested-gas-limit",
 		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
-		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
+		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

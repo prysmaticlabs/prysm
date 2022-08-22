@@ -38,6 +38,7 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.ExecutionEngineEndpoint,
+	flags.HTTPWeb3ProviderFlag,
 	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,

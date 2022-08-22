@@ -76,9 +76,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, s *Service) {
-				if baCount := len(s.cfg.AttPool.BlockAttestations()); baCount != 2 {
+				if baCount := len(s.cfg.AttPool.BlockAttestations()); baCount != 0 {
 					t.Errorf("Did not get the correct number of block attestations saved to the pool. "+
-						"Got %d but wanted %d", baCount, 2)
+						"Got %d but wanted %d", baCount, 0)
 				}
 			},
 		},

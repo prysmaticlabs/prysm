@@ -1514,7 +1514,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1523,7 +1523,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(35000000),
+							GasLimit: 35000000,
 						},
 					},
 				}
@@ -1541,11 +1541,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(),
-					GasLimit:     uint64(40000000),
+					GasLimit:     40000000,
 				},
 				{
 					FeeRecipient: byteValueAddress,
-					GasLimit:     uint64(35000000),
+					GasLimit:     35000000,
 				},
 			},
 		},
@@ -1594,7 +1594,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1603,7 +1603,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: uint64(35000000),
+							GasLimit: 35000000,
 						},
 					},
 				}
@@ -1715,7 +1715,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -1771,7 +1771,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(40000000),
+							GasLimit: 40000000,
 						},
 					},
 				}
@@ -1963,7 +1963,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.Address{},
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1972,7 +1972,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(40000000),
+							GasLimit: 40000000,
 						},
 					},
 				}

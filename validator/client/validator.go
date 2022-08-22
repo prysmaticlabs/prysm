@@ -1066,7 +1066,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
 			config := v.ProposerSettings.DefaultConfig.BuilderConfig
 			if config != nil && config.Enabled {
-				gasLimit = config.GasLimit // Use cli config for gas limit.
+				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
@@ -1077,7 +1077,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 				builderConfig := config.BuilderConfig
 				if builderConfig != nil {
 					if builderConfig.Enabled {
-						gasLimit = builderConfig.GasLimit // Use file config for gas limit.
+						gasLimit = uint64(builderConfig.GasLimit) // Use file config for gas limit.
 						enabled = true
 					} else {
 						enabled = false // Custom config can disable validator from register.

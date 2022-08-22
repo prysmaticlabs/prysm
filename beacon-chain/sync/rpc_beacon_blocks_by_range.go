@@ -190,7 +190,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			continue
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Error("Could not send a chunked response")
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
