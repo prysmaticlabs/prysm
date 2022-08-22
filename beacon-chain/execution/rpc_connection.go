@@ -65,7 +65,6 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			currClient := s.rpcClient
 			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 				errorLogger(err, "Could not connect to execution client endpoint")
-				s.retryExecutionClientConnection(ctx, err)
 				continue
 			}
 			// Close previous client, if connection was successful.
