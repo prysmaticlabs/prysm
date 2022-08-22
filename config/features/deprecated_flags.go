@@ -67,6 +67,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableLargerGossipHistory = &cli.BoolFlag{
+		Name:   "enable-larger-gossip-history",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -82,6 +87,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDutyCountdown,
 	deprecatedHeadSync,
 	deprecatedGossipBatchAggregation,
+	deprecatedEnableLargerGossipHistory,
 }
 
 var deprecatedBeaconFlags = []cli.Flag{
