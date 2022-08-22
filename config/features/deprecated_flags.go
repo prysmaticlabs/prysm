@@ -42,11 +42,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableGossipBatchAggregation = &cli.BoolFlag{
-		Name:   "enable-gossip-batch-aggregation",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableForkchoiceDoublyLinkedTree = &cli.BoolFlag{
 		Name:   "enable-forkchoice-doubly-linked-tree",
 		Usage:  deprecatedUsage,
@@ -87,7 +82,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableAttHistoryCacheFlag,
 	deprecatedEnableVectorizedHtr,
 	deprecatedEnablePeerScorer,
-	deprecatedEnableGossipBatchAggregation,
 	deprecatedEnableForkchoiceDoublyLinkedTree,
 	deprecatedDutyCountdown,
 	deprecatedHeadSync,
