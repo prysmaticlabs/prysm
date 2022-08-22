@@ -25,7 +25,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			block, ok = blockMessage.(*eth.BeaconBlock)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
+				return nil, errIncorrectBlockVersion
 			}
 		}
 		return &eth.SignedBeaconBlock{
@@ -38,7 +38,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			block, ok = blockMessage.(*eth.BeaconBlockAltair)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
+				return nil, errIncorrectBlockVersion
 			}
 		}
 		return &eth.SignedBeaconBlockAltair{
@@ -52,7 +52,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 				var ok bool
 				block, ok = blockMessage.(*eth.BlindedBeaconBlockBellatrix)
 				if !ok {
-					return nil, errors.Wrap(err, incorrectBlockVersion)
+					return nil, errIncorrectBlockVersion
 				}
 			}
 			return &eth.SignedBlindedBeaconBlockBellatrix{
@@ -65,7 +65,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			block, ok = blockMessage.(*eth.BeaconBlockBellatrix)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
+				return nil, errIncorrectBlockVersion
 			}
 		}
 		return &eth.SignedBeaconBlockBellatrix{
@@ -95,7 +95,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			body, ok = bodyMessage.(*eth.BeaconBlockBody)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
+				return nil, errIncorrectBodyVersion
 			}
 		}
 		return &eth.BeaconBlock{
@@ -111,7 +111,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			body, ok = bodyMessage.(*eth.BeaconBlockBodyAltair)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
+				return nil, errIncorrectBodyVersion
 			}
 		}
 		return &eth.BeaconBlockAltair{
@@ -128,7 +128,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 				var ok bool
 				body, ok = bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
 				if !ok {
-					return nil, errors.Wrap(err, incorrectBodyVersion)
+					return nil, errIncorrectBodyVersion
 				}
 			}
 			return &eth.BlindedBeaconBlockBellatrix{
@@ -144,7 +144,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			var ok bool
 			body, ok = bodyMessage.(*eth.BeaconBlockBodyBellatrix)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
+				return nil, errIncorrectBodyVersion
 			}
 		}
 		return &eth.BeaconBlockBellatrix{
