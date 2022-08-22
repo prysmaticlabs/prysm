@@ -6,12 +6,6 @@ datadir: /var/lib/prysm/beacon
 # http-web3provider: ETH1 API endpoint, eg. http://localhost:8545 for a local geth service on the default port
 http-web3provider: http://localhost:8545
 
-# fallback-web3provider: List of backup ETH1 API endpoints, used if above is not working
-# For example:
-# fallback-web3provider:
-#   - https://mainnet.infura.io/v3/YOUR-PROJECT-ID
-#   - https://eth-mainnet.alchemyapi.io/v2/YOUR-PROJECT-ID
-
 
 # Optional tuning parameters
 # For full list, see https://docs.prylabs.network/docs/prysm-usage/parameters
