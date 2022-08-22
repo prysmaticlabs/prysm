@@ -24,7 +24,7 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
-	return statenative.InitializeFromProtoPhase0(proto.Clone(st).(*ethpb.BeaconState))
+	return statenative.InitializeFromProtoUnsafePhase0(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
