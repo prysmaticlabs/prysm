@@ -606,7 +606,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	if features.Get().DisableForkchoiceDoublyLinkedTree {
 		opts = append(opts, blockchain.WithForkChoiceStore(protoarray.New()))
 	} else {
-		opts = append(opts, blockchain.WithForkChoiceStore(protoarray.New()))
+		opts = append(opts, blockchain.WithForkChoiceStore(doublylinkedtree.New()))
 	}
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
