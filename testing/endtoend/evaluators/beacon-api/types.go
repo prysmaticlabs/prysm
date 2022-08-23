@@ -1,4 +1,4 @@
-package evaluators
+package beaconapi_evaluators
 
 type validatorJson struct {
 	PublicKey                  string `json:"pubkey"`

@@ -1,4 +1,4 @@
-package evaluators
+package beaconapi_evaluators
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
