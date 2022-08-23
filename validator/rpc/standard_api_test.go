@@ -1063,14 +1063,17 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
 					},
 				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 5555},
+				},
 			},
 			httpCode: "204",
 			w: []want{
-				want{
+				{
 					pubkey:   pubkey1,
-					gaslimit: 0,
+					gaslimit: 5555,
 				},
-				want{
+				{
 					pubkey:   pubkey2,
 					gaslimit: 123456789,
 				},
@@ -1089,7 +1092,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			httpCode: "404",
 			w: []want{
 				// pubkey1's gaslimit is unaffected
-				want{
+				{
 					pubkey:   pubkey1,
 					gaslimit: 987654321,
 				},

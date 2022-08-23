@@ -487,11 +487,13 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil &&
+		// make sure default gaslimit value is available in DefaultConfig
+		s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			if proposerOption.BuilderConfig != nil {
-				proposerOption.BuilderConfig.GasLimit = 0
+				proposerOption.BuilderConfig.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
 			}
 			// Successfully removed gas limit (reset to 0) or no gas limit was previously set (BuildConfig == nil || BuildConfig.GasLimit == 0).
 			httpCode = "204"
