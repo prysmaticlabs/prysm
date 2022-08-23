@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beacon-api_v1"
+	beaconapiev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beacon-api"
 	e2eParams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -53,7 +53,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
-		evaluators.APIMiddlewareVerifyIntegrity,
+		beaconapiev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
