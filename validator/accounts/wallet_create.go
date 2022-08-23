@@ -288,6 +288,8 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 	return keymanager.Kind(selection), nil
 }
 
+// TODO(mikeneuder): Remove duplicate function when migration wallet create
+// to cmd/validator/wallet.
 func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
 	if cliCtx.IsSet(flags.NumAccountsFlag.Name) {
 		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
