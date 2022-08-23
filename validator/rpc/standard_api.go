@@ -476,6 +476,33 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	return &empty.Empty{}, nil
 }
 
+func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGasLimitRequest) (*empty.Empty, error) {
+	// Return When the key is not found on the server.
+	httpCode := "404"
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			if proposerOption.BuilderConfig != nil {
+				proposerOption.BuilderConfig.GasLimit = 0
+			}
+			// Successfully removed gas limit (reset to 0) or no gas limit was previously set (BuildConfig == nil || BuildConfig.GasLimit == 0).
+			httpCode = "204"
+		}
+	}
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", httpCode)); err != nil {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code %v header: %v", httpCode, err)
+	}
+	return &empty.Empty{}, nil
+}
+
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {

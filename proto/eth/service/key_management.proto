@@ -199,6 +199,24 @@ service KeyManagement {
     };
   }
 
+  // DeleteGasLimit deletes the gas limit for the specific public key.
+  //
+  // Spec page: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/DeleteGasLimit
+  //
+  // HTTP response status codes:
+  //  - 204: Successfully removed the gas limit or there was no gas limit set for the requested pubkey.
+  //  - 400: Bad request, malformed request
+  //  - 401: Unauthorized, no token is found.
+  //  - 403: A gas limit was found but cannot be removed. This may be because the gas limit was in configuration files that cannot be updated.
+  //  - 404: The key was not found on the server, nothing to delete.
+  //  - 500: Validator internal error
+  rpc DeleteGasLimit(DeleteGasLimitRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/internal/eth/v1/validator/{pubkey}/gas_limit",
+      body: "*"
+    };
+  }
+
 }
 
 message ListKeystoresResponse {
@@ -329,4 +347,8 @@ message GetGasLimitResponse {
 message SetGasLimitRequest {
   bytes pubkey = 1;
   uint64 gas_limit = 2;
+}
+
+message DeleteGasLimitRequest {
+  bytes pubkey = 1;
 }

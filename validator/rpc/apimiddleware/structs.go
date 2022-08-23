@@ -92,3 +92,7 @@ type getGasLimitResponseJson struct {
 type setGasLimitRequestJson struct {
 	GasLimit string `json:"gas_limit"`
 }
+
+type deleteGasLimitRequestJson struct {
+	Pubkey string `json:"pubkey" hex:"true"`
+}
