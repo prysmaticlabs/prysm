@@ -1857,8 +1857,11 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
-
-				if !reflect.DeepEqual(blk.Data, v1Block.Block.Body.Attestations) {
+				blkAtts := blk.Data
+				if len(blkAtts) == 0 {
+					blkAtts = nil
+				}
+				if !reflect.DeepEqual(blkAtts, v1Block.Block.Body.Attestations) {
 					t.Error("Expected attestations to equal")
 				}
 			})
@@ -1961,7 +1964,11 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 				v1Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				if !reflect.DeepEqual(blk.Data, v1Block.Body.Attestations) {
+				blkAtts := blk.Data
+				if len(blkAtts) == 0 {
+					blkAtts = nil
+				}
+				if !reflect.DeepEqual(blkAtts, v1Block.Body.Attestations) {
 					t.Error("Expected attestations to equal")
 				}
 			})
@@ -2064,7 +2071,11 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 				v1Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				if !reflect.DeepEqual(blk.Data, v1Block.Body.Attestations) {
+				blkAtts := blk.Data
+				if len(blkAtts) == 0 {
+					blkAtts = nil
+				}
+				if !reflect.DeepEqual(blkAtts, v1Block.Body.Attestations) {
 					t.Error("Expected attestations to equal")
 				}
 			})
