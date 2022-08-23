@@ -2357,6 +2357,84 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 	}
 }
 
+func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	proposerServer := &Server{BeaconDB: db}
+
+	// New validator
+	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req := &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+		},
+	}
+	_, err := proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validator
+	hook.Reset()
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validator with different fee recipient
+	hook.Reset()
+	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req = &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+		},
+	}
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// More than one validator
+	hook.Reset()
+	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req = &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+			{FeeRecipient: f, ValidatorIndex: 2},
+		},
+	}
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validators
+	hook.Reset()
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+}
+
+func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
+	db := dbutil.SetupDB(b)
+	ctx := context.Background()
+	proposerServer := &Server{BeaconDB: db}
+
+	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	recipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
+	for i := 0; i < 10000; i++ {
+		recipients = append(recipients, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: types.ValidatorIndex(i)})
+	}
+
+	req := &ethpb.PrepareBeaconProposerRequest{
+		Recipients: recipients,
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := proposerServer.PrepareBeaconProposer(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestProposer_SubmitValidatorRegistrations(t *testing.T) {
 	ctx := context.Background()
 	proposerServer := &Server{}
