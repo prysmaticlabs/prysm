@@ -116,10 +116,13 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	if !n.optimistic || n.parent == nil {
+	if !n.optimistic {
 		return nil
 	}
-
 	n.optimistic = false
+
+	if n.parent == nil {
+		return nil
+	}
 	return n.parent.setNodeAndParentValidated(ctx)
 }
