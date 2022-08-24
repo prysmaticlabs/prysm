@@ -781,8 +781,8 @@ type validatorRegistrationJson struct {
 }
 
 type signedValidatorRegistrationJson struct {
-	Message   validatorRegistrationJson `json:"message"`
-	Signature string                    `json:"signature" hex:"true"`
+	Message   *validatorRegistrationJson `json:"message"`
+	Signature string                     `json:"signature" hex:"true"`
 }
 
 type signedValidatorRegistrationsRequestJson struct {
