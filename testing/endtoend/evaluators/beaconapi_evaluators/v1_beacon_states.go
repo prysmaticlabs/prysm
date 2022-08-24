@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
 
@@ -128,6 +131,17 @@ func assertValidator(jsonVal *validatorContainerJson, val *ethpbv1.ValidatorCont
 }
 
 func withCompareSyncCommittee(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
+	if err != nil {
+		return err
+	}
+	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
+		return nil
+	}
+
 	type syncCommitteeValidatorsJson struct {
 		Validators          []string   `json:"validators"`
 		ValidatorAggregates [][]string `json:"validator_aggregates"`
@@ -135,8 +149,6 @@ func withCompareSyncCommittee(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type syncCommitteesResponseJson struct {
 		Data *syncCommitteeValidatorsJson `json:"data"`
 	}
-	ctx := context.Background()
-	beaconClient := service.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListSyncCommittees(ctx, &ethpbv2.StateSyncCommitteesRequest{
 		StateId: []byte("head"),
 	})
