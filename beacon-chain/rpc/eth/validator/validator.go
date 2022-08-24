@@ -404,14 +404,36 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 // ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
 // which can then be signed by a proposer and submitted.
 //
-// Pre-Bellatrix, this endpoint will return a regular block.
+// Under the following conditions, this endpoint will return an error.
+// - The current time is before bellatrix fork epoch.
+// - The requested slot is before bellatrix fork epoch.
+// - The node is syncing or optimistic mode.
+// - The builder is not figured.
+// - The relayer circuit breaker is activated.
+// - The relayer responded with an error.
 func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlindedBlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
 	defer span.End()
 
+	if req.Slot < types.Slot(params.BeaconConfig().BellatrixForkEpoch)*params.BeaconConfig().SlotsPerEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Requested slot is before bellatrix fork epoch")
+	}
+
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil, status.Error(codes.Unavailable, "Blinded blocks are not supported pre-Bellatrix")
+	}
+
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
+	}
+
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
 
 	v1alpha1req := &ethpbalpha.BlockRequest{
@@ -419,51 +441,28 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
 	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+
+	altairBlk, err := vs.V1Alpha1Server.BuildAltairBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 	}
-	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
-	if ok {
-		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlindedBlockResponse{
-			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BlindedBeaconBlockContainer{
-				Block: &ethpbv2.BlindedBeaconBlockContainer_Phase0Block{Phase0Block: block},
-			},
-		}, nil
+	ok, b, err := vs.V1Alpha1Server.GetAndBuildBlindBlock(ctx, altairBlk)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare blind beacon block: %v", err)
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
-	if ok {
-		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlindedBlockResponse{
-			Version: ethpbv2.Version_ALTAIR,
-			Data: &ethpbv2.BlindedBeaconBlockContainer{
-				Block: &ethpbv2.BlindedBeaconBlockContainer_AltairBlock{AltairBlock: block},
-			},
-		}, nil
+	if !ok {
+		return nil, status.Error(codes.Unavailable, "Builder is not available due to miss-config or circuit breaker")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
-	if ok {
-		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlindedBlockResponse{
-			Version: ethpbv2.Version_BELLATRIX,
-			Data: &ethpbv2.BlindedBeaconBlockContainer{
-				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: block},
-			},
-		}, nil
+	blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.GetBlindedBellatrix())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 	}
-	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+	return &ethpbv2.ProduceBlindedBlockResponse{
+		Version: ethpbv2.Version_BELLATRIX,
+		Data: &ethpbv2.BlindedBeaconBlockContainer{
+			Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk},
+		},
+	}, nil
 }
 
 // ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
