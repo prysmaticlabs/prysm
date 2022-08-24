@@ -6,10 +6,13 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +31,15 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		Data          []*attesterDutyJson `json:"data"`
 	}
 	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
+	if err != nil {
+		return err
+	}
+	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
+		return nil
+	}
 	validatorClient := service.NewBeaconValidatorClient(conn)
 	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
 		Epoch: helpers.AltairE2EForkEpoch,
