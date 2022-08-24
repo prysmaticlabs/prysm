@@ -50,7 +50,10 @@ go_test(
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
 <<<<<<< HEAD
+<<<<<<< HEAD
         "//validator/keymanager/local:go_default_library",
+=======
+>>>>>>> e99de7726 (Wallet recover CLI Manager migration (#11278))
 =======
 >>>>>>> e99de7726 (Wallet recover CLI Manager migration (#11278))
         "//validator/keymanager/remote:go_default_library",
