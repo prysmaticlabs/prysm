@@ -128,6 +128,7 @@ go_test(
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_protobuf//types/known/timestamppb:go_default_library",
     ],
