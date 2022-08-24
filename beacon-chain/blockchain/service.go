@@ -232,7 +232,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
-	if !features.Get().EnableEverytingOptimistic {
+	if !features.Get().EnableStartOptimistic {
 		lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get last validated checkpoint")

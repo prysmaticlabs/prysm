@@ -66,7 +66,7 @@ type Flags struct {
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
-	EnableEverytingOptimistic         bool // EnableEverythingOptimistic treats every block as optimistic at startup.
+	EnableStartOptimistic         bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -244,7 +244,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	}
 	if ctx.Bool(enableEverythingOptimistic.Name) {
 		logEnabled(enableEverythingOptimistic)
-		cfg.EnableEverytingOptimistic = true
+		cfg.EnableStartOptimistic = true
 	}
 	Init(cfg)
 	return nil

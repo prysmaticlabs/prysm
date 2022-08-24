@@ -114,7 +114,7 @@ var (
 		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
 	}
 	enableEverythingOptimistic = &cli.BoolFlag{
-		Name:   "everything-optimistic",
+		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
 		Value:  false,
 		Hidden: true,

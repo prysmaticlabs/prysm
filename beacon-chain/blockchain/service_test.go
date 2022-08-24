@@ -532,7 +532,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 
 func TestChainService_EverythingOptimistic(t *testing.T) {
 	resetFn := features.InitWithReset(&features.Flags{
-		EnableEverytingOptimistic: true,
+		EnableStartOptimistic: true,
 	})
 	defer resetFn()
 	beaconDB := testDB.SetupDB(t)
