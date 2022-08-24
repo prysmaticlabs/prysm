@@ -184,11 +184,13 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return err
 	}
+
 	s.originBlockRoot = originRoot
 
 	if err := s.initializeHeadFromDB(s.ctx); err != nil {
 		return errors.Wrap(err, "could not set up chain info")
 	}
+
 	spawnCountdownIfPreGenesis(s.ctx, s.genesisTime, s.cfg.BeaconDB)
 
 	justified, err := s.cfg.BeaconDB.JustifiedCheckpoint(s.ctx)
@@ -223,7 +225,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
 	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
-
 	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint state")
@@ -231,16 +232,18 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
-
-	lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get last validated checkpoint")
-	}
-	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
-		if err := forkChoicer.SetOptimisticToValid(s.ctx, fRoot); err != nil {
-			return errors.Wrap(err, "could not set finalized block as validated")
+	if !features.Get().EnableEverytingOptimistic {
+		lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get last validated checkpoint")
+		}
+		if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
+			if err := forkChoicer.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+				return errors.Wrap(err, "could not set finalized block as validated")
+			}
 		}
 	}
+
 	// not attempting to save initial sync blocks here, because there shouldn't be any until
 	// after the statefeed.Initialized event is fired (below)
 	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
