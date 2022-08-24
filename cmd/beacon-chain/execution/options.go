@@ -61,6 +61,7 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	if len(secret) < 32 {
 		return nil, errors.New("provided JWT secret should be a hex string of at least 32 bytes")
 	}
+	log.Infof("Finished reading JWT secret from %s", jwtSecretFile)
 	return secret, nil
 }
 

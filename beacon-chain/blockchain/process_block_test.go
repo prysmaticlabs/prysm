@@ -3009,7 +3009,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	// The node is optimistic now.
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, optimistic)
+	require.Equal(t, false, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3233,7 +3233,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	// The node is optimistic now
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, optimistic)
+	require.Equal(t, false, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the

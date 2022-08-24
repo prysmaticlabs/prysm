@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
@@ -546,7 +547,24 @@ func (vs *Server) PrepareBeaconProposer(
 	defer span.End()
 	var feeRecipients []common.Address
 	var validatorIndices []types.ValidatorIndex
-	for _, recipientContainer := range request.Recipients {
+	newRecipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
+	for _, r := range request.Recipients {
+		f, err := vs.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
+		switch {
+		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+			newRecipients = append(newRecipients, r)
+		case err != nil:
+			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
+		default:
+		}
+		if common.BytesToAddress(r.FeeRecipient) != f {
+			newRecipients = append(newRecipients, r)
+		}
+	}
+	if len(newRecipients) == 0 {
+		return &emptypb.Empty{}, nil
+	}
+	for _, recipientContainer := range newRecipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
