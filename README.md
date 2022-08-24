@@ -2,8 +2,8 @@
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/prysmaticlabs/prysm)](https://goreportcard.com/report/github.com/prysmaticlabs/prysm)
-[![Consensus_Spec_Version 1.2.0-rc.1](https://img.shields.io/badge/Consensus%20Spec%20Version-v1.2.0.rc.1-blue.svg)](https://github.com/ethereum/consensus-specs/tree/v1.2.0-rc.1)
-[![Execution_API_Version 1.0.0-alpha.9](https://img.shields.io/badge/Execution%20API%20Version-v1.0.0.alpha.9-blue.svg)](https://github.com/ethereum/execution-apis/tree/v1.0.0-alpha.9/src/engine)
+[![Consensus_Spec_Version 1.2.0-rc.3](https://img.shields.io/badge/Consensus%20Spec%20Version-v1.2.0.rc.3-blue.svg)](https://github.com/ethereum/consensus-specs/tree/v1.2.0-rc.3)
+[![Execution_API_Version 1.0.0-beta.1](https://img.shields.io/badge/Execution%20API%20Version-v1.0.0.beta.1-blue.svg)](https://github.com/ethereum/execution-apis/tree/v1.0.0-beta.1/src/engine)
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/CTYGPUJ)
 [![GitPOAP Badge](https://public-api.gitpoap.io/v1/repo/prysmaticlabs/prysm/badge)](https://www.gitpoap.io/gh/prysmaticlabs/prysm)
 
