@@ -258,7 +258,6 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 	if err != nil {
 		return err
 	}
-
 	if header.Timestamp() != uint64(t.Unix()) {
 		return ErrInvalidPayloadTimeStamp
 	}
