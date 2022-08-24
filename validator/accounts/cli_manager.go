@@ -29,6 +29,7 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
+	keymanagerKind       keymanager.Kind
 	keymanagerOpts       *remote.KeymanagerOpts
 	showDepositData      bool
 	showPrivateKeys      bool
@@ -36,6 +37,7 @@ type AccountsCLIManager struct {
 	deletePublicKeys     bool
 	importPrivateKeys    bool
 	readPasswordFile     bool
+	skipMnemonicConfirm  bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string

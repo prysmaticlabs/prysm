@@ -14,7 +14,6 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -67,13 +66,14 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		// Flag required for ExitAccounts to work.
 		voluntaryExitPublicKeys: keystore.Pubkey,
 	})
-	_, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	_, err = acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 
@@ -167,13 +167,14 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		// Exit all public keys.
 		exitAll: true,
 	})
-	_, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	_, err = acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 

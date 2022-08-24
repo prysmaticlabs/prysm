@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
@@ -53,13 +52,14 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
@@ -170,13 +170,14 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	_, err = accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	_, err = acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	// We attempt to import accounts we wrote to the keys directory
