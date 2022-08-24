@@ -35,7 +35,7 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/codes"
 )
 
 func TestServer_ListKeystores(t *testing.T) {
@@ -1015,23 +1015,6 @@ func TestServer_SetGasLimit(t *testing.T) {
 	}
 }
 
-// Set up a test ServerTransportStream so we can test grpc http response code.
-type testServerTransportStream struct {
-	httpCode string
-}
-
-func (*testServerTransportStream) Method() string { return "" }
-func (s *testServerTransportStream) SetHeader(md metadata.MD) error {
-	if v, found := md["x-http-code"]; found {
-		if len(v) != 0 {
-			s.httpCode = v[0]
-		}
-	}
-	return nil
-}
-func (*testServerTransportStream) SendHeader(metadata.MD) error { return nil }
-func (*testServerTransportStream) SetTrailer(metadata.MD) error { return nil }
-
 func TestServer_DeleteGasLimit(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
@@ -1050,8 +1033,8 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		name             string
 		pubkey           []byte
 		proposerSettings *validatorserviceconfig.ProposerSettings
+		wantError        error
 		w                []want
-		httpCode         string
 	}{
 		{
 			name:   "delete existing gas limit with default config",
@@ -1069,7 +1052,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorServiceConfig.Uint64(5555)},
 				},
 			},
-			httpCode: "204",
+			wantError: nil,
 			w: []want{
 				{
 					pubkey: pubkey1,
@@ -1095,7 +1078,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 					},
 				},
 			},
-			httpCode: "204",
+			wantError: nil,
 			w: []want{
 				{
 					pubkey: pubkey1,
@@ -1118,7 +1101,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 					},
 				},
 			},
-			httpCode: "404",
+			wantError: fmt.Errorf("%s", codes.NotFound.String()),
 			w: []want{
 				// pubkey1's gaslimit is unaffected
 				{
@@ -1128,16 +1111,14 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			},
 		},
 		{
-			name:     "delete nonexist gas limit 2",
-			pubkey:   pubkey2,
-			httpCode: "404",
-			w:        []want{},
+			name:      "delete nonexist gas limit 2",
+			pubkey:    pubkey2,
+			wantError: fmt.Errorf("%s", codes.NotFound.String()),
+			w:         []want{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			txStream := &testServerTransportStream{}
-			ctx := grpc.NewContextWithServerTransportStream(ctx, txStream)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator:        &mock.MockValidator{},
 				ProposerSettings: tt.proposerSettings,
@@ -1149,8 +1130,11 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			// Set up global default value for builder gas limit.
 			params.OverrideBeaconConfig(&params.BeaconChainConfig{DefaultBuilderGasLimit: uint64(globalDefaultGasLimit)})
 			_, err = s.DeleteGasLimit(ctx, &ethpbservice.DeleteGasLimitRequest{Pubkey: tt.pubkey})
-			require.NoError(t, err)
-			assert.Equal(t, tt.httpCode, txStream.httpCode)
+			if tt.wantError != nil {
+				assert.ErrorContains(t, fmt.Sprintf("code = %s", tt.wantError.Error()), err)
+			} else {
+				require.NoError(t, err)
+			}
 			for _, w := range tt.w {
 				assert.Equal(t, w.gaslimit, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit)
 			}

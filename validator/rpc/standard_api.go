@@ -477,8 +477,6 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 }
 
 func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGasLimitRequest) (*empty.Empty, error) {
-	// Responde code when the key is not found on the server.
-	httpCode := "404"
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
@@ -487,26 +485,28 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+	proposerSettings := s.validatorService.ProposerSettings
+	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
+		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found && proposerOption.BuilderConfig != nil {
 			// If proposerSettings has default value, use it.
-			if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
-				proposerOption.BuilderConfig.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			if proposerSettings.DefaultConfig != nil && proposerSettings.DefaultConfig.BuilderConfig != nil {
+				proposerOption.BuilderConfig.GasLimit = proposerSettings.DefaultConfig.BuilderConfig.GasLimit
 			} else {
 				// Fallback to using global default.
 				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 			}
-			// Successfully removed gas limit (reset to global default) or no gas limit was previously set (BuildConfig == nil).
-			httpCode = "204"
+			// Successfully deleted gas limit (reset to proposer config default or global default).
+			// Return with success http code "204".
+			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
+				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code 204 header: %v", err)
+			}
+			return &empty.Empty{}, nil
 		}
-		// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
-		// in this case, we response with "404".
 	}
-	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", httpCode)); err != nil {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code %v header: %v", httpCode, err)
-	}
-	return &empty.Empty{}, nil
+	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
+	// we response "not found".
+	return nil, status.Error(codes.NotFound, fmt.Sprintf("no gaslimt found for pubkey: %q", hexutil.Encode(validatorKey)))
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
