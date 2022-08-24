@@ -44,7 +44,6 @@ func FlagOptions(c *cli.Context) ([]execution.Option, error) {
 func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	jwtSecretFile := c.String(flags.ExecutionJWTSecretFlag.Name)
 	if jwtSecretFile == "" {
-		log.Warn("No path found for jwt secret file")
 		return nil, nil
 	}
 	enc, err := file.ReadFileAsBytes(jwtSecretFile)
