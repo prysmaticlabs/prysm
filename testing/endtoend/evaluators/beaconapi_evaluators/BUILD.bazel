@@ -2,6 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = [
         "api_middleware.go",
         "types.go",
@@ -9,7 +10,7 @@ go_library(
         "v1_beacon_states.go",
         "v1_validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beacon-api",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",
