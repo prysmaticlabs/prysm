@@ -21,26 +21,55 @@ import (
 func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
-	resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
-		BlockId: []byte("head"),
-	})
+	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
 	if err != nil {
 		return err
 	}
-	respJSON := &blockResponseJson{}
-	if err := doMiddlewareJSONGetRequest(
-		v2MiddlewarePathTemplate,
-		"/beacon/blocks/head",
-		beaconNodeIdx,
-		respJSON,
-	); err != nil {
-		return err
+	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
+		resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
+			BlockId: []byte("head"),
+		})
+		if err != nil {
+			return err
+		}
+		respJSON := &blockResponseJson{}
+		if err := doMiddlewareJSONGetRequest(
+			v1MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			respJSON,
+		); err != nil {
+			return err
+		}
+		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
+			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+				respJSON.Data.Signature,
+				hexutil.Encode(resp.Data.Signature))
+		}
+	} else {
+		resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
+			BlockId: []byte("head"),
+		})
+		if err != nil {
+			return err
+		}
+		respJSON := &blockResponseJson{}
+		if err := doMiddlewareJSONGetRequest(
+			v2MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			respJSON,
+		); err != nil {
+			return err
+		}
+		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
+			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+				respJSON.Data.Signature,
+				hexutil.Encode(resp.Data.Signature))
+		}
 	}
-	if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
-		return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
-			respJSON.Data.Signature,
-			hexutil.Encode(resp.Data.Signature))
-	}
+
 	return nil
 }
 
