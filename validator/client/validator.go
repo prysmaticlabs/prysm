@@ -956,21 +956,12 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
+func (v *validator) HasProposerSettings() bool {
+	return v.ProposerSettings != nil
+}
+
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
 func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
-	// only used after Bellatrix
-	if v.ProposerSettings == nil {
-		e := params.BeaconConfig().BellatrixForkEpoch
-		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
-			log.Warn("You will need to specify the Ethereum addresses which will receive transaction fee rewards from proposing blocks. " +
-				"This is known as a fee recipient configuration. You can read more about this feature in our documentation portal here (https://docs.prylabs.network/docs/execution-node/fee-recipient)")
-		} else {
-			log.Warn("In order to receive transaction fees from proposing blocks post merge, " +
-				"you must specify a configuration known as a fee recipient config. " +
-				"If it is not provided, transaction fees will be burnt. Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
-		}
-		return nil
-	}
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -999,7 +990,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		log.WithFields(logrus.Fields{
 			"pubkeysCount": len(pubkeys),
 			"reqCount":     len(proposerReqs),
-		}).Warnln("Prepare proposer request did not success with all pubkeys")
+		}).Debugln("Prepare proposer request did not success with all pubkeys")
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: proposerReqs,
@@ -1121,7 +1112,7 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
 	switch {
 	case status.Code(err) == codes.NotFound:
-		log.Warnf("Could not find validator index for public key %#x. "+
+		log.Debugf("Could not find validator index for public key %#x. "+
 			"Perhaps the validator is not yet active.", pubkey)
 		return 0, false, nil
 	case err != nil:

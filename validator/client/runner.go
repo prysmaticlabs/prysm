@@ -55,13 +55,20 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if err := v.PushProposerSettings(ctx, km); err != nil {
-		if errors.Is(err, ErrBuilderValidatorRegistration) {
-			log.WithError(err).Warn("Push proposer settings error")
-		} else {
-			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+	if v.HasProposerSettings() {
+		log.Infoln("Proposer Settings have been provided will periodically update and override settings such as fee recipient in the related services")
+		if err := v.PushProposerSettings(ctx, km); err != nil {
+			if errors.Is(err, ErrBuilderValidatorRegistration) {
+				log.WithError(err).Warn("Push proposer settings error")
+			} else {
+				log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+			}
 		}
+	} else {
+		log.Info("Proposer Settings such as fee recipient are not defined in the validator client" +
+			" and will continue to use settings provided in the beacon node.")
 	}
+
 	for {
 		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -118,7 +125,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) {
+			if slots.IsEpochStart(slot) && v.HasProposerSettings() {
 				go func() {
 					//deadline set for next epoch rounded up
 					if err := v.PushProposerSettings(ctx, km); err != nil {
