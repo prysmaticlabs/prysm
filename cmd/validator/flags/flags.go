@@ -3,6 +3,7 @@
 package flags
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -340,16 +341,17 @@ var (
 
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableBuilderFlag = &cli.BoolFlag{
-		Name:  "enable-builder",
-		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
-		Value: false,
+		Name:    "enable-builder",
+		Usage:   "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Value:   false,
+		Aliases: []string{"enable-validator-registration"},
 	}
 
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
-	BuilderGasLimitFlag = &cli.IntFlag{
+	BuilderGasLimitFlag = &cli.StringFlag{
 		Name:  "suggested-gas-limit",
 		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
-		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
+		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

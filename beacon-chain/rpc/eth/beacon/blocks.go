@@ -722,66 +722,24 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 		return nil, err
 	}
 
-	_, err = blk.PbPhase0Block()
-	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	v1Alpha1Attestations := blk.Block().Body().Attestations()
+	v1Attestations := make([]*ethpbv1.Attestation, 0, len(v1Alpha1Attestations))
+	for _, att := range v1Alpha1Attestations {
+		migratedAtt := migration.V1Alpha1AttestationToV1(att)
+		v1Attestations = append(v1Attestations, migratedAtt)
 	}
-	if err == nil {
-		v1Blk, err := migration.SignedBeaconBlock(blk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		return &ethpbv1.BlockAttestationsResponse{
-			Data:                v1Blk.Block.Body.Attestations,
-			ExecutionOptimistic: false,
-		}, nil
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
-	if err == nil {
-		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		return &ethpbv1.BlockAttestationsResponse{
-			Data:                v2Blk.Body.Attestations,
-			ExecutionOptimistic: false,
-		}, nil
-	}
-
-	bellatrixBlock, err := blk.PbBellatrixBlock()
-	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-	if err == nil {
-		if bellatrixBlock == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		return &ethpbv1.BlockAttestationsResponse{
-			Data:                v2Blk.Body.Attestations,
-			ExecutionOptimistic: isOptimistic,
-		}, nil
-	}
-
-	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	return &ethpbv1.BlockAttestationsResponse{
+		Data:                v1Attestations,
+		ExecutionOptimistic: isOptimistic,
+	}, nil
 }
 
 func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {

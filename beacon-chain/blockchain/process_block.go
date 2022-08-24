@@ -139,6 +139,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
+	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
+		return errors.Wrap(err, "could not handle block's attestations")
+	}
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -513,6 +516,29 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 		return err
 	}
 
+	return nil
+}
+
+// This feeds in the attestations included in the block to fork choice store. It's allows fork choice store
+// to gain information on the most current chain.
+func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.BeaconBlock, st state.BeaconState) error {
+	// Feed in block's attestations to fork choice store.
+	for _, a := range blk.Body().Attestations() {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
+		if err != nil {
+			return err
+		}
+		r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
+		if s.cfg.ForkChoiceStore.HasNode(r) {
+			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.Data.Target.Epoch)
+		} else if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
