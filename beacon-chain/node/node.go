@@ -110,6 +110,7 @@ type BeaconNode struct {
 	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
+	cswrap                  *blockchainCurrentSlotterWrapper
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -204,6 +205,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, errors.Wrap(err, "backfill status initialization error")
 	}
 
+	log.Debugln("Starting Fork Choice")
+	beacon.startForkChoice()
+
 	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(ctx, bfs); err != nil {
 		return nil, err
@@ -228,9 +232,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := beacon.registerDeterminsticGenesisService(); err != nil {
 		return nil, err
 	}
-
-	log.Debugln("Starting Fork Choice")
-	beacon.startForkChoice()
 
 	log.Debugln("Registering Blockchain Service")
 	if err := beacon.registerBlockchainService(); err != nil {
@@ -495,9 +496,23 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
+type blockchainCurrentSlotterWrapper struct {
+	cs stategen.CurrentSlotter
+}
+
+func (w *blockchainCurrentSlotterWrapper) CurrentSlot() types.Slot {
+	return w.cs.CurrentSlot()
+}
+
+var _ stategen.CurrentSlotter = &blockchainCurrentSlotterWrapper{}
+
 func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) error {
 	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
-	sg := stategen.New(b.db, opts...)
+	// we'll update the current slotter's pointer to the blockchain service once it's initialized
+	// this is weird and bad, but its an intermediate step between decoupling these two services
+	b.cswrap = &blockchainCurrentSlotterWrapper{}
+	saver := stategen.NewHotStateSaver(b.db, b.forkChoiceStore, b.cswrap)
+	sg := stategen.New(b.db, saver, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
 	if err != nil {
@@ -620,6 +635,11 @@ func (b *BeaconNode) registerBlockchainService() error {
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
+	// TODO: file an issue to track the task of moving the implementation of CurrentSlot to
+	// a separate service.
+	// fulfill this creepy circular dependency between stategen and the blockchain service
+	b.cswrap.cs = blockchainService
+
 	return b.services.RegisterService(blockchainService)
 }
 

@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"sort"
 	"testing"
 	"time"
@@ -536,7 +537,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 

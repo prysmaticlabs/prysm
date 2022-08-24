@@ -42,48 +42,46 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 }
 
 func TestHotStateSaving_Enabled(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 	}
-	h.enableSaving()
-	require.Equal(t, true, h.enabled)
+	h.enableSnapshots()
+	require.Equal(t, PersistenceModeSnapshot, h.mode())
 }
 
 func TestHotStateSaving_AlreadyEnabled(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
-		enabled: true,
+		m:  PersistenceModeSnapshot,
 	}
-	h.enableSaving()
-	require.Equal(t, true, h.enabled)
+	h.enableSnapshots()
+	require.Equal(t, PersistenceModeSnapshot, h.mode())
 }
 
 func TestHotStateSaving_Disabled(t *testing.T) {
 	ctx := context.Background()
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
-		enabled: true,
+		m:  PersistenceModeSnapshot,
 	}
 	b := util.NewBeaconBlock()
 	util.SaveBlock(t, ctx, h.db, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	h.blockRootsOfSavedStates = [][32]byte{r}
-	require.NoError(t, h.disableSaving(ctx))
-	require.Equal(t, false, h.enabled)
-	require.Equal(t, 0, len(h.blockRootsOfSavedStates))
+	h.savedRoots = [][32]byte{r}
+	require.NoError(t, h.disableSnapshots(ctx))
+	require.Equal(t, PersistenceModeMemory, h.mode())
+	require.Equal(t, 0, len(h.savedRoots))
 }
 
 func TestHotStateSaving_AlreadyDisabled(t *testing.T) {
-	h := &hotStateStatus{
-		db: testDB.SetupDB(t),
-	}
-	require.NoError(t, h.disableSaving(context.Background()))
-	require.Equal(t, false, h.enabled)
+	h := &hotStateSaver{}
+	require.NoError(t, h.disableSnapshots(context.Background()))
+	require.Equal(t, PersistenceModeMemory, h.mode())
 }
 
 func TestHotStateSaving_DisabledByDefault(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 		fc: doublylinkedtree.New(),
 	}
@@ -91,37 +89,41 @@ func TestHotStateSaving_DisabledByDefault(t *testing.T) {
 	finslot, err := slots.EpochStart(fin.Epoch)
 	require.NoError(t, err)
 	h.cs = &mockCurrentSlotter{Slot: finslot}
-	require.Equal(t, false, h.enabled)
-	require.NoError(t, h.refresh(context.Background()))
-	require.Equal(t, false, h.enabled)
+	require.Equal(t, PersistenceModeMemory, h.mode())
+	mode, err := h.refreshMode(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeMemory, mode)
 }
 
 func TestHotStateSaving_Enabling(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 		fc: doublylinkedtree.New(),
 		cs: &mockCurrentSlotter{Slot: types.Slot(uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(hotStateSaveThreshold))},
 	}
-	require.NoError(t, h.refresh(context.Background()))
-	require.Equal(t, true, h.enabled)
+	mode, err := h.refreshMode(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
 }
 
 func TestHotStateSaving_DisableAfterFinality(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 		fc: doublylinkedtree.New(),
 		cs: &mockCurrentSlotter{Slot: types.Slot(uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(hotStateSaveThreshold))},
 	}
-	require.NoError(t, h.refresh(context.Background()))
-	require.Equal(t, true, h.enabled)
+	mode, err := h.refreshMode(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
 
 	// set current slot equal to finalized and ask for an update, should be disabled
 	fin := h.fc.FinalizedCheckpoint()
 	finslot, err := slots.EpochStart(fin.Epoch)
 	require.NoError(t, err)
 	h.cs = &mockCurrentSlotter{Slot: finslot}
-	require.NoError(t, h.refresh(context.Background()))
-	require.Equal(t, false, h.enabled)
+	mode, err = h.refreshMode(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeMemory, mode)
 }
 
 type mockFinalizedCheckpointer struct {
@@ -135,19 +137,23 @@ func (m *mockFinalizedCheckpointer) FinalizedCheckpoint() *forkchoicetypes.Check
 var _ FinalizedCheckpointer = &mockFinalizedCheckpointer{}
 
 func TestUpdateHotStateMode_CurrentSlotBeforeFinalized(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 		fc: &mockFinalizedCheckpointer{c: &forkchoicetypes.Checkpoint{Epoch: 1}},
 		cs: &mockCurrentSlotter{Slot: 0},
 	}
-	require.ErrorIs(t, h.refresh(context.Background()), errCurrentEpochBehindFinalized)
+	mode, err := h.refreshMode(context.Background())
+	require.ErrorIs(t, err, errCurrentEpochBehindFinalized)
+	require.Equal(t, PersistenceModeMemory, mode)
 }
 
 func TestUpdateHotStateMode_NilFinalized(t *testing.T) {
-	h := &hotStateStatus{
+	h := &hotStateSaver{
 		db: testDB.SetupDB(t),
 		fc: &mockFinalizedCheckpointer{c: nil},
 		cs: &mockCurrentSlotter{Slot: 0},
 	}
-	require.ErrorIs(t, h.refresh(context.Background()), errForkchoiceFinalizedNil)
+	mode, err := h.refreshMode(context.Background())
+	require.ErrorIs(t, err, errForkchoiceFinalizedNil)
+	require.Equal(t, PersistenceModeMemory, mode)
 }

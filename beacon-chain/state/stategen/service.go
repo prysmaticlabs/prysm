@@ -17,7 +17,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var defaultHotStateDBInterval types.Slot = 128
+// DefaultSnapshotInterval dictates how frequently the state should be saved when the Saver
+// goes into snapshot mode. Default value is once every 128 slots.
+var DefaultSnapshotInterval types.Slot = 128
 
 // StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -41,10 +43,9 @@ type State struct {
 	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
-	hotStateStatus          *hotStateStatus
+	saver                   Saver
 	backfillStatus          *backfill.Status
-	fc                      FinalizedCheckpointer
-	cs                      CurrentSlotter
+	rb                      ReplayerBuilder
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -65,17 +66,29 @@ func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
 	}
 }
 
+func WithReplayerBuilder(rb ReplayerBuilder) StateGenOption {
+	return func(sg *State) {
+		sg.rb = rb
+	}
+}
+
+// Saver is an interface describing the set of methods that stategen needs
+// in order to delegate the decision to save hot states to the database. The Strategy is
+// responsible for cleaning up the database
+type Saver interface {
+	Save(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
+	Preserve(ctx context.Context, root [32]byte, st state.BeaconState) error
+}
+
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+func New(beaconDB db.NoHeadAccessDatabase, saver Saver, opts ...StateGenOption) *State {
 	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		epochBoundaryStateCache: newBoundaryStateCache(),
-		hotStateStatus: &hotStateStatus{
-			duration: defaultHotStateDBInterval,
-		},
+		saver: saver,
 	}
 	for _, o := range opts {
 		o(s)

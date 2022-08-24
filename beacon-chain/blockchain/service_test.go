@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -117,7 +118,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	stateGen := stategen.New(beaconDB)
+	stateGen := sgmock.NewMockStategen(beaconDB)
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, stateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
@@ -305,7 +306,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
+	stateGen := sgmock.NewMockStategen(beaconDB)
 	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
@@ -358,7 +359,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: headRoot[:], Epoch: slots.ToEpoch(finalizedSlot)}))
-	stateGen := stategen.New(beaconDB)
+	stateGen := sgmock.NewMockStategen(beaconDB)
 	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 
@@ -376,7 +377,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: doublylinkedtree.New()},
+		cfg: &config{BeaconDB: beaconDB, StateGen: sgmock.NewMockStategen(beaconDB), ForkChoiceStore: doublylinkedtree.New()},
 	}
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
@@ -438,7 +439,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:            &config{BeaconDB: beaconDB, StateGen: sgmock.NewMockStategen(beaconDB)},
 		ctx:            ctx,
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),

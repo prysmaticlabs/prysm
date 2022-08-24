@@ -63,6 +63,7 @@ go_test(
         "replayer_test.go",
         "service_test.go",
         "setter_test.go",
+        "shared_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -70,6 +71,7 @@ go_test(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/db/iface:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",

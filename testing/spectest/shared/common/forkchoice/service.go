@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"math/big"
 	"testing"
 
@@ -54,7 +55,7 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
 		blockchain.WithForkChoiceStore(protoarray.New()),
-		blockchain.WithStateGen(stategen.New(db)),
+		blockchain.WithStateGen(sgmock.NewMockStategen(db)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),

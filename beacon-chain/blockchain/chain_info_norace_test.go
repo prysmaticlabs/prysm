@@ -2,10 +2,10 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -32,7 +32,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 func TestHeadRoot_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:  &config{BeaconDB: beaconDB, StateGen: sgmock.NewMockStategen(beaconDB)},
 		head: &head{root: [32]byte{'A'}},
 	}
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
@@ -54,7 +54,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 	require.NoError(t, err)
 	s := &Service{
-		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:  &config{BeaconDB: beaconDB, StateGen: sgmock.NewMockStategen(beaconDB)},
 		head: &head{block: wsb},
 	}
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
@@ -74,7 +74,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 func TestHeadState_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg: &config{BeaconDB: beaconDB, StateGen: sgmock.NewMockStategen(beaconDB)},
 	}
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)

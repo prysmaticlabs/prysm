@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"strconv"
 	"testing"
 	"time"
@@ -675,7 +676,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -779,7 +780,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -928,7 +929,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               sgmock.NewMockStategen(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
@@ -1052,7 +1053,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -1213,7 +1214,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -1417,7 +1418,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               sgmock.NewMockStategen(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
@@ -1635,7 +1636,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1739,7 +1740,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -1888,7 +1889,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               sgmock.NewMockStategen(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
@@ -2012,7 +2013,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -2173,7 +2174,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          sgmock.NewMockStategen(db),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -2377,7 +2378,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               sgmock.NewMockStategen(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}

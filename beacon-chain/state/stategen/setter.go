@@ -2,16 +2,13 @@ package stategen
 
 import (
 	"context"
-	"math"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -25,10 +22,6 @@ var hotStateSaveThreshold = types.Epoch(100)
 func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
-
-	if err := s.hotStateStatus.refresh(ctx); err != nil {
-		return errors.Wrap(err, "stategen is unable to make hot state saving decision")
-	}
 
 	return s.saveStateByRoot(ctx, blockRoot, st)
 }
@@ -63,27 +56,14 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 
-	// Duration can't be 0 to prevent panic for division.
-	duration := uint64(math.Max(float64(s.hotStateStatus.duration), 1))
-
-	s.hotStateStatus.lock.Lock()
-	if s.hotStateStatus.enabled && st.Slot().Mod(duration) == 0 {
-		if err := s.beaconDB.SaveState(ctx, st, blockRoot); err != nil {
-			s.hotStateStatus.lock.Unlock()
-			return err
-		}
-		s.hotStateStatus.blockRootsOfSavedStates = append(s.hotStateStatus.blockRootsOfSavedStates, blockRoot)
-
-		log.WithFields(logrus.Fields{
-			"slot":                   st.Slot(),
-			"totalHotStateSavedInDB": len(s.hotStateStatus.blockRootsOfSavedStates),
-		}).Info("Saving hot state to DB")
-	}
-	s.hotStateStatus.lock.Unlock()
-
-	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
+	// this is the only method that puts states in the cache, so if the state is in the cache
+	// the state has already been processed by this method and there's no need to run again.
 	if s.hotStateCache.has(blockRoot) {
 		return nil
+	}
+
+	if err := s.saver.Save(ctx, blockRoot, st); err != nil {
+		return err
 	}
 
 	// Only on an epoch boundary slot, save epoch boundary state in epoch boundary root state cache.
@@ -91,14 +71,6 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}
-	}
-
-	// On an intermediate slot, save state summary.
-	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
-		Slot: st.Slot(),
-		Root: blockRoot[:],
-	}); err != nil {
-		return err
 	}
 
 	// Store the copied state in the hot state cache.

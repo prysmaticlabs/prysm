@@ -529,6 +529,25 @@ func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bo
 	return m.is, m.err
 }
 
+func newMockCanonicalMap() *mockCanonicalMap {
+	return &mockCanonicalMap{
+		canonical: make(map[[32]byte]struct{}),
+	}
+}
+
+type mockCanonicalMap struct {
+	canonical map[[32]byte]struct{}
+}
+
+func (m *mockCanonicalMap) IsCanonical(_ context.Context, root [32]byte) (bool, error) {
+	_, exists := m.canonical[root]
+	return exists, nil
+}
+
+func (m *mockCanonicalMap) AddCanonical(root [32]byte) {
+	m.canonical[root] = struct{}{}
+}
+
 func TestReverseChain(t *testing.T) {
 	// test 0,1,2,3 elements to handle: zero case; single element; even number; odd number
 	for i := 0; i < 4; i++ {

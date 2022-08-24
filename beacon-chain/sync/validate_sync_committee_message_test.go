@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"reflect"
 	"testing"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -64,7 +64,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -92,7 +92,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -120,7 +120,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
@@ -147,7 +147,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 
@@ -176,7 +176,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -210,7 +210,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -258,7 +258,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -305,7 +305,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -360,7 +360,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = sgmock.NewMockStategen(beaconDB)
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]

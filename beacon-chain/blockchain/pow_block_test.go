@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"math/big"
 	"testing"
 
@@ -112,7 +113,7 @@ func Test_validateMergeBlock(t *testing.T) {
 	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -162,7 +163,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)

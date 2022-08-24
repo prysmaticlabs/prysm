@@ -5,6 +5,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"reflect"
 	"testing"
 	"time"
@@ -19,7 +20,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -51,7 +51,7 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(f, err)
 
-	stateGen := stategen.New(db)
+	stateGen := sgmock.NewMockStategen(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -132,7 +132,7 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(f, err)
 
-	stateGen := stategen.New(db)
+	stateGen := sgmock.NewMockStategen(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -213,7 +213,7 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(f, err)
 
-	stateGen := stategen.New(db)
+	stateGen := sgmock.NewMockStategen(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{

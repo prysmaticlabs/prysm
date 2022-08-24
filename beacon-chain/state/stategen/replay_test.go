@@ -41,7 +41,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
 	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	targetSlot := beaconState.Slot()
 	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	targetSlot := beaconState.Slot()
 	b := util.NewBeaconBlock()
 	b.Block.Slot = beaconState.Slot() - 1
@@ -130,7 +130,8 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	service := New(testDB.SetupDB(t))
+	bdb := testDB.SetupDB(t)
+	service := New(bdb, newTestSaver(bdb))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch
 	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
@@ -160,7 +161,8 @@ func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	service := New(testDB.SetupDB(t))
+	bdb := testDB.SetupDB(t)
+	service := New(bdb, newTestSaver(bdb))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch * 2
 	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)

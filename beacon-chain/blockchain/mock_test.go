@@ -3,12 +3,12 @@ package blockchain
 import (
 	"context"
 	"errors"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 )
 
 func testServiceOptsWithDB(t *testing.T) []Option {
@@ -16,7 +16,7 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 	fcs := protoarray.New()
 	return []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 }

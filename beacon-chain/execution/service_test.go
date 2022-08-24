@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"math/big"
 	"strings"
 	"testing"
@@ -469,7 +470,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	headBlock := util.NewBeaconBlock()
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
+	stateGen := sgmock.NewMockStategen(beaconDB)
 
 	emptyState, err := util.NewBeaconState()
 	require.NoError(t, err)

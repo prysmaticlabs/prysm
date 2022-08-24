@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 	"time"
 
@@ -86,7 +87,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -111,7 +112,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -138,7 +139,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -157,7 +158,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

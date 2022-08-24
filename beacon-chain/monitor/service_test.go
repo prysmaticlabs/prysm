@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"sync"
 	"testing"
 	"time"
@@ -88,7 +89,7 @@ func setupService(t *testing.T) *Service {
 	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:            stategen.New(beaconDB),
+			StateGen:            sgmock.NewMockStategen(beaconDB),
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),

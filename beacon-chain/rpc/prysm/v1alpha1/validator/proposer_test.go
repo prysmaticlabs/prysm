@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"math/big"
 	"testing"
 	"time"
@@ -137,7 +138,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		ChainStartFetcher: &mockExecution.Chain{},
 		Eth1InfoFetcher:   &mockExecution.Chain{},
 		Eth1BlockFetcher:  &mockExecution.Chain{},
-		StateGen:          stategen.New(db),
+		StateGen:          sgmock.NewMockStategen(db),
 	}
 	req := util.NewBeaconBlock()
 	req.Block.ProposerIndex = 21
@@ -1928,7 +1929,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          sgmock.NewMockStategen(db),
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
@@ -2039,7 +2040,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          sgmock.NewMockStategen(db),
 		SyncCommitteePool: synccommittee.NewStore(),
 	}
 
@@ -2191,7 +2192,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          sgmock.NewMockStategen(db),
 		SyncCommitteePool: synccommittee.NewStore(),
 		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},

@@ -2,18 +2,20 @@ package stategen
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"github.com/sirupsen/logrus"
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -105,75 +107,184 @@ type FinalizedCheckpointer interface {
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 }
 
+type PersistenceMode int
+
+const (
+	// PersistenceModeMemory means the hot state cache does write to the database
+	PersistenceModeMemory PersistenceMode = iota
+	PersistenceModeSnapshot
+)
+
+func (m PersistenceMode) String() string {
+	switch m {
+	case PersistenceModeMemory:
+		return "memory"
+	case PersistenceModeSnapshot:
+		return "snapshot"
+	default:
+		return "unknown"
+	}
+}
+
+func NewHotStateSaver(d db.NoHeadAccessDatabase, fc FinalizedCheckpointer, cs CurrentSlotter) *hotStateSaver {
+	return &hotStateSaver{
+		snapshotInterval: DefaultSnapshotInterval,
+		db:               d,
+		fc:               fc,
+		cs:               cs,
+	}
+}
+
 // This tracks the config in the event of long non-finality,
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
-type hotStateStatus struct {
-	enabled                 bool
-	lock                    sync.Mutex
-	duration                types.Slot
-	blockRootsOfSavedStates [][32]byte
-	fc                      FinalizedCheckpointer
-	cs                      CurrentSlotter
-	db                      db.NoHeadAccessDatabase
+type hotStateSaver struct {
+	m                PersistenceMode
+	lock             sync.RWMutex
+	snapshotInterval types.Slot
+	savedRoots       [][32]byte
+	db               db.NoHeadAccessDatabase
+	fc               FinalizedCheckpointer
+	cs               CurrentSlotter
 }
 
-// This checks whether it's time to start saving hot state to DB.
-func (s *hotStateStatus) refresh(ctx context.Context) error {
+var _ Saver = &hotStateSaver{}
+
+// enable/disable hot state saving m depending on
+// whether the size of the gap between finalized and current epochs
+// is greater than the threshold.
+func (s *hotStateSaver) refreshMode(ctx context.Context) (PersistenceMode, error) {
 	current := slots.ToEpoch(s.cs.CurrentSlot())
 	fcp := s.fc.FinalizedCheckpoint()
 	if fcp == nil {
-		return errForkchoiceFinalizedNil
+		return PersistenceModeMemory, errForkchoiceFinalizedNil
 	}
 	// don't allow underflow
 	if fcp.Epoch > current {
-		return errCurrentEpochBehindFinalized
+		return PersistenceModeMemory, errCurrentEpochBehindFinalized
 	}
-
 	if current-fcp.Epoch >= hotStateSaveThreshold {
-		s.enableSaving()
-		return nil
+		s.enableSnapshots()
+		return PersistenceModeSnapshot, nil
 	}
 
-	return s.disableSaving(ctx)
+	return PersistenceModeMemory, s.disableSnapshots(ctx)
 }
 
-// enableHotStateSaving enters the mode that saves hot beacon state to the DB.
+func (s *hotStateSaver) mode() PersistenceMode {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.m
+}
+
+// enableHotStateSaving enters the m that saves hot beacon state to the DB.
 // This usually gets triggered when there's long duration since finality.
-func (s *hotStateStatus) enableSaving() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if s.enabled {
+func (s *hotStateSaver) enableSnapshots() {
+	if s.mode() == PersistenceModeSnapshot {
 		return
 	}
-	s.enabled = true
 
-	log.WithFields(logrus.Fields{
-		"enabled":       s.enabled,
-		"slotsInterval": s.duration,
-	}).Warn("Enabling hot state db persistence mode")
-}
-
-// disableHotStateSaving exits the mode that saves beacon state to DB for the hot states.
-// This usually gets triggered once there's finality after long duration since finality.
-func (s *hotStateStatus) disableSaving(ctx context.Context) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if !s.enabled {
+
+	s.m = PersistenceModeSnapshot
+	log.WithFields(logrus.Fields{
+		"mode":             s.m.String(),
+		"slotsPerSnapshot": s.snapshotInterval,
+	}).Warn("Enabling state cache db snapshots")
+}
+
+// disableHotStateSaving exits the m that saves beacon state to DB for the hot states.
+// This usually gets triggered once there's finality after long duration since finality.
+func (s *hotStateSaver) disableSnapshots(ctx context.Context) error {
+	if s.mode() == PersistenceModeMemory {
 		return nil
 	}
 
-	log.WithFields(logrus.Fields{
-		"enabled":          s.enabled,
-		"deletedHotStates": len(s.blockRootsOfSavedStates),
-	}).Warn("Disabling hot state db persistence mode")
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	// Delete previous saved states in DB as we are turning this mode off.
-	s.enabled = false
-	if err := s.db.DeleteStates(ctx, s.blockRootsOfSavedStates); err != nil {
+	log.WithFields(logrus.Fields{
+		"mode":             PersistenceModeMemory.String(),
+		"slotsPerSnapshot": s.snapshotInterval,
+	}).Warn("Disabling state cache db snapshots and removing saved snapshots")
+
+	// we have a recent-enough finalized state, so time to clean up the state cache snapshots
+	if err := s.db.DeleteStates(ctx, s.savedRoots); err != nil {
 		return err
 	}
-	s.blockRootsOfSavedStates = nil
+	s.savedRoots = nil
+	s.m = PersistenceModeMemory
 
+	return nil
+}
+
+func shouldSave(m PersistenceMode, interval types.Slot, st state.BeaconState) bool {
+	if m != PersistenceModeSnapshot {
+		// only write full states to the db when in snapshot mode
+		return false
+	}
+	// divide by zero guard
+	if interval == 0 {
+		return false
+	}
+	// only saving every s.duration slots - typically every 128 slots
+	// checking this first avoids holding the lock if we aren't on a slot that should be saved
+	if st.Slot().ModSlot(interval) != 0 {
+		return false
+	}
+	return true
+}
+
+func (s *hotStateSaver) Save(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
+	mode, err := s.refreshMode(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to make hot state saving decision")
+	}
+	err = s.db.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: blockRoot[:]})
+	if err != nil {
+		return err
+	}
+	if !shouldSave(mode, s.snapshotInterval, st) {
+		return nil
+	}
+
+	// we need the update to savedRoots to be in the same critical section as db.SaveState
+	// because in Preserve we need the state bucket to be consistent with the list of saved roots
+	// so that we can safely confirm the state is present and remove it from the root cleanup list.
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.savedRoots = append(s.savedRoots, blockRoot)
+	log.WithFields(logrus.Fields{
+		"slot":               st.Slot(),
+		"totalStatesWritten": len(s.savedRoots),
+	}).Info("Saving hot state to DB")
+	return s.db.SaveState(ctx, st, blockRoot)
+}
+
+// Preserve ensures that the given state is permanently saved in the db. If the state already exists
+// and the state saver is in snapshot mode, the block root will be removed from the list of roots to
+// clean up when exiting snapshot mode to ensure it won't be deleted in the cleanup procedure.
+func (s *hotStateSaver) Preserve(ctx context.Context, root [32]byte, st state.BeaconState) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	exists := s.db.HasState(ctx, root)
+	if !exists {
+		if err := s.db.SaveState(ctx, st, root); err != nil {
+			return err
+		}
+	}
+	// the state exists, and we aren't in snapshot mode, so we shouldn't have to do anything
+	if s.m != PersistenceModeSnapshot {
+		return nil
+	}
+
+	// slice the preserved root out of the list of states to delete once the node exists snapshot mode.
+	for i := 0; i < len(s.savedRoots); i++ {
+		if s.savedRoots[i] == root {
+			s.savedRoots = append(s.savedRoots[:i], s.savedRoots[i+1:]...)
+			return nil
+		}
+	}
 	return nil
 }

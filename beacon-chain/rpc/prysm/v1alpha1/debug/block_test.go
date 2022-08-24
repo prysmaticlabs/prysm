@@ -2,6 +2,7 @@ package debug
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -53,7 +53,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	offset := int64(2 * params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	bs := &Server{
 		BeaconDB:           db,
-		StateGen:           stategen.New(db),
+		StateGen:           sgmock.NewMockStategen(db),
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 

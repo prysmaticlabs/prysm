@@ -2,12 +2,12 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -19,7 +19,7 @@ func TestService_headSyncCommitteeFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: sgmock.NewMockStategen(beaconDB),
 		},
 	}
 	c.head = &head{}
@@ -37,7 +37,7 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: sgmock.NewMockStategen(beaconDB),
 		},
 	}
 	c.head = &head{}

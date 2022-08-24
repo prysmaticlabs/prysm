@@ -2,13 +2,13 @@ package slasher
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -44,7 +44,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                sgmock.NewMockStategen(beaconDB),
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},
@@ -151,7 +151,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			Database:                slasherDB,
 			AttestationStateFetcher: mockChain,
-			StateGen:                stategen.New(beaconDB),
+			StateGen:                sgmock.NewMockStategen(beaconDB),
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
 			HeadStateFetcher:        mockChain,
 		},

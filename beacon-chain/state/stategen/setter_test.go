@@ -16,7 +16,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
@@ -37,7 +37,7 @@ func TestSaveState_HotStateCached(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -57,7 +57,7 @@ func TestState_ForceCheckpoint_SavesStateToDatabase(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	svc := New(beaconDB)
+	svc := New(beaconDB, newTestSaver(beaconDB))
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
@@ -76,7 +76,7 @@ func TestSaveState_Alreadyhas(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -95,7 +95,7 @@ func TestSaveState_Alreadyhas(t *testing.T) {
 func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -116,7 +116,7 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
@@ -138,12 +138,11 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 
 func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	ctx := context.Background()
-	h := &hotStateStatus{db: testDB.SetupDB(t), duration: defaultHotStateDBInterval}
-	service := New(h.db)
-	h.enableSaving()
-	service.hotStateStatus = h
+	h := &hotStateSaver{db: testDB.SetupDB(t), snapshotInterval: DefaultSnapshotInterval}
+	h.enableSnapshots()
+	service := New(h.db, h)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	require.NoError(t, beaconState.SetSlot(defaultHotStateDBInterval))
+	require.NoError(t, beaconState.SetSlot(DefaultSnapshotInterval))
 
 	r := [32]byte{'A'}
 	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
@@ -578,7 +579,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	phase0State, _ := util.DeterministicGenesisState(t, 1)
@@ -824,7 +825,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
@@ -871,7 +872,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 
@@ -975,7 +976,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 
 	service, err := NewService(ctx, opts...)
@@ -1016,7 +1017,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 
@@ -1058,7 +1059,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	stateGen := stategen.New(beaconDB)
+	stateGen := sgmock.NewMockStategen(beaconDB)
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
@@ -1162,7 +1163,7 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)
@@ -1214,7 +1215,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)

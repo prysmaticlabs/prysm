@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"sync"
 	"testing"
 
@@ -131,7 +132,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(sgmock.NewMockStategen(beaconDB)),
 				WithFinalizedStateAtStartUp(genesis),
 			}
 			s, err := NewService(ctx, opts...)
@@ -170,7 +171,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 
 	s, err := NewService(ctx, opts...)
@@ -245,7 +246,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				WithDatabase(beaconDB),
 				WithForkChoiceStore(protoarray.New()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(sgmock.NewMockStategen(beaconDB)),
 			}
 			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)

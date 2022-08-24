@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"reflect"
 	"testing"
 	"time"
@@ -74,7 +75,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = database
 				s.initCaches()
@@ -110,7 +111,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = database
 				s.initCaches()
@@ -146,7 +147,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.initCaches()
 				return s
@@ -181,7 +182,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -224,7 +225,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -267,7 +268,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -311,7 +312,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -373,7 +374,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				hState, err := database.State(context.Background(), headRoot)
@@ -438,7 +439,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				s.cfg.chain = chainService
 				msg.Message.Contribution.BlockRoot = headRoot[:]
@@ -518,7 +519,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				s.cfg.beaconDB = database
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				hState, err := database.State(context.Background(), headRoot)
@@ -600,7 +601,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = database
 				hState, err := database.State(context.Background(), headRoot)
@@ -684,7 +685,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = database
 				hState, err := database.State(context.Background(), headRoot)
@@ -780,7 +781,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(database)
+				s.cfg.stateGen = sgmock.NewMockStategen(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = database
 				hState, err := database.State(context.Background(), headRoot)
@@ -927,7 +928,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithOperationNotifier(chainService.OperationNotifier()),
 	)
 	go s.verifierRoutine()
-	s.cfg.stateGen = stategen.New(database)
+	s.cfg.stateGen = sgmock.NewMockStategen(database)
 	msg.Message.Contribution.BlockRoot = headRoot[:]
 	s.cfg.beaconDB = database
 	hState, err := database.State(context.Background(), headRoot)

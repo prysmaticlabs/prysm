@@ -16,7 +16,7 @@ func TestResume(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, newTestSaver(beaconDB))
 	b := util.NewBeaconBlock()
 	util.SaveBlock(t, ctx, service.beaconDB, b)
 	root, err := b.Block.HashTreeRoot()

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"math/rand"
 	"sync"
 	"testing"
@@ -12,7 +13,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -423,7 +423,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db),
+		StateGen:            sgmock.NewMockStategen(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	util.SaveBlock(t, ctx, db, block)

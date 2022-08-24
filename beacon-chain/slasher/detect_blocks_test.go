@@ -2,6 +2,7 @@ package slasher
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
@@ -9,7 +10,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -60,7 +60,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 			Database:             slasherDB,
 			StateNotifier:        &mock.MockStateNotifier{},
 			HeadStateFetcher:     mockChain,
-			StateGen:             stategen.New(beaconDB),
+			StateGen:             sgmock.NewMockStategen(beaconDB),
 			SlashingPoolInserter: &slashingsmock.PoolMock{},
 		},
 		params:    DefaultParams(),

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	sgmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(doublylinkedtree.New()),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -135,7 +136,7 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(doublylinkedtree.New()),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -241,7 +242,7 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -271,7 +272,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -300,7 +301,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -362,7 +363,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -468,7 +469,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -499,7 +500,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(sgmock.NewMockStategen(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
