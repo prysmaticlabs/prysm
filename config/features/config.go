@@ -242,8 +242,8 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableOnlyBlindedBeaconBlocks)
 		cfg.EnableOnlyBlindedBeaconBlocks = true
 	}
-	if ctx.Bool(enableEverythingOptimistic.Name) {
-		logEnabled(enableEverythingOptimistic)
+	if ctx.Bool(enableStartupOptimistic.Name) {
+		logEnabled(enableStartupOptimistic)
 		cfg.EnableStartOptimistic = true
 	}
 	Init(cfg)
