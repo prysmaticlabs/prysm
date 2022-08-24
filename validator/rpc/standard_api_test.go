@@ -1054,7 +1054,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 		httpCode         string
 	}{
 		{
-			name:   "delete existing gas limit",
+			name:   "delete existing gas limit with default config",
 			pubkey: pubkey1,
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
@@ -1073,7 +1073,33 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			w: []want{
 				{
 					pubkey: pubkey1,
-					// After deletion, the gaslimit must be globalDefaultBuilderGasLimit, not the override value in DefaultConfig.
+					// After deletion, use DefaultConfig.BuilderConfig.GasLimit.
+					gaslimit: validatorServiceConfig.Uint64(5555),
+				},
+				{
+					pubkey:   pubkey2,
+					gaslimit: validatorServiceConfig.Uint64(123456789),
+				},
+			},
+		},
+		{
+			name:   "delete existing gas limit with no default config",
+			pubkey: pubkey1,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorServiceConfig.Uint64(987654321)},
+					},
+					bytesutil.ToBytes48(pubkey2): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorServiceConfig.Uint64(123456789)},
+					},
+				},
+			},
+			httpCode: "204",
+			w: []want{
+				{
+					pubkey: pubkey1,
+					// After deletion, use global default, because DefaultConfig is not set at all.
 					gaslimit: globalDefaultGasLimit,
 				},
 				{

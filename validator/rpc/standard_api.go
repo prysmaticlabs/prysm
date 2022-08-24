@@ -489,15 +489,19 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 
 	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
-		if found {
-			gloablDefaultGasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
-			if proposerOption.BuilderConfig != nil {
-				// Set gaslimit to the global default instead of any value specified in the config (per pubkey or default override).
-				proposerOption.BuilderConfig.GasLimit = gloablDefaultGasLimit
+		if found && proposerOption.BuilderConfig != nil {
+			// If proposerSettings has default value, use it.
+			if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+				proposerOption.BuilderConfig.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			} else {
+				// Fallback to using global default.
+				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 			}
 			// Successfully removed gas limit (reset to global default) or no gas limit was previously set (BuildConfig == nil).
 			httpCode = "204"
 		}
+		// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
+		// in this case, we response with "404".
 	}
 	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", httpCode)); err != nil {
 		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code %v header: %v", httpCode, err)
