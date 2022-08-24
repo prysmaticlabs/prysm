@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -20,6 +21,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	// #nosec G101 -- Not sensitive data
+	newMnemonicPassphraseYesNoText = "(Advanced) Do you want to setup a '25th word' passphrase for your mnemonic? [y/n]"
+	// #nosec G101 -- Not sensitive data
+	newMnemonicPassphrasePromptText = "(Advanced) Setup a passphrase '25th word' for your mnemonic " +
+		"(WARNING: You cannot recover your keys from your mnemonic if you forget this passphrase!)"
 )
 
 // CreateWalletConfig defines the parameters needed to call the create wallet functions.
@@ -277,4 +286,28 @@ func inputKeymanagerKind(cliCtx *cli.Context) (keymanager.Kind, error) {
 		return keymanager.Local, fmt.Errorf("could not select wallet type: %w", userprompt.FormatPromptError(err))
 	}
 	return keymanager.Kind(selection), nil
+}
+
+// TODO(mikeneuder): Remove duplicate function when migration wallet create
+// to cmd/validator/wallet.
+func inputNumAccounts(cliCtx *cli.Context) (int64, error) {
+	if cliCtx.IsSet(flags.NumAccountsFlag.Name) {
+		numAccounts := cliCtx.Int64(flags.NumAccountsFlag.Name)
+		if numAccounts <= 0 {
+			return 0, errors.New("must recover at least 1 account")
+		}
+		return numAccounts, nil
+	}
+	numAccounts, err := prompt.ValidatePrompt(os.Stdin, "Enter how many accounts you would like to generate from the mnemonic", prompt.ValidateNumber)
+	if err != nil {
+		return 0, err
+	}
+	numAccountsInt, err := strconv.Atoi(numAccounts)
+	if err != nil {
+		return 0, err
+	}
+	if numAccountsInt <= 0 {
+		return 0, errors.New("must recover at least 1 account")
+	}
+	return int64(numAccountsInt), nil
 }

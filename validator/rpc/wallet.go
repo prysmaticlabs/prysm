@@ -187,13 +187,18 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
-	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
-		WalletDir:        walletDir,
-		WalletPassword:   walletPassword,
-		Mnemonic:         mnemonic,
-		NumAccounts:      numAccounts,
-		Mnemonic25thWord: req.Mnemonic25ThWord,
-	}); err != nil {
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithWalletPassword(walletPassword),
+		accounts.WithMnemonic(mnemonic),
+		accounts.WithMnemonic25thWord(req.Mnemonic25ThWord),
+		accounts.WithNumAccounts(numAccounts),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := acc.WalletRecover(ctx); err != nil {
 		return nil, err
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
