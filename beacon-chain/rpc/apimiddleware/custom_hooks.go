@@ -72,7 +72,7 @@ func wrapAttestationsArray(
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
 	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
-		atts := make([]*attestationJson, 0)
+		atts := make([]*AttestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
@@ -219,22 +219,22 @@ func wrapSignedContributionAndProofsArray(
 }
 
 type phase0PublishBlockRequestJson struct {
-	Phase0Block *beaconBlockJson `json:"phase0_block"`
+	Phase0Block *BeaconBlockJson `json:"phase0_block"`
 	Signature   string           `json:"signature" hex:"true"`
 }
 
 type altairPublishBlockRequestJson struct {
-	AltairBlock *beaconBlockAltairJson `json:"altair_block"`
+	AltairBlock *BeaconBlockAltairJson `json:"altair_block"`
 	Signature   string                 `json:"signature" hex:"true"`
 }
 
 type bellatrixPublishBlockRequestJson struct {
-	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
+	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                    `json:"signature" hex:"true"`
 }
 
 type bellatrixPublishBlindedBlockRequestJson struct {
-	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                           `json:"signature" hex:"true"`
 }
 
@@ -266,11 +266,11 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	}
 	currentEpoch := slots.ToEpoch(types.Slot(slot))
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
-		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
+		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
-		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
 	} else {
-		endpoint.PostRequest = &signedBeaconBlockBellatrixContainerJson{}
+		endpoint.PostRequest = &SignedBeaconBlockBellatrixContainerJson{}
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -281,7 +281,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 // We do a simple conversion depending on the type of endpoint.PostRequest
 // (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
-	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &phase0PublishBlockRequestJson{
 			Phase0Block: block.Message,
@@ -290,7 +290,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
-	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &altairPublishBlockRequestJson{
 			AltairBlock: block.Message,
@@ -299,7 +299,7 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
-	if block, ok := endpoint.PostRequest.(*signedBeaconBlockBellatrixContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockBellatrixContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &bellatrixPublishBlockRequestJson{
 			BellatrixBlock: block.Message,
@@ -339,11 +339,11 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	}
 	currentEpoch := slots.ToEpoch(types.Slot(slot))
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
-		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
+		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
-		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
 	} else {
-		endpoint.PostRequest = &signedBlindedBeaconBlockBellatrixContainerJson{}
+		endpoint.PostRequest = &SignedBlindedBeaconBlockBellatrixContainerJson{}
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -354,7 +354,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 // We do a simple conversion depending on the type of endpoint.PostRequest
 // (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
-	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &phase0PublishBlockRequestJson{
 			Phase0Block: block.Message,
@@ -363,7 +363,7 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
-	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &altairPublishBlockRequestJson{
 			AltairBlock: block.Message,
@@ -372,7 +372,7 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
-	if block, ok := endpoint.PostRequest.(*signedBlindedBeaconBlockBellatrixContainerJson); ok {
+	if block, ok := endpoint.PostRequest.(*SignedBlindedBeaconBlockBellatrixContainerJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
 		actualPostReq := &bellatrixPublishBlindedBlockRequestJson{
 			BellatrixBlock: block.Message,
@@ -423,19 +423,19 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 
 type phase0BlockResponseJson struct {
 	Version             string                          `json:"version"`
-	Data                *signedBeaconBlockContainerJson `json:"data"`
+	Data                *SignedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                            `json:"execution_optimistic"`
 }
 
 type altairBlockResponseJson struct {
 	Version             string                                `json:"version"`
-	Data                *signedBeaconBlockAltairContainerJson `json:"data"`
+	Data                *SignedBeaconBlockAltairContainerJson `json:"data"`
 	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
 }
 
 type bellatrixBlockResponseJson struct {
 	Version             string                                   `json:"version"`
-	Data                *signedBeaconBlockBellatrixContainerJson `json:"data"`
+	Data                *SignedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
 
@@ -450,7 +450,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0BlockResponseJson{
 			Version: respContainer.Version,
-			Data: &signedBeaconBlockContainerJson{
+			Data: &SignedBeaconBlockContainerJson{
 				Message:   respContainer.Data.Phase0Block,
 				Signature: respContainer.Data.Signature,
 			},
@@ -459,7 +459,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
-			Data: &signedBeaconBlockAltairContainerJson{
+			Data: &SignedBeaconBlockAltairContainerJson{
 				Message:   respContainer.Data.AltairBlock,
 				Signature: respContainer.Data.Signature,
 			},
@@ -468,7 +468,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
 			Version: respContainer.Version,
-			Data: &signedBeaconBlockBellatrixContainerJson{
+			Data: &SignedBeaconBlockBellatrixContainerJson{
 				Message:   respContainer.Data.BellatrixBlock,
 				Signature: respContainer.Data.Signature,
 			},
@@ -536,22 +536,22 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 
 type phase0ProduceBlockResponseJson struct {
 	Version string           `json:"version"`
-	Data    *beaconBlockJson `json:"data"`
+	Data    *BeaconBlockJson `json:"data"`
 }
 
 type altairProduceBlockResponseJson struct {
 	Version string                 `json:"version"`
-	Data    *beaconBlockAltairJson `json:"data"`
+	Data    *BeaconBlockAltairJson `json:"data"`
 }
 
 type bellatrixProduceBlockResponseJson struct {
 	Version string                    `json:"version"`
-	Data    *beaconBlockBellatrixJson `json:"data"`
+	Data    *BeaconBlockBellatrixJson `json:"data"`
 }
 
 type bellatrixProduceBlindedBlockResponseJson struct {
 	Version string                           `json:"version"`
-	Data    *blindedBeaconBlockBellatrixJson `json:"data"`
+	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
 }
 
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {

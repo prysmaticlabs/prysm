@@ -119,7 +119,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlindedBlockSSZ}
 	case "/eth/v1/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &blockResponseJson{}
+		endpoint.GetResponse = &BlockResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}
 	case "/eth/v2/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockV2ResponseJson{}
@@ -140,13 +140,13 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreDeserializeRequestBodyIntoContainer: wrapAttestationsArray,
 		}
 	case "/eth/v1/beacon/pool/attester_slashings":
-		endpoint.PostRequest = &attesterSlashingJson{}
+		endpoint.PostRequest = &AttesterSlashingJson{}
 		endpoint.GetResponse = &attesterSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/proposer_slashings":
-		endpoint.PostRequest = &proposerSlashingJson{}
+		endpoint.PostRequest = &ProposerSlashingJson{}
 		endpoint.GetResponse = &proposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/voluntary_exits":
-		endpoint.PostRequest = &signedVoluntaryExitJson{}
+		endpoint.PostRequest = &SignedVoluntaryExitJson{}
 		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/sync_committees":
 		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}

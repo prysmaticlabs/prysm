@@ -24,7 +24,7 @@ func TestWrapAttestationArray(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
 			PostRequest: &submitAttestationRequestJson{},
 		}
-		unwrappedAtts := []*attestationJson{{AggregationBits: "1010"}}
+		unwrappedAtts := []*AttestationJson{{AggregationBits: "1010"}}
 		unwrappedAttsJson, err := json.Marshal(unwrappedAtts)
 		require.NoError(t, err)
 
@@ -385,7 +385,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -400,7 +400,7 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
@@ -415,16 +415,16 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 }
 
 func TestPreparePublishedBlock(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBeaconBlockContainerJson{
-				Message: &beaconBlockJson{
-					Body: &beaconBlockBodyJson{},
+			PostRequest: &SignedBeaconBlockContainerJson{
+				Message: &BeaconBlockJson{
+					Body: &BeaconBlockBodyJson{},
 				},
 			},
 		}
@@ -436,9 +436,9 @@ func TestPreparePublishedBlock(t *testing.T) {
 
 	t.Run("Altair", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBeaconBlockAltairContainerJson{
-				Message: &beaconBlockAltairJson{
-					Body: &beaconBlockBodyAltairJson{},
+			PostRequest: &SignedBeaconBlockAltairContainerJson{
+				Message: &BeaconBlockAltairJson{
+					Body: &BeaconBlockBodyAltairJson{},
 				},
 			},
 		}
@@ -450,9 +450,9 @@ func TestPreparePublishedBlock(t *testing.T) {
 
 	t.Run("Bellatrix", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBeaconBlockBellatrixContainerJson{
-				Message: &beaconBlockBellatrixJson{
-					Body: &beaconBlockBodyBellatrixJson{},
+			PostRequest: &SignedBeaconBlockBellatrixContainerJson{
+				Message: &BeaconBlockBellatrixJson{
+					Body: &BeaconBlockBodyBellatrixJson{},
 				},
 			},
 		}
@@ -491,7 +491,7 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Altair", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -506,7 +506,7 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
@@ -521,16 +521,16 @@ func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
 		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		assert.Equal(t, reflect.TypeOf(signedBlindedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+		assert.Equal(t, reflect.TypeOf(SignedBlindedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 }
 
 func TestPreparePublishedBlindedBlock(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBeaconBlockContainerJson{
-				Message: &beaconBlockJson{
-					Body: &beaconBlockBodyJson{},
+			PostRequest: &SignedBeaconBlockContainerJson{
+				Message: &BeaconBlockJson{
+					Body: &BeaconBlockBodyJson{},
 				},
 			},
 		}
@@ -542,9 +542,9 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 
 	t.Run("Altair", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBeaconBlockAltairContainerJson{
-				Message: &beaconBlockAltairJson{
-					Body: &beaconBlockBodyAltairJson{},
+			PostRequest: &SignedBeaconBlockAltairContainerJson{
+				Message: &BeaconBlockAltairJson{
+					Body: &BeaconBlockBodyAltairJson{},
 				},
 			},
 		}
@@ -556,9 +556,9 @@ func TestPreparePublishedBlindedBlock(t *testing.T) {
 
 	t.Run("Bellatrix", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &signedBlindedBeaconBlockBellatrixContainerJson{
-				Message: &blindedBeaconBlockBellatrixJson{
-					Body: &blindedBeaconBlockBodyBellatrixJson{},
+			PostRequest: &SignedBlindedBeaconBlockBellatrixContainerJson{
+				Message: &BlindedBeaconBlockBellatrixJson{
+					Body: &BlindedBeaconBlockBodyBellatrixJson{},
 				},
 			},
 		}
@@ -603,13 +603,13 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
-			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{
+			Data: &SignedBeaconBlockContainerV2Json{
+				Phase0Block: &BeaconBlockJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyJson{},
+					Body:          &BeaconBlockBodyJson{},
 				},
 				Signature: "sig",
 			},
@@ -635,13 +635,13 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
-			Data: &signedBeaconBlockContainerV2Json{
-				AltairBlock: &beaconBlockAltairJson{
+			Data: &SignedBeaconBlockContainerV2Json{
+				AltairBlock: &BeaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyAltairJson{},
+					Body:          &BeaconBlockBodyAltairJson{},
 				},
 				Signature: "sig",
 			},
@@ -667,13 +667,13 @@ func TestSerializeV2Block(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_BELLATRIX.String(),
-			Data: &signedBeaconBlockContainerV2Json{
-				BellatrixBlock: &beaconBlockBellatrixJson{
+			Data: &SignedBeaconBlockContainerV2Json{
+				BellatrixBlock: &BeaconBlockBellatrixJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyBellatrixJson{},
+					Body:          &BeaconBlockBodyBellatrixJson{},
 				},
 				Signature: "sig",
 			},
@@ -787,13 +787,13 @@ func TestSerializeProducedV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
-			Data: &beaconBlockContainerV2Json{
-				Phase0Block: &beaconBlockJson{
+			Data: &BeaconBlockContainerV2Json{
+				Phase0Block: &BeaconBlockJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyJson{},
+					Body:          &BeaconBlockBodyJson{},
 				},
 			},
 		}
@@ -816,13 +816,13 @@ func TestSerializeProducedV2Block(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_ALTAIR.String(),
-			Data: &beaconBlockContainerV2Json{
-				AltairBlock: &beaconBlockAltairJson{
+			Data: &BeaconBlockContainerV2Json{
+				AltairBlock: &BeaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyAltairJson{},
+					Body:          &BeaconBlockBodyAltairJson{},
 				},
 			},
 		}
@@ -845,13 +845,13 @@ func TestSerializeProducedV2Block(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_BELLATRIX.String(),
-			Data: &beaconBlockContainerV2Json{
-				BellatrixBlock: &beaconBlockBellatrixJson{
+			Data: &BeaconBlockContainerV2Json{
+				BellatrixBlock: &BeaconBlockBellatrixJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyBellatrixJson{},
+					Body:          &BeaconBlockBodyBellatrixJson{},
 				},
 			},
 		}
@@ -896,13 +896,13 @@ func TestSerializeProduceBlindedBlock(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &produceBlindedBlockResponseJson{
 			Version: ethpbv2.Version_PHASE0.String(),
-			Data: &blindedBeaconBlockContainerJson{
-				Phase0Block: &beaconBlockJson{
+			Data: &BlindedBeaconBlockContainerJson{
+				Phase0Block: &BeaconBlockJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyJson{},
+					Body:          &BeaconBlockBodyJson{},
 				},
 				AltairBlock: nil,
 			},
@@ -926,13 +926,13 @@ func TestSerializeProduceBlindedBlock(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		response := &produceBlindedBlockResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
-			Data: &blindedBeaconBlockContainerJson{
-				AltairBlock: &beaconBlockAltairJson{
+			Data: &BlindedBeaconBlockContainerJson{
+				AltairBlock: &BeaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &beaconBlockBodyAltairJson{},
+					Body:          &BeaconBlockBodyAltairJson{},
 				},
 			},
 		}
@@ -955,13 +955,13 @@ func TestSerializeProduceBlindedBlock(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		response := &produceBlindedBlockResponseJson{
 			Version: ethpbv2.Version_BELLATRIX.String(),
-			Data: &blindedBeaconBlockContainerJson{
-				BellatrixBlock: &blindedBeaconBlockBellatrixJson{
+			Data: &BlindedBeaconBlockContainerJson{
+				BellatrixBlock: &BlindedBeaconBlockBellatrixJson{
 					Slot:          "1",
 					ProposerIndex: "1",
 					ParentRoot:    "root",
 					StateRoot:     "root",
-					Body:          &blindedBeaconBlockBodyBellatrixJson{},
+					Body:          &BlindedBeaconBlockBodyBellatrixJson{},
 				},
 			},
 		}

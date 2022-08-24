@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -33,7 +34,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		respJSON := &blockResponseJson{}
+		respJSON := &apimiddleware.BlockResponseJson{}
 		if err := doMiddlewareJSONGetRequest(
 			v1MiddlewarePathTemplate,
 			"/beacon/blocks/head",
@@ -54,7 +55,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		respJSON := &blockResponseJson{}
+		respJSON := &apimiddleware.BlockResponseJson{}
 		if err := doMiddlewareJSONGetRequest(
 			v2MiddlewarePathTemplate,
 			"/beacon/blocks/head",

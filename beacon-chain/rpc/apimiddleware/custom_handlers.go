@@ -367,7 +367,7 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 			case events.BlockTopic:
 				data = &receivedBlockDataJson{}
 			case events.AttestationTopic:
-				data = &attestationJson{}
+				data = &AttestationJson{}
 
 				// Data received in the event does not fit the expected event stream output.
 				// We extract the underlying attestation from event data
@@ -382,7 +382,7 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				}
 				msg.Data = attData
 			case events.VoluntaryExitTopic:
-				data = &signedVoluntaryExitJson{}
+				data = &SignedVoluntaryExitJson{}
 			case events.FinalizedCheckpointTopic:
 				data = &eventFinalizedCheckpointJson{}
 			case events.ChainReorgTopic:
