@@ -937,17 +937,21 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 		}
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
+		durationTillDuty := startTime.Sub(time.Now())
+
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":                  slotOffset + i,
 				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
+				"timeTillDuty":          durationTillDuty.String(),
 				"attesterDutiesAtSlot":  len(attesterKeys[i]),
 				"totalAttestersInEpoch": totalAttestingKeys,
 				"pubKeys":               attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
-			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
+			log.WithField("slot", slotOffset+i).WithField("timeTillDuty", durationTillDuty.String()).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
 		}
 	}
 }
