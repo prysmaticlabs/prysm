@@ -15,8 +15,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) buildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildAltairBeaconBlock")
+func (vs *Server) BuildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildAltairBeaconBlock")
 	defer span.End()
 	blkData, err := vs.buildPhase0BlockData(ctx, req)
 	if err != nil {
@@ -55,7 +55,7 @@ func (vs *Server) buildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getAltairBeaconBlock")
 	defer span.End()
-	blk, err := vs.buildAltairBeaconBlock(ctx, req)
+	blk, err := vs.BuildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}

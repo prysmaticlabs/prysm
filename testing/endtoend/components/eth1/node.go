@@ -90,12 +90,8 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
+		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
-	}
-	// If we are testing sync, geth needs to be run via full sync as snap sync does not
-	// work in our setup.
-	if node.index == e2e.TestParams.BeaconNodeCount+e2e.TestParams.LighthouseBeaconNodeCount {
-		args = append(args, []string{"--syncmode=full"}...)
 	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log"))

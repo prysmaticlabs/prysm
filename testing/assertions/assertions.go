@@ -99,6 +99,9 @@ func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) 
 
 // ErrorContains asserts that actual error contains wanted message.
 func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...interface{}) {
+	if want == "" {
+		loggerFn("Want string can't be empty")
+	}
 	if err == nil || !strings.Contains(err.Error(), want) {
 		errMsg := parseMsg("Expected error not returned", msg...)
 		_, file, line, _ := runtime.Caller(2)
