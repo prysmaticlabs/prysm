@@ -752,7 +752,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, gotSlot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
 			require.Equal(t, tc.wantSlot, gotSlot)
@@ -804,7 +804,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, gotSlot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
 			require.Equal(t, tc.wantSlot, gotSlot)
@@ -812,25 +812,25 @@ func TestStore_CommonAncestor(t *testing.T) {
 	}
 
 	// Equal inputs should return the same root.
-	r, s, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
+	r, s, err := f.CommonAncestor(ctx, [32]byte{'b'}, [32]byte{'b'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, r)
 	require.Equal(t, types.Slot(1), s)
 	// Requesting finalized root (last node) should return the same root.
-	r, s, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
+	r, s, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'a'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, r)
 	require.Equal(t, types.Slot(0), s)
 	// Requesting unknown root
-	_, _, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'z'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
-	_, _, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	// broken link
-	_, _, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 

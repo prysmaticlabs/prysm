@@ -101,7 +101,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
-		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestorRoot(ctx, oldHeadRoot, newHeadRoot)
+		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not find common ancestor root")
 			commonRoot = params.BeaconConfig().ZeroHash
@@ -345,7 +345,7 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the attestations between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
 // It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
-	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestorRoot(ctx, newHeadRoot, orphanedRoot)
+	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestor(ctx, newHeadRoot, orphanedRoot)
 	switch {
 	// Exit early if there's no common ancestor and root doesn't exist, there would be nothing to save.
 	case errors.Is(err, forkchoice.ErrUnknownCommonAncestor):
