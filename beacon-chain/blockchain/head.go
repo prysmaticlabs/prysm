@@ -115,7 +115,6 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			"distance":           headSlot + newHeadSlot - 2*forkSlot,
 			"depth":              math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
 		}).Info("Chain reorg occurred")
-		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
@@ -124,7 +123,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
 				Slot:                newHeadSlot,
-				Depth:               absoluteSlotDifference,
+				Depth:               math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
 				OldHeadBlock:        oldHeadRoot[:],
 				NewHeadBlock:        newHeadRoot[:],
 				OldHeadState:        oldStateRoot,
