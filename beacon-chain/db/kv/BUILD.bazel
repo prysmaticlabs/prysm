@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "archived_point.go",
         "backup.go",
         "blocks.go",
         "checkpoint.go",
@@ -17,7 +16,6 @@ go_library(
         "kv.go",
         "log.go",
         "migration.go",
-        "migration_archived_index.go",
         "migration_blinded_beacon_blocks.go",
         "migration_block_slot_index.go",
         "migration_state_validators.go",
@@ -88,7 +86,6 @@ go_test(
         "genesis_test.go",
         "init_test.go",
         "kv_test.go",
-        "migration_archived_index_test.go",
         "migration_block_slot_index_test.go",
         "migration_state_validators_test.go",
         "state_summary_test.go",
