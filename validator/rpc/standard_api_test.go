@@ -1023,9 +1023,9 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 
 	// This test changes global default values, we do not want this to side-affect other
 	// tests, so store the origin global default and then restore after tests are done.
-	originBeaconChainConfig := params.BeaconConfig()
+	originBeaconChainGasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 	defer func() {
-		params.SetActive(originBeaconChainConfig)
+		params.BeaconConfig().DefaultBuilderGasLimit = originBeaconChainGasLimit
 	}()
 
 	globalDefaultGasLimit := validatorserviceconfig.Uint64(0xbbdd)
@@ -1134,7 +1134,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 				validatorService: vs,
 			}
 			// Set up global default value for builder gas limit.
-			params.OverrideBeaconConfig(&params.BeaconChainConfig{DefaultBuilderGasLimit: uint64(globalDefaultGasLimit)})
+			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
 			_, err = s.DeleteGasLimit(ctx, &ethpbservice.DeleteGasLimitRequest{Pubkey: tt.pubkey})
 			if tt.wantError != nil {
 				assert.ErrorContains(t, fmt.Sprintf("code = %s", tt.wantError.Error()), err)
