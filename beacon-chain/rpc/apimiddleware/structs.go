@@ -139,16 +139,16 @@ type submitSyncCommitteeSignaturesRequestJson struct {
 	Data []*syncCommitteeMessageJson `json:"data"`
 }
 
-type identityResponseJson struct {
-	Data *identityJson `json:"data"`
+type IdentityResponseJson struct {
+	Data *IdentityJson `json:"data"`
 }
 
-type peersResponseJson struct {
-	Data []*peerJson `json:"data"`
+type PeersResponseJson struct {
+	Data []*PeerJson `json:"data"`
 }
 
-type peerResponseJson struct {
-	Data *peerJson `json:"data"`
+type PeerResponseJson struct {
+	Data *PeerJson `json:"data"`
 }
 
 type peerCountResponseJson struct {
@@ -543,20 +543,20 @@ type syncCommitteeMessageJson struct {
 	Signature       string `json:"signature" hex:"true"`
 }
 
-type identityJson struct {
+type IdentityJson struct {
 	PeerId             string        `json:"peer_id"`
 	Enr                string        `json:"enr"`
 	P2PAddresses       []string      `json:"p2p_addresses"`
 	DiscoveryAddresses []string      `json:"discovery_addresses"`
-	Metadata           *metadataJson `json:"metadata"`
+	Metadata           *MetadataJson `json:"metadata"`
 }
 
-type metadataJson struct {
+type MetadataJson struct {
 	SeqNumber string `json:"seq_number"`
 	Attnets   string `json:"attnets" hex:"true"`
 }
 
-type peerJson struct {
+type PeerJson struct {
 	PeerId    string `json:"peer_id"`
 	Enr       string `json:"enr"`
 	Address   string `json:"last_seen_p2p_address"`

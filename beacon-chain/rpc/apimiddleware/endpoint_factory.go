@@ -157,13 +157,13 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
-		endpoint.GetResponse = &identityResponseJson{}
+		endpoint.GetResponse = &IdentityResponseJson{}
 	case "/eth/v1/node/peers":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}}
-		endpoint.GetResponse = &peersResponseJson{}
+		endpoint.GetResponse = &PeersResponseJson{}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint.RequestURLLiterals = []string{"peer_id"}
-		endpoint.GetResponse = &peerResponseJson{}
+		endpoint.GetResponse = &PeerResponseJson{}
 	case "/eth/v1/node/peer_count":
 		endpoint.GetResponse = &peerCountResponseJson{}
 	case "/eth/v1/node/version":

@@ -22,16 +22,20 @@ const (
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
 func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
-	v1Beacon := []apiComparisonFunc{
+	beacon := []apiComparisonFunc{
 		withCompareBeaconBlocks,
 		withCompareValidatorsEth,
 		withCompareSyncCommittee,
 		withCompareBlockAttestations,
 	}
-	v1Validator := []apiComparisonFunc{
+	validator := []apiComparisonFunc{
 		withCompareAttesterDuties,
 	}
-	comparisons := append(v1Beacon, v1Validator...)
+	node := []apiComparisonFunc{
+		withCompareNodeMetaData,
+	}
+	comparisons := append(beacon, validator...)
+	comparisons = append(comparisons, node...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
