@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -100,7 +101,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
-		commonRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, oldHeadRoot, newHeadRoot)
+		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not find common ancestor root")
 			commonRoot = params.BeaconConfig().ZeroHash
@@ -111,8 +112,9 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			"oldSlot":            fmt.Sprintf("%d", headSlot),
 			"oldRoot":            fmt.Sprintf("%#x", oldHeadRoot),
 			"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
+			"distance":           headSlot + newHeadSlot - 2*forkSlot,
+			"depth":              math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
 		}).Info("Chain reorg occurred")
-		absoluteSlotDifference := slots.AbsoluteValueSlotDifference(newHeadSlot, headSlot)
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
@@ -121,7 +123,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			Type: statefeed.Reorg,
 			Data: &ethpbv1.EventChainReorg{
 				Slot:                newHeadSlot,
-				Depth:               absoluteSlotDifference,
+				Depth:               math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
 				OldHeadBlock:        oldHeadRoot[:],
 				NewHeadBlock:        newHeadRoot[:],
 				OldHeadState:        oldStateRoot,
@@ -342,7 +344,7 @@ func (s *Service) notifyNewHeadEvent(
 // This saves the attestations between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
 // It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
-	commonAncestorRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, newHeadRoot, orphanedRoot)
+	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestor(ctx, newHeadRoot, orphanedRoot)
 	switch {
 	// Exit early if there's no common ancestor and root doesn't exist, there would be nothing to save.
 	case errors.Is(err, forkchoice.ErrUnknownCommonAncestor):

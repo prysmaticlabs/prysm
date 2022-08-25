@@ -281,49 +281,51 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
 
-	// Do nothing if the two input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
+	}
+
+	// Do nothing if the two input roots are the same.
+	if r1 == r2 {
+		n1 := f.store.nodes[i1]
+		return r1, n1.slot, nil
 	}
 
 	i2, ok := f.store.nodesIndices[r2]
 	if !ok || i2 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if i1 > i2 {
 			n1 := f.store.nodes[i1]
 			i1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i1 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 := f.store.nodes[i2]
 			i2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i2 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if i1 == i2 {
 			n1 := f.store.nodes[i1]
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }

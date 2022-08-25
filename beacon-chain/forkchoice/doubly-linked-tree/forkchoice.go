@@ -490,30 +490,31 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 }
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "doublelinkedtree.CommonAncestorRoot")
 	defer span.End()
-
-	// Do nothing if the input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
 
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
+
+	// Do nothing if the input roots are the same.
+	if r1 == r2 {
+		return r1, n1.slot, nil
+	}
+
 	n2, ok := f.store.nodeByRoot[r2]
 	if !ok || n2 == nil {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if n1.slot > n2.slot {
 			n1 = n1.parent
@@ -521,17 +522,17 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 			// This should not happen at runtime as the finalized
 			// node has to be a common ancestor
 			if n1 == nil {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if n2 == nil {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if n1 == n2 {
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }

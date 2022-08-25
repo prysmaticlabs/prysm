@@ -52,7 +52,7 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
-	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
+	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, types.Slot, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 	FinalizedPayloadBlockHash() [32]byte

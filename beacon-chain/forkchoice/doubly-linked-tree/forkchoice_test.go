@@ -408,73 +408,85 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
+		wantSlot types.Slot
 	}{
 		{
 			name:     "Common ancestor between c and b is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between c and d is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'d'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between c and e is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'e'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between g and f is c",
 			r1:       [32]byte{'g'},
 			r2:       [32]byte{'f'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between f and h is c",
 			r1:       [32]byte{'f'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between g and h is c",
 			r1:       [32]byte{'g'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between b and h is a",
 			r1:       [32]byte{'b'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between e and h is a",
 			r1:       [32]byte{'e'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between i and f is c",
 			r1:       [32]byte{'i'},
 			r2:       [32]byte{'f'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between e and h is a",
 			r1:       [32]byte{'j'},
 			r2:       [32]byte{'g'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
+			require.Equal(t, tc.wantSlot, gotSlot)
 		})
 	}
 
@@ -497,46 +509,53 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
+		wantSlot types.Slot
 	}{
 		{
 			name:     "Common ancestor between a and b is a",
 			r1:       [32]byte{'a'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between b and d is b",
 			r1:       [32]byte{'d'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'b'},
+			wantSlot: 1,
 		},
 		{
 			name:     "Common ancestor between d and a is a",
 			r1:       [32]byte{'d'},
 			r2:       [32]byte{'a'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
+			require.Equal(t, tc.wantSlot, gotSlot)
 		})
 	}
 
 	// Equal inputs should return the same root.
-	r, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
+	r, s, err := f.CommonAncestor(ctx, [32]byte{'b'}, [32]byte{'b'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, r)
+	require.Equal(t, types.Slot(1), s)
 	// Requesting finalized root (last node) should return the same root.
-	r, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
+	r, s, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'a'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, r)
+	require.Equal(t, types.Slot(0), s)
 	// Requesting unknown root
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'z'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	n := &Node{
 		slot:                     100,
@@ -550,7 +569,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 
 	f.store.nodeByRoot[[32]byte{'y'}] = n
 	// broken link
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
