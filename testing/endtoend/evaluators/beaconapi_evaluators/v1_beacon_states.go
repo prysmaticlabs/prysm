@@ -166,7 +166,7 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 	}
 	for i, pattes := range poolas.Data {
 		if hexutil.Encode(pattes.Data.BeaconBlockRoot) != poolJSON.Data[i].Data.BeaconBlockRoot {
-			return fmt.Errorf("API Middleware pool attestation response BeaconBlockRoot %d does not match gRPC pool attestation response BeaconBlockRoot %d ",
+			return fmt.Errorf("API Middleware pool attestation response BeaconBlockRoot %s does not match gRPC pool attestation response BeaconBlockRoot %s ",
 				poolJSON.Data[i].Data.BeaconBlockRoot, hexutil.Encode(pattes.Data.BeaconBlockRoot))
 		}
 	}
