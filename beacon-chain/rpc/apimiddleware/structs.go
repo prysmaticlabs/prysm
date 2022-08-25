@@ -115,7 +115,7 @@ type BlockAttestationsResponseJson struct {
 	ExecutionOptimistic bool               `json:"execution_optimistic"`
 }
 
-type attestationsPoolResponseJson struct {
+type AttestationsPoolResponseJson struct {
 	Data []*AttestationJson `json:"data"`
 }
 

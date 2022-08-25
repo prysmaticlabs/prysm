@@ -133,7 +133,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &BlockAttestationsResponseJson{}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
-		endpoint.GetResponse = &attestationsPoolResponseJson{}
+		endpoint.GetResponse = &AttestationsPoolResponseJson{}
 		endpoint.PostRequest = &submitAttestationRequestJson{}
 		endpoint.Err = &indexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{

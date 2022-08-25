@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -117,6 +118,8 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 			len(respJSON.Data),
 			len(resp.Data))
 	}
+	var slot types.Slot
+	var index types.CommitteeIndex
 	for i, attest := range resp.Data {
 		index, err := strconv.ParseUint(respJSON.Data[i].Data.CommitteeIndex, 10, 64)
 		if err != nil {
@@ -129,11 +132,42 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 		if uint64(attest.Data.Index) == index &&
 			uint64(attest.Data.Slot) == slot &&
 			hexutil.Encode(attest.Signature) == respJSON.Data[i].Signature {
-			return nil
+			slot = uint64(attest.Data.Slot)
+			index = uint64(attest.Data.Index)
 		} else {
 			return fmt.Errorf("API Middleware attestation response %s does not match gRPC attestation response %s ",
 				fmt.Sprintf("index: %d, slot: %d, signature: %s", index, slot, respJSON.Data[i].Signature),
 				fmt.Sprintf("index: %d, slot: %d, signature: %s", uint64(attest.Data.Index), uint64(attest.Data.Slot), hexutil.Encode(attest.Signature)))
+		}
+	}
+	poolas, err := beaconClient.ListPoolAttestations(ctx, &ethpbv1.AttestationsPoolRequest{
+		Slot:           &slot,
+		CommitteeIndex: &index,
+	})
+	if err != nil {
+		return err
+	}
+	poolJSON := &apimiddleware.AttestationsPoolResponseJson{}
+	if err := doMiddlewareJSONGetRequest(
+		v1MiddlewarePathTemplate,
+		"/beacon/pool/attestations",
+		beaconNodeIdx,
+		poolJSON,
+	); err != nil {
+		return err
+	}
+	if len(poolas.Data) == 0 {
+		return errors.New("no attestation pool data")
+	}
+
+	if len(poolas.Data) != len(poolJSON.Data) {
+		return fmt.Errorf("API Middleware pool attestation response length %d does not match gRPC pool attestation response length %d ",
+			len(poolJSON.Data), len(poolas.Data))
+	}
+	for i, pattes := range poolas.Data {
+		if hexutil.Encode(pattes.Data.BeaconBlockRoot) != poolJSON.Data[i].Data.BeaconBlockRoot {
+			return fmt.Errorf("API Middleware pool attestation response BeaconBlockRoot %d does not match gRPC pool attestation response BeaconBlockRoot %d ",
+				poolJSON.Data[i].Data.BeaconBlockRoot, hexutil.Encode(pattes.Data.BeaconBlockRoot))
 		}
 	}
 
