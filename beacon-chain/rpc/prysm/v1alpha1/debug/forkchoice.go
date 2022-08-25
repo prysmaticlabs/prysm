@@ -8,6 +8,6 @@ import (
 )
 
 // GetForkChoice returns a dump fork choice store.
-func (ds *Server) GetForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ForkChoiceResponse, error) {
-	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump()
+func (ds *Server) GetForkChoice(ctx context.Context, _ *empty.Empty) (*pbrpc.ForkChoiceResponse, error) {
+	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump(ctx)
 }

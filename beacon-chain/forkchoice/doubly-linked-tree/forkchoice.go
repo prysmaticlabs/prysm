@@ -614,7 +614,7 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 }
 
 // ForkchoiceDump returns a full dump of forkhoice.
-func (f *ForkChoice) ForkChoiceDump() (*ethpb.ForkChoiceResponse, error) {
+func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*ethpb.ForkChoiceResponse, error) {
 	jc := &ethpb.Checkpoint{
 		Epoch: f.store.justifiedCheckpoint.Epoch,
 		Root:  f.store.justifiedCheckpoint.Root[:],
@@ -636,8 +636,12 @@ func (f *ForkChoice) ForkChoiceDump() (*ethpb.ForkChoiceResponse, error) {
 		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
 	}
 	nodes := make([]*ethpb.ForkChoiceNode, 0, f.NodeCount())
+	var err error
 	if f.store.treeRootNode != nil {
-		nodes = f.store.treeRootNode.nodeTreeDump(nodes)
+		nodes, err = f.store.treeRootNode.nodeTreeDump(ctx, nodes)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var headRoot [32]byte
 	if f.store.headNode != nil {

@@ -63,7 +63,7 @@ type Getter interface {
 	NodeCount() int
 	HighestReceivedBlockSlot() types.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
-	ForkChoiceDump() (*ethpb.ForkChoiceResponse, error)
+	ForkChoiceDump(context.Context) (*ethpb.ForkChoiceResponse, error)
 }
 
 // Setter allows to set forkchoice information

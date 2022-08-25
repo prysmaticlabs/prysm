@@ -129,7 +129,10 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one
-func (n *Node) nodeTreeDump(nodes []*ethpb.ForkChoiceNode) []*ethpb.ForkChoiceNode {
+func (n *Node) nodeTreeDump(ctx context.Context, nodes []*ethpb.ForkChoiceNode) ([]*ethpb.ForkChoiceNode, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	var parentRoot [32]byte
 	if n.parent != nil {
 		parentRoot = n.parent.root
@@ -149,8 +152,12 @@ func (n *Node) nodeTreeDump(nodes []*ethpb.ForkChoiceNode) []*ethpb.ForkChoiceNo
 	}
 
 	nodes = append(nodes, thisNode)
+	var err error
 	for _, child := range n.children {
-		nodes = child.nodeTreeDump(nodes)
+		nodes, err = child.nodeTreeDump(ctx, nodes)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return nodes
+	return nodes, nil
 }
