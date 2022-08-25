@@ -612,3 +612,48 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	}
 	return node.payloadHash
 }
+
+// ForkchoiceDump returns a full dump of forkhoice.
+func (f *ForkChoice) ForkChoiceDump() (*ethpb.ForkChoiceResponse, error) {
+	jc := &ethpb.Checkpoint{
+		Epoch: f.store.justifiedCheckpoint.Epoch,
+		Root:  f.store.justifiedCheckpoint.Root[:],
+	}
+	bjc := &ethpb.Checkpoint{
+		Epoch: f.store.bestJustifiedCheckpoint.Epoch,
+		Root:  f.store.bestJustifiedCheckpoint.Root[:],
+	}
+	ujc := &ethpb.Checkpoint{
+		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
+		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
+	}
+	fc := &ethpb.Checkpoint{
+		Epoch: f.store.finalizedCheckpoint.Epoch,
+		Root:  f.store.finalizedCheckpoint.Root[:],
+	}
+	ufc := &ethpb.Checkpoint{
+		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
+		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
+	}
+	nodes := make([]*ethpb.ForkChoiceNode, 0, f.NodeCount())
+	if f.store.treeRootNode != nil {
+		nodes = f.store.treeRootNode.nodeTreeDump(nodes)
+	}
+	var headRoot [32]byte
+	if f.store.headNode != nil {
+		headRoot = f.store.headNode.root
+	}
+	resp := &ethpb.ForkChoiceResponse{
+		JustifiedCheckpoint:           jc,
+		BestJustifiedCheckpoint:       bjc,
+		UnrealizedJustifiedCheckpoint: ujc,
+		FinalizedCheckpoint:           fc,
+		UnrealizedFinalizedCheckpoint: ufc,
+		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
+		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
+		HeadRoot:                      headRoot[:],
+		ForkchoiceNodes:               nodes,
+	}
+	return resp, nil
+
+}
