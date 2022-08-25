@@ -57,16 +57,6 @@ func (s *Service) validateSyncCommitteeMessage(
 		return pubsub.ValidationIgnore, nil
 	}
 
-	// We should not attempt to process this message if the node is running in optimistic mode.
-	// We just ignore in p2p so that the peer is not penalized.
-	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
-	if err != nil {
-		return pubsub.ValidationReject, err
-	}
-	if optimistic {
-		return pubsub.ValidationIgnore, nil
-	}
-
 	if msg.Topic == nil {
 		return pubsub.ValidationReject, errInvalidTopic
 	}
