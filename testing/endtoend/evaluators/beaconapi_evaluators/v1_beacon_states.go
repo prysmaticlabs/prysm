@@ -157,7 +157,7 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 		return err
 	}
 	if len(poolas.Data) == 0 {
-		return errors.New("no attestation pool data")
+		return nil
 	}
 
 	if len(poolas.Data) != len(poolJSON.Data) {
