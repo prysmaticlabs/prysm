@@ -350,20 +350,20 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs := &Server{}
 
 	// Nil builder
-	ready, _, err := vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err := vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Not configured
 	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Block is not ready
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
@@ -380,7 +380,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
 	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
 
@@ -456,7 +456,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
 	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
+	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
 	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
