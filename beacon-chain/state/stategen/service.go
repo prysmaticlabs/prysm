@@ -113,6 +113,12 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		return nil, errors.New("finalized state is nil")
 	}
 
+	go func() {
+		if err := s.beaconDB.CleanUpDirtyStates(ctx, s.slotsPerArchivedPoint); err != nil {
+			log.WithError(err).Error("Could not clean up dirty states")
+		}
+	}()
+
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
 
 	return fState, nil
