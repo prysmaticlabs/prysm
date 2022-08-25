@@ -29,7 +29,6 @@ var (
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
 	blockSlotIndicesBucket              = []byte("block-slot-indices")
-	stateSlotIndicesBucket              = []byte("state-slot-indices")
 	attestationHeadBlockRootBucket      = []byte("attestation-head-block-root-indices")
 	attestationSourceRootIndicesBucket  = []byte("attestation-source-root-indices")
 	attestationSourceEpochIndicesBucket = []byte("attestation-source-epoch-indices")

@@ -138,10 +138,6 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		for i, rt := range blockRoots {
-			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
-			if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
 			if err := bucket.Put(rt[:], multipleEncs[i]); err != nil {
 				return err
 			}
@@ -208,11 +204,6 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 	bucket := tx.Bucket(stateBucket)
 	valIdxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 	for i, rt := range blockRoots {
-		indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
-		if err := updateValueForIndices(ctx, indicesByBucket, rt[:], tx); err != nil {
-			return errors.Wrap(err, "could not update DB indices")
-		}
-
 		// There is a gap when the states that are passed are used outside this
 		// thread. But while storing the state object, we should not store the
 		// validator entries.To bring the gap closer, we empty the validators
@@ -390,15 +381,6 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		enc = bkt.Get(blockRoot[:])
 		if enc == nil {
 			return nil
-		}
-
-		slot, err := s.slotByBlockRoot(ctx, tx, blockRoot[:])
-		if err != nil {
-			return err
-		}
-		indicesByBucket := createStateIndicesFromStateSlot(ctx, slot)
-		if err := deleteValueForIndices(ctx, indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
 		}
 
 		ok, err := s.isStateValidatorMigrationOver()
@@ -683,28 +665,6 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 		return 0, err
 	}
 	return stateSummary.Slot, nil
-}
-
-// createStateIndicesFromStateSlot takes in a state slot and returns
-// a map of bolt DB index buckets corresponding to each particular key for indices for
-// data, such as (shard indices bucket -> shard 5).
-func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
-	defer span.End()
-	indicesByBucket := make(map[string][]byte)
-	// Every index has a unique bucket for fast, binary-search
-	// range scans for filtering across keys.
-	buckets := [][]byte{
-		stateSlotIndicesBucket,
-	}
-
-	indices := [][]byte{
-		bytesutil.SlotToBytesBigEndian(slot),
-	}
-	for i := 0; i < len(buckets); i++ {
-		indicesByBucket[string(buckets[i])] = indices[i]
-	}
-	return indicesByBucket
 }
 
 func (s *Store) isStateValidatorMigrationOver() (bool, error) {
