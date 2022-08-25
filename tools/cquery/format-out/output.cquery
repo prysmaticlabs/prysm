@@ -1,0 +1,5 @@
+# via https://stackoverflow.com/questions/52729104/how-do-i-get-output-files-for-a-given-bazel-target
+def format(target):
+  outputs = target.files.to_list()
+  return outputs[0].path if len(outputs) > 0 else "(missing)"
+
