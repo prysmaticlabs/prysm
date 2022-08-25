@@ -18,7 +18,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// "/eth/v1/beacon/blocks/{block_id}"
+// GET "/eth/v1/beacon/blocks/{block_id}"
+// GET "/eth/v1/beacon/blocks/{block_id}/root"
 func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
@@ -70,10 +71,31 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 	}
+	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+		BlockId: []byte("head"),
+	})
+	if err != nil {
+		return err
+	}
+	blockrootJSON := &apimiddleware.BlockRootResponseJson{}
+	if err := doMiddlewareJSONGetRequest(
+		v1MiddlewarePathTemplate,
+		"/beacon/blocks/head/root",
+		beaconNodeIdx,
+		blockrootJSON,
+	); err != nil {
+		return err
+	}
+	if hexutil.Encode(blockroot.Data.Root) != blockrootJSON.Data.Root {
+		return fmt.Errorf("API Middleware block root  %s does not match gRPC block root %s",
+			blockrootJSON.Data.Root,
+			hexutil.Encode(blockroot.Data.Root))
+	}
 	return nil
 }
 
-// /eth/v1/beacon/blocks/{block_id}/attestations
+// GET "/eth/v1/beacon/blocks/{block_id}/attestations"
+// GET "/eth/v1/beacon/pool/attestations"
 func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
@@ -114,6 +136,7 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 				fmt.Sprintf("index: %d, slot: %d, signature: %s", uint64(attest.Data.Index), uint64(attest.Data.Slot), hexutil.Encode(attest.Signature)))
 		}
 	}
+
 	return nil
 }
 

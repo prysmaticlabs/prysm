@@ -128,7 +128,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
-		endpoint.GetResponse = &blockRootResponseJson{}
+		endpoint.GetResponse = &BlockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
 		endpoint.GetResponse = &BlockAttestationsResponseJson{}
 	case "/eth/v1/beacon/pool/attestations":

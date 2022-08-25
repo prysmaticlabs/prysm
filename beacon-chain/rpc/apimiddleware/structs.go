@@ -105,7 +105,7 @@ type blockV2ResponseJson struct {
 	ExecutionOptimistic bool                              `json:"execution_optimistic"`
 }
 
-type blockRootResponseJson struct {
+type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
