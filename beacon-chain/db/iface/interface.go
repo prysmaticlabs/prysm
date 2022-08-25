@@ -42,7 +42,6 @@ type ReadOnlyDatabase interface {
 	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
-	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
 	LastArchivedSlot(ctx context.Context) (types.Slot, error)
 	LastValidatedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	// Deposit contract related handlers.

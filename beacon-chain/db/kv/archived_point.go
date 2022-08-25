@@ -41,18 +41,3 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 
 	return bytesutil.ToBytes32(blockRoot)
 }
-
-// HasArchivedPoint returns true if an archived point exists in DB.
-func (s *Store) HasArchivedPoint(ctx context.Context, slot types.Slot) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
-	defer span.End()
-	var exists bool
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		iBucket := tx.Bucket(stateSlotIndicesBucket)
-		exists = iBucket.Get(bytesutil.SlotToBytesBigEndian(slot)) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
-		panic(err)
-	}
-	return exists
-}
