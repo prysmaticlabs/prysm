@@ -1021,6 +1021,13 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, err2)
 
+	// This test changes global default values, we do not want this to side-affect other
+	// tests, so store the origin global default and then restore after tests are done.
+	originBeaconChainConfig := params.BeaconConfig()
+	defer func() {
+		params.SetActive(originBeaconChainConfig)
+	}()
+
 	globalDefaultGasLimit := validatorserviceconfig.Uint64(0xbbdd)
 
 	type want struct {
