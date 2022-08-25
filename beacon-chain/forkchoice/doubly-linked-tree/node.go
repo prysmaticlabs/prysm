@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // depth returns the length of the path to the root of Fork Choice
@@ -125,4 +126,38 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 		return nil
 	}
 	return n.parent.setNodeAndParentValidated(ctx)
+}
+
+// nodeTreeDump appends to the given list all the nodes descending from this one
+func (n *Node) nodeTreeDump(ctx context.Context, nodes []*ethpb.ForkChoiceNode) ([]*ethpb.ForkChoiceNode, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	var parentRoot [32]byte
+	if n.parent != nil {
+		parentRoot = n.parent.root
+	}
+	thisNode := &ethpb.ForkChoiceNode{
+		Slot:                     n.slot,
+		Root:                     n.root[:],
+		ParentRoot:               parentRoot[:],
+		JustifiedEpoch:           n.justifiedEpoch,
+		FinalizedEpoch:           n.finalizedEpoch,
+		UnrealizedJustifiedEpoch: n.unrealizedJustifiedEpoch,
+		UnrealizedFinalizedEpoch: n.unrealizedFinalizedEpoch,
+		Balance:                  n.balance,
+		Weight:                   n.weight,
+		ExecutionOptimistic:      n.optimistic,
+		ExecutionPayload:         n.payloadHash[:],
+	}
+
+	nodes = append(nodes, thisNode)
+	var err error
+	for _, child := range n.children {
+		nodes, err = child.nodeTreeDump(ctx, nodes)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nodes, nil
 }
