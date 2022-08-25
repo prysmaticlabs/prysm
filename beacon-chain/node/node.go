@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"math"
 	"os"
 	"os/signal"
@@ -521,6 +523,11 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		return err
 	}
 
+	st := b.finalizedStateAtStartUp
+	activeVals, err := helpers.ActiveValidatorCount(context.Background(), st, coreTime.CurrentEpoch(st))
+	if err != nil {
+		return err
+	}
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
@@ -539,7 +546,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		StateNotifier:     b,
-		DB:                b.db,
+		ActiveValidators:  activeVals,
 	})
 	if err != nil {
 		return err
