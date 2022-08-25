@@ -362,6 +362,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			beaconDB:    db,
 			initialSync: &mockSync.Sync{IsSyncing: false},
 			chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
+				Optimistic:       true,
 				DB:               db,
 				State:            beaconState,
 				ValidAttestation: true,

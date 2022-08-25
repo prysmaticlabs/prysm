@@ -35,6 +35,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
 		DB:               db,
+		Optimistic:       true,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
