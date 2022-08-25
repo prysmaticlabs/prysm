@@ -130,7 +130,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/blocks/{block_id}/root":
 		endpoint.GetResponse = &blockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
-		endpoint.GetResponse = &blockAttestationsResponseJson{}
+		endpoint.GetResponse = &BlockAttestationsResponseJson{}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 		endpoint.GetResponse = &attestationsPoolResponseJson{}

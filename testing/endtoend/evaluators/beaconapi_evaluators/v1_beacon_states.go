@@ -70,8 +70,51 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 	}
-
 	return nil
+}
+
+// /eth/v1/beacon/blocks/{block_id}/attestations
+func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	resp, err := beaconClient.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{BlockId: []byte("head")})
+	if err != nil {
+		return err
+	}
+	respJSON := &apimiddleware.BlockAttestationsResponseJson{}
+	if err := doMiddlewareJSONGetRequest(
+		v1MiddlewarePathTemplate,
+		"/beacon/blocks/head/attestation",
+		beaconNodeIdx,
+		respJSON,
+	); err != nil {
+		return err
+	}
+	if len(resp.Data) != len(respJSON.Data) {
+		return fmt.Errorf("API Middleware attestations length  %d does not match gRPC block signature %d",
+			len(respJSON.Data),
+			len(resp.Data))
+	}
+	for i, attest := range resp.Data {
+		index, err := strconv.ParseUint(respJSON.Data[i].Data.CommitteeIndex, 10, 64)
+		if err != nil {
+			return err
+		}
+		slot, err := strconv.ParseUint(respJSON.Data[i].Data.Slot, 10, 64)
+		if err != nil {
+			return err
+		}
+		if uint64(attest.Data.Index) == index &&
+			uint64(attest.Data.Slot) == slot &&
+			hexutil.Encode(attest.Signature) == respJSON.Data[i].Signature {
+			return nil
+		} else {
+			return fmt.Errorf("API Middleware attestation response %s does not match gRPC attestation response %s ",
+				fmt.Sprintf("index: %d, slot: %d, signature: %s", index, slot, respJSON.Data[i].Signature),
+				fmt.Sprintf("index: %d, slot: %d, signature: %s", uint64(attest.Data.Index), uint64(attest.Data.Slot), hexutil.Encode(attest.Signature)))
+		}
+	}
+
 }
 
 // eth/v1/beacon/states/{state_id}/validators

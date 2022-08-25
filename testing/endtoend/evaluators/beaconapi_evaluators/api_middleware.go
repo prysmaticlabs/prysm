@@ -26,6 +26,7 @@ func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
 		withCompareBeaconBlocks,
 		withCompareValidatorsEth,
 		withCompareSyncCommittee,
+		withCompareBlockAttestations,
 	}
 	v1Validator := []apiComparisonFunc{
 		withCompareAttesterDuties,
