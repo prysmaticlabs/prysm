@@ -13,11 +13,13 @@ import (
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
@@ -32,6 +34,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -1842,7 +1845,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
 
-	t.Run("Bellatrix", func(t *testing.T) {
+	t.Run("Can get blind block from builder service", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
@@ -1850,6 +1853,8 @@ func TestProduceBlindedBlock(t *testing.T) {
 		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch + 1
+		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
@@ -1870,14 +1875,56 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlock{
-					TotalDifficulty: "0x1",
-				},
+		fb := util.HydrateSignedBeaconBlockBellatrix(&ethpbalpha.SignedBeaconBlockBellatrix{})
+		fb.Block.Body.ExecutionPayload.GasLimit = 123
+		wfb, err := blocks.NewSignedBeaconBlock(fb)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wfb), "Could not save block")
+		r, err := wfb.Block().HashTreeRoot()
+		require.NoError(t, err)
+
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		ti := time.Unix(0, 0)
+		ts, err := slots.ToTime(uint64(ti.Unix()), 33)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+		bid := &ethpbalpha.BuilderBid{
+			Header: &enginev1.ExecutionPayloadHeader{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       random,
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+				BlockNumber:      1,
+				Timestamp:        uint64(ts.Unix()),
 			},
-			TimeFetcher:            &mockChain.ChainService{},
-			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpbalpha.SignedBuilderBid{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			BeaconDB:    db,
+			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New()},
+			TimeFetcher: &mockChain.ChainService{
+				Genesis: ti,
+			},
+			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:], Block: wfb},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
@@ -1892,6 +1939,15 @@ func TestProduceBlindedBlock(t *testing.T) {
 			StateGen:               stategen.New(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				Bid:           sBid,
+			},
+			FinalizationFetcher: &mockChain.ChainService{
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+					Root: r[:],
+				},
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1949,8 +2005,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:        v1Alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           &mockChain.ChainService{},
+			OptimisticModeFetcher: &mockChain.ChainService{},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
 		require.NoError(t, err)
