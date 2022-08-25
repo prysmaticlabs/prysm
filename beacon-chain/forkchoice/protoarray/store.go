@@ -1080,6 +1080,6 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	return count, nil
 }
 
-func (_ *ForkChoice) ForkChoiceDump(_ context.Context) (*ethpb.ForkChoiceResponse, error) {
+func (*ForkChoice) ForkChoiceDump(_ context.Context) (*ethpb.ForkChoiceResponse, error) {
 	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
 }
