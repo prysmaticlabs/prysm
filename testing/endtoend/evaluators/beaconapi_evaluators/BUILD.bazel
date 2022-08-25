@@ -5,10 +5,11 @@ go_library(
     testonly = True,
     srcs = [
         "api_middleware.go",
+        "beacon.go",
+        "node.go",
         "types.go",
         "util.go",
-        "v1_beacon_states.go",
-        "v1_validator.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators",
     visibility = ["//testing/endtoend:__subpackages__"],
