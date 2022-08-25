@@ -123,6 +123,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if bid == nil || bid.Message == nil {
+		return nil, errors.New("builder returned nil bid")
+	}
 
 	v := bid.Message.Value
 
