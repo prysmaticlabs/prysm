@@ -2,6 +2,7 @@ package evaluators
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -12,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
+
+var streamDeadline = 1 * time.Minute
 
 // AltairForkTransition ensures that the Altair hard fork has occurred successfully.
 var AltairForkTransition = types.Evaluator{
@@ -30,7 +33,7 @@ var BellatrixForkTransition = types.Evaluator{
 func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
@@ -72,7 +75,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
