@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -108,6 +110,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
+
 	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
@@ -120,6 +123,25 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if bid == nil || bid.Message == nil {
+		return nil, errors.New("builder returned nil bid")
+	}
+
+	v := bid.Message.Value
+
+	if new(big.Int).SetBytes(bytesutil.ReverseByteOrder(v)).String() == "0" {
+		return nil, errors.New("builder returned header with 0 bid amount")
+	}
+
+	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	if err != nil {
+		return nil, err
+	}
+
+	if bytesutil.ToBytes32(bid.Message.Header.TransactionsRoot) == emptyRoot {
+		return nil, errors.New("builder returned header with an empty tx root")
+	}
+
 	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
 		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
 	}
