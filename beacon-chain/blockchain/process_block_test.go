@@ -3006,7 +3006,6 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is optimistic now.
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
@@ -3230,7 +3229,6 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is optimistic now
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
