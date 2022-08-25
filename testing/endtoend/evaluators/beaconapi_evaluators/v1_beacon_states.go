@@ -84,7 +84,7 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 	respJSON := &apimiddleware.BlockAttestationsResponseJson{}
 	if err := doMiddlewareJSONGetRequest(
 		v1MiddlewarePathTemplate,
-		"/beacon/blocks/head/attestation",
+		"/beacon/blocks/head/attestations",
 		beaconNodeIdx,
 		respJSON,
 	); err != nil {
@@ -114,7 +114,7 @@ func withCompareBlockAttestations(beaconNodeIdx int, conn *grpc.ClientConn) erro
 				fmt.Sprintf("index: %d, slot: %d, signature: %s", uint64(attest.Data.Index), uint64(attest.Data.Slot), hexutil.Encode(attest.Signature)))
 		}
 	}
-
+	return nil
 }
 
 // eth/v1/beacon/states/{state_id}/validators
