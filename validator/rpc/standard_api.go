@@ -476,6 +476,39 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	return &empty.Empty{}, nil
 }
 
+func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGasLimitRequest) (*empty.Empty, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+
+	proposerSettings := s.validatorService.ProposerSettings
+	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
+		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found && proposerOption.BuilderConfig != nil {
+			// If proposerSettings has default value, use it.
+			if proposerSettings.DefaultConfig != nil && proposerSettings.DefaultConfig.BuilderConfig != nil {
+				proposerOption.BuilderConfig.GasLimit = proposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			} else {
+				// Fallback to using global default.
+				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+			}
+			// Successfully deleted gas limit (reset to proposer config default or global default).
+			// Return with success http code "204".
+			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
+				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code 204 header: %v", err)
+			}
+			return &empty.Empty{}, nil
+		}
+	}
+	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
+	// we response "not found".
+	return nil, status.Error(codes.NotFound, fmt.Sprintf("no gaslimt found for pubkey: %q", hexutil.Encode(validatorKey)))
+}
+
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {
