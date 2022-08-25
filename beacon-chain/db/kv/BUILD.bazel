@@ -78,7 +78,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "archived_point_test.go",
         "backup_test.go",
         "blocks_test.go",
         "checkpoint_test.go",
