@@ -34,6 +34,7 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func TestServer_ListKeystores(t *testing.T) {
@@ -1008,6 +1009,140 @@ func TestServer_SetGasLimit(t *testing.T) {
 			require.NoError(t, err)
 			for _, w := range tt.w {
 				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
+			}
+		})
+	}
+}
+
+func TestServer_DeleteGasLimit(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
+	require.NoError(t, err)
+	require.NoError(t, err2)
+
+	// This test changes global default values, we do not want this to side-affect other
+	// tests, so store the origin global default and then restore after tests are done.
+	originBeaconChainGasLimit := params.BeaconConfig().DefaultBuilderGasLimit
+	defer func() {
+		params.BeaconConfig().DefaultBuilderGasLimit = originBeaconChainGasLimit
+	}()
+
+	globalDefaultGasLimit := validatorserviceconfig.Uint64(0xbbdd)
+
+	type want struct {
+		pubkey   []byte
+		gaslimit validatorserviceconfig.Uint64
+	}
+
+	tests := []struct {
+		name             string
+		pubkey           []byte
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		wantError        error
+		w                []want
+	}{
+		{
+			name:   "delete existing gas limit with default config",
+			pubkey: pubkey1,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+					},
+					bytesutil.ToBytes48(pubkey2): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(5555)},
+				},
+			},
+			wantError: nil,
+			w: []want{
+				{
+					pubkey: pubkey1,
+					// After deletion, use DefaultConfig.BuilderConfig.GasLimit.
+					gaslimit: validatorserviceconfig.Uint64(5555),
+				},
+				{
+					pubkey:   pubkey2,
+					gaslimit: validatorserviceconfig.Uint64(123456789),
+				},
+			},
+		},
+		{
+			name:   "delete existing gas limit with no default config",
+			pubkey: pubkey1,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+					},
+					bytesutil.ToBytes48(pubkey2): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(123456789)},
+					},
+				},
+			},
+			wantError: nil,
+			w: []want{
+				{
+					pubkey: pubkey1,
+					// After deletion, use global default, because DefaultConfig is not set at all.
+					gaslimit: globalDefaultGasLimit,
+				},
+				{
+					pubkey:   pubkey2,
+					gaslimit: validatorserviceconfig.Uint64(123456789),
+				},
+			},
+		},
+		{
+			name:   "delete nonexist gas limit",
+			pubkey: pubkey2,
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(pubkey1): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: validatorserviceconfig.Uint64(987654321)},
+					},
+				},
+			},
+			wantError: fmt.Errorf("%s", codes.NotFound.String()),
+			w: []want{
+				// pubkey1's gaslimit is unaffected
+				{
+					pubkey:   pubkey1,
+					gaslimit: validatorserviceconfig.Uint64(987654321),
+				},
+			},
+		},
+		{
+			name:      "delete nonexist gas limit 2",
+			pubkey:    pubkey2,
+			wantError: fmt.Errorf("%s", codes.NotFound.String()),
+			w:         []want{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.proposerSettings,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			// Set up global default value for builder gas limit.
+			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
+			_, err = s.DeleteGasLimit(ctx, &ethpbservice.DeleteGasLimitRequest{Pubkey: tt.pubkey})
+			if tt.wantError != nil {
+				assert.ErrorContains(t, fmt.Sprintf("code = %s", tt.wantError.Error()), err)
+			} else {
+				require.NoError(t, err)
+			}
+			for _, w := range tt.w {
+				assert.Equal(t, w.gaslimit, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit)
 			}
 		})
 	}
