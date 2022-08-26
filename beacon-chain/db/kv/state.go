@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -668,14 +670,19 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 	return stateSummary.Slot, nil
 }
 
-// CleanUpDirtyStates removes states in DB that falls to under archived point interval rules.
-// Only following states would be kept:
-// 1.) state_slot % archived_interval == 0. (e.g. archived_interval=2048, states with slot 2048, 4096... etc)
-// 2.) archived_interval - archived_interval/3 < state_slot % archived_interval
-//   (e.g. archived_interval=2048, states with slots after 1365).
-//   This is to tolerate skip slots. Not every state lays on the boundary.
-// 3.) state with current finalized root
-// 4.) unfinalized States
+var errSavedStateMissingBlock = errors.New("Could not find block corresponding to saved state")
+
+// CleanUpDirtyStates attempts to maintain the promise to save approximately <head slot / save state interval> states.
+// To do that, we save about 1 state every eg 2048 slots (default slotsPerArchivedPoint value), calling the slot
+// where the save happened the "save point". Due to skipped slots, there may not be a block at a multiple of 2048,
+// in which case the saved state point will be at the slot where the last block was previously included in the interval.
+// We don't want to delete the most recently finalized state, which is saved to the same database,
+// and in long periods of non-finality, stategen may also write a state every 128 slots to aid in recovery.
+// So we preserve:
+//   1. any state where the slot number is a multiple of 2048 (slot % 2048 == 0)
+//   2. any state with a slot number within 682 slots (2048/3) of a such a save point,
+//   3. most recently finalized state
+//   4. non-finalized states used by stategen
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
@@ -688,24 +695,61 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	if err != nil {
 		return err
 	}
-	deletedRoots := make([][32]byte, 0)
+	finalizedRoot := bytesutil.ToBytes32(f.Root)
 
+	// We usually archive a state every 2048 slots. If a slot at with slot number % 2048 == 0 is skipped,
+	// we will store the last un-skipped state instead. We don't know exactly how far back that state could be
+	// from the skipped one, but a fudge factor of roughly 1/3 of the interval was chosen based on looking
+	// at chain history for guidance. 1/3 of the default interval (2048) comes out to about 682 slots (or ~21 epochs).
+	intervalTopThird := slotsPerArchivedPoint-slotsPerArchivedPoint/3
+
+	seen := 0
+	toDelete := make([][32]byte, 0)
 	err = s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(stateSlotIndicesBucket)
-		return bkt.ForEach(func(k, v []byte) error {
+		bkt := tx.Bucket(stateBucket)
+		bbkt := tx.Bucket(blocksBucket)
+		return bkt.ForEach(func(k, _ []byte) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
 
-			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
-			slot := bytesutil.BytesToSlotBigEndian(k)
-			mod := slot % slotsPerArchivedPoint
-			nonFinalized := slot > finalizedSlot
-
-			// The following conditions cover 1, 2, 3 and 4 above.
-			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized {
-				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
+			seen += 1
+			// If we could cheaply and easily read the first 50 or so bytes of the state,
+			// we could pull the slot from the ssz-encoded bytes. But the state is very large (> 50MB) and
+			// we need to read the entire thing to snappy.Decode it, so this code is betting that it's cheaper
+			// to grab the corresponding block and decode that instead.
+			enc := bbkt.Get(k[:32])
+			if enc == nil {
+				// the database is in an unexpected state, we should error out to prevent anything destructive.
+				log.WithField("root", hexutil.Encode(k)).Error("Could not find block corresponding to saved state")
+				return errors.Wrapf(errSavedStateMissingBlock, "root=%#x", k)
 			}
+			enc, err = snappy.Decode(nil, enc)
+			if err != nil {
+				return errors.Wrapf(err, "unable to snappy.Decode block with root=%#x", k)
+			}
+			slot, err := detect.SlotFromBlock(enc)
+			if err != nil {
+				return errors.Wrapf(err, "unable to extract slot from block with root=%#x", k)
+			}
+			mod := slot % slotsPerArchivedPoint
+			// state is on an archive point, or within the final 1/3 of the interval (case 1 & 2)
+			if mod == 0 || mod > intervalTopThird {
+				return nil
+			}
+
+			// don't delete the state integrating the latest finalized block (case 3)
+			if bytesutil.ToBytes32(k) == finalizedRoot {
+				return nil
+			}
+
+			// don't delete states that haven't finalized yet - they may be in-use by the hot state cache (case 4)
+			if slot > finalizedSlot {
+				return nil
+			}
+
+			// delete everything else!
+			toDelete = append(toDelete, bytesutil.ToBytes32(k))
 			return nil
 		})
 	})
@@ -713,13 +757,13 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 		return err
 	}
 
-	// Length of to be deleted roots is 0. Nothing to do.
-	if len(deletedRoots) == 0 {
+	if len(toDelete) == 0 {
+		log.WithField("db_total", seen).Info("No dirty states to clean up")
 		return nil
 	}
 
-	log.WithField("count", len(deletedRoots)).Info("Cleaning up dirty states")
-	if err := s.DeleteStates(ctx, deletedRoots); err != nil {
+	log.WithField("db_total", seen).WithField("dirty", len(toDelete)).Info("Cleaning up dirty states")
+	if err := s.DeleteStates(ctx, toDelete); err != nil {
 		return err
 	}
 

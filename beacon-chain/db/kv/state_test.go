@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -474,8 +475,7 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	genesisRoot := [32]byte{'a'}
-	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveGenesisData(context.Background(), genesisState))
 
 	bRoots := make([][32]byte, 0)
 	slotsPerArchivedPoint := types.Slot(128)
@@ -504,11 +504,12 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	}))
 	require.NoError(t, db.CleanUpDirtyStates(context.Background(), slotsPerArchivedPoint))
 
+	threshold := slotsPerArchivedPoint.SubSlot(slotsPerArchivedPoint.Div(3))
 	for i, root := range bRoots {
-		if types.Slot(i) >= slotsPerArchivedPoint.SubSlot(slotsPerArchivedPoint.Div(3)) {
+		if types.Slot(i) >= threshold {
 			require.Equal(t, true, db.HasState(context.Background(), root))
 		} else {
-			require.Equal(t, false, db.HasState(context.Background(), root))
+			require.Equal(t, false, db.HasState(context.Background(), root), fmt.Sprintf("slot=%d, threshold=%d", i, threshold))
 		}
 	}
 }
@@ -518,9 +519,9 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 
 	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	genesisRoot := [32]byte{'a'}
-	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveGenesisData(context.Background(), genesisState))
+	genesisRoot, err := db.GenesisBlockRoot(context.Background())
+	require.NoError(t, err)
 
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := util.NewBeaconBlock()
@@ -547,9 +548,9 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 
 	genesisState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	genesisRoot := [32]byte{'a'}
-	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
-	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
+	require.NoError(t, db.SaveGenesisData(context.Background(), genesisState))
+	genesisRoot, err := db.GenesisBlockRoot(context.Background())
+	require.NoError(t, err)
 
 	var unfinalizedRoots [][32]byte
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
