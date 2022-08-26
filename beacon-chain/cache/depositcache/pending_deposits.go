@@ -55,7 +55,7 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, untilBlk *big.Int) 
 
 	depositCntrs := dc.PendingContainers(ctx, untilBlk)
 
-	var deposits []*ethpb.Deposit
+	deposits := make([]*ethpb.Deposit, 0, len(depositCntrs))
 	for _, dep := range depositCntrs {
 		deposits = append(deposits, dep.Deposit)
 	}
@@ -71,7 +71,7 @@ func (dc *DepositCache) PendingContainers(ctx context.Context, untilBlk *big.Int
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*ethpb.DepositContainer
+	depositCntrs := make([]*ethpb.DepositContainer, 0, len(dc.pendingDeposits))
 	for _, ctnr := range dc.pendingDeposits {
 		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			depositCntrs = append(depositCntrs, ctnr)
@@ -139,7 +139,7 @@ func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeInde
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	var cleanDeposits []*ethpb.DepositContainer
+	cleanDeposits := make([]*ethpb.DepositContainer, 0, len(dc.pendingDeposits))
 	for _, dp := range dc.pendingDeposits {
 		if dp.Index >= merkleTreeIndex {
 			cleanDeposits = append(cleanDeposits, dp)

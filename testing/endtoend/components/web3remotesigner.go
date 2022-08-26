@@ -205,7 +205,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 		return nil, errors.New("no keys returned")
 	}
 
-	var pks []bls.PublicKey
+	pks := make([]bls.PublicKey, 0, len(keys))
 	for _, key := range keys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
