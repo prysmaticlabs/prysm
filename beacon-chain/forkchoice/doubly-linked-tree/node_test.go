@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -206,6 +207,8 @@ func TestNode_LeadsToViableHead(t *testing.T) {
 func TestNode_SetFullyValidated(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
+	storeNodes := make([]*Node, 6)
+	storeNodes[0] = f.store.treeRootNode
 	// insert blocks in the fork pattern (optimistic status in parenthesis)
 	//
 	// 0 (false) -- 1 (false) -- 2 (false) -- 3 (true) -- 4 (true)
@@ -215,20 +218,25 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	storeNodes[1] = f.store.nodeByRoot[blkRoot]
 	require.NoError(t, f.SetOptimisticToValid(ctx, params.BeaconConfig().ZeroHash))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	storeNodes[2] = f.store.nodeByRoot[blkRoot]
 	require.NoError(t, f.SetOptimisticToValid(ctx, indexToHash(1)))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	storeNodes[3] = f.store.nodeByRoot[blkRoot]
 	state, blkRoot, err = prepareForkchoiceState(ctx, 4, indexToHash(4), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	storeNodes[4] = f.store.nodeByRoot[blkRoot]
 	state, blkRoot, err = prepareForkchoiceState(ctx, 5, indexToHash(5), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	storeNodes[5] = f.store.nodeByRoot[blkRoot]
 
 	opt, err := f.IsOptimistic(indexToHash(5))
 	require.NoError(t, err)
@@ -253,4 +261,21 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	opt, err = f.IsOptimistic(indexToHash(3))
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
+
+	respNodes := make([]*ethpb.ForkChoiceNode, 0)
+	respNodes, err = f.store.treeRootNode.nodeTreeDump(ctx, respNodes)
+	require.NoError(t, err)
+	require.Equal(t, len(respNodes), f.NodeCount())
+
+	for i, respNode := range respNodes {
+		require.Equal(t, storeNodes[i].slot, respNode.Slot)
+		require.DeepEqual(t, storeNodes[i].root[:], respNode.Root)
+		require.Equal(t, storeNodes[i].balance, respNode.Balance)
+		require.Equal(t, storeNodes[i].weight, respNode.Weight)
+		require.Equal(t, storeNodes[i].optimistic, respNode.ExecutionOptimistic)
+		require.Equal(t, storeNodes[i].justifiedEpoch, respNode.JustifiedEpoch)
+		require.Equal(t, storeNodes[i].unrealizedJustifiedEpoch, respNode.UnrealizedJustifiedEpoch)
+		require.Equal(t, storeNodes[i].finalizedEpoch, respNode.FinalizedEpoch)
+		require.Equal(t, storeNodes[i].unrealizedFinalizedEpoch, respNode.UnrealizedFinalizedEpoch)
+	}
 }
