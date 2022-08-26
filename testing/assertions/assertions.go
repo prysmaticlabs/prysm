@@ -135,7 +135,7 @@ func isNil(obj interface{}) bool {
 func LogsContain(loggerFn assertionLoggerFn, hook *test.Hook, want string, flag bool, msg ...interface{}) {
 	_, file, line, _ := runtime.Caller(2)
 	entries := hook.AllEntries()
-	var logs []string
+	logs := make([]string, 0, len(entries))
 	match := false
 	for _, e := range entries {
 		msg, err := e.String()
