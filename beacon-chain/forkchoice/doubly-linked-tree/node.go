@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
 // depth returns the length of the path to the root of Fork Choice
@@ -129,7 +129,7 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one
-func (n *Node) nodeTreeDump(ctx context.Context, nodes []*ethpb.ForkChoiceNode) ([]*ethpb.ForkChoiceNode, error) {
+func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]*v1.ForkChoiceNode, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -137,7 +137,7 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*ethpb.ForkChoiceNode) 
 	if n.parent != nil {
 		parentRoot = n.parent.root
 	}
-	thisNode := &ethpb.ForkChoiceNode{
+	thisNode := &v1.ForkChoiceNode{
 		Slot:                     n.slot,
 		Root:                     n.root[:],
 		ParentRoot:               parentRoot[:],
