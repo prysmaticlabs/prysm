@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -614,29 +615,29 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
-// ForkchoiceDump returns a full dump of forkhoice.
-func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*ethpb.ForkChoiceResponse, error) {
-	jc := &ethpb.Checkpoint{
+// ForkChoiceDump returns a full dump of forkhoice.
+func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse, error) {
+	jc := &v1.Checkpoint{
 		Epoch: f.store.justifiedCheckpoint.Epoch,
 		Root:  f.store.justifiedCheckpoint.Root[:],
 	}
-	bjc := &ethpb.Checkpoint{
+	bjc := &v1.Checkpoint{
 		Epoch: f.store.bestJustifiedCheckpoint.Epoch,
 		Root:  f.store.bestJustifiedCheckpoint.Root[:],
 	}
-	ujc := &ethpb.Checkpoint{
+	ujc := &v1.Checkpoint{
 		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
 		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
 	}
-	fc := &ethpb.Checkpoint{
+	fc := &v1.Checkpoint{
 		Epoch: f.store.finalizedCheckpoint.Epoch,
 		Root:  f.store.finalizedCheckpoint.Root[:],
 	}
-	ufc := &ethpb.Checkpoint{
+	ufc := &v1.Checkpoint{
 		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
 		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
 	}
-	nodes := make([]*ethpb.ForkChoiceNode, 0, f.NodeCount())
+	nodes := make([]*v1.ForkChoiceNode, 0, f.NodeCount())
 	var err error
 	if f.store.treeRootNode != nil {
 		nodes, err = f.store.treeRootNode.nodeTreeDump(ctx, nodes)
@@ -648,7 +649,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*ethpb.ForkChoiceRespo
 	if f.store.headNode != nil {
 		headRoot = f.store.headNode.root
 	}
-	resp := &ethpb.ForkChoiceResponse{
+	resp := &v1.ForkChoiceResponse{
 		JustifiedCheckpoint:           jc,
 		BestJustifiedCheckpoint:       bjc,
 		UnrealizedJustifiedCheckpoint: ujc,

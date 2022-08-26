@@ -17,6 +17,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -1082,6 +1083,6 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	return count, nil
 }
 
-func (*ForkChoice) ForkChoiceDump(_ context.Context) (*ethpb.ForkChoiceResponse, error) {
+func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, error) {
 	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
 }

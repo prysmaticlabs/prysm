@@ -49,7 +49,7 @@ var file_proto_eth_service_beacon_debug_service_proto_rawDesc = []byte{
 	0x6f, 0x74, 0x6f, 0x1a, 0x1f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76,
 	0x32, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x2e, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x16, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f,
-	0x76, 0x32, 0x2f, 0x73, 0x73, 0x7a, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0xdf, 0x04, 0x0a,
+	0x76, 0x32, 0x2f, 0x73, 0x73, 0x7a, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0xdf, 0x05, 0x0a,
 	0x0b, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x44, 0x65, 0x62, 0x75, 0x67, 0x12, 0x8e, 0x01, 0x0a,
 	0x11, 0x47, 0x65, 0x74, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x53,
 	0x53, 0x5a, 0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
@@ -87,7 +87,15 @@ var file_proto_eth_service_beacon_debug_service_proto_rawDesc = []byte{
 	0x6f, 0x69, 0x63, 0x65, 0x48, 0x65, 0x61, 0x64, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x22, 0x2b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x25, 0x12, 0x23, 0x2f, 0x69, 0x6e, 0x74, 0x65,
 	0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x2f, 0x64, 0x65, 0x62, 0x75,
-	0x67, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x68, 0x65, 0x61, 0x64, 0x73, 0x42, 0x98,
+	0x67, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x68, 0x65, 0x61, 0x64, 0x73, 0x12, 0x7e,
+	0x0a, 0x0d, 0x47, 0x65, 0x74, 0x46, 0x6f, 0x72, 0x6b, 0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x12,
+	0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
+	0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
+	0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x46, 0x6f, 0x72, 0x6b, 0x43, 0x68,
+	0x6f, 0x69, 0x63, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x30, 0x82, 0xd3,
+	0xe4, 0x93, 0x02, 0x2a, 0x12, 0x28, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f,
+	0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x64, 0x65, 0x62, 0x75, 0x67, 0x2f, 0x62, 0x65, 0x61,
+	0x63, 0x6f, 0x6e, 0x2f, 0x66, 0x6f, 0x72, 0x6b, 0x63, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x42, 0x98,
 	0x01, 0x0a, 0x18, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
 	0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x42, 0x17, 0x42, 0x65, 0x61,
 	0x63, 0x6f, 0x6e, 0x44, 0x65, 0x62, 0x75, 0x67, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50,
@@ -108,18 +116,21 @@ var file_proto_eth_service_beacon_debug_service_proto_goTypes = []interface{}{
 	(*v2.SSZContainer)(nil),            // 3: ethereum.eth.v2.SSZContainer
 	(*v2.BeaconStateResponseV2)(nil),   // 4: ethereum.eth.v2.BeaconStateResponseV2
 	(*v2.ForkChoiceHeadsResponse)(nil), // 5: ethereum.eth.v2.ForkChoiceHeadsResponse
+	(*v1.ForkChoiceResponse)(nil),      // 6: ethereum.eth.v1.ForkChoiceResponse
 }
 var file_proto_eth_service_beacon_debug_service_proto_depIdxs = []int32{
 	0, // 0: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZ:input_type -> ethereum.eth.v1.StateRequest
 	1, // 1: ethereum.eth.service.BeaconDebug.GetBeaconStateV2:input_type -> ethereum.eth.v2.BeaconStateRequestV2
 	1, // 2: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZV2:input_type -> ethereum.eth.v2.BeaconStateRequestV2
 	2, // 3: ethereum.eth.service.BeaconDebug.ListForkChoiceHeadsV2:input_type -> google.protobuf.Empty
-	3, // 4: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZ:output_type -> ethereum.eth.v2.SSZContainer
-	4, // 5: ethereum.eth.service.BeaconDebug.GetBeaconStateV2:output_type -> ethereum.eth.v2.BeaconStateResponseV2
-	3, // 6: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZV2:output_type -> ethereum.eth.v2.SSZContainer
-	5, // 7: ethereum.eth.service.BeaconDebug.ListForkChoiceHeadsV2:output_type -> ethereum.eth.v2.ForkChoiceHeadsResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	2, // 4: ethereum.eth.service.BeaconDebug.GetForkChoice:input_type -> google.protobuf.Empty
+	3, // 5: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZ:output_type -> ethereum.eth.v2.SSZContainer
+	4, // 6: ethereum.eth.service.BeaconDebug.GetBeaconStateV2:output_type -> ethereum.eth.v2.BeaconStateResponseV2
+	3, // 7: ethereum.eth.service.BeaconDebug.GetBeaconStateSSZV2:output_type -> ethereum.eth.v2.SSZContainer
+	5, // 8: ethereum.eth.service.BeaconDebug.ListForkChoiceHeadsV2:output_type -> ethereum.eth.v2.ForkChoiceHeadsResponse
+	6, // 9: ethereum.eth.service.BeaconDebug.GetForkChoice:output_type -> ethereum.eth.v1.ForkChoiceResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -165,6 +176,7 @@ type BeaconDebugClient interface {
 	GetBeaconStateV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.BeaconStateResponseV2, error)
 	GetBeaconStateSSZV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.SSZContainer, error)
 	ListForkChoiceHeadsV2(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v2.ForkChoiceHeadsResponse, error)
+	GetForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.ForkChoiceResponse, error)
 }
 
 type beaconDebugClient struct {
@@ -211,12 +223,22 @@ func (c *beaconDebugClient) ListForkChoiceHeadsV2(ctx context.Context, in *empty
 	return out, nil
 }
 
+func (c *beaconDebugClient) GetForkChoice(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.ForkChoiceResponse, error) {
+	out := new(v1.ForkChoiceResponse)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconDebug/GetForkChoice", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BeaconDebugServer is the server API for BeaconDebug service.
 type BeaconDebugServer interface {
 	GetBeaconStateSSZ(context.Context, *v1.StateRequest) (*v2.SSZContainer, error)
 	GetBeaconStateV2(context.Context, *v2.BeaconStateRequestV2) (*v2.BeaconStateResponseV2, error)
 	GetBeaconStateSSZV2(context.Context, *v2.BeaconStateRequestV2) (*v2.SSZContainer, error)
 	ListForkChoiceHeadsV2(context.Context, *empty.Empty) (*v2.ForkChoiceHeadsResponse, error)
+	GetForkChoice(context.Context, *empty.Empty) (*v1.ForkChoiceResponse, error)
 }
 
 // UnimplementedBeaconDebugServer can be embedded to have forward compatible implementations.
@@ -234,6 +256,9 @@ func (*UnimplementedBeaconDebugServer) GetBeaconStateSSZV2(context.Context, *v2.
 }
 func (*UnimplementedBeaconDebugServer) ListForkChoiceHeadsV2(context.Context, *empty.Empty) (*v2.ForkChoiceHeadsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListForkChoiceHeadsV2 not implemented")
+}
+func (*UnimplementedBeaconDebugServer) GetForkChoice(context.Context, *empty.Empty) (*v1.ForkChoiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetForkChoice not implemented")
 }
 
 func RegisterBeaconDebugServer(s *grpc.Server, srv BeaconDebugServer) {
@@ -312,6 +337,24 @@ func _BeaconDebug_ListForkChoiceHeadsV2_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BeaconDebug_GetForkChoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconDebugServer).GetForkChoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.eth.service.BeaconDebug/GetForkChoice",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconDebugServer).GetForkChoice(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _BeaconDebug_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.eth.service.BeaconDebug",
 	HandlerType: (*BeaconDebugServer)(nil),
@@ -331,6 +374,10 @@ var _BeaconDebug_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListForkChoiceHeadsV2",
 			Handler:    _BeaconDebug_ListForkChoiceHeadsV2_Handler,
+		},
+		{
+			MethodName: "GetForkChoice",
+			Handler:    _BeaconDebug_GetForkChoice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
