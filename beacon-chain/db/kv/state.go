@@ -670,8 +670,6 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 	return stateSummary.Slot, nil
 }
 
-var errSavedStateMissingBlock = errors.New("Could not find block corresponding to saved state")
-
 // CleanUpDirtyStates attempts to maintain the promise to save approximately <head slot / save state interval> states.
 // To do that, we save about 1 state every eg 2048 slots (default slotsPerArchivedPoint value), calling the slot
 // where the save happened the "save point". Due to skipped slots, there may not be a block at a multiple of 2048,
