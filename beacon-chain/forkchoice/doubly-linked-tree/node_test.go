@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -262,7 +262,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 
-	respNodes := make([]*ethpb.ForkChoiceNode, 0)
+	respNodes := make([]*v1.ForkChoiceNode, 0)
 	respNodes, err = f.store.treeRootNode.nodeTreeDump(ctx, respNodes)
 	require.NoError(t, err)
 	require.Equal(t, len(respNodes), f.NodeCount())
