@@ -113,7 +113,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 		if err != nil {
 			return nil, err
 		}
-	case "":
+	case "", "ipc":
 		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
 		if err != nil {
 			return nil, err
