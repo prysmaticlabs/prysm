@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
@@ -699,7 +699,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	// we will store the last un-skipped state instead. We don't know exactly how far back that state could be
 	// from the skipped one, but a fudge factor of roughly 1/3 of the interval was chosen based on looking
 	// at chain history for guidance. 1/3 of the default interval (2048) comes out to about 682 slots (or ~21 epochs).
-	intervalTopThird := slotsPerArchivedPoint-slotsPerArchivedPoint/3
+	intervalTopThird := slotsPerArchivedPoint - slotsPerArchivedPoint/3
 
 	seen := 0
 	toDelete := make([][32]byte, 0)

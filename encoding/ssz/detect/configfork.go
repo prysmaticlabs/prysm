@@ -43,7 +43,7 @@ var beaconStateCurrentVersion = fieldSpec{
 var beaconStateSlot = fieldSpec{
 	// 40 = 8 (genesis_time) + 32 (genesis_validators_root)
 	offset: 40,
-	t: typeUint64,
+	t:      typeUint64,
 }
 
 // SlotFromState extracts the slot of the state out of the ssz-encoded byte slice

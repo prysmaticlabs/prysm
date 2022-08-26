@@ -21,7 +21,7 @@ import (
 )
 
 func TestSlotFromBlock(t *testing.T) {
-	for _, slot := range []types.Slot{0,1,2,3,5,7,11,13,16,32,128,2048, math.MaxUint64} {
+	for _, slot := range []types.Slot{0, 1, 2, 3, 5, 7, 11, 13, 16, 32, 128, 2048, math.MaxUint64} {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = slot
 		bb, err := b.MarshalSSZ()
