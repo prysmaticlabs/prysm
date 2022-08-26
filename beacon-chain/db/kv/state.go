@@ -619,57 +619,6 @@ func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, err
 	return dst, err
 }
 
-// slotByBlockRoot retrieves the corresponding slot of the input block root.
-func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []byte) (types.Slot, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.slotByBlockRoot")
-	defer span.End()
-
-	bkt := tx.Bucket(stateSummaryBucket)
-	enc := bkt.Get(blockRoot)
-
-	if enc == nil {
-		// Fall back to check the block.
-		bkt := tx.Bucket(blocksBucket)
-		enc := bkt.Get(blockRoot)
-
-		if enc == nil {
-			// Fallback and check the state.
-			bkt = tx.Bucket(stateBucket)
-			enc = bkt.Get(blockRoot)
-			if enc == nil {
-				return 0, errors.New("state enc can't be nil")
-			}
-			// no need to construct the validator entries as it is not used here.
-			s, err := s.unmarshalState(ctx, enc, nil)
-			if err != nil {
-				return 0, err
-			}
-			if s == nil || s.IsNil() {
-				return 0, errors.New("state can't be nil")
-			}
-			return s.Slot(), nil
-		}
-		b := &ethpb.SignedBeaconBlock{}
-		err := decode(ctx, enc, b)
-		if err != nil {
-			return 0, err
-		}
-		wsb, err := blocks.NewSignedBeaconBlock(b)
-		if err != nil {
-			return 0, err
-		}
-		if err := blocks.BeaconBlockIsNil(wsb); err != nil {
-			return 0, err
-		}
-		return b.Block.Slot, nil
-	}
-	stateSummary := &ethpb.StateSummary{}
-	if err := decode(ctx, enc, stateSummary); err != nil {
-		return 0, err
-	}
-	return stateSummary.Slot, nil
-}
-
 // CleanUpDirtyStates attempts to maintain the promise to save approximately <head slot / save state interval> states.
 // To do that, we save about 1 state every eg 2048 slots (default slotsPerArchivedPoint value), calling the slot
 // where the save happened the "save point". Due to skipped slots, there may not be a block at a multiple of 2048,
