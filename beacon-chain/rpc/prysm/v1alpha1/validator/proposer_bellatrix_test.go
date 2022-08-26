@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
@@ -504,6 +503,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
+	var scBits [fieldparams.SyncCommitteeLength]byte
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:       bellatrixSlot + 1,
@@ -513,7 +513,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 				RandaoReveal:     genesis.Block.Body.RandaoReveal,
 				Graffiti:         genesis.Block.Body.Graffiti,
 				Eth1Data:         genesis.Block.Body.Eth1Data,
-				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: emptyPayload,
 			},
 		},
@@ -602,6 +602,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	}
+	var scBits [fieldparams.SyncCommitteeLength]byte
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:       bellatrixSlot + 1,
@@ -611,7 +612,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 				RandaoReveal:     genesis.Block.Body.RandaoReveal,
 				Graffiti:         genesis.Block.Body.Graffiti,
 				Eth1Data:         genesis.Block.Body.Eth1Data,
-				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate:    &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: emptyPayload,
 			},
 		},

@@ -2006,6 +2006,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	altairSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 
+	var scBits [fieldparams.SyncCommitteeLength]byte
 	genAltair := &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
 			Slot:       altairSlot + 1,
@@ -2015,7 +2016,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 			},
 		},
 		Signature: genesis.Signature,
@@ -2124,6 +2125,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
+	var scBits [fieldparams.SyncCommitteeLength]byte
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:       bellatrixSlot + 1,
@@ -2133,7 +2135,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: &enginev1.ExecutionPayload{
 					ParentHash:    make([]byte, fieldparams.RootLength),
 					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
