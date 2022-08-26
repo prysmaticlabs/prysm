@@ -523,10 +523,15 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		return err
 	}
 
+	var activeVals uint64
 	st := b.finalizedStateAtStartUp
-	activeVals, err := helpers.ActiveValidatorCount(context.Background(), st, coreTime.CurrentEpoch(st))
-	if err != nil {
-		return err
+	if st == nil || st.IsNil() {
+		log.Warn("Starting p2p with active validator count = 0. This should only happen with networks in a pre-genesis state")
+	} else {
+		activeVals, err = helpers.ActiveValidatorCount(context.Background(), st, coreTime.CurrentEpoch(st))
+		if err != nil {
+			return err
+		}
 	}
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
