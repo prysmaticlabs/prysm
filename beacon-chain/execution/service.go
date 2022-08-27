@@ -608,11 +608,6 @@ func (s *Service) run(done <-chan struct{}) {
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
 				continue
 			}
-			if eth1HeadIsBehind(head.Time) {
-				s.pollConnectionStatus(s.ctx)
-				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
-				continue
-			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
 		case <-chainstartTicker.C:
