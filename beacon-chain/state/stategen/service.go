@@ -88,7 +88,7 @@ func New(beaconDB db.NoHeadAccessDatabase, saver Saver, opts ...StateGenOption) 
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
 		slotsPerArchivedPoint:   params.BeaconConfig().SlotsPerArchivedPoint,
 		epochBoundaryStateCache: newBoundaryStateCache(),
-		saver: saver,
+		saver:                   saver,
 	}
 	for _, o := range opts {
 		o(s)

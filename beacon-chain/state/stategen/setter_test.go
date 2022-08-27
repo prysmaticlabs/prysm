@@ -5,18 +5,29 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
+	genroot := [32]byte{}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 0, Root: genroot}
+	h := newTestSaver(beaconDB, withFinalizedCheckpointer(&mockFinalizedCheckpointer{c: cp}))
+	stateSlot := firstSaveableSlotAfter(t, h)
+	h.cs = &mockCurrentSlotter{Slot: stateSlot + h.snapshotInterval}
+	mode, err := h.refreshMode(ctx)
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
+	service := New(beaconDB, h)
 
-	service := New(beaconDB, newTestSaver(beaconDB))
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	// This goes to hot section, verify it can save on epoch boundary.
@@ -95,7 +106,15 @@ func TestSaveState_Alreadyhas(t *testing.T) {
 func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB, newTestSaver(beaconDB))
+	genroot := [32]byte{}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 0, Root: genroot}
+	h := newTestSaver(beaconDB, withFinalizedCheckpointer(&mockFinalizedCheckpointer{c: cp}))
+	stateSlot := firstSaveableSlotAfter(t, h)
+	h.cs = &mockCurrentSlotter{Slot: stateSlot + h.snapshotInterval}
+	mode, err := h.refreshMode(ctx)
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
+	service := New(beaconDB, h)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -116,7 +135,15 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB, newTestSaver(beaconDB))
+	genroot := [32]byte{}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 0, Root: genroot}
+	h := newTestSaver(beaconDB, withFinalizedCheckpointer(&mockFinalizedCheckpointer{c: cp}))
+	stateSlot := firstSaveableSlotAfter(t, h)
+	h.cs = &mockCurrentSlotter{Slot: stateSlot + h.snapshotInterval}
+	mode, err := h.refreshMode(ctx)
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
+	service := New(beaconDB, h)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
@@ -134,15 +161,40 @@ func TestSaveState_NoSaveNotEpochBoundary(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 	// Should have not been saved in DB.
 	require.Equal(t, false, beaconDB.HasState(ctx, r))
+
+	_, ok, err := service.epochBoundaryStateCache.getByBlockRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, false, ok, "saved to epoch boundary cache in error")
+}
+
+func firstSaveableSlotAfter(t *testing.T, h *hotStateSaver) types.Slot {
+	min, err := slots.EpochStart(hotStateSaveThreshold)
+	require.NoError(t, err)
+	f := h.fc.FinalizedCheckpoint()
+	require.NotNil(t, f)
+	fslot, err := slots.EpochStart(f.Epoch)
+	require.NoError(t, err)
+	min += fslot
+	diff := h.snapshotInterval - (min % h.snapshotInterval)
+	aligned := min + diff
+	require.Equal(t, types.Slot(0), aligned%h.snapshotInterval)
+	return min + diff
 }
 
 func TestSaveState_CanSaveHotStateToDB(t *testing.T) {
 	ctx := context.Background()
-	h := &hotStateSaver{db: testDB.SetupDB(t), snapshotInterval: DefaultSnapshotInterval}
-	h.enableSnapshots()
-	service := New(h.db, h)
+	beaconDB := testDB.SetupDB(t)
+	genroot := [32]byte{}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 0, Root: genroot}
+	h := newTestSaver(beaconDB, withFinalizedCheckpointer(&mockFinalizedCheckpointer{c: cp}))
+	stateSlot := firstSaveableSlotAfter(t, h)
+	h.cs = &mockCurrentSlotter{Slot: stateSlot + h.snapshotInterval}
+	mode, err := h.refreshMode(ctx)
+	require.NoError(t, err)
+	require.Equal(t, PersistenceModeSnapshot, mode)
+	service := New(beaconDB, h)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	require.NoError(t, beaconState.SetSlot(DefaultSnapshotInterval))
+	require.NoError(t, beaconState.SetSlot(stateSlot))
 
 	r := [32]byte{'A'}
 	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))

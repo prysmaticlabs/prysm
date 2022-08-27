@@ -2,7 +2,6 @@ package stategen
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 type testSaverOpt func(h *hotStateSaver)
@@ -10,18 +9,6 @@ type testSaverOpt func(h *hotStateSaver)
 func withFinalizedCheckpointer(fc *mockFinalizedCheckpointer) testSaverOpt {
 	return func(h *hotStateSaver) {
 		h.fc = fc
-	}
-}
-
-func withCurrentSlotter(cs *mockCurrentSlotter) testSaverOpt {
-	return func(h *hotStateSaver) {
-		h.cs = cs
-	}
-}
-
-func withSnapshotInterval(si types.Slot) testSaverOpt {
-	return func(h *hotStateSaver) {
-		h.snapshotInterval = si
 	}
 }
 
