@@ -123,12 +123,13 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	numOfSlots := types.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
-	timeToSleep := oneThird + oneThird
+	timeToSleep := (oneThird + oneThird).Seconds()
 
-	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
-	currentTime = time.Now()
-	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
+
+	elapsedTime := time.Since(currentTime).Seconds()
+	waitCorrectly := elapsedTime >= timeToSleep && elapsedTime <= timeToSleep*1.05 // allow a small error margin
+	assert.Equal(t, waitCorrectly, true)
 }
 
 func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
