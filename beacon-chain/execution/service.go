@@ -833,11 +833,3 @@ func dedupEndpoints(endpoints []string) []string {
 	}
 	return newEndpoints
 }
-
-// Checks if the provided timestamp is beyond the prescribed bound from
-// the current wall clock time.
-func eth1HeadIsBehind(timestamp uint64) bool {
-	timeout := prysmTime.Now().Add(-eth1Threshold)
-	// check that web3 client is syncing
-	return time.Unix(int64(timestamp), 0).Before(timeout) // lint:ignore uintcast -- timestamp will not exceed int64 in your lifetime.
-}

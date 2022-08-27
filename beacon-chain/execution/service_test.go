@@ -752,15 +752,6 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 	}
 }
 
-func TestTimestampIsChecked(t *testing.T) {
-	timestamp := uint64(time.Now().Unix())
-	assert.Equal(t, false, eth1HeadIsBehind(timestamp))
-
-	// Give an older timestmap beyond threshold.
-	timestamp = uint64(time.Now().Add(-eth1Threshold).Add(-1 * time.Minute).Unix())
-	assert.Equal(t, true, eth1HeadIsBehind(timestamp))
-}
-
 func TestETH1Endpoints(t *testing.T) {
 	server, firstEndpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
