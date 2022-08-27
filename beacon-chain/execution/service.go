@@ -66,10 +66,6 @@ var (
 	logThreshold = 8
 	// period to log chainstart related information
 	logPeriod = 1 * time.Minute
-	// threshold of how old we will accept an eth1 node's head to be.
-	eth1Threshold = 20 * time.Minute
-	// error when eth1 node is too far behind.
-	errFarBehind = errors.Errorf("eth1 head is more than %s behind from current wall clock time", eth1Threshold.String())
 )
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
