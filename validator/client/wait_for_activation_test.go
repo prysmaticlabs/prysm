@@ -401,6 +401,59 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	})
 }
 
+func TestWaitForActivation_RemoteKeymanager_NotStatEpoch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	validatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	beaconClient := mock.NewMockBeaconChainClient(ctrl)
+	stream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	validatorClient.EXPECT().WaitForActivation(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(stream, nil /* err */).AnyTimes()
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).AnyTimes()
+
+	inactiveKey := bytesutil.ToBytes48([]byte("inactive"))
+	activeKey := bytesutil.ToBytes48([]byte("active"))
+	km := remotekeymanagermock.NewMock()
+	km.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey, activeKey}
+	slot := types.Slot(1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	tickerChan := make(chan types.Slot)
+	ticker := &slotutilmock.MockTicker{
+		Channel: tickerChan,
+	}
+	v := validator{
+		validatorClient: validatorClient,
+		keyManager:      &km,
+		ticker:          ticker,
+		beaconClient:    beaconClient,
+	}
+	go func() {
+		tickerChan <- slot
+		// Cancel after timeout to avoid waiting on channel forever in case test goes wrong.
+		time.Sleep(time.Second)
+		tickerChan <- slot + 1
+		cancel()
+	}()
+
+	ctx, cancel = context.WithCancel(context.Background())
+	go func() {
+		time.AfterFunc(1500*time.Millisecond, func() {
+			cancel()
+		})
+	}()
+
+	err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
+	require.ErrorContains(t, "context error, not waiting for activation anymore: context canceled", err)
+	assert.LogsDoNotContain(t, hook, "Waiting for deposit to be observed by beacon node")
+	assert.LogsDoNotContain(t, hook, "Validator activated")
+
+}
+
 func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

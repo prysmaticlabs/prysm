@@ -115,10 +115,15 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 		case <-accountsChangedChan:
 			// Accounts (keys) changed, restart the process.
 			return v.waitForActivation(ctx, accountsChangedChan)
-		case <-v.NextSlot():
-			if ctx.Err() == context.Canceled {
-				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
+		case s := <-v.NextSlot():
+			if ctx.Err() != nil {
+				return errors.Wrap(ctx.Err(), "context error, not waiting for activation anymore")
 			}
+
+			if !slots.IsEpochStart(s) {
+				continue
+			}
+
 			validatingKeys, err := (*remoteKm).ReloadPublicKeys(ctx)
 			if err != nil {
 				return errors.Wrap(err, msgCouldNotFetchKeys)
