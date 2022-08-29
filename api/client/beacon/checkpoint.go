@@ -21,7 +21,7 @@ import (
 // OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
 type OriginData struct {
-	wsd *WeakSubjectivityData
+	wsd *WeakSubjectivityData // nolint:unused
 	sb  []byte
 	bb  []byte
 	st  state.BeaconState
