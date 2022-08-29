@@ -322,7 +322,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 		}
 
 		if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
-			if index < len(resp.InactivityScores) {
+			if index < len(resp.InactivityScores) && resp.InactivityScores[index] != 0 {
 				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[index]
 			} else {
 				log.WithField("pubKey", truncatedKey).Warn("Missing inactivity score")
@@ -407,7 +407,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	}
 
 	// Altair summary fields.
-	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && attested > 0 {
+	if slots.ToEpoch(slot) > params.BeaconConfig().AltairForkEpoch && attested > 0 && inactivityScore != 0 {
 		epochSummaryFields["averageInactivityScore"] = fmt.Sprintf("%.0f", float64(inactivityScore)/float64(len(resp.PublicKeys)))
 	}
 
