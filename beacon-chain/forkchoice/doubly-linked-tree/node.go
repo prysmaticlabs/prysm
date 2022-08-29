@@ -149,6 +149,7 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		Weight:                   n.weight,
 		ExecutionOptimistic:      n.optimistic,
 		ExecutionPayload:         n.payloadHash[:],
+		Timestamp:                n.timestamp,
 	}
 
 	nodes = append(nodes, thisNode)
