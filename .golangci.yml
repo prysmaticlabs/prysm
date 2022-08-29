@@ -13,7 +13,7 @@ linters:
   enable:
     - gofmt
     - goimports
-    - deadcode
+    - unused
     - errcheck
     - gosimple
     - gocognit
