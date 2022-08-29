@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -127,6 +128,16 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 			return nil, err
 		}
 		client.SetHeader("Authorization", header)
+	}
+	for _, h := range s.cfg.headers {
+		if h != "" {
+			keyValue := strings.Split(h, "=")
+			if len(keyValue) < 2 {
+				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+				continue
+			}
+			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		}
 	}
 	return client, nil
 }
