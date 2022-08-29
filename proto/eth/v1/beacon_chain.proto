@@ -336,4 +336,6 @@ message ForkChoiceNode {
     bool execution_optimistic = 10;
     // Execution payload block hash of the current forkchoice node.
     bytes execution_payload = 11 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Timestamp when the node was inserted
+    uint64 timestamp = 12;
 }
