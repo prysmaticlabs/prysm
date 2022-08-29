@@ -170,7 +170,7 @@ service BeaconNodeValidator {
 
     // GetFeeRecipientByValidatorIndex returns fee recipient in byte format to the corresponding validator index
     // prysm internal only, not beacon API
-    rpc GetFeeRecipientByValidatorIndex(FeeRecipientByValidatorIndexRequest) returns (FeeRecipientByValidatorIndexResponse){
+    rpc GetFeeRecipientByPubKey(FeeRecipientByPubKeyRequest) returns (FeeRecipientByPubKeyResponse){
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/fee_recipient_by_validator_index"
             body: "*"
@@ -775,10 +775,10 @@ message PrepareBeaconProposerRequest {
     repeated FeeRecipientContainer recipients = 1;
 }
 
-message FeeRecipientByValidatorIndexRequest {
-    uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+message FeeRecipientByPubKeyRequest {
+    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
 }
 
-message FeeRecipientByValidatorIndexResponse {
+message FeeRecipientByPubKeyResponse {
     bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 }
