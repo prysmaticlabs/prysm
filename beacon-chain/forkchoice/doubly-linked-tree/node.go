@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -100,7 +101,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch types.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
 	finalized := finalizedEpoch == n.finalizedEpoch || finalizedEpoch == 0
-	if !justified && justifiedEpoch+1 == currentEpoch {
+	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
 		if n.unrealizedJustifiedEpoch+1 >= currentEpoch {
 			justified = true
 			finalized = true

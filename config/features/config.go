@@ -61,7 +61,8 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	EnableNativeState                 bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
-	DisablePullTips                   bool // DisablePullTips enables experimental disabling of boundary checks.
+	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
+	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
@@ -209,6 +210,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
 	}
+	if ctx.Bool(enableDefensivePull.Name) {
+		logEnabled(enableDefensivePull)
+		cfg.EnableDefensivePull = true
+	}
+
 	if ctx.Bool(disableVecHTR.Name) {
 		logEnabled(disableVecHTR)
 	} else {
