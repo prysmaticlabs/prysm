@@ -239,7 +239,8 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 		// Is the state the genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
 		if parentRoot == params.BeaconConfig().ZeroHash {
-			return s.beaconDB.GenesisState(ctx)
+			s, err := s.beaconDB.GenesisState(ctx)
+			return s, errors.Wrap(err, "could not get genesis state")
 		}
 
 		// Return an error if slot hasn't been covered by checkpoint sync.
@@ -268,12 +269,13 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 
 		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
-			return s.beaconDB.State(ctx, parentRoot)
+			s, err := s.beaconDB.State(ctx, parentRoot)
+			return s, errors.Wrap(err, "failed to retrieve state from db")
 		}
 
 		b, err = s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to retrieve block from db")
 		}
 		if b == nil || b.IsNil() {
 			return nil, errUnknownBlock
