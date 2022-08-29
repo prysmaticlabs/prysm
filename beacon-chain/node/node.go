@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"math"
 	"os"
 	"os/signal"
@@ -28,8 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/v3/beacon-chain/deterministic-genesis"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node/registration"
@@ -108,6 +109,7 @@ type BeaconNode struct {
 	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
+	forkChoicer             forkchoice.ForkChoicer
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -183,6 +185,12 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
+	if features.Get().DisableForkchoiceDoublyLinkedTree {
+		beacon.forkChoicer = protoarray.New()
+	} else {
+		beacon.forkChoicer = doublylinkedtree.New()
+	}
+
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
@@ -228,7 +236,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(); err != nil {
+	if err := beacon.registerBlockchainService(beacon.forkChoicer); err != nil {
 		return nil, err
 	}
 
@@ -573,7 +581,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService() error {
+func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -587,6 +595,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	// skipcq: CRT-D0001
 	opts := append(
 		b.serviceFlagOpts.blockchainFlagOpts,
+		blockchain.WithForkChoiceStore(fc),
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
@@ -602,12 +611,6 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 	)
-
-	if features.Get().DisableForkchoiceDoublyLinkedTree {
-		opts = append(opts, blockchain.WithForkChoiceStore(protoarray.New()))
-	} else {
-		opts = append(opts, blockchain.WithForkChoiceStore(doublylinkedtree.New()))
-	}
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {

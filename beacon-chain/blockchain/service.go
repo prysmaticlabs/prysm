@@ -21,8 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	f "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
@@ -206,29 +204,22 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errNilFinalizedCheckpoint
 	}
 
-	var forkChoicer f.ForkChoicer
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	if !features.Get().DisableForkchoiceDoublyLinkedTree {
-		forkChoicer = doublylinkedtree.New()
-	} else {
-		forkChoicer = protoarray.New()
-	}
-	s.cfg.ForkChoiceStore = forkChoicer
-	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
 		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}
-	if err := forkChoicer.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
 		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
-	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint state")
 	}
-	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
 	if !features.Get().EnableStartOptimistic {
@@ -237,7 +228,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not get last validated checkpoint")
 		}
 		if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
-			if err := forkChoicer.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(s.ctx, fRoot); err != nil {
 				return errors.Wrap(err, "could not set finalized block as validated")
 			}
 		}
