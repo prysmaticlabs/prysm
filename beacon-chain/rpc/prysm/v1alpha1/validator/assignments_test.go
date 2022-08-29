@@ -311,7 +311,7 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
