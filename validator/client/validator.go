@@ -244,7 +244,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	log.Info("Syncing with beacon node to align on chain genesis info")
 	chainStartRes, err := stream.Recv()
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
