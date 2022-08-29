@@ -605,7 +605,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -852,7 +852,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 
 func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	db := dbTest.SetupDB(t)
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
