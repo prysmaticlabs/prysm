@@ -403,6 +403,10 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 		}
 	}
 
+	s.latestEth1DataLock.RLock()
+	lastReqBlock := s.latestEth1Data.LastRequestedBlock
+	s.latestEth1DataLock.RUnlock()
+
 	for _, filterLog := range logs {
 		if filterLog.BlockNumber > currentBlockNum {
 			if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
@@ -415,6 +419,13 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 			currentBlockNum = filterLog.BlockNumber
 		}
 		if err := s.ProcessLog(ctx, filterLog); err != nil {
+			// In the event the execution client gives us a garbled/bad log
+			// we reset the last requested block to the previous valid block range. This
+			// prevents the beacon from advancing processing of logs to another range
+			// in the event of an execution client failure.
+			s.latestEth1DataLock.Lock()
+			s.latestEth1Data.LastRequestedBlock = lastReqBlock
+			s.latestEth1DataLock.Unlock()
 			return 0, 0, err
 		}
 	}

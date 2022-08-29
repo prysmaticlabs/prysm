@@ -17,8 +17,8 @@ func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
 	testFiles, err := os.ReadDir(filepath)
 	require.NoError(t, err)
 
-	var fileNames []string
-	var fileContent [][]byte
+	fileNames := make([]string, 0, len(testFiles))
+	fileContent := make([][]byte, 0, len(testFiles))
 	require.Equal(t, false, len(testFiles) == 0, "no files exist in directory")
 	for _, f := range testFiles {
 		// Remove .yml suffix

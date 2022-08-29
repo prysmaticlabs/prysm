@@ -351,6 +351,7 @@ func (s *Service) Start() {
 				ReplayerBuilder:    ch,
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+			ForkFetcher:           s.cfg.ForkFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)

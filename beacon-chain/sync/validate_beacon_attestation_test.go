@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
@@ -23,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -38,6 +35,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
 		DB:               db,
+		Optimistic:       true,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -304,37 +302,6 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestServiceValidateCommitteeIndexBeaconAttestation_Optimistic(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidAttesterSlashing(t)
-
-	r := &Service{
-		cfg: &config{
-			p2p:         p,
-			chain:       &mockChain.ChainService{State: s, Optimistic: true},
-			initialSync: &mockSync.Sync{IsSyncing: false},
-		},
-	}
-
-	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, slashing)
-	require.NoError(t, err)
-
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
-	msg := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-	res, err := r.validateCommitteeIndexBeaconAttestation(ctx, "foobar", msg)
-	assert.NoError(t, err)
-	valid := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, valid, "Should have ignore this message")
 }
 
 func TestService_setSeenCommitteeIndicesSlot(t *testing.T) {
