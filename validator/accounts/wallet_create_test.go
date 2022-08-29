@@ -24,11 +24,8 @@ import (
 )
 
 const (
-	walletDirName    = "wallet"
 	passwordFileName = "password.txt"
 	password         = "OhWOWthisisatest42!$"
-	mnemonicFileName = "mnemonic.txt"
-	mnemonic         = "garage car helmet trade salmon embrace market giant movie wet same champion dawn chair shield drill amazing panther accident puzzle garden mosquito kind arena"
 )
 
 func init() {
