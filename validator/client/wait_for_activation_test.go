@@ -448,7 +448,7 @@ func TestWaitForActivation_RemoteKeymanager_NotStatEpoch(t *testing.T) {
 	}()
 
 	err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
-	require.ErrorContains(t, "context error, not waiting for activation anymore: context canceled", err)
+	require.ErrorContains(t, "context canceled, not waiting for activation anymore", err)
 	assert.LogsDoNotContain(t, hook, "Waiting for deposit to be observed by beacon node")
 	assert.LogsDoNotContain(t, hook, "Validator activated")
 
@@ -526,7 +526,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		}()
 
 		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
-		assert.ErrorContains(t, "context canceled, not waiting for activation anymore", err)
+		assert.ErrorContains(t, "context error, not waiting for activation anymore", err)
 	})
 	t.Run("reloaded", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
