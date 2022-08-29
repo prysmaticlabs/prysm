@@ -51,7 +51,7 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 
 func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name       string
 		reqPubKeys [][]byte
@@ -137,7 +137,7 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 
 func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte
