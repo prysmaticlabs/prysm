@@ -23,9 +23,11 @@ func FlagOptions(c *cli.Context) ([]execution.Option, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
 	}
+	headers := strings.Split(c.String(flags.ExecutionEngineHeaders.Name), ",")
 	opts := []execution.Option{
 		execution.WithHttpEndpoint(endpoint),
 		execution.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
+		execution.WithHeaders(headers),
 	}
 	if len(jwtSecret) > 0 {
 		opts = append(opts, execution.WithHttpEndpointAndJWTSecret(endpoint, jwtSecret))
