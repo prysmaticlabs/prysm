@@ -268,12 +268,13 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 
 		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
-			return s.beaconDB.State(ctx, parentRoot)
+			s, err := s.beaconDB.State(ctx, parentRoot)
+			return s, errors.Wrap(err, "failed to retrieve state from db")
 		}
 
 		b, err = s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to retrieve block from db")
 		}
 		if b == nil || b.IsNil() {
 			return nil, errUnknownBlock
