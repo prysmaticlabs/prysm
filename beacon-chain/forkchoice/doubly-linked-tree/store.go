@@ -142,6 +142,7 @@ func (s *Store) insert(ctx context.Context,
 		unrealizedFinalizedEpoch: finalizedEpoch,
 		optimistic:               true,
 		payloadHash:              payloadHash,
+		timestamp:                uint64(time.Now().Unix()),
 	}
 
 	s.nodeByPayload[payloadHash] = n
