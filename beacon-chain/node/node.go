@@ -23,8 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/slasherkv"
@@ -205,12 +203,13 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Starting State Gen")
-	if err := beacon.startStateGen(ctx, bfs); err != nil {
+	stg, err := beacon.startStateGen(ctx, bfs)
+	if err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
+	if err := beacon.registerP2P(cliCtx, stg); err != nil {
 		return nil, err
 	}
 
@@ -484,13 +483,13 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) error {
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) (stategen.StateManager, error) {
 	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
 	sg := stategen.New(b.db, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r := bytesutil.ToBytes32(cp.Root)
@@ -498,41 +497,32 @@ func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) er
 	if r == params.BeaconConfig().ZeroHash {
 		genesisBlock, err := b.db.GenesisBlock(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if genesisBlock != nil && !genesisBlock.IsNil() {
 			r, err = genesisBlock.Block().HashTreeRoot()
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	b.finalizedStateAtStartUp, err = sg.StateByRoot(ctx, r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b.stateGen = sg
-	return nil
+	return sg, err
 }
 
-func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerP2P(cliCtx *cli.Context, sg stategen.StateManager) error {
 	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
 	if err != nil {
 		return err
 	}
 
-	var activeVals uint64
-	st := b.finalizedStateAtStartUp
-	if st == nil || st.IsNil() {
-		log.Warn("Starting p2p with active validator count = 0. This should only happen with networks in a pre-genesis state")
-	} else {
-		activeVals, err = helpers.ActiveValidatorCount(context.Background(), st, coreTime.CurrentEpoch(st))
-		if err != nil {
-			return err
-		}
-	}
+	vc := stategen.NewLastFinalizedValidatorCounter(0, b.db, sg)
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
@@ -551,7 +541,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		StateNotifier:     b,
-		ActiveValidators:  activeVals,
+		ValCounter:        vc,
 	})
 	if err != nil {
 		return err

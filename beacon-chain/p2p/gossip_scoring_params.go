@@ -93,15 +93,19 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 }
 
 func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, error) {
+	c, err := s.cfg.ValCounter.ActiveValidatorCount(s.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute active validator count")
+	}
 	switch {
 	case strings.Contains(topic, GossipBlockMessage):
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, GossipAggregateAndProofMessage):
-		return defaultAggregateTopicParams(s.cfg.ActiveValidators), nil
+		return defaultAggregateTopicParams(c), nil
 	case strings.Contains(topic, GossipAttestationMessage):
-		return defaultAggregateSubnetTopicParams(s.cfg.ActiveValidators), nil
+		return defaultAggregateSubnetTopicParams(c), nil
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		return defaultSyncSubnetTopicParams(s.cfg.ActiveValidators), nil
+		return defaultSyncSubnetTopicParams(c), nil
 	case strings.Contains(topic, GossipContributionAndProofMessage):
 		return defaultSyncContributionTopicParams(), nil
 	case strings.Contains(topic, GossipExitMessage):

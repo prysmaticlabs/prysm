@@ -16,12 +16,14 @@ go_library(
         "replayer.go",
         "service.go",
         "setter.go",
+        "valcounter.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/execution:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db:go_default_library",
@@ -62,6 +64,7 @@ go_test(
         "replayer_test.go",
         "service_test.go",
         "setter_test.go",
+        "valcounter_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
