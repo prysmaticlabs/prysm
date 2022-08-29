@@ -316,7 +316,7 @@ func (s *Service) updateBeaconNodeStats() {
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
 
-func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
+func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) { // nolint:unused
 	s.cfg.currHttpEndpoint = endpoint
 	s.updateBeaconNodeStats()
 }
