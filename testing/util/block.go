@@ -734,8 +734,9 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 		}
 	}
 	if b.SyncAggregate == nil {
+		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeBits:      scBits[:],
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}

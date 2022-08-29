@@ -89,7 +89,7 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 
 func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte

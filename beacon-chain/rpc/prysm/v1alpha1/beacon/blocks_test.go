@@ -421,7 +421,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()

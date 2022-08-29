@@ -1589,7 +1589,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1610,7 +1610,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	atts := []*ethpb.PendingAttestation{{
 		Data:            util.HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
-		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
+		AggregationBits: bitfield.NewBitlist((validatorCount / 3) / uint64(params.BeaconConfig().SlotsPerEpoch)),
 	}}
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -1667,7 +1667,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	transition.SkipSlotCache.Disable()
 
 	t.Run("altair", func(t *testing.T) {
@@ -2510,7 +2510,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
