@@ -110,7 +110,6 @@ type BeaconNode struct {
 	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
-	cswrap                  *blockchainCurrentSlotterWrapper
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -208,8 +207,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	log.Debugln("Starting Fork Choice")
 	beacon.startForkChoice()
 
+	bw := &blockchainWrapper{}
 	log.Debugln("Starting State Gen")
-	if err := beacon.startStateGen(ctx, bfs); err != nil {
+	if err := beacon.startStateGen(ctx, bfs, bw); err != nil {
 		return nil, err
 	}
 
@@ -234,7 +234,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(); err != nil {
+	if err := beacon.registerBlockchainService(bw); err != nil {
 		return nil, err
 	}
 
@@ -496,22 +496,27 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-type blockchainCurrentSlotterWrapper struct {
-	cs stategen.CurrentSlotter
+type blockchainWrapper struct {
+	blksrv *blockchain.Service
 }
 
-func (w *blockchainCurrentSlotterWrapper) CurrentSlot() types.Slot {
-	return w.cs.CurrentSlot()
+func (w *blockchainWrapper) CurrentSlot() types.Slot {
+	return w.blksrv.CurrentSlot()
 }
 
-var _ stategen.CurrentSlotter = &blockchainCurrentSlotterWrapper{}
+func (w *blockchainWrapper) IsCanonical(ctx context.Context, root [32]byte) (bool, error) {
+	return w.blksrv.IsCanonical(ctx, root)
+}
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) error {
-	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
-	// we'll update the current slotter's pointer to the blockchain service once it's initialized
-	// this is weird and bad, but its an intermediate step between decoupling these two services
-	b.cswrap = &blockchainCurrentSlotterWrapper{}
-	saver := stategen.NewHotStateSaver(b.db, b.forkChoiceStore, b.cswrap)
+var _ stategen.CurrentSlotter = &blockchainWrapper{}
+var _ stategen.CanonicalChecker = &blockchainWrapper{}
+
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, bw *blockchainWrapper) error {
+	// we'll update the blockchain service pointer to the blockchain service once it's initialized
+	// this is weird and gross, but it's an intermediate step between decoupling these two services
+	rb := stategen.NewCanonicalHistory(b.db, bw, bw)
+	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs), stategen.WithReplayerBuilder(rb)}
+	saver := stategen.NewHotStateSaver(b.db, b.forkChoiceStore, bw)
 	sg := stategen.New(b.db, saver, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
@@ -601,7 +606,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService() error {
+func (b *BeaconNode) registerBlockchainService(bw *blockchainWrapper) error {
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -638,7 +643,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	// TODO: file an issue to track the task of moving the implementation of CurrentSlot to
 	// a separate service.
 	// fulfill this creepy circular dependency between stategen and the blockchain service
-	b.cswrap.cs = blockchainService
+	bw.blksrv = blockchainService
 
 	return b.services.RegisterService(blockchainService)
 }
