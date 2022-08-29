@@ -316,11 +316,6 @@ func (s *Service) updateBeaconNodeStats() {
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
 
-func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) { // nolint:unused
-	s.cfg.currHttpEndpoint = endpoint
-	s.updateBeaconNodeStats()
-}
-
 func (s *Service) updateConnectedETH1(state bool) {
 	s.connectedETH1 = state
 	s.updateBeaconNodeStats()
