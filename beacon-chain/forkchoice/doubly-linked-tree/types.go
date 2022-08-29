@@ -59,6 +59,7 @@ type Node struct {
 	weight                   uint64                       // weight of this node: the total balance including children
 	bestDescendant           *Node                        // bestDescendant node of this node.
 	optimistic               bool                         // whether the block has been fully validated or not
+	timestamp                uint64                       // The timestamp when the node was inserted.
 }
 
 // Vote defines an individual validator's vote.
