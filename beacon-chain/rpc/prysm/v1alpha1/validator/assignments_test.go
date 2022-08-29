@@ -205,7 +205,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	cfg.BellatrixForkEpoch = types.Epoch(1)
 	params.OverrideBeaconConfig(cfg)
