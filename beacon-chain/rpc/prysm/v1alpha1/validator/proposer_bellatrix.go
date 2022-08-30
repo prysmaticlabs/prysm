@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -37,14 +39,14 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 const blockBuilderTimeout = 1 * time.Second
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
+	altairBlk, err := vs.BuildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
 	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
 	if registered && err == nil {
-		builderReady, b, err := vs.getAndBuildBlindBlock(ctx, altairBlk)
+		builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
 		if err != nil {
 			// In the event of an error, the node should fall back to default execution engine for building block.
 			log.WithError(err).Error("Failed to build a block from external builder, falling " +
@@ -108,6 +110,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
+
 	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
@@ -120,6 +123,25 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if bid == nil || bid.Message == nil {
+		return nil, errors.New("builder returned nil bid")
+	}
+
+	v := bid.Message.Value
+
+	if new(big.Int).SetBytes(bytesutil.ReverseByteOrder(v)).String() == "0" {
+		return nil, errors.New("builder returned header with 0 bid amount")
+	}
+
+	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	if err != nil {
+		return nil, err
+	}
+
+	if bytesutil.ToBytes32(bid.Message.Header.TransactionsRoot) == emptyRoot {
+		return nil, errors.New("builder returned header with an empty tx root")
+	}
+
 	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
 		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
 	}
@@ -357,10 +379,10 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 	return false, nil
 }
 
-// Get and build blind block from builder network. Returns a boolean status, built block and error.
+// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) getAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
+func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil

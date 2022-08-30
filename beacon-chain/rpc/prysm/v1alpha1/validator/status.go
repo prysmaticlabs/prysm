@@ -30,13 +30,14 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
-//  DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
-//  PENDING - validator is in Ethereum's activation queue.
-//  ACTIVE - validator is active.
-//  EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
-//  EXITED - validator is no longer validating.
-//  SLASHING - validator has been kicked out due to meeting a slashing condition.
-//  UNKNOWN_STATUS - validator does not have a known status in the network.
+//
+//	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
+//	PENDING - validator is in Ethereum's activation queue.
+//	ACTIVE - validator is active.
+//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITED - validator is no longer validating.
+//	SLASHING - validator has been kicked out due to meeting a slashing condition.
+//	UNKNOWN_STATUS - validator does not have a known status in the network.
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *ethpb.ValidatorStatusRequest,
@@ -361,15 +362,6 @@ func (vs *Server) validatorStatus(
 	default:
 		return resp, idx
 	}
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	// replay to first slot of following epoch
-	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

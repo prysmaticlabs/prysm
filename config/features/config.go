@@ -60,11 +60,13 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	DisablePullTips                   bool // DisablePullTips enables experimental disabling of boundary checks.
+	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
+	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	DisableForkchoiceDoublyLinkedTree bool // DisableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
+	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -201,6 +203,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
 	}
+	if ctx.Bool(enableDefensivePull.Name) {
+		logEnabled(enableDefensivePull)
+		cfg.EnableDefensivePull = true
+	}
+
 	if ctx.Bool(disableVecHTR.Name) {
 		logEnabled(disableVecHTR)
 	} else {
@@ -233,6 +240,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
 		logEnabled(EnableOnlyBlindedBeaconBlocks)
 		cfg.EnableOnlyBlindedBeaconBlocks = true
+	}
+	if ctx.Bool(enableStartupOptimistic.Name) {
+		logEnabled(enableStartupOptimistic)
+		cfg.EnableStartOptimistic = true
 	}
 	Init(cfg)
 	return nil

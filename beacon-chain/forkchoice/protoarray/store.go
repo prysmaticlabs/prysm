@@ -17,6 +17,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -188,11 +189,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// release the checkpoints lock here because
+			// AncestorRoot takes a lock on nodes and that can lead
+			// to double locks
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -277,47 +282,51 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
 
-	// Do nothing if the two input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
+	}
+
+	// Do nothing if the two input roots are the same.
+	if r1 == r2 {
+		n1 := f.store.nodes[i1]
+		return r1, n1.slot, nil
 	}
 
 	i2, ok := f.store.nodesIndices[r2]
 	if !ok || i2 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if i1 > i2 {
 			n1 := f.store.nodes[i1]
 			i1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i1 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 := f.store.nodes[i2]
 			i2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i2 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if i1 == i2 {
 			n1 := f.store.nodes[i1]
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }
@@ -406,8 +415,12 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 
 	if !s.viableForHead(bestNode) {
 		s.allTipsAreInvalid = true
+		s.checkpointsLock.RLock()
+		jEpoch := s.justifiedCheckpoint.Epoch
+		fEpoch := s.finalizedCheckpoint.Epoch
+		s.checkpointsLock.RUnlock()
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestNode.justifiedEpoch, s.justifiedCheckpoint.Epoch)
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, fEpoch, bestNode.justifiedEpoch, jEpoch)
 	}
 	s.allTipsAreInvalid = false
 
@@ -426,7 +439,8 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	return bestNode.root, nil
 }
 
-// updateCanonicalNodes updates the canonical nodes mapping given the input block root.
+// updateCanonicalNodes updates the canonical nodes mapping given the input
+// block root. This function assumes the caller holds a lock in Store.nodesLock
 func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
 	defer span.End()
@@ -548,14 +562,14 @@ func (s *Store) insert(ctx context.Context,
 	if slot > s.highestReceivedSlot {
 		s.highestReceivedSlot = slot
 	}
-
 	return n, nil
 }
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
-// the best child is then updated along with the best descendant.
+// the best child is then updated along with the best descendant. This function
+// assumes the caller holds a lock in Store.nodesLock
 func (s *Store) applyWeightChanges(
 	ctx context.Context, newBalances []uint64, delta []int,
 ) error {
@@ -900,6 +914,8 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -909,9 +925,6 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
-
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
 	}
@@ -1068,4 +1081,8 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 		}
 	}
 	return count, nil
+}
+
+func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, error) {
+	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
 }

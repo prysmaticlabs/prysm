@@ -140,3 +140,8 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 
 	return resp, nil
 }
+
+// GetForkChoice returns a dump fork choice store.
+func (ds *Server) GetForkChoice(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceResponse, error) {
+	return ds.ForkFetcher.ForkChoicer().ForkChoiceDump(ctx)
+}

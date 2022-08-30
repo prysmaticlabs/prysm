@@ -93,6 +93,11 @@ var (
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
+	enableDefensivePull = &cli.BoolFlag{
+		Name:   "enable-back-pull",
+		Usage:  "Experimental enable of past boundary checks, useful for debugging, may cause bad votes.",
+		Hidden: true,
+	}
 	disableVecHTR = &cli.BoolFlag{
 		Name:  "disable-vectorized-htr",
 		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
@@ -108,6 +113,12 @@ var (
 	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
 		Name:  "enable-only-blinded-beacon-blocks",
 		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
+	}
+	enableStartupOptimistic = &cli.BoolFlag{
+		Name:   "startup-optimistic",
+		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
+		Value:  false,
+		Hidden: true,
 	}
 )
 
@@ -134,7 +145,7 @@ var E2EValidatorFlags = []string{
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
@@ -151,7 +162,9 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
-}...)
+	enableStartupOptimistic,
+	enableDefensivePull,
+}...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{

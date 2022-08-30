@@ -3,6 +3,7 @@ package doublylinkedtree
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -82,7 +84,8 @@ func (f *ForkChoice) Head(
 
 	jc := f.JustifiedCheckpoint()
 	fc := f.FinalizedCheckpoint()
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch); err != nil {
+	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(f.store.genesisTime), 0))
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch, currentEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 	return f.store.head(ctx)
@@ -183,11 +186,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// Releasing here the checkpoints lock because
+			// AncestorRoot acquires a lock on nodes and that can
+			// cause a double lock.
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -296,7 +303,8 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock.
+// validators' latest votes. This function requires a lock in Store.nodesLock
+// and votesLock
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
@@ -424,6 +432,9 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -433,8 +444,6 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
 
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
@@ -484,30 +493,31 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 }
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "doublelinkedtree.CommonAncestorRoot")
 	defer span.End()
-
-	// Do nothing if the input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
 
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
+
+	// Do nothing if the input roots are the same.
+	if r1 == r2 {
+		return r1, n1.slot, nil
+	}
+
 	n2, ok := f.store.nodeByRoot[r2]
 	if !ok || n2 == nil {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if n1.slot > n2.slot {
 			n1 = n1.parent
@@ -515,17 +525,17 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 			// This should not happen at runtime as the finalized
 			// node has to be a common ancestor
 			if n1 == nil {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if n2 == nil {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if n1 == n2 {
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }
@@ -605,4 +615,53 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 		return [32]byte{}
 	}
 	return node.payloadHash
+}
+
+// ForkChoiceDump returns a full dump of forkhoice.
+func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse, error) {
+	jc := &v1.Checkpoint{
+		Epoch: f.store.justifiedCheckpoint.Epoch,
+		Root:  f.store.justifiedCheckpoint.Root[:],
+	}
+	bjc := &v1.Checkpoint{
+		Epoch: f.store.bestJustifiedCheckpoint.Epoch,
+		Root:  f.store.bestJustifiedCheckpoint.Root[:],
+	}
+	ujc := &v1.Checkpoint{
+		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
+		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
+	}
+	fc := &v1.Checkpoint{
+		Epoch: f.store.finalizedCheckpoint.Epoch,
+		Root:  f.store.finalizedCheckpoint.Root[:],
+	}
+	ufc := &v1.Checkpoint{
+		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
+		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
+	}
+	nodes := make([]*v1.ForkChoiceNode, 0, f.NodeCount())
+	var err error
+	if f.store.treeRootNode != nil {
+		nodes, err = f.store.treeRootNode.nodeTreeDump(ctx, nodes)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var headRoot [32]byte
+	if f.store.headNode != nil {
+		headRoot = f.store.headNode.root
+	}
+	resp := &v1.ForkChoiceResponse{
+		JustifiedCheckpoint:           jc,
+		BestJustifiedCheckpoint:       bjc,
+		UnrealizedJustifiedCheckpoint: ujc,
+		FinalizedCheckpoint:           fc,
+		UnrealizedFinalizedCheckpoint: ufc,
+		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
+		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
+		HeadRoot:                      headRoot[:],
+		ForkchoiceNodes:               nodes,
+	}
+	return resp, nil
+
 }

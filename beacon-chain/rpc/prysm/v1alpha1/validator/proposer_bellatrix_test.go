@@ -96,6 +96,40 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 }
 
 func TestServer_getPayloadHeader(t *testing.T) {
+	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	require.NoError(t, err)
+	ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
+	require.NoError(t, err)
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	bid := &ethpb.BuilderBid{
+		Header: &v1.ExecutionPayloadHeader{
+			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:       make([]byte, fieldparams.RootLength),
+			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+			BlockHash:        make([]byte, fieldparams.RootLength),
+			TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
+			ParentHash:       params.BeaconConfig().ZeroHash[:],
+			Timestamp:        uint64(ti.Unix()),
+		},
+		Pubkey: sk.PublicKey().Marshal(),
+		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+	}
+	d := params.BeaconConfig().DomainApplicationBuilder
+	domain, err := signing.ComputeDomain(d, nil, nil)
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(bid, domain)
+	require.NoError(t, err)
+	sBid := &ethpb.SignedBuilderBid{
+		Message:   bid,
+		Signature: sk.Sign(sr[:]).Marshal(),
+	}
+
+	require.NoError(t, err)
 	tests := []struct {
 		name           string
 		head           interfaces.SignedBeaconBlock
@@ -130,7 +164,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			err: "can't get header",
 		},
 		{
-			name: "get header correct",
+			name: "0 bid",
 			mock: &builderTest.MockBuilderService{
 				Bid: &ethpb.SignedBuilderBid{
 					Message: &ethpb.BuilderBid{
@@ -139,7 +173,6 @@ func TestServer_getPayloadHeader(t *testing.T) {
 						},
 					},
 				},
-				ErrGetHeader: errors.New("can't get header"),
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
@@ -148,18 +181,55 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					return wb
 				}(),
 			},
-			returnedHeader: &v1.ExecutionPayloadHeader{
-				BlockNumber: 123,
+			err: "builder returned header with 0 bid amount",
+		},
+		{
+			name: "invalid tx root",
+			mock: &builderTest.MockBuilderService{
+				Bid: &ethpb.SignedBuilderBid{
+					Message: &ethpb.BuilderBid{
+						Value: []byte{1},
+						Header: &v1.ExecutionPayloadHeader{
+							BlockNumber:      123,
+							TransactionsRoot: emptyRoot[:],
+						},
+					},
+				},
 			},
+			fetcher: &blockchainTest.ChainService{
+				Block: func() interfaces.SignedBeaconBlock {
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					require.NoError(t, err)
+					return wb
+				}(),
+			},
+			err: "builder returned header with an empty tx root",
+		},
+		{
+			name: "can get header",
+			mock: &builderTest.MockBuilderService{
+				Bid: sBid,
+			},
+			fetcher: &blockchainTest.ChainService{
+				Block: func() interfaces.SignedBeaconBlock {
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					require.NoError(t, err)
+					return wb
+				}(),
+			},
+			returnedHeader: bid.Header,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher}
+			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
+				Genesis: time.Now(),
+			}}
 			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), 0, 0)
-			if err != nil {
+			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
+				require.NoError(t, err)
 				require.DeepEqual(t, tc.returnedHeader, h)
 			}
 		})
@@ -349,20 +419,20 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs := &Server{}
 
 	// Nil builder
-	ready, _, err := vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err := vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Not configured
 	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Block is not ready
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
@@ -379,7 +449,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
 	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, _, err = vs.getAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
+	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
 
@@ -455,7 +525,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
 	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
-	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
+	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
 	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)

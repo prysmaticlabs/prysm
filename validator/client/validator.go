@@ -244,7 +244,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	log.Info("Syncing with beacon node to align on chain genesis info")
 	chainStartRes, err := stream.Recv()
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
@@ -937,17 +937,21 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 		}
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
+		durationTillDuty := time.Until(startTime)
+
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":                  slotOffset + i,
 				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
+				"timeTillDuty":          durationTillDuty.Round(time.Second),
 				"attesterDutiesAtSlot":  len(attesterKeys[i]),
 				"totalAttestersInEpoch": totalAttestingKeys,
 				"pubKeys":               attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
-			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
+			log.WithField("slot", slotOffset+i).WithField("timeTillDuty", durationTillDuty.Round(time.Second)).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
 		}
 	}
 }
@@ -1066,7 +1070,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
 			config := v.ProposerSettings.DefaultConfig.BuilderConfig
 			if config != nil && config.Enabled {
-				gasLimit = config.GasLimit // Use cli config for gas limit.
+				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
@@ -1077,7 +1081,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 				builderConfig := config.BuilderConfig
 				if builderConfig != nil {
 					if builderConfig.Enabled {
-						gasLimit = builderConfig.GasLimit // Use file config for gas limit.
+						gasLimit = uint64(builderConfig.GasLimit) // Use file config for gas limit.
 						enabled = true
 					} else {
 						enabled = false // Custom config can disable validator from register.

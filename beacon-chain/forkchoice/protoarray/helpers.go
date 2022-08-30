@@ -10,7 +10,9 @@ import (
 )
 
 // This computes validator balance delta from validator votes.
-// It returns a list of deltas that represents the difference between old balances and new balances.
+// It returns a list of deltas that represents the difference between old
+// balances and new balances. This function assumes the caller holds a lock in
+// Store.nodesLock and Store.votesLock
 func computeDeltas(
 	ctx context.Context,
 	count int,
