@@ -47,8 +47,6 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
