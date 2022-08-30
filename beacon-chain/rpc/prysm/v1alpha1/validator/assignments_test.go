@@ -353,14 +353,12 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 
 	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
 	req := &ethpb.DutiesRequest{
-		PublicKeys: [][]byte{deposits[0].Data.PublicKey, unknownPubkey},
+		PublicKeys: [][]byte{unknownPubkey},
 	}
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, true, res.CurrentEpochDuties[0].IsSyncCommittee)
-	assert.Equal(t, true, res.NextEpochDuties[0].IsSyncCommittee)
-	assert.Equal(t, false, res.CurrentEpochDuties[1].IsSyncCommittee)
-	assert.Equal(t, false, res.NextEpochDuties[1].IsSyncCommittee)
+	assert.Equal(t, false, res.CurrentEpochDuties[0].IsSyncCommittee)
+	assert.Equal(t, false, res.NextEpochDuties[0].IsSyncCommittee)
 }
 
 func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
