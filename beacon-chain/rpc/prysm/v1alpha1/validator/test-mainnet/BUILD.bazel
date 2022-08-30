@@ -1,0 +1,20 @@
+load("@prysm//tools/go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    srcs = ["attester_test.go"],
+    deps = [
+        "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/p2p/testing:go_default_library",
+        "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
+        "//beacon-chain/sync/initial-sync/testing:go_default_library",
+        "//config/params:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
+)
