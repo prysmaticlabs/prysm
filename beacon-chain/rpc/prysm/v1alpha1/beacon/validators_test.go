@@ -2348,8 +2348,6 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 
 func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	helpers.ClearCache()
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
