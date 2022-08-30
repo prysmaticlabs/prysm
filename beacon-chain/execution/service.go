@@ -128,6 +128,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
+	headers                 []string
 	finalizedStateAtStartup state.BeaconState
 }
 
