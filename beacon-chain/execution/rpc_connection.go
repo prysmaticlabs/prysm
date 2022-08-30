@@ -38,6 +38,12 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	// Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
+		errStr := err.Error()
+		if strings.Contains(errStr, "401 Unauthorized") {
+			errStr = "could not verify execution chain ID as your connection is not authenticated. " +
+				"If connecting to your execution client via HTTP, you will need to set up JWT authentication. " +
+				"See our documentation here https://docs.prylabs.network/docs/execution-node/authentication"
+		}
 		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
 	}
 	s.updateConnectedETH1(true)
