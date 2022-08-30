@@ -118,6 +118,31 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
+// GetFeeRecipientByPubKey
+func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
+	defer span.End()
+	if request == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request was empty")
+	}
+
+	resp, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: request.PublicKey})
+	if err != nil {
+		return &ethpb.FeeRecipientByPubKeyResponse{
+			FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+		}, nil
+	}
+	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
+	if err != nil {
+		return &ethpb.FeeRecipientByPubKeyResponse{
+			FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+		}, nil
+	}
+	return &ethpb.FeeRecipientByPubKeyResponse{
+		FeeRecipient: address.Bytes(),
+	}, nil
+}
+
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()

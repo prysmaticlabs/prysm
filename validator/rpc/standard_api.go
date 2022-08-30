@@ -14,6 +14,8 @@ import (
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
@@ -510,7 +512,7 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
-func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
+func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
@@ -520,12 +522,24 @@ func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.P
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
 	if s.validatorService.ProposerSettings == nil {
-		return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-			Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-				Pubkey:     validatorKey,
-				Ethaddress: defaultFeeRecipient,
-			},
-		}, nil
+		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
+			PublicKey: validatorKey,
+		})
+		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
+			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+					Pubkey:     validatorKey,
+					Ethaddress: defaultFeeRecipient,
+				},
+			}, nil
+		} else {
+			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+					Pubkey:     validatorKey,
+					Ethaddress: resp.FeeRecipient,
+				},
+			}, nil
+		}
 	}
 	if s.validatorService.ProposerSettings.ProposeConfig != nil {
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
