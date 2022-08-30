@@ -6,7 +6,7 @@ var Commands = []*cli.Command{
 	{
 		Name:    "checkpoint",
 		Aliases: []string{"cpt"},
-		Usage:   "commands for managing checkpoint syncing",
+		Usage:   "deprecated",
 		Subcommands: []*cli.Command{
 			checkpointCmd,
 			saveCmd,
