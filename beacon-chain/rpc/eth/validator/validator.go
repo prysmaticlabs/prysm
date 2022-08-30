@@ -195,11 +195,11 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 // where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
 //
 // Algorithm:
-//  - Get the last valid epoch. This is the last epoch of the next sync committee period.
-//  - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
-//  or an epoch from the next sync committee period, then get the current state.
-//  - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
-//  - Get duties.
+//   - Get the last valid epoch. This is the last epoch of the next sync committee period.
+//   - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
+//     or an epoch from the next sync committee period, then get the current state.
+//   - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
+//   - Get duties.
 func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
@@ -1033,19 +1033,6 @@ func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.V
 	default:
 		return ethpbalpha.ValidatorStatus_UNKNOWN_STATUS
 	}
-}
-
-func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.BeaconBlock, error) {
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		return nil, err
-	}
-	return migration.V1Alpha1ToV1Block(v1alpha1resp.GetPhase0())
 }
 
 func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {

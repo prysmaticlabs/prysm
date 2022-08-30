@@ -105,7 +105,6 @@ type BeaconNode struct {
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
-	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 }
