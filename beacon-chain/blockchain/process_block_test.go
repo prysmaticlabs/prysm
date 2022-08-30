@@ -2998,6 +2998,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = doublylinkedtree.New()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
@@ -3222,6 +3223,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = protoarray.New()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
