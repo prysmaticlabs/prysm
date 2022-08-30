@@ -123,6 +123,9 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
+	if st == nil {
+		return nil, status.Errorf(codes.Internal, "head state is emtpy")
+	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", req.PublicKey)
