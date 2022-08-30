@@ -441,7 +441,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
