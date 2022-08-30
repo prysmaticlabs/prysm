@@ -550,10 +550,23 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				},
 			},
 		},
+		{
+			name: "bellatrix blind block",
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{
+					BlindedBellatrix: func() *ethpb.BlindedBeaconBlockBellatrix {
+						blk := util.NewBlindedBeaconBlockBellatrix()
+						blk.Block.Body.Graffiti = graffiti
+						return blk.Block
+					}(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
 			validator, m, validatorKey, finish := setup(t)
 			defer finish()
 			pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -594,6 +607,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 
 			validator.ProposeBlock(context.Background(), 1, pubKey)
 			assert.Equal(t, string(validator.graffiti), string(sentBlock.Block().Body().Graffiti()))
+			require.LogsContain(t, hook, "Submitted new block")
 		})
 	}
 }

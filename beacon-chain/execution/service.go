@@ -128,6 +128,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
+	headers                 []string
 	finalizedStateAtStartup state.BeaconState
 }
 
@@ -314,11 +315,6 @@ func (s *Service) updateBeaconNodeStats() {
 		bs.SyncEth1Connected = true
 	}
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
-}
-
-func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
-	s.cfg.currHttpEndpoint = endpoint
-	s.updateBeaconNodeStats()
 }
 
 func (s *Service) updateConnectedETH1(state bool) {
