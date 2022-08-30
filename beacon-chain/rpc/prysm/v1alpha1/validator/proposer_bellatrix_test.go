@@ -452,8 +452,6 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	require.Equal(t, false, ready)
 
 	// Block built and validated!
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
