@@ -40,7 +40,6 @@ type ReadOnlyDatabase interface {
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
 	// Checkpoint operations.
-	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
 	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
@@ -76,7 +75,6 @@ type NoHeadAccessDatabase interface {
 	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
 	SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error
 	// Checkpoint operations.
-	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Deposit contract related handlers.

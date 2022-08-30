@@ -284,10 +284,6 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		cp := &ethpb.Checkpoint{
-			Epoch: 5,
-			Root:  root[:],
-		}
 		// a valid chain is required to save finalized checkpoint.
 		util.SaveBlock(t, ctx, db, blk)
 		st, err := util.NewBeaconState()
@@ -295,7 +291,6 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, st.SetSlot(1))
 		// a state is required to save checkpoint
 		require.NoError(t, db.SaveState(ctx, st, root))
-		require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 
 		p := StateProvider{
 			BeaconDB: db,

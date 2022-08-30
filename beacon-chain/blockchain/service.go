@@ -191,13 +191,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 	spawnCountdownIfPreGenesis(s.ctx, s.genesisTime, s.cfg.BeaconDB)
 
-	justified, err := s.cfg.BeaconDB.JustifiedCheckpoint(s.ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get justified checkpoint")
-	}
-	if justified == nil {
-		return errNilJustifiedCheckpoint
-	}
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
@@ -214,8 +207,8 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		forkChoicer = protoarray.New()
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
-		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
+	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
+		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}
 	if err := forkChoicer.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,

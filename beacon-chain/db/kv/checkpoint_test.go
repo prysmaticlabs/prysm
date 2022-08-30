@@ -14,44 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	root := bytesutil.ToBytes32([]byte{'A'})
-	cp := &ethpb.Checkpoint{
-		Epoch: 10,
-		Root:  root[:],
-	}
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, st.SetSlot(1))
-	require.NoError(t, db.SaveState(ctx, st, root))
-	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
-
-	retrieved, err := db.JustifiedCheckpoint(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
-}
-
-func TestStore_JustifiedCheckpoint_Recover(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
-	r, err := blk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	cp := &ethpb.Checkpoint{
-		Epoch: 2,
-		Root:  r[:],
-	}
-	wb, err := blocks.NewSignedBeaconBlock(blk)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wb))
-	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
-	retrieved, err := db.JustifiedCheckpoint(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
-}
-
 func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
@@ -104,16 +66,6 @@ func TestStore_FinalizedCheckpoint_Recover(t *testing.T) {
 	require.NoError(t, db.SaveBlock(ctx, wb))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	retrieved, err := db.FinalizedCheckpoint(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
-}
-
-func TestStore_JustifiedCheckpoint_DefaultIsZeroHash(t *testing.T) {
-	db := setupDB(t)
-	ctx := context.Background()
-
-	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	retrieved, err := db.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }

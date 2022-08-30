@@ -259,16 +259,12 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	b.Block.Slot = 1
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	cp := &ethpb.Checkpoint{
-		Root: root[:],
-	}
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
-	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
 }
 

@@ -135,10 +135,17 @@ func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 }
 
 // updateFinalized saves the init sync blocks, finalized checkpoint, migrates
-// to cold old states and saves the last validated checkpoint to DB
+// to cold old states and saves the last validated checkpoint to DB. It returns
+// early if the new checkpoint is older than the one on db.
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateFinalized")
 	defer span.End()
+
+	// return early if new checkpoint is not newer than the one in DB
+	currentFinalizedEpoch := s.FinalizedCheckpt().Epoch
+	if cp.Epoch <= currentFinalizedEpoch {
+		return nil
+	}
 
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.

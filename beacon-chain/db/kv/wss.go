@@ -93,9 +93,6 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		Epoch: types.Epoch(slotEpoch),
 		Root:  blockRoot[:],
 	}
-	if err = s.SaveJustifiedCheckpoint(ctx, chkpt); err != nil {
-		return errors.Wrap(err, "could not mark checkpoint sync block as justified")
-	}
 	if err = s.SaveFinalizedCheckpoint(ctx, chkpt); err != nil {
 		return errors.Wrap(err, "could not mark checkpoint sync block as finalized")
 	}

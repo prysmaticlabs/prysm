@@ -38,7 +38,6 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		Root:  r[:],
 	}
 	require.NoError(t, db.SaveState(ctx, st, r))
-	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	attPool, err := attestations.NewService(ctx, &attestations.Config{
 		Pool: attestations.NewPool(),

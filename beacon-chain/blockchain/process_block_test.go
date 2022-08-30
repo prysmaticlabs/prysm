@@ -1190,10 +1190,6 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	require.Equal(t, types.Epoch(2), cp.Epoch)
 
 	// The update should persist in DB.
-	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
-	require.NoError(t, err)
-	cp = service.CurrentJustifiedCheckpt()
-	require.Equal(t, j.Epoch, cp.Epoch)
 	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
 	cp = service.FinalizedCheckpt()
@@ -1238,10 +1234,6 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.Equal(t, types.Epoch(2), cp.Epoch)
 
 	// The update should persist in DB.
-	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
-	require.NoError(t, err)
-	cp = service.CurrentJustifiedCheckpt()
-	require.Equal(t, j.Epoch, cp.Epoch)
 	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
 	cp = service.FinalizedCheckpt()

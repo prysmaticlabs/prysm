@@ -14,24 +14,6 @@ import (
 
 var errMissingStateForCheckpoint = errors.New("missing state summary for checkpoint root")
 
-// JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
-func (s *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.JustifiedCheckpoint")
-	defer span.End()
-	var checkpoint *ethpb.Checkpoint
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(checkpointBucket)
-		enc := bkt.Get(justifiedCheckpointKey)
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-			return nil
-		}
-		checkpoint = &ethpb.Checkpoint{}
-		return decode(ctx, enc, checkpoint)
-	})
-	return checkpoint, err
-}
-
 // FinalizedCheckpoint returns the latest finalized checkpoint in beacon chain.
 func (s *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedCheckpoint")
@@ -48,29 +30,6 @@ func (s *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 		return decode(ctx, enc, checkpoint)
 	})
 	return checkpoint, err
-}
-
-// SaveJustifiedCheckpoint saves justified checkpoint in beacon chain.
-func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
-	defer span.End()
-
-	enc, err := encode(ctx, checkpoint)
-	if err != nil {
-		return err
-	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(checkpointBucket)
-		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
-		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
-		if !(hasStateInDB || hasStateSummary) {
-			log.Warnf("Recovering state summary for justified root: %#x", bytesutil.Trunc(checkpoint.Root))
-			if err := recoverStateSummary(ctx, tx, checkpoint.Root); err != nil {
-				return errors.Wrapf(errMissingStateForCheckpoint, "could not save justified checkpoint, finalized root: %#x", bytesutil.Trunc(checkpoint.Root))
-			}
-		}
-		return bucket.Put(justifiedCheckpointKey, enc)
-	})
 }
 
 // SaveFinalizedCheckpoint saves finalized checkpoint in beacon chain.

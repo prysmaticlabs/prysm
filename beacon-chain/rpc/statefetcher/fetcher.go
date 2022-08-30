@@ -253,10 +253,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 }
 
 func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) {
-	cp, err := p.BeaconDB.JustifiedCheckpoint(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get justified checkpoint")
-	}
+	cp := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
 	b, err := p.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
