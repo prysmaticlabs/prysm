@@ -146,7 +146,7 @@ func TestStart_OK(t *testing.T) {
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
-	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
+	require.NoError(t, err, "unable to setup execution service")
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
@@ -156,7 +156,7 @@ func TestStart_OK(t *testing.T) {
 	web3Service.Start()
 	if len(hook.Entries) > 0 {
 		msg := hook.LastEntry().Message
-		want := "Could not connect to ETH1.0 chain RPC client"
+		want := "Could not connect to execution endpoint"
 		if strings.Contains(want, msg) {
 			t.Errorf("incorrect log, expected %s, got %s", want, msg)
 		}
