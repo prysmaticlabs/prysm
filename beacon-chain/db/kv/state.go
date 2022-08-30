@@ -643,7 +643,7 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint ty
 	}
 	finalizedRoot := bytesutil.ToBytes32(f.Root)
 
-	// We usually archive a state every 2048 slots. If a slot at with slot number % 2048 == 0 is skipped,
+	// We usually archive a state every 2048 slots. If a slot with value % 2048 == 0 is skipped,
 	// we will store the last un-skipped state instead. We don't know exactly how far back that state could be
 	// from the skipped one, but a fudge factor of roughly 1/3 of the interval was chosen based on looking
 	// at chain history for guidance. 1/3 of the default interval (2048) comes out to about 682 slots (or ~21 epochs).

@@ -22,4 +22,4 @@ var ErrNotFoundBackfillBlockRoot = errors.Wrap(ErrNotFound, "BackfillBlockRoot")
 // ErrNotFoundFeeRecipient is a not found error specifically for the fee recipient getter
 var ErrNotFoundFeeRecipient = errors.Wrap(ErrNotFound, "fee recipient")
 
-var errSavedStateMissingBlock = errors.New("Could not find block corresponding to saved state")
+var errSavedStateMissingBlock = errors.New("could not find block corresponding to saved state")
