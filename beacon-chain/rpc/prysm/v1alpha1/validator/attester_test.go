@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -201,7 +200,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
+/*func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//
 	// State slot = 10000
@@ -287,7 +286,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
-}
+}*/
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &ethpb.BeaconState{Slot: 100}
