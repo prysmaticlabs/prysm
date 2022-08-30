@@ -274,9 +274,6 @@ func non200Err(response *http.Response) error {
 	if err != nil {
 		body = "(Unable to read response body.)"
 	} else {
-		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			return errors.Wrap(jsonErr, "unable to read response body")
-		}
 		body = "response body:\n" + string(bodyBytes)
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
@@ -285,13 +282,25 @@ func non200Err(response *http.Response) error {
 		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
 	case 400:
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		log.WithError(ErrBadRequest).Debug(msg)
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
 	case 404:
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		log.WithError(ErrNotFound).Debug(msg)
 		return errors.Wrap(ErrNotFound, errMessage.Message)
-	default:
+	case 500:
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		log.WithError(ErrNotOK).Debug(msg)
 		return errors.Wrap(ErrNotOK, errMessage.Message)
+	default:
+		log.WithError(ErrNotOK).Debug(msg)
+		return errors.Wrap(ErrNotOK, fmt.Sprintf("unsupported error code: %d", response.StatusCode))
 	}
 }
