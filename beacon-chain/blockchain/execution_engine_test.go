@@ -1164,6 +1164,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	}
 	// Nothing should happen as we no-op on an invalid checkpoint.
 	require.NoError(t, service.updateFinalized(ctx, invalidCp))
+	got, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, oldCp, got)
 }
 
 func TestService_removeInvalidBlockAndState(t *testing.T) {
