@@ -44,7 +44,7 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 				"If connecting to your execution client via HTTP, you will need to set up JWT authentication. " +
 				"See our documentation here https://docs.prylabs.network/docs/execution-node/authentication"
 		}
-		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
+		return errors.Wrap(err, errStr)
 	}
 	s.updateConnectedETH1(true)
 	s.runError = nil
