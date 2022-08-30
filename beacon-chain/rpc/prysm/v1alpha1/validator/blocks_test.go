@@ -113,8 +113,6 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateAltair(t, 32)
