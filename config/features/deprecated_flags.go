@@ -72,6 +72,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableNativeState = &cli.StringFlag{
+		Name:   "disable-native-state",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -88,6 +93,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedGossipBatchAggregation,
 	deprecatedEnableLargerGossipHistory,
 	deprecatedFallbackProvider,
+	deprecatedDisableNativeState,
 }
 
 var deprecatedBeaconFlags = []cli.Flag{
