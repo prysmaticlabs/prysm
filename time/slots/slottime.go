@@ -33,7 +33,7 @@ func SinceGenesis(genesis time.Time) types.Slot {
 	return types.Slot(uint64(prysmTime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
 }
 
-// EpochsSinceGenesis returns the number of slots since
+// EpochsSinceGenesis returns the number of epochs since
 // the provided genesis time.
 func EpochsSinceGenesis(genesis time.Time) types.Epoch {
 	return types.Epoch(SinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch)
