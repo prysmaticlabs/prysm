@@ -2870,22 +2870,16 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 type newForkChoicer func() forkchoice.ForkChoicer
 
 func TestStore_NoViableHead_Reboot(t *testing.T) {
-	ndlt := func() forkchoice.ForkChoicer {
-		return doublylinkedtree.New()
-	}
-	npa := func() forkchoice.ForkChoicer {
-		return protoarray.New()
-	}
 	cases := []struct {
 		new  newForkChoicer
 		name string
 	}{
 		{
-			new:  ndlt,
+			new:  func() forkchoice.ForkChoicer { return doublylinkedtree.New() },
 			name: "doublylinkedtree",
 		},
 		{
-			new:  npa,
+			new:  func() forkchoice.ForkChoicer { return protoarray.New() },
 			name: "protoarray",
 		},
 	}
