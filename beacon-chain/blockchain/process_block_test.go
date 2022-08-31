@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"math/big"
 	"strconv"
 	"sync"
@@ -23,6 +22,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
@@ -2876,16 +2876,16 @@ func TestStore_NoViableHead_Reboot(t *testing.T) {
 	npa := func() forkchoice.ForkChoicer {
 		return protoarray.New()
 	}
-	cases := []struct{
-		new newForkChoicer
+	cases := []struct {
+		new  newForkChoicer
 		name string
 	}{
 		{
-			new: ndlt,
+			new:  ndlt,
 			name: "doublylinkedtree",
 		},
 		{
-			new: npa,
+			new:  npa,
 			name: "protoarray",
 		},
 	}
