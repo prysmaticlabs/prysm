@@ -123,8 +123,8 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
-	if st == nil {
-		return nil, status.Errorf(codes.Internal, "head state is emtpy")
+	if st == nil || st.IsNil() {
+		return nil, status.Errorf(codes.Internal, "head state is empty")
 	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
