@@ -1,8 +1,6 @@
 package node
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
@@ -169,19 +167,22 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
-		return errors.New("In order to receive transaction fees from proposing blocks, " +
+		log.Warnf("In order to receive transaction fees from proposing blocks, " +
 			"you must provide flag --" + flags.SuggestedFeeRecipient.Name + " with a valid ethereum address to start your beacon node." +
 			"Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
+		return nil
 	}
 
 	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
-		return fmt.Errorf("%s is not a valid fee recipient address", ha)
+		log.Warnf("%s is not a valid fee recipient address, defaulting back to burn address", ha)
+		return nil
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		return errors.Wrapf(err, "could not decode fee recipient %s", ha)
+		log.Warnf(errors.Wrapf(err, "could not decode fee recipient %s , defaulting back to burn address", ha).Error())
+		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
 	if !mixedcaseAddress.ValidChecksum() {
