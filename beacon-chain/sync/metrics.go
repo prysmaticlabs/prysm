@@ -114,18 +114,6 @@ var (
 	})
 
 	// Attestation processing granular error tracking.
-	attCannotDecodePubsub = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_failed_decode_total",
-		Help: "Increased when a gossip attestation fails decoding",
-	})
-	attInvalidMessageType = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_invalid_message_type_total",
-		Help: "Increased when a gossip attestation is the wrong message",
-	})
-	attNilMessage = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_nil_message_total",
-		Help: "Increased when a gossip attestation is nil",
-	})
 	attWrongTargetEpoch = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_wrong_target_total",
 		Help: "Increased when a gossip attestation fails target check",

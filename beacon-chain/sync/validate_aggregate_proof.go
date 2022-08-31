@@ -45,24 +45,16 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		attCannotDecodePubsub.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		attInvalidMessageType.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.Errorf("invalid message type: %T", raw)
 	}
 	if m.Message == nil {
-		attNilMessage.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errNilMessage
 	}
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
-		attNilMessage.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 aggregates.

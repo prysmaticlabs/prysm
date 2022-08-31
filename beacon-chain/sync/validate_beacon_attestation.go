@@ -53,20 +53,17 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		attCannotDecodePubsub.Inc()
 		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
-		attInvalidMessageType.Inc()
 		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
-		attNilMessage.Inc()
 		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
