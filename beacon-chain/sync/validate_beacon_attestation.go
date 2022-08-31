@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -32,6 +34,7 @@ import (
 // - attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot).
 // - The signature of attestation is valid.
 func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+	receivedTime := prysmTime.Now()
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
@@ -163,6 +166,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
 
 	msg.ValidatorData = att
+
+	ms := prysmTime.Now().Sub(receivedTime) / time.Millisecond
+	unaggregatedAttestationVerificationGossipSummary.Observe(float64(ms))
 
 	return pubsub.ValidationAccept, nil
 }

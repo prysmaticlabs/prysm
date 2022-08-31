@@ -89,6 +89,47 @@ var (
 			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
 		},
 	)
+
+	// Attestation processing errors and successes.
+	unaggregatedAttsProcessedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_unaggregated_attestations_processed_total",
+		Help: "Number of unaggregated attestations processed from gossipsub",
+	})
+	unaggregatedAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_unaggregated_attestations_failed_processing_total",
+		Help: "Number of unaggregated attestations that fail processing from gossipsub",
+	})
+	aggregateAttsProcessedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_aggregate_attestations_processed_total",
+		Help: "Number of aggregate attestations processed from gossipsub",
+	})
+	aggregateAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_aggregate_attestations_failed_processing_total",
+		Help: "Number of aggregate attestations that fail processing from gossipsub",
+	})
+	aggregateAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_aggregate_attestations_failed_processing_total",
+		Help: "Number of aggregate attestations that fail processing from gossipsub",
+	})
+	// Attestation and block gossip verification performance.
+	unaggregatedAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_unaggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped, unaggregated attestations",
+		},
+	)
+	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_aggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped attestations",
+		},
+	)
+	blockVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_verification_milliseconds",
+			Help: "Time to verify gossiped blocks",
+		},
+	)
 )
 
 func (s *Service) updateMetrics() {

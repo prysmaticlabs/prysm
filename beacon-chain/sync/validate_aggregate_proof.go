@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -27,6 +29,7 @@ import (
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
 func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+	receivedTime := prysmTime.Now()
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
@@ -113,6 +116,9 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	s.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
 
 	msg.ValidatorData = m
+
+	ms := prysmTime.Now().Sub(receivedTime) / time.Millisecond
+	aggregateAttestationVerificationGossipSummary.Observe(float64(ms))
 
 	return pubsub.ValidationAccept, nil
 }
