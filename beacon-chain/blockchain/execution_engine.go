@@ -94,7 +94,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if len(lastValidHash) == 0 {
 				lastValidHash = defaultLatestValidHash
 			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				log.WithError(err).Error("Could not set head root to invalid")
 				return nil, nil
@@ -229,7 +229,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		if err != nil {
 			return false, err
 		}
-		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(blk.Block().ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, blk.Block().ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 		if err != nil {
 			return false, err
 		}
@@ -269,7 +269,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
-	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	parent, err := s.getBlock(ctx, blk.ParentRoot())
 	if err != nil {
 		return err
 	}
