@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusBlocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -51,10 +52,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		}
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
 		txs, err := p.Transactions()
-		if err != nil {
+		switch {
+		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
+		case err != nil:
 			return err
+		default:
+			log = log.WithField("txCount", len(txs))
 		}
-		log = log.WithField("txCount", len(txs))
+
 	}
 	log.Info("Finished applying state transition")
 	return nil
