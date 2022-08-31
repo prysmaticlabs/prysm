@@ -75,8 +75,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	if newHeadRoot == oldHeadRoot {
 		return nil
 	}
-	if err := blocks.BeaconBlockIsNil(headBlock); err != nil {
-		return err
+	if headBlock.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	if headState == nil || headState.IsNil() {
 		return errors.New("cannot save nil head state")
@@ -164,8 +164,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+	if b.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {

@@ -361,8 +361,8 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 func (s *Service) ReconstructFullBellatrixBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
-	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
-		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+	if blindedBlock.IsNil() {
+		return nil, errors.Wrap(blocks.ErrNilSignedBeaconBlock, "cannot reconstruct bellatrix block from nil data")
 	}
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
@@ -414,8 +414,8 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	validExecPayloads := []int{}
 	zeroExecPayloads := []int{}
 	for i, b := range blindedBlocks {
-		if err := blocks.BeaconBlockIsNil(b); err != nil {
-			return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+		if b.IsNil() {
+			return nil, errors.Wrap(blocks.ErrNilSignedBeaconBlock, "cannot reconstruct bellatrix block from nil data")
 		}
 		if !b.Block().IsBlinded() {
 			return nil, errors.New("can only reconstruct block from blinded block format")

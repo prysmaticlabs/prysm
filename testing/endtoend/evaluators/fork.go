@@ -63,8 +63,8 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if err := blocks.BeaconBlockIsNil(blk); err != nil {
-		return err
+	if blk.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	if blk.Block().Slot() < fSlot {
 		return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())
@@ -108,8 +108,8 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if err := blocks.BeaconBlockIsNil(blk); err != nil {
-		return err
+	if blk.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	if blk.Block().Slot() < fSlot {
 		return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())

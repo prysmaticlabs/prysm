@@ -26,8 +26,8 @@ func ProcessAttestationsNoVerifySignature(
 	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 	body := b.Block().Body()
 	var err error

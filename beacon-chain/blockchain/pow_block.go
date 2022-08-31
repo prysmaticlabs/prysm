@@ -37,8 +37,8 @@ import (
 //    # Check if `pow_block` is a valid terminal PoW block
 //    assert is_valid_terminal_pow_block(pow_block, pow_parent)
 func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+	if b.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	payload, err := b.Block().Body().Execution()
 	if err != nil {

@@ -227,8 +227,8 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 	if err != nil {
 		return nil, err
 	}
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 
 	for {

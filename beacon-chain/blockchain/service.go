@@ -276,8 +276,8 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := blocks.BeaconBlockIsNil(genesisBlock); err != nil {
-		return originRoot, err
+	if genesisBlock.IsNil() {
+		return originRoot, blocks.ErrNilSignedBeaconBlock
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
 	if err != nil {

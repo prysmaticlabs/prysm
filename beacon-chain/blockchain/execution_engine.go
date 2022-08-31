@@ -196,8 +196,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
-		return false, err
+	if blk.IsNil() {
+		return false, consensusblocks.ErrNilSignedBeaconBlock
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)

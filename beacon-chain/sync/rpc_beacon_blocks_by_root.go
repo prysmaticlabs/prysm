@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 )
 
@@ -70,7 +69,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		if blk.IsNil() {
 			continue
 		}
 

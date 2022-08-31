@@ -143,8 +143,8 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 func BuildSignedBeaconBlockFromExecutionPayload(
 	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
 ) (interfaces.SignedBeaconBlock, error) {
-	if err := BeaconBlockIsNil(blk); err != nil {
-		return nil, err
+	if blk.IsNil() {
+		return nil, ErrNilSignedBeaconBlock
 	}
 	b := blk.Block()
 	payloadHeader, err := b.Body().Execution()

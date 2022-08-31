@@ -95,8 +95,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
-		return invalidBlock{error: err}
+	if signed.IsNil() {
+		return invalidBlock{error: consensusblocks.ErrNilSignedBeaconBlock}
 	}
 	b := signed.Block()
 
@@ -296,8 +296,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errWrongBlockCount
 	}
 
-	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
-		return invalidBlock{error: err}
+	if blks[0].IsNil() {
+		return invalidBlock{error: consensusblocks.ErrNilSignedBeaconBlock}
 	}
 	b := blks[0].Block()
 

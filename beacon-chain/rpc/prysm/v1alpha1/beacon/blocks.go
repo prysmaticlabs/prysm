@@ -233,8 +233,11 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 	}
-	if err := consensusblocks.BeaconBlockIsNil(genBlk); err != nil {
-		return []blockContainer{}, 0, strconv.Itoa(0), status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
+	if genBlk.IsNil() {
+		return []blockContainer{},
+			0,
+			strconv.Itoa(0),
+			status.Errorf(codes.NotFound, "Could not find genesis block: %v", consensusblocks.ErrNilSignedBeaconBlock)
 	}
 	root, err := genBlk.Block().HashTreeRoot()
 	if err != nil {
@@ -363,8 +366,8 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get optimistic status")
 	}
-	if err := consensusblocks.BeaconBlockIsNil(headBlock); err != nil {
-		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
+	if headBlock.IsNil() {
+		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", consensusblocks.ErrNilSignedBeaconBlock)
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
 	if err != nil {
@@ -379,7 +382,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 			}
 			// Retrieve genesis block in the event we have genesis checkpoints.
 			genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-			if err != nil || consensusblocks.BeaconBlockIsNil(genBlock) != nil {
+			if err != nil || genBlock.IsNil() {
 				return status.Error(codes.Internal, "Could not get genesis block")
 			}
 			validGenesis = true
@@ -389,8 +392,8 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
 		}
-		if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
+		if b.IsNil() {
+			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, consensusblocks.ErrNilSignedBeaconBlock)
 		}
 		return nil
 	}

@@ -80,8 +80,8 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if err != nil {
 		return err
 	}
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+	if b.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	if b.Block().Slot() > data.Slot {
 		return fmt.Errorf("could not process attestation for future block, block.Slot=%d > attestation.Data.Slot=%d", b.Block().Slot(), data.Slot)

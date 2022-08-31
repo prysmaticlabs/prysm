@@ -81,8 +81,8 @@ func (s *Status) Reload(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving block for origin checkpoint root=%#x", cpRoot)
 	}
-	if err := blocks.BeaconBlockIsNil(cpBlock); err != nil {
-		return err
+	if cpBlock.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	s.end = cpBlock.Block().Slot()
 
@@ -105,8 +105,8 @@ func (s *Status) Reload(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving block for backfill root=%#x", bfRoot)
 	}
-	if err := blocks.BeaconBlockIsNil(bfBlock); err != nil {
-		return err
+	if bfBlock.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 	s.start = bfBlock.Block().Slot()
 	return nil

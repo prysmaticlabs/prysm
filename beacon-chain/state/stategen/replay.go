@@ -146,8 +146,8 @@ func executeStateTransitionStateGen(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if err := blocks.BeaconBlockIsNil(signed); err != nil {
-		return nil, err
+	if signed.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 	ctx, span := trace.StartSpan(ctx, "stategen.executeStateTransitionStateGen")
 	defer span.End()

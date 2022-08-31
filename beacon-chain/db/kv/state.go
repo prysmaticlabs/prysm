@@ -674,8 +674,8 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 		if err != nil {
 			return 0, err
 		}
-		if err := blocks.BeaconBlockIsNil(wsb); err != nil {
-			return 0, err
+		if wsb.IsNil() {
+			return 0, blocks.ErrNilSignedBeaconBlock
 		}
 		return b.Block.Slot, nil
 	}

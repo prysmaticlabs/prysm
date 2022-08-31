@@ -31,8 +31,8 @@ func ProcessRandao(
 	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 	body := b.Block().Body()
 	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)

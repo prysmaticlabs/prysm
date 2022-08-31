@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 )
 
@@ -56,7 +55,7 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 			return nil, errors.Wrap(err, "could not retrieve block from db")
 		}
 	}
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
+	if b.IsNil() {
 		return nil, errBlockNotFoundInCacheOrDB
 	}
 	return b, nil

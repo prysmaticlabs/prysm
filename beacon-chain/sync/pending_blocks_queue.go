@@ -361,8 +361,8 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+	if b.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 
 	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
@@ -428,8 +428,8 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaco
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+	if b.IsNil() {
+		return blocks.ErrNilSignedBeaconBlock
 	}
 
 	blks := s.pendingBlocksInCache(b.Block().Slot())

@@ -5,7 +5,6 @@ import (
 
 	ssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
@@ -13,31 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
-
-func Test_BeaconBlockIsNil(t *testing.T) {
-	t.Run("not nil", func(t *testing.T) {
-		assert.NoError(t, BeaconBlockIsNil(&SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}))
-	})
-	t.Run("nil interface", func(t *testing.T) {
-		err := BeaconBlockIsNil(nil)
-		assert.NotNil(t, err)
-	})
-	t.Run("nil signed block", func(t *testing.T) {
-		var i interfaces.SignedBeaconBlock
-		var sb *SignedBeaconBlock
-		i = sb
-		err := BeaconBlockIsNil(i)
-		assert.NotNil(t, err)
-	})
-	t.Run("nil block", func(t *testing.T) {
-		err := BeaconBlockIsNil(&SignedBeaconBlock{})
-		assert.NotNil(t, err)
-	})
-	t.Run("nil block body", func(t *testing.T) {
-		err := BeaconBlockIsNil(&SignedBeaconBlock{block: &BeaconBlock{}})
-		assert.NotNil(t, err)
-	})
-}
 
 func Test_SignedBeaconBlock_Signature(t *testing.T) {
 	sb := &SignedBeaconBlock{signature: []byte("signature")}

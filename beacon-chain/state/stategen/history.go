@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -177,7 +176,7 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.Si
 			msg := fmt.Sprintf("db error when retrieving parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(err, msg)
 		}
-		if blocks.BeaconBlockIsNil(parent) != nil {
+		if parent.IsNil() {
 			msg := fmt.Sprintf("unable to retrieve parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(db.ErrNotFound, msg)
 		}

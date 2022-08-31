@@ -10,22 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
-// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
-// Access to these nil fields will result in run time panic,
-// it is recommended to run these checks as first line of defense.
-func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
-	if b == nil || b.IsNil() {
-		return ErrNilSignedBeaconBlock
-	}
-	if b.Block().IsNil() {
-		return errNilBeaconBlock
-	}
-	if b.Block().Body().IsNil() {
-		return errNilBeaconBlockBody
-	}
-	return nil
-}
-
 // Signature returns the respective block signature.
 func (b *SignedBeaconBlock) Signature() []byte {
 	return b.signature

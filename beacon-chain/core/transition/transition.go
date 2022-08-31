@@ -52,8 +52,8 @@ func ExecuteStateTransition(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if err := blocks.BeaconBlockIsNil(signed); err != nil {
-		return nil, err
+	if signed.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
@@ -296,8 +296,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
 func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b.IsNil() {
+		return nil, blocks.ErrNilSignedBeaconBlock
 	}
 	body := b.Block().Body()
 

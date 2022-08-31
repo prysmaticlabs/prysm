@@ -99,8 +99,8 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if err != nil {
 			return nil, err
 		}
-		if err := consensusblocks.BeaconBlockIsNil(finalizedBlock); err != nil {
-			return nil, err
+		if finalizedBlock.IsNil() {
+			return nil, consensusblocks.ErrNilSignedBeaconBlock
 		}
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
