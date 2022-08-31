@@ -244,7 +244,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	log.Info("Syncing with beacon node to align on chain genesis info")
 	chainStartRes, err := stream.Recv()
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
@@ -371,7 +371,10 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool {
+func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount uint64) bool {
+	activationsPerEpoch :=
+		uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(activeValCount/params.BeaconConfig().ChurnLimitQuotient)))
+
 	nonexistentIndex := types.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
 	for _, status := range statuses {
@@ -397,9 +400,13 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
+			secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+			expectedWaitingTime :=
+				time.Duration((status.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
 			if status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
 					"positionInActivationQueue": status.status.PositionInActivationQueue,
+					"expectedWaitingTime":       expectedWaitingTime.String(),
 				}).Info("Waiting to be assigned activation epoch")
 			} else {
 				log.WithFields(logrus.Fields{
@@ -930,17 +937,21 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 		}
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
+		durationTillDuty := time.Until(startTime)
+
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{
 				"slot":                  slotOffset + i,
 				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
+				"timeTillDuty":          durationTillDuty.Round(time.Second),
 				"attesterDutiesAtSlot":  len(attesterKeys[i]),
 				"totalAttestersInEpoch": totalAttestingKeys,
 				"pubKeys":               attesterKeys[i],
 			}).Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
-			log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
+			log.WithField("slot", slotOffset+i).WithField("timeTillDuty", durationTillDuty.Round(time.Second)).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
 		}
 	}
 }
@@ -1059,7 +1070,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
 			config := v.ProposerSettings.DefaultConfig.BuilderConfig
 			if config != nil && config.Enabled {
-				gasLimit = config.GasLimit // Use cli config for gas limit.
+				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
@@ -1070,7 +1081,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 				builderConfig := config.BuilderConfig
 				if builderConfig != nil {
 					if builderConfig.Enabled {
-						gasLimit = builderConfig.GasLimit // Use file config for gas limit.
+						gasLimit = uint64(builderConfig.GasLimit) // Use file config for gas limit.
 						enabled = true
 					} else {
 						enabled = false // Custom config can disable validator from register.

@@ -16,7 +16,7 @@ func UpdateGenesisEth1Data(state state.BeaconState, deposits []*ethpb.Deposit, e
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	var leaves [][]byte
+	leaves := make([][]byte, 0, len(deposits))
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
 			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)

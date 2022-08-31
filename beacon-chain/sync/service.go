@@ -178,6 +178,7 @@ func (s *Service) Start() {
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
+	s.resyncIfBehind()
 
 	// Update sync metrics.
 	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)

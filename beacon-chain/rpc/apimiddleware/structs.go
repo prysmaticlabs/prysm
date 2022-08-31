@@ -277,6 +277,18 @@ type submitContributionAndProofsRequestJson struct {
 	Data []*signedContributionAndProofJson `json:"data"`
 }
 
+type forkchoiceResponse struct {
+	JustifiedCheckpoint           *checkpointJson       `json:"justified_checkpoint"`
+	FinalizedCheckpoint           *checkpointJson       `json:"finalized_checkpoint"`
+	BestJustifiedCheckpoint       *checkpointJson       `json:"best_justified_checkpoint"`
+	UnrealizedJustifiedCheckpoint *checkpointJson       `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *checkpointJson       `json:"unrealized_finalized_checkpoint"`
+	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
+	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
+	HeadRoot                      string                `json:"head_root" hex:"true"`
+	ForkChoiceNodes               []*forkChoiceNodeJson `json:"forkchoice_nodes"`
+}
+
 //----------------
 // Reusable types.
 //----------------
@@ -771,6 +783,36 @@ type syncCommitteeContributionJson struct {
 	SubcommitteeIndex string `json:"subcommittee_index"`
 	AggregationBits   string `json:"aggregation_bits" hex:"true"`
 	Signature         string `json:"signature" hex:"true"`
+}
+
+type validatorRegistrationJson struct {
+	FeeRecipient string `json:"fee_recipient" hex:"true"`
+	GasLimit     string `json:"gas_limit"`
+	Timestamp    string `json:"timestamp"`
+	Pubkey       string `json:"pubkey" hex:"true"`
+}
+
+type signedValidatorRegistrationJson struct {
+	Message   *validatorRegistrationJson `json:"message"`
+	Signature string                     `json:"signature" hex:"true"`
+}
+
+type signedValidatorRegistrationsRequestJson struct {
+	Registrations []*signedValidatorRegistrationJson `json:"registrations"`
+}
+
+type forkChoiceNodeJson struct {
+	Slot                     string `json:"slot"`
+	Root                     string `json:"root" hex:"true"`
+	ParentRoot               string `json:"parent_root" hex:"true"`
+	JustifiedEpoch           string `json:"justified_epoch"`
+	FinalizedEpoch           string `json:"finalized_epoch"`
+	UnrealizedJustifiedEpoch string `json:"unrealized_justified_epoch"`
+	UnrealizedFinalizedEpoch string `json:"unrealized_finalized_epoch"`
+	Balance                  string `json:"balance"`
+	Weight                   string `json:"weight"`
+	ExecutionOptimistic      bool   `json:"execution_optimistic"`
+	ExecutionPayload         string `json:"execution_payload" hex:"true"`
 }
 
 //----------------

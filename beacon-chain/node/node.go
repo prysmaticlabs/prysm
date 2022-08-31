@@ -28,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/v3/beacon-chain/deterministic-genesis"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/gateway"
@@ -56,7 +55,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
 	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
@@ -101,14 +99,12 @@ type BeaconNode struct {
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
-	forkChoiceStore         forkchoice.ForkChoicer
 	stateGen                *stategen.State
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
-	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
 }
@@ -229,9 +225,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := beacon.registerDeterminsticGenesisService(); err != nil {
 		return nil, err
 	}
-
-	log.Debugln("Starting Fork Choice")
-	beacon.startForkChoice()
 
 	log.Debugln("Registering Blockchain Service")
 	if err := beacon.registerBlockchainService(); err != nil {
@@ -356,14 +349,6 @@ func (b *BeaconNode) Close() {
 	close(b.stop)
 }
 
-func (b *BeaconNode) startForkChoice() {
-	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		b.forkChoiceStore = doublylinkedtree.New()
-	} else {
-		b.forkChoiceStore = protoarray.New()
-	}
-}
-
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
@@ -372,9 +357,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath, &kv.Config{
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-	})
+	d, err := db.NewDB(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -396,9 +379,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath, &kv.Config{
-			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-		})
+		d, err = db.NewDB(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -468,9 +449,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-	})
+	d, err := slasherkv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -492,9 +471,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
-			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-		})
+		d, err = slasherkv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -560,7 +537,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
 		DB:                b.db,
 	})
@@ -619,13 +595,19 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithSlashingPool(b.slashingsPool),
 		blockchain.WithP2PBroadcaster(b.fetchP2P()),
 		blockchain.WithStateNotifier(b),
-		blockchain.WithForkChoiceStore(b.forkChoiceStore),
 		blockchain.WithAttestationService(attService),
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 	)
+
+	if features.Get().DisableForkchoiceDoublyLinkedTree {
+		opts = append(opts, blockchain.WithForkChoiceStore(protoarray.New()))
+	} else {
+		opts = append(opts, blockchain.WithForkChoiceStore(doublylinkedtree.New()))
+	}
+
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -853,7 +835,7 @@ func (b *BeaconNode) registerRPCService() error {
 	return b.services.RegisterService(rpcService)
 }
 
-func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	var p *p2p.Service
 	if err := b.services.FetchService(&p); err != nil {
@@ -864,16 +846,6 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
-	}
-
-	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
-		additionalHandlers = append(
-			additionalHandlers,
-			prometheus.Handler{
-				Path:    "/db/backup",
-				Handler: backup.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
-			},
-		)
 	}
 
 	service := prometheus.NewService(

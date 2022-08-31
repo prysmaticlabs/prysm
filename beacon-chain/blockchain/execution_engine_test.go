@@ -41,7 +41,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -575,7 +575,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -795,7 +795,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}
 			service.cfg.ExecutionEngineCaller = e
 			root := [32]byte{'a'}
-			state, blkRoot, err := prepareForkchoiceState(ctx, 0, root, root, params.BeaconConfig().ZeroHash, ojc, ofc)
+			state, blkRoot, err := prepareForkchoiceState(ctx, 0, root, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 			require.NoError(t, err)
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
@@ -821,7 +821,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -868,7 +868,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1155,6 +1155,18 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.Equal(t, false, optimistic)
 	require.DeepEqual(t, validCheckpoint.Root, cp.Root)
 	require.Equal(t, validCheckpoint.Epoch, cp.Epoch)
+
+	// Checkpoint with a lower epoch
+	oldCp, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	invalidCp := &ethpb.Checkpoint{
+		Epoch: oldCp.Epoch - 1,
+	}
+	// Nothing should happen as we no-op on an invalid checkpoint.
+	require.NoError(t, service.updateFinalized(ctx, invalidCp))
+	got, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, oldCp, got)
 }
 
 func TestService_removeInvalidBlockAndState(t *testing.T) {
@@ -1163,7 +1175,7 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1215,7 +1227,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

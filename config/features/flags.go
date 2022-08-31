@@ -50,23 +50,10 @@ var (
 		Name:  "disable-peer-scorer",
 		Usage: "Disables experimental P2P peer scorer",
 	}
-	checkPtInfoCache = &cli.BoolFlag{
-		Name:  "use-check-point-cache",
-		Usage: "Enables check point info caching",
-	}
-	enableLargerGossipHistory = &cli.BoolFlag{
-		Name:  "enable-larger-gossip-history",
-		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
-	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
 			"We recommend against this flag unless you are an advanced user.",
-	}
-	disableAttestingHistoryDBCache = &cli.BoolFlag{
-		Name: "disable-attesting-history-db-cache",
-		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
-			"disk reads and writes as well as increasing time required for attestations to be produced",
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
@@ -110,13 +97,18 @@ var (
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
-	enableVecHTR = &cli.BoolFlag{
-		Name:  "enable-vectorized-htr",
-		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
+	enableDefensivePull = &cli.BoolFlag{
+		Name:   "enable-back-pull",
+		Usage:  "Experimental enable of past boundary checks, useful for debugging, may cause bad votes.",
+		Hidden: true,
 	}
-	enableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
-		Name:  "enable-forkchoice-doubly-linked-tree",
-		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
+	disableVecHTR = &cli.BoolFlag{
+		Name:  "disable-vectorized-htr",
+		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
+	}
+	disableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:  "disable-forkchoice-doubly-linked-tree",
+		Usage: "Disables the new forkchoice store structure that uses doubly linked trees",
 	}
 	disableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "disable-gossip-batch-aggregation",
@@ -126,19 +118,21 @@ var (
 		Name:  "enable-only-blinded-beacon-blocks",
 		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
 	}
+	enableStartupOptimistic = &cli.BoolFlag{
+		Name:   "startup-optimistic",
+		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
+		Value:  false,
+		Hidden: true,
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{
-	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
-}
+var devModeFlags = []cli.Flag{}
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
-	disableAttestingHistoryDBCache,
 	PraterTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
@@ -155,7 +149,7 @@ var E2EValidatorFlags = []string{
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
-var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
@@ -164,18 +158,18 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
-	enableLargerGossipHistory,
-	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
 	disablePullTips,
-	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
+	disableVecHTR,
+	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
-}...)
+	enableStartupOptimistic,
+	enableDefensivePull,
+}...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{

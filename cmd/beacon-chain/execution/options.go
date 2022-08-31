@@ -9,25 +9,28 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "cmd-execution-chain")
-
 // FlagOptions for execution service flag configurations.
 func FlagOptions(c *cli.Context) ([]execution.Option, error) {
-	endpoints := parseExecutionChainEndpoint(c)
+	endpoint, err := parseExecutionChainEndpoint(c)
+	if err != nil {
+		return nil, err
+	}
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
 	}
+	headers := strings.Split(c.String(flags.ExecutionEngineHeaders.Name), ",")
 	opts := []execution.Option{
-		execution.WithHttpEndpoints(endpoints),
+		execution.WithHttpEndpoint(endpoint),
 		execution.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
+		execution.WithHeaders(headers),
 	}
 	if len(jwtSecret) > 0 {
-		opts = append(opts, execution.WithHttpEndpointsAndJWTSecret(endpoints, jwtSecret))
+		opts = append(opts, execution.WithHttpEndpointAndJWTSecret(endpoint, jwtSecret))
 	}
 	return opts, nil
 }
@@ -60,18 +63,27 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	if len(secret) < 32 {
 		return nil, errors.New("provided JWT secret should be a hex string of at least 32 bytes")
 	}
+	log.Infof("Finished reading JWT secret from %s", jwtSecretFile)
 	return secret, nil
 }
 
-func parseExecutionChainEndpoint(c *cli.Context) []string {
-	if c.String(flags.ExecutionEngineEndpoint.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
-		log.Error(
-			"No execution engine specified to run with the beacon node. " +
-				"You must specified an execution client in order to participate. Visit " +
-				"https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information",
+func parseExecutionChainEndpoint(c *cli.Context) (string, error) {
+	aliasUsed := c.IsSet(flags.HTTPWeb3ProviderFlag.Name)
+	if c.String(flags.ExecutionEngineEndpoint.Name) == "" && !aliasUsed {
+		return "", fmt.Errorf(
+			"you need to specify %s to provide a connection endpoint to an Ethereum execution client "+
+				"for your Prysm beacon node. This is a requirement for running a node. You can read more about "+
+				"how to configure this execution client connection in our docs here "+
+				"https://docs.prylabs.network/docs/install/install-with-script",
+			flags.ExecutionEngineEndpoint.Name,
 		)
 	}
-	endpoints := []string{c.String(flags.ExecutionEngineEndpoint.Name)}
-	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
-	return endpoints
+	// If users only declare the deprecated flag without setting the execution engine
+	// flag, we fallback to using the deprecated flag value.
+	if aliasUsed && !c.IsSet(flags.ExecutionEngineEndpoint.Name) {
+		log.Warnf("The %s flag has been deprecated and will be removed in a future release,"+
+			"please use the execution endpoint flag instead %s", flags.HTTPWeb3ProviderFlag.Name, flags.ExecutionEngineEndpoint.Name)
+		return c.String(flags.HTTPWeb3ProviderFlag.Name), nil
+	}
+	return c.String(flags.ExecutionEngineEndpoint.Name), nil
 }

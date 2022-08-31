@@ -32,6 +32,19 @@ var (
 		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
 		Value: "http://localhost:8551",
 	}
+	// ExecutionEngineHeaders defines a list of HTTP headers to send with all execution client requests.
+	ExecutionEngineHeaders = &cli.StringFlag{
+		Name: "execution-headers",
+		Usage: "A comma separated list of key value pairs to pass as HTTP headers for all execution " +
+			"client calls. Example: --execution-headers=key1=value1,key2=value2",
+	}
+	// Deprecated: HTTPWeb3ProviderFlag is a deprecated flag and is an alias for the ExecutionEngineEndpoint flag.
+	HTTPWeb3ProviderFlag = &cli.StringFlag{
+		Name:   "http-web3provider",
+		Usage:  "DEPRECATED: A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
+		Value:  "http://localhost:8551",
+		Hidden: true,
+	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
 	// to execution nodes for consensus-related calls will fail. This is not required if using an IPC connection.
@@ -43,11 +56,6 @@ var (
 			"fail, which will prevent your validators from performing their duties. " +
 			"This is not required if using an IPC connection.",
 		Value: "",
-	}
-	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
-	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
-		Name:  "fallback-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
@@ -146,11 +154,6 @@ var (
 		Name:  "slots-per-archive-point",
 		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
-	}
-	// DisableDiscv5 disables running discv5.
-	DisableDiscv5 = &cli.BoolFlag{
-		Name:  "disable-discv5",
-		Usage: "Does not run the discoveryV5 dht.",
 	}
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{

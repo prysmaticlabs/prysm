@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -132,5 +133,29 @@ func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 		_ = err
 		err = signing.VerifySigningRoot(st, p, s, d)
 		_ = err
+	}
+}
+
+func TestBlockSignatureBatch_NoSigVerification(t *testing.T) {
+	tests := []struct {
+		pubkey          []byte
+		mockSignature   []byte
+		domain          []byte
+		wantMessageHexs []string
+	}{
+		{
+			pubkey:          []byte{0xa9, 0x9a, 0x76, 0xed, 0x77, 0x96, 0xf7, 0xbe, 0x22, 0xd5, 0xb7, 0xe8, 0x5d, 0xee, 0xb7, 0xc5, 0x67, 0x7e, 0x88, 0xe5, 0x11, 0xe0, 0xb3, 0x37, 0x61, 0x8f, 0x8c, 0x4e, 0xb6, 0x13, 0x49, 0xb4, 0xbf, 0x2d, 0x15, 0x3f, 0x64, 0x9f, 0x7b, 0x53, 0x35, 0x9f, 0xe8, 0xb9, 0x4a, 0x38, 0xe4, 0x4c},
+			mockSignature:   []byte{0xa9, 0x9a, 0x76, 0xed, 0x77},
+			domain:          []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169},
+			wantMessageHexs: []string{"0xe6012bc68e112797a91ed6889e7453f8e304fb76fbffcec1c62eef280a93f7ba"},
+		},
+	}
+	for _, tt := range tests {
+		block := util.NewBeaconBlock()
+		got, err := signing.BlockSignatureBatch(tt.pubkey, tt.mockSignature, tt.domain, block.Block.HashTreeRoot)
+		require.NoError(t, err)
+		for i, message := range got.Messages {
+			require.Equal(t, hexutil.Encode(message[:]), tt.wantMessageHexs[i])
+		}
 	}
 }

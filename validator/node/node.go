@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -241,8 +242,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -318,8 +318,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -470,7 +469,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
-				pks = slice.Unique(pks)
+				pks = slice.Unique[string](pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
@@ -500,9 +499,17 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
 		var vr *validatorServiceConfig.BuilderConfig
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
 			vr = &validatorServiceConfig.BuilderConfig{
 				Enabled:  true,
-				GasLimit: reviewGasLimit(uint64(cliCtx.Int(flags.BuilderGasLimitFlag.Name))),
+				GasLimit: validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+			}
+			if sgl != "" {
+				gl, err := strconv.ParseUint(sgl, 10, 64)
+				if err != nil {
+					return nil, errors.New("Gas Limit is not a uint64")
+				}
+				vr.GasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
 			}
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
@@ -597,10 +604,10 @@ func warnNonChecksummedAddress(feeRecipient string) error {
 	return nil
 }
 
-func reviewGasLimit(gasLimit uint64) uint64 {
+func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConfig.Uint64 {
 	// sets gas limit to default if not defined or set to 0
 	if gasLimit == 0 {
-		return params.BeaconConfig().DefaultBuilderGasLimit
+		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 	}
 	//TODO(10810): add in warning for ranges
 	return gasLimit

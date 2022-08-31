@@ -357,7 +357,8 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	validatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -368,14 +369,15 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient: client,
+		validatorClient: validatorClient,
 		keyManager:      km,
+		beaconClient:    beaconClient,
 	}
 
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
+	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&ethpb.ValidatorActivationRequest{
 			PublicKeys: [][]byte{pubKey[:]},
@@ -385,6 +387,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -392,7 +395,8 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	validatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -403,16 +407,18 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient: client,
+		validatorClient: validatorClient,
 		keyManager:      km,
+		beaconClient:    beaconClient,
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
+	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(clientStream, nil)
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).Times(2)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ValidatorActivationResponse{},
 		nil,
@@ -805,7 +811,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 6,
 				},
 			},
-			log:    "Waiting to be assigned activation epoch\" index=50 positionInActivationQueue=6",
+			log:    "Waiting to be assigned activation epoch\" expectedWaitingTime=12m48s index=50 positionInActivationQueue=6",
 			active: false,
 		},
 		{
@@ -873,7 +879,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				},
 			}
 
-			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status})
+			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status}, 100)
 			require.Equal(t, test.active, active)
 			if test.log != "" {
 				require.LogsContain(t, hook, test.log)
@@ -1508,7 +1514,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1517,7 +1523,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(35000000),
+							GasLimit: 35000000,
 						},
 					},
 				}
@@ -1535,11 +1541,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(),
-					GasLimit:     uint64(40000000),
+					GasLimit:     40000000,
 				},
 				{
 					FeeRecipient: byteValueAddress,
-					GasLimit:     uint64(35000000),
+					GasLimit:     35000000,
 				},
 			},
 		},
@@ -1588,7 +1594,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1597,7 +1603,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: uint64(35000000),
+							GasLimit: 35000000,
 						},
 					},
 				}
@@ -1709,7 +1715,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -1765,7 +1771,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(40000000),
+							GasLimit: 40000000,
 						},
 					},
 				}
@@ -1957,7 +1963,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: common.Address{},
 					BuilderConfig: &validatorserviceconfig.BuilderConfig{
 						Enabled:  true,
-						GasLimit: uint64(40000000),
+						GasLimit: 40000000,
 					},
 				}
 				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
@@ -1966,7 +1972,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: uint64(40000000),
+							GasLimit: 40000000,
 						},
 					},
 				}

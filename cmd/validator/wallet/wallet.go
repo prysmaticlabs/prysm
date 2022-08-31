@@ -108,13 +108,13 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				if err := features.ConfigureValidator(cliCtx); err != nil {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.RecoverWalletCli(cliCtx); err != nil {
+				return features.ConfigureBeaconChain(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := walletRecover(cliCtx); err != nil {
 					log.WithError(err).Fatal("Could not recover wallet")
 				}
 				return nil

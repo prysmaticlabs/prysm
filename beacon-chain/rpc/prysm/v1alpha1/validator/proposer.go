@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -81,7 +82,26 @@ func (vs *Server) PrepareBeaconProposer(
 	defer span.End()
 	var feeRecipients []common.Address
 	var validatorIndices []types.ValidatorIndex
-	for _, recipientContainer := range request.Recipients {
+
+	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
+	for _, r := range request.Recipients {
+		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
+		switch {
+		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+			newRecipients = append(newRecipients, r)
+		case err != nil:
+			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
+		default:
+		}
+		if common.BytesToAddress(r.FeeRecipient) != f {
+			newRecipients = append(newRecipients, r)
+		}
+	}
+	if len(newRecipients) == 0 {
+		return &emptypb.Empty{}, nil
+	}
+
+	for _, recipientContainer := range newRecipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
@@ -160,12 +180,6 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
-}
-
-// SubmitValidatorRegistration submits validator registration.
-// Deprecated: Use SubmitValidatorRegistrations instead.
-func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
-	return vs.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{Messages: []*ethpb.SignedValidatorRegistrationV1{reg}})
 }
 
 // SubmitValidatorRegistrations submits validator registrations.

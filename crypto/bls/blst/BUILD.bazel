@@ -20,7 +20,6 @@ go_library(
     ],
     deps = [
         "//cache/lru:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls/common:go_default_library",

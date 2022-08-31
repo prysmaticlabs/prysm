@@ -40,8 +40,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{types.Slot(^uint64(0)), 10, 11}, // exact slot doesn't matter, only if it is == or != ^uint64(0)
-			InclusionDistances:   []types.Slot{0, 5, 2},
 			CorrectlyVotedHead:   []bool{false, true, false},
 			CorrectlyVotedSource: []bool{false, true, true},
 			CorrectlyVotedTarget: []bool{false, true, true},
@@ -52,8 +50,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{33, 34, 35},
-			InclusionDistances:   []types.Slot{1, 2, 3},
 			CorrectlyVotedHead:   []bool{true, true, true},
 			CorrectlyVotedSource: []bool{true, true, true},
 			CorrectlyVotedTarget: []bool{true, true, true},
@@ -64,8 +60,6 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 				bytesutil.FromBytes48(pubKeyBytes[1]),
 				bytesutil.FromBytes48(pubKeyBytes[2]),
 			},
-			InclusionSlots:       []types.Slot{65, types.Slot(^uint64(0)), 67},
-			InclusionDistances:   []types.Slot{1, 0, 2},
 			CorrectlyVotedHead:   []bool{true, false, true},
 			CorrectlyVotedSource: []bool{true, false, true},
 			CorrectlyVotedTarget: []bool{false, false, true},
@@ -88,7 +82,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+
 		"correctlyVotedHeadPct=\"100%\" correctlyVotedSourcePct=\"100%\" correctlyVotedTargetPct=\"50%\" epoch=2")
 	require.LogsContain(t, hook, "msg=\"Vote summary since launch\" attestationsInclusionPct=\"78%\" "+
-		"averageInclusionDistance=\"2.29 slots\" correctlyVotedHeadPct=\"86%\" correctlyVotedSourcePct=\"100%\" "+
+		"averageInclusionDistance=\"0.00 slots\" correctlyVotedHeadPct=\"86%\" correctlyVotedSourcePct=\"100%\" "+
 		"correctlyVotedTargetPct=\"86%\" numberOfEpochs=3 pctChangeCombinedBalance=\"0.20555%\"")
 
 }

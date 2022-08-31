@@ -11,7 +11,9 @@ run:
 linters:
   disable-all: true
   enable:
-    - deadcode
+    - gofmt
+    - goimports
+    - unused
     - errcheck
     - gosimple
     - gocognit

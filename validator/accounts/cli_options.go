@@ -178,3 +178,43 @@ func WithFormattedPubKeys(formattedPubKeys []string) Option {
 		return nil
 	}
 }
+
+// WithWalletDir specifies the password for backups.
+func WithWalletDir(walletDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletDir = walletDir
+		return nil
+	}
+}
+
+// WithWalletPassword specifies the password for backups.
+func WithWalletPassword(walletPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletPassword = walletPassword
+		return nil
+	}
+}
+
+// WithMnemonic specifies the password for backups.
+func WithMnemonic(mnemonic string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic = mnemonic
+		return nil
+	}
+}
+
+// WithMnemonic25thWord specifies the password for backups.
+func WithMnemonic25thWord(mnemonic25thWord string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic25thWord = mnemonic25thWord
+		return nil
+	}
+}
+
+// WithMnemonic25thWord specifies the password for backups.
+func WithNumAccounts(numAccounts int) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.numAccounts = numAccounts
+		return nil
+	}
+}

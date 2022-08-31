@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -106,7 +107,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	web3Service, err = execution.NewService(
 		ctx,
 		execution.WithDatabase(beaconDB),
-		execution.WithHttpEndpoints([]string{endpoint}),
+		execution.WithHttpEndpoint(endpoint),
 		execution.WithDepositContractAddress(common.Address{}),
 	)
 	require.NoError(t, err, "Unable to set up web3 service")
@@ -128,7 +129,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithP2PBroadcaster(&mockBroadcaster{}),
 		WithStateNotifier(&mockBeaconNode{}),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 	}
@@ -376,7 +377,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: protoarray.New()},
+		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: doublylinkedtree.New()},
 	}
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
@@ -527,4 +528,46 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, true, s.cfg.ForkChoiceStore.HasNode(r), "Block is not in fork choice store")
 	}
+}
+
+func TestChainService_EverythingOptimistic(t *testing.T) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableStartOptimistic: true,
+	})
+	defer resetFn()
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+
+	genesis := util.NewBeaconBlock()
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
+
+	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
+	headBlock := util.NewBeaconBlock()
+	headBlock.Block.Slot = finalizedSlot
+	headBlock.Block.ParentRoot = bytesutil.PadTo(genesisRoot[:], 32)
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, headState, genesisRoot))
+	util.SaveBlock(t, ctx, beaconDB, headBlock)
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
+	require.NoError(t, err)
+	stateGen := stategen.New(beaconDB)
+	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	require.NoError(t, err)
+	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
+	require.NoError(t, c.StartFromSavedState(headState))
+	require.Equal(t, true, c.cfg.ForkChoiceStore.HasNode(headRoot))
+	op, err := c.cfg.ForkChoiceStore.IsOptimistic(headRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, op)
 }

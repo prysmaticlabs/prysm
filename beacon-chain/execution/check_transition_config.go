@@ -24,12 +24,18 @@ var (
 	configMismatchLog              = "Configuration mismatch between your execution client and Prysm. " +
 		"Please check your execution client and restart it with the proper configuration. If this is not done, " +
 		"your node will not be able to complete the proof-of-stake transition"
+	needsEnginePortLog = "Could not check execution client configuration. " +
+		"You are probably connecting to your execution client on the wrong port. For the Ethereum " +
+		"merge, you will need to connect to your " +
+		"execution client on port 8551 rather than 8545. This is known as the 'engine API' port and needs to be " +
+		"authenticated if connecting via HTTP. See our documentation on how to set up this up here " +
+		"https://docs.prylabs.network/docs/execution-node/authentication"
 )
 
 // Checks the transition configuration between Prysm and the connected execution node to ensure
 // there are no differences in terminal block difficulty and block hash.
 // If there are any discrepancies, we must log errors to ensure users can resolve
-//the problem and be ready for the merge transition.
+// the problem and be ready for the merge transition.
 func (s *Service) checkTransitionConfiguration(
 	ctx context.Context, blockNotifications chan *feed.Event,
 ) {
@@ -48,10 +54,14 @@ func (s *Service) checkTransitionConfiguration(
 	}
 	err := s.ExchangeTransitionConfiguration(ctx, cfg)
 	if err != nil {
-		if errors.Is(err, ErrConfigMismatch) {
+		switch {
+		case errors.Is(err, ErrConfigMismatch):
 			log.WithError(err).Fatal(configMismatchLog)
+		case errors.Is(err, ErrMethodNotFound):
+			log.WithError(err).Error(needsEnginePortLog)
+		default:
+			log.WithError(err).Error("Could not check configuration values between execution and consensus client")
 		}
-		log.WithError(err).Error("Could not check configuration values between execution and consensus client")
 	}
 
 	// We poll the execution client to see if the transition configuration has changed.
@@ -114,6 +124,9 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 	if errors.Is(err, ErrConfigMismatch) {
 		s.runError = err
 		log.WithError(err).Error(configMismatchLog)
+		return
+	} else if errors.Is(err, ErrMethodNotFound) {
+		log.WithError(err).Error(needsEnginePortLog)
 		return
 	}
 	log.WithError(err).Error("Could not check configuration values between execution and consensus client")

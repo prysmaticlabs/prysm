@@ -115,7 +115,6 @@ func TestGetValidator(t *testing.T) {
 func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
-
 	var st state.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 

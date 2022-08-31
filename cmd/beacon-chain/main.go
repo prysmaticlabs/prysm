@@ -38,8 +38,9 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.ExecutionEngineEndpoint,
+	flags.ExecutionEngineHeaders,
+	flags.HTTPWeb3ProviderFlag,
 	flags.ExecutionJWTSecretFlag,
-	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
 	flags.CertFlag,
@@ -52,7 +53,6 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
@@ -73,7 +73,8 @@ var appFlags = []cli.Flag{
 	flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
 	flags.MevRelayEndpoint,
-	cmd.EnableBackupWebhookFlag,
+	flags.MaxBuilderEpochMissedSlots,
+	flags.MaxBuilderConsecutiveMissedSlots,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -121,7 +122,6 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
-	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
 	cmd.ApiTimeoutFlag,
 	checkpoint.BlockPath,
@@ -189,7 +189,7 @@ func main() {
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
-		if err := cmd.ExpandWeb3EndpointsIfFile(ctx, flags.FallbackWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
 			return err
 		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {
@@ -236,6 +236,13 @@ func startNode(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
+	// Set libp2p logger to only panic logs for the info level.
+	golog.SetAllLoggers(golog.LevelPanic)
+
+	if level == logrus.DebugLevel {
+		// Set libp2p logger to error logs for the debug level.
+		golog.SetAllLoggers(golog.LevelError)
+	}
 	if level == logrus.TraceLevel {
 		// libp2p specific logging.
 		golog.SetAllLoggers(golog.LevelDebug)
