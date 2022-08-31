@@ -49,7 +49,6 @@ func TestValidatorIndex_OK(t *testing.T) {
 }
 
 func TestValidatorIndex_StateEmpty(t *testing.T) {
-
 	Server := &Server{
 		HeadFetcher: &mockChain.ChainService{},
 	}
