@@ -69,6 +69,8 @@ type Flags struct {
 	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
+	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -214,7 +216,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableDefensivePull)
 		cfg.EnableDefensivePull = true
 	}
-
+	if ctx.Bool(disableStakinContractCheck.Name) {
+		logEnabled(disableStakinContractCheck)
+		cfg.DisableStakinContractCheck = true
+	}
 	if ctx.Bool(disableVecHTR.Name) {
 		logEnabled(disableVecHTR)
 	} else {
