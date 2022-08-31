@@ -7,11 +7,11 @@ import (
 
 var (
 	attReceivedTooEarlyCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_too_early_ignored_total",
-		Help: "Increased when a gossip attestation fails decoding",
+		Name: "attestation_too_early_total",
+		Help: "Increased when an attestation is considered too early",
 	})
 	attReceivedTooLateCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_too_late_ignored_total",
-		Help: "Increased when a gossip attestation fails decoding",
+		Name: "attestation_too_late_total",
+		Help: "Increased when an attestation is considered too late",
 	})
 )

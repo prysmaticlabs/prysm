@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
@@ -35,6 +36,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.Signe
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return v.(interfaces.SignedBeaconBlock), nil
 	}
+	startTime := time.Now()
 	var blk interfaces.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
@@ -46,6 +48,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.Signe
 		blk, err = unmarshalBlock(ctx, enc)
 		return err
 	})
+	blockReadingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return blk, err
 }
 
@@ -119,6 +122,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 	blocks := make([]interfaces.SignedBeaconBlock, 0)
 	blockRoots := make([][32]byte, 0)
 
+	startTime := time.Now()
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 
@@ -138,6 +142,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 		}
 		return nil
 	})
+	blocksReadingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return blocks, blockRoots, err
 }
 
@@ -276,6 +281,7 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
+	startTime := time.Now()
 
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
 	// to minimize the time we hold the DB lock.
@@ -296,7 +302,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		for i, blk := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
@@ -321,7 +327,11 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	blocksSavingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	return nil
 }
 
 // SaveHeadBlockRoot to the db.
