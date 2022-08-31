@@ -30,7 +30,7 @@ type WeakSubjectivityVerifier struct {
 // NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
-		log.Info("--weak-subjectivity-checkpoint not provided")
+		log.Debug("--weak-subjectivity-checkpoint not provided")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
