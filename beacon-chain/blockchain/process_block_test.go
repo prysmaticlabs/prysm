@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"math/big"
 	"strconv"
 	"sync"
@@ -2866,12 +2867,41 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.Equal(t, false, optimistic)
 }
 
+type newForkChoicer func() forkchoice.ForkChoicer
+
+func TestStore_NoViableHead_Reboot(t *testing.T) {
+	ndlt := func() forkchoice.ForkChoicer {
+		return doublylinkedtree.New()
+	}
+	npa := func() forkchoice.ForkChoicer {
+		return protoarray.New()
+	}
+	cases := []struct{
+		new newForkChoicer
+		name string
+	}{
+		{
+			new: ndlt,
+			name: "doublylinkedtree",
+		},
+		{
+			new: npa,
+			name: "protoarray",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			noViableHead_Reboot(t, c.new)
+		})
+	}
+}
+
 // See the description in #10777 and #10782 for the full setup
 // We sync optimistically a chain of blocks. Block 12 is the first block in Epoch
 // 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
 // INVALID from NewPayload, with LVH block 12. No head is viable. We check that
 // the node can reboot from this state
-func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
+func noViableHead_Reboot(t *testing.T, newfc newForkChoicer) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
@@ -2890,7 +2920,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(newfc()),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -2998,7 +3028,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
-	service.cfg.ForkChoiceStore = doublylinkedtree.New()
+	service.cfg.ForkChoiceStore = newfc()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
