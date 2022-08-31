@@ -131,7 +131,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch); err != nil {
-		log.WithError(err).Warn("Skip processing batched blocks")
+		log.WithError(err).Warn("Batch is not processed")
 	}
 }
 
@@ -260,7 +260,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	headSlot := s.cfg.Chain.HeadSlot()
 	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
-			return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, firstBlock.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
+			return errors.New("no good blocks in batch")
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
