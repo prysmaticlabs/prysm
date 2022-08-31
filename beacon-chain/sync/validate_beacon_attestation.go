@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -167,8 +166,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	msg.ValidatorData = att
 
-	ms := prysmTime.Now().Sub(receivedTime) / time.Millisecond
-	unaggregatedAttestationVerificationGossipSummary.Observe(float64(ms))
+	unaggregatedAttestationVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
 
 	return pubsub.ValidationAccept, nil
 }

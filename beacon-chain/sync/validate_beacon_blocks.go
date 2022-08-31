@@ -205,8 +205,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		"graffiti":           string(blk.Block().Body().Graffiti()),
 	}).Debug("Received block")
 
-	ms := prysmTime.Now().Sub(receivedTime) / time.Millisecond
-	blockVerificationGossipSummary.Observe(float64(ms))
+	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
 	return pubsub.ValidationAccept, nil
 }
 
