@@ -2,7 +2,6 @@ package builder
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -66,7 +65,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 		// Is the builder up?
 		if err := s.c.Status(ctx); err != nil {
-			return nil, fmt.Errorf("could not connect to builder: %v", err)
+			log.WithError(err).Error("Failed to check builder status")
 		}
 
 		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
