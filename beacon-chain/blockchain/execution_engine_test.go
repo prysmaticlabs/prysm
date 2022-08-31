@@ -1155,6 +1155,18 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.Equal(t, false, optimistic)
 	require.DeepEqual(t, validCheckpoint.Root, cp.Root)
 	require.Equal(t, validCheckpoint.Epoch, cp.Epoch)
+
+	// Checkpoint with a lower epoch
+	oldCp, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	invalidCp := &ethpb.Checkpoint{
+		Epoch: oldCp.Epoch - 1,
+	}
+	// Nothing should happen as we no-op on an invalid checkpoint.
+	require.NoError(t, service.updateFinalized(ctx, invalidCp))
+	got, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, oldCp, got)
 }
 
 func TestService_removeInvalidBlockAndState(t *testing.T) {
