@@ -170,6 +170,27 @@ var (
 		Name: "missed_payload_id_filled_count",
 		Help: "",
 	})
+	processAttsElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "process_attestations_milliseconds",
+			Help:    "Captures latency for process attestations (forkchoice) in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
+	newAttHeadElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "new_att_head_milliseconds",
+			Help:    "Captures latency for new attestation head in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
+	newBlockHeadElapsedTime = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "new_block_head_milliseconds",
+			Help:    "Captures latency for new block head in milliseconds",
+			Buckets: []float64{1, 5, 20, 100, 500, 1000},
+		},
+	)
 )
 
 // reportSlotMetrics reports slot related metrics.
