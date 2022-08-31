@@ -182,10 +182,14 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
+
+	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
 	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
 		return err
 	}

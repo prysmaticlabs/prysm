@@ -58,6 +58,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			return err
 		default:
 			log = log.WithField("txCount", len(txs))
+			txsPerSlotCount.Set(float64(len(txs)))
 		}
 
 	}
