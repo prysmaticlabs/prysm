@@ -114,7 +114,7 @@ var (
 	})
 
 	// Attestation processing granular error tracking.
-	attWrongTargetEpoch = promauto.NewCounter(prometheus.CounterOpts{
+	attWrongTargetEpochCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_wrong_target_total",
 		Help: "Increased when a gossip attestation fails target check",
 	})
@@ -130,7 +130,7 @@ var (
 		Name: "gossip_attestation_validator_not_in_committee_total",
 		Help: "Increased when a gossip attestation's validator is not the right committee",
 	})
-	attBadSelectionProof = promauto.NewCounter(prometheus.CounterOpts{
+	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_bad_selection_proof_total",
 		Help: "Increased when a gossip attestation has a bad selection proof",
 	})

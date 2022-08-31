@@ -72,7 +72,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	})
 
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
-		attWrongTargetEpoch.Inc()
+		attWrongTargetEpochCount.Inc()
 		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
@@ -183,7 +183,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	if err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
-		attBadSelectionProof.Inc()
+		attBadSelectionProofCount.Inc()
 		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}

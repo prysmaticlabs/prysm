@@ -88,7 +88,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore, err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
-		attWrongTargetEpoch.Inc()
+		attWrongTargetEpochCount.Inc()
 		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
