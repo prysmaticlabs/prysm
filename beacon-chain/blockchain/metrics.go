@@ -158,6 +158,14 @@ var (
 		Name: "forkchoice_updated_optimistic_node_count",
 		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
 	})
+	forkchoiceUpdatedInvalidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_invalid_node_count",
+		Help: "Count the number of invalid nodes after forkchoiceUpdated EE call",
+	})
+	txsPerSlotCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "txs_per_slot_count",
+		Help: "Count the number of txs per slot",
+	})
 	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "missed_payload_id_filled_count",
 		Help: "",
