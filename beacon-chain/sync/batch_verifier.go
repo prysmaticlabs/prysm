@@ -73,6 +73,7 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 		if !verified {
 			verErr := errors.Errorf("Verification of %s failed", message)
 			tracing.AnnotateError(span, verErr)
+			sigVerificationErrorCount.Inc()
 			return pubsub.ValidationReject, verErr
 		}
 	}

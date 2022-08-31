@@ -53,15 +53,21 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
+		attCannotDecodePubsub.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
+		attInvalidMessageType.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
+		attNilMessage.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 attestations.
@@ -85,6 +91,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore, err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
+		attWrongTargetEpoch.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -126,6 +134,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.hasBadBlock(bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
+		attBadBlockCount.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
 	}
 
@@ -143,6 +153,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
+		attBadLmdConsistencyCount.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -213,6 +225,8 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 
 	// Verify number of aggregation bits matches the committee size.
 	if err := helpers.VerifyBitfieldLength(a.AggregationBits, uint64(len(committee))); err != nil {
+		attBadBitfieldLengthCount.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -220,12 +234,16 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 	// Note: The Ethereum Beacon chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
 	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
 	if a.AggregationBits.Count() != 1 || a.AggregationBits.BitIndices()[0] >= len(committee) {
+		attInvalidBitfieldCount.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
 	set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
 	if err != nil {
 		tracing.AnnotateError(span, err)
+		attBadSignatureBatchCount.Inc()
+		unaggregatedAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	return s.validateWithBatchVerifier(ctx, "attestation", set)

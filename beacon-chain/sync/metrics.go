@@ -90,7 +90,12 @@ var (
 		},
 	)
 
-	// Attestation processing errors and successes.
+	sigVerificationErrorCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_signature_verification_failed_total",
+		Help: "Number of gossip messages that failed signature verification",
+	})
+
+	// Attestation processing failures and successes.
 	unaggregatedAttsProcessedCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_unaggregated_attestations_processed_total",
 		Help: "Number of unaggregated attestations processed from gossipsub",
@@ -107,10 +112,53 @@ var (
 		Name: "gossip_aggregate_attestations_failed_processing_total",
 		Help: "Number of aggregate attestations that fail processing from gossipsub",
 	})
-	aggregateAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_aggregate_attestations_failed_processing_total",
-		Help: "Number of aggregate attestations that fail processing from gossipsub",
+
+	// Attestation processing granular error tracking.
+	attCannotDecodePubsub = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_failed_decode_total",
+		Help: "Increased when a gossip attestation fails decoding",
 	})
+	attInvalidMessageType = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_invalid_message_type_total",
+		Help: "Increased when a gossip attestation is the wrong message",
+	})
+	attNilMessage = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_nil_message_total",
+		Help: "Increased when a gossip attestation is nil",
+	})
+	attWrongTargetEpoch = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_wrong_target_total",
+		Help: "Increased when a gossip attestation fails target check",
+	})
+	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_block_total",
+		Help: "Increased when a gossip attestation references a bad block",
+	})
+	attBadLmdConsistencyCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_lmd_consistency_total",
+		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
+	})
+	attValidatorNotInCommitteeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_validator_not_in_committee_total",
+		Help: "Increased when a gossip attestation's validator is not the right committee",
+	})
+	attBadSelectionProof = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_selection_proof_total",
+		Help: "Increased when a gossip attestation has a bad selection proof",
+	})
+	attBadBitfieldLengthCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_bitfield_length_total",
+		Help: "Increased when a gossip attestation has a bad bitfield length",
+	})
+	attInvalidBitfieldCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_invalid_bitfield_total",
+		Help: "Increased when a gossip attestation has an invalid bitfield",
+	})
+	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_signature_batch_total",
+		Help: "Increased when a gossip attestation has a bad signature batch",
+	})
+
 	// Attestation and block gossip verification performance.
 	unaggregatedAttestationVerificationGossipSummary = promauto.NewSummary(
 		prometheus.SummaryOpts{

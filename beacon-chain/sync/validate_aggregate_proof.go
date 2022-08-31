@@ -45,16 +45,24 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
+		attCannotDecodePubsub.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
+		attInvalidMessageType.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.Errorf("invalid message type: %T", raw)
 	}
 	if m.Message == nil {
+		attNilMessage.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errNilMessage
 	}
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
+		attNilMessage.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 aggregates.
@@ -72,13 +80,18 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	})
 
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
+		attWrongTargetEpoch.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
 	// processing tolerance.
-	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.chain.GenesisTime(),
-		earlyAttestationProcessingTolerance); err != nil {
+	if err := helpers.ValidateAttestationTime(
+		m.Message.Aggregate.Data.Slot,
+		s.cfg.chain.GenesisTime(),
+		earlyAttestationProcessingTolerance,
+	); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
@@ -91,6 +104,8 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
+		attBadBlockCount.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
@@ -131,6 +146,8 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	// but it's invalid in the spirit of the protocol. Here we choose safety over profit.
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
 		tracing.AnnotateError(span, err)
+		attBadLmdConsistencyCount.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -164,6 +181,8 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	if err := validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
+		attValidatorNotInCommitteeCount.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}
 
@@ -172,6 +191,8 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	if err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
+		attBadSelectionProof.Inc()
+		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}
 
