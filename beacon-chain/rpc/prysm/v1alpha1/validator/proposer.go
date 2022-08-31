@@ -118,7 +118,7 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
-// GetFeeRecipientByPubKey
+// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
 func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
 	defer span.End()
