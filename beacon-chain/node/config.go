@@ -176,12 +176,12 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
-		log.Warnf("%s is not a valid fee recipient address, defaulting back to burn address", ha)
+		log.Warnf("%s is not a valid fee recipient address, setting suggested-fee-recipient failed", ha)
 		return nil
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		log.Warnf(errors.Wrapf(err, "could not decode fee recipient %s , defaulting back to burn address", ha).Error())
+		log.Warnf(errors.Wrapf(err, "could not decode fee recipient %s , setting suggested-fee-recipient failed", ha).Error())
 		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
