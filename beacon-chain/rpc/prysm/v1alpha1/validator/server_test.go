@@ -48,6 +48,18 @@ func TestValidatorIndex_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not get validator index")
 }
 
+func TestValidatorIndex_StateEmpty(t *testing.T) {
+	Server := &Server{
+		HeadFetcher: &mockChain.ChainService{},
+	}
+	pubKey := pubKey(1)
+	req := &ethpb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	_, err := Server.ValidatorIndex(context.Background(), req)
+	assert.ErrorContains(t, "head state is empty", err)
+}
+
 func TestWaitForActivation_ContextClosed(t *testing.T) {
 	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Slot:       0,

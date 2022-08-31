@@ -8,6 +8,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -16,6 +18,13 @@ import (
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+)
+
+var (
+	exitQueueCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "exit_queue_count",
+		Help: "Number of validators in the exit queue",
+	})
 )
 
 // InitiateValidatorExit takes in validator index and updates
@@ -59,6 +68,7 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx types.V
 	if err != nil {
 		return nil, err
 	}
+	exitQueueCount.Set(float64(len(exitEpochs)))
 	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(time.CurrentEpoch(s)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
