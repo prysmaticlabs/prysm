@@ -83,6 +83,10 @@ var (
 			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
 			" vulnerable if it is being run in unsafe configurations.",
 	}
+	disableStakinContractCheck = &cli.BoolFlag{
+		Name:  "disable-staking-contract-check",
+		Usage: "Disables checking of staking contract deposits when proposing blocks, useful for devnets",
+	}
 	enableHistoricalSpaceRepresentation = &cli.BoolFlag{
 		Name: "enable-historical-state-representation",
 		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +

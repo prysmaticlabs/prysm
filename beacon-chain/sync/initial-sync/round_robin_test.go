@@ -457,7 +457,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
-		assert.ErrorContains(t, "no good blocks in batch", err)
+		assert.ErrorContains(t, "block is already processed", err)
 
 		var badBatch2 []interfaces.SignedBeaconBlock
 		for i, b := range batch2 {
