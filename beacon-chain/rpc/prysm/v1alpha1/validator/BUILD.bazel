@@ -192,6 +192,7 @@ go_test(
     srcs = [
         "attester_mainnet_test.go",
         "proposer_bellatrix_mainnet_test.go",
+        "proposer_mainnet_test.go",
     ],
     embed = [":go_default_library"],
     deps = common_deps,

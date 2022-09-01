@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -12,7 +11,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -35,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -126,9 +123,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
 	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 100)
 
 	proposerServer := &Server{
@@ -138,7 +132,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:          stategen.New(db),
 	}
 	req := util.NewBeaconBlock()
-	req.Block.ProposerIndex = 21
+	req.Block.ProposerIndex = 84
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -1652,8 +1646,6 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 }
 
 func TestProposer_FilterAttestation(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := util.NewBeaconBlock()
 
 	numValidators := uint64(64)
@@ -1706,7 +1698,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
-						AggregationBits: bitfield.Bitlist{0b00000110},
+						AggregationBits: bitfield.Bitlist{0b00010010},
 					})
 					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
@@ -1730,7 +1722,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				return atts
 			},
 			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{inputAtts[0]}
+				return []*ethpb.Attestation{inputAtts[0], inputAtts[1]}
 			},
 		},
 	}
@@ -1883,8 +1875,6 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -1985,7 +1975,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
@@ -2004,7 +1994,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	altairSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 
-	var scBits [fieldparams.SyncCommitteeLength]byte
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	genAltair := &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
 			Slot:       altairSlot + 1,
@@ -2093,152 +2083,9 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	assert.DeepEqual(t, attSlashings, altairBlk.Altair.Body.AttesterSlashings)
 }
 
-func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	hook := logTest.NewGlobal()
-
-	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
-	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
-	cfg.BellatrixForkEpoch = 2
-	cfg.AltairForkEpoch = 1
-	cfg.TerminalBlockHash = common.BytesToHash(terminalBlockHash)
-	cfg.TerminalBlockHashActivationEpoch = 2
-	params.OverrideBeaconConfig(cfg)
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	util.SaveBlock(t, ctx, db, genesis)
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
-
-	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
-	require.NoError(t, err)
-
-	var scBits [fieldparams.SyncCommitteeLength]byte
-	blk := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:       bellatrixSlot + 1,
-			ParentRoot: parentRoot[:],
-			StateRoot:  genesis.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:  genesis.Block.Body.RandaoReveal,
-				Graffiti:      genesis.Block.Body.Graffiti,
-				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
-				ExecutionPayload: &enginev1.ExecutionPayload{
-					ParentHash:    make([]byte, fieldparams.RootLength),
-					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-					StateRoot:     make([]byte, fieldparams.RootLength),
-					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-					PrevRandao:    make([]byte, fieldparams.RootLength),
-					BaseFeePerGas: make([]byte, fieldparams.RootLength),
-					BlockHash:     make([]byte, fieldparams.RootLength),
-				},
-			},
-		},
-		Signature: genesis.Signature,
-	}
-
-	blkRoot, err := blk.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
-
-	c := mockExecution.New()
-	c.HashesByHeight[0] = terminalBlockHash
-	random, err := helpers.RandaoMix(beaconState, slots.ToEpoch(beaconState.Slot()))
-	require.NoError(t, err)
-	timeStamp, err := slots.ToTime(beaconState.GenesisTime(), bellatrixSlot+1)
-	require.NoError(t, err)
-
-	payload := &enginev1.ExecutionPayload{
-		ParentHash:    make([]byte, fieldparams.RootLength),
-		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    random,
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
-		BlockNumber:   1,
-		GasLimit:      2,
-		GasUsed:       3,
-		Timestamp:     uint64(timeStamp.Unix()),
-	}
-	proposerServer := &Server{
-		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
-		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:     &mock.ChainService{},
-		HeadUpdater:       &mock.ChainService{},
-		ChainStartFetcher: &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		Eth1BlockFetcher:  c,
-		MockEth1Votes:     true,
-		AttPool:           attestations.NewPool(),
-		SlashingsPool:     slashings.NewPool(),
-		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
-		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockExecution.EngineClient{
-			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
-			ExecutionPayload: payload,
-		},
-		BeaconDB:               db,
-		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-	}
-
-	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
-	require.NoError(t, err)
-
-	graffiti := bytesutil.ToBytes32([]byte("eth2"))
-	require.NoError(t, err)
-	req := &ethpb.BlockRequest{
-		Slot:         bellatrixSlot + 1,
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti[:],
-	}
-
-	block, err := proposerServer.GetBeaconBlock(ctx, req)
-	require.NoError(t, err)
-	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Bellatrix)
-	require.Equal(t, true, ok)
-
-	assert.Equal(t, req.Slot, bellatrixBlk.Bellatrix.Slot)
-	assert.DeepEqual(t, parentRoot[:], bellatrixBlk.Bellatrix.ParentRoot, "Expected block to have correct parent root")
-	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
-	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
-
-	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
-	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
-
-	// Operator sets default fee recipient to not be burned through beacon node cli.
-	newHook := logTest.NewGlobal()
-	params.SetupTestConfigCleanup(t)
-	cfg = params.MainnetConfig().Copy()
-	cfg.DefaultFeeRecipient = common.Address{'b'}
-	params.OverrideBeaconConfig(cfg)
-	_, err = proposerServer.GetBeaconBlock(ctx, req)
-	require.NoError(t, err)
-	require.LogsDoNotContain(t, newHook, "Fee recipient is currently using the burn address")
-}
-
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
