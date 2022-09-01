@@ -72,7 +72,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	})
 
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
-		attWrongTargetEpochCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -170,7 +169,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	if err := validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
 		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
-		attValidatorNotInCommitteeCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}
 

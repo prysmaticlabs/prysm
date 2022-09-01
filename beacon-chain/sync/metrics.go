@@ -91,10 +91,6 @@ var (
 	)
 
 	// Attestation processing granular error tracking.
-	attWrongTargetEpochCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_wrong_target_total",
-		Help: "Increased when a gossip attestation fails target check",
-	})
 	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_bad_block_total",
 		Help: "Increased when a gossip attestation references a bad block",
@@ -103,21 +99,9 @@ var (
 		Name: "gossip_attestation_bad_lmd_consistency_total",
 		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
 	})
-	attValidatorNotInCommitteeCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_validator_not_in_committee_total",
-		Help: "Increased when a gossip attestation's validator is not the right committee",
-	})
 	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_bad_selection_proof_total",
 		Help: "Increased when a gossip attestation has a bad selection proof",
-	})
-	attBadBitfieldLengthCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_bad_bitfield_length_total",
-		Help: "Increased when a gossip attestation has a bad bitfield length",
-	})
-	attInvalidBitfieldCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_attestation_invalid_bitfield_total",
-		Help: "Increased when a gossip attestation has an invalid bitfield",
 	})
 	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_bad_signature_batch_total",
