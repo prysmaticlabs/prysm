@@ -24,14 +24,8 @@ func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Me
 
 	// An unaggregated attestation can make it here. It’s valid, the aggregator it just itself, although it means poor performance for the subnet.
 	if !helpers.IsAggregated(a.Message.Aggregate) {
-		if err := s.cfg.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate); err != nil {
-			return err
-		}
-		return nil
+		return s.cfg.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate)
 	}
 
-	if err := s.cfg.attPool.SaveAggregatedAttestation(a.Message.Aggregate); err != nil {
-		return err
-	}
-	return nil
+	return s.cfg.attPool.SaveAggregatedAttestation(a.Message.Aggregate)
 }
