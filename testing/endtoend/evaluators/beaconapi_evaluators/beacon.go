@@ -3,6 +3,9 @@ package beaconapi_evaluators
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -17,11 +20,13 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
+	"gopkg.in/yaml.v3"
 )
 
 // GET "/eth/v1/beacon/blocks/{block_id}"
 // GET "/eth/v1/beacon/blocks/{block_id}/root"
 func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
+
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
 	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
@@ -29,6 +34,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return err
 	}
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	respJSON := &apimiddleware.BlockResponseJson{}
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
@@ -36,7 +42,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		respJSON := &apimiddleware.BlockResponseJson{}
+
 		fmt.Printf("version: 1 current Epoch: %d", currentEpoch)
 		if err := doMiddlewareJSONGetRequest(
 			v1MiddlewarePathTemplate,
@@ -59,7 +65,6 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		respJSON := &apimiddleware.BlockResponseJson{}
 		fmt.Printf("version: 2 current Epoch: %d", currentEpoch)
 		if err := doMiddlewareJSONGetRequest(
 			v2MiddlewarePathTemplate,
@@ -75,6 +80,18 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 	}
+	to := &apimiddleware.BlockResponseJson{}
+	cleanpath := filepath.Clean(fmt.Sprintf("./testdata/BeaconBlock_Epoch%d.json", currentEpoch))
+	b, err := os.ReadFile(cleanpath)
+	if err == nil {
+		if err := yaml.Unmarshal(b, to); err != nil {
+			return errors.Wrap(err, "failed to unmarshal yaml file")
+		}
+	}
+	if !reflect.DeepEqual(respJSON, to) {
+		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", respJSON, to)
+	}
+
 	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
 		BlockId: []byte("head"),
 	})

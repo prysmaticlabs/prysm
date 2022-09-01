@@ -24,9 +24,9 @@ type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconBlocks,
-		withCompareValidatorsEth,
-		withCompareSyncCommittee,
-		withCompareBlockAttestations,
+		//withCompareValidatorsEth,
+		//withCompareSyncCommittee,
+		//withCompareBlockAttestations,
 	}
 	validator := []apiComparisonFunc{
 		withCompareAttesterDuties,
