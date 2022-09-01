@@ -90,8 +90,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
-			params.SetupTestConfigCleanup(t)
-			params.OverrideBeaconConfig(params.MainnetConfig())
 
 			genesis := util.NewBeaconBlock()
 			util.SaveBlock(t, ctx, db, genesis)
