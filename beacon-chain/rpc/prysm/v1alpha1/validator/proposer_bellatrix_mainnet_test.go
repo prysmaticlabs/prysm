@@ -44,7 +44,8 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig().Copy()
+	// We use mainnet config for this test
+	cfg := params.MainnetConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	cfg.TerminalBlockHash = common.BytesToHash(terminalBlockHash)
@@ -144,7 +145,8 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig().Copy()
+	// We use mainnet config for this test
+	cfg := params.MainnetConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
