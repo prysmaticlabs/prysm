@@ -2,10 +2,10 @@ package beaconapi_evaluators
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"os"
-	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -20,7 +20,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
-	"gopkg.in/yaml.v3"
 )
 
 // GET "/eth/v1/beacon/blocks/{block_id}"
@@ -80,16 +79,21 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 	}
-	to := &apimiddleware.BlockResponseJson{}
-	cleanpath := filepath.Clean(fmt.Sprintf("./testdata/BeaconBlock_Epoch%d.json", currentEpoch))
-	b, err := os.ReadFile(cleanpath)
-	if err == nil {
-		if err := yaml.Unmarshal(b, to); err != nil {
-			return errors.Wrap(err, "failed to unmarshal yaml file")
-		}
+
+	path, err := bazel.Runfile(fmt.Sprintf("/testing/endtoend/static-files/beaconapi_evaluator_testdata/BeaconBlock_Epoch%d.json", currentEpoch))
+	if err != nil {
+		return err
 	}
-	if !reflect.DeepEqual(respJSON, to) {
-		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", respJSON, to)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	a, err := json.Marshal(respJSON)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(b)) != string(a) {
+		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", string(a), strings.TrimSpace(string(b)))
 	}
 
 	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
