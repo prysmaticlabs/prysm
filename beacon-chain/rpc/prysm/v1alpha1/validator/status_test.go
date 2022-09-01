@@ -365,8 +365,6 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(slot))

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
@@ -60,7 +61,6 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
-	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:       bellatrixSlot + 1,
@@ -70,7 +70,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: &enginev1.ExecutionPayload{
 					ParentHash:    make([]byte, fieldparams.RootLength),
 					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
@@ -165,7 +165,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	// Operator sets default fee recipient to not be burned through beacon node cli.
 	newHook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
-	cfg = params.BeaconConfig().Copy()
+	cfg = params.MainnetConfig().Copy()
 	cfg.DefaultFeeRecipient = common.Address{'b'}
 	params.OverrideBeaconConfig(cfg)
 	_, err = proposerServer.GetBeaconBlock(ctx, req)

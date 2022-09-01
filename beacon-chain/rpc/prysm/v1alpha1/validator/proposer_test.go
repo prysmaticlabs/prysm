@@ -2136,15 +2136,15 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 
 	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector512{0xf, 0xf, 0xf, 0xf}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector32{0xf, 0xf, 0xf, 0xf}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector512{0xaa, 0xaa, 0xaa, 0xaa}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector32{0xaa, 0xaa, 0xaa, 0xaa}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.NewBitvector32(), aggregate.SyncCommitteeBits)
 }
 
 func TestProposer_PrepareBeaconProposer(t *testing.T) {
