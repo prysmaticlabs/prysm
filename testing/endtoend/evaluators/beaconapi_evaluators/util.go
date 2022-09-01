@@ -23,7 +23,7 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 		if err != nil {
 			return err
 		}
-		fmt.Printf("BeaconBlock: %v", responseDump)
+		fmt.Printf("BeaconBlock: %v", string(responseDump))
 	}
 
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
