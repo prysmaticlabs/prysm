@@ -75,6 +75,9 @@ func handleConditionalExpression(exp *ast.BinaryExpr, pass *analysis.Pass) {
 		return
 	}
 	for _, iface := range selectedInterfaces {
+		if strings.HasPrefix(typeMap[identX].Type.String(), "func") {
+			return // Ignore functions as they are not interfaces.
+		}
 		xIsIface := strings.Contains(typeMap[identX].Type.String(), iface)
 		xIsNil := typeMap[identX].IsNil()
 		yisIface := strings.Contains(typeMap[identY].Type.String(), iface)
