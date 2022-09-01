@@ -231,6 +231,9 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	exitingEffectiveBalance := uint64(0)
 	slashingBalance := uint64(0)
 	slashingEffectiveBalance := uint64(0)
+	// Queue seizes
+	activationQueueSize := 0
+	exitQueueSize := 0
 
 	for i, validator := range postState.Validators() {
 		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
