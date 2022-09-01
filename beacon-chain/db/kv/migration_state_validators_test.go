@@ -202,7 +202,7 @@ func Test_migrateStateValidators(t *testing.T) {
 			defer resetCfg()
 
 			tt.setup(t, dbStore, st, vals)
-			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateArchivedIndex(tx) error")
+			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateStateValidators(tx) error")
 			tt.eval(t, dbStore, st, vals)
 		})
 	}
@@ -309,7 +309,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 			defer resetCfg()
 
 			tt.setup(t, dbStore, st, vals)
-			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateArchivedIndex(tx) error")
+			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateStateValidators(tx) error")
 			tt.eval(t, dbStore, st, vals)
 		})
 	}

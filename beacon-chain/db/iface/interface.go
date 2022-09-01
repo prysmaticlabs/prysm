@@ -38,14 +38,9 @@ type ReadOnlyDatabase interface {
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]state.ReadOnlyBeaconState, error)
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
-	ArchivedPointRoot(ctx context.Context, slot types.Slot) [32]byte
-	HasArchivedPoint(ctx context.Context, slot types.Slot) bool
-	LastArchivedRoot(ctx context.Context) [32]byte
-	LastArchivedSlot(ctx context.Context) (types.Slot, error)
 	LastValidatedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)

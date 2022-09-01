@@ -40,6 +40,18 @@ var beaconStateCurrentVersion = fieldSpec{
 	t:      typeBytes4,
 }
 
+var beaconStateSlot = fieldSpec{
+	// 40 = 8 (genesis_time) + 32 (genesis_validators_root)
+	offset: 40,
+	t:      typeUint64,
+}
+
+// SlotFromState extracts the slot of the state out of the ssz-encoded byte slice
+func SlotFromState(marshaled []byte) (types.Slot, error) {
+	s, err := beaconStateSlot.uint64(marshaled)
+	return types.Slot(s), err
+}
+
 // FromState exploits the fixed-size lower-order bytes in a BeaconState as a heuristic to obtain the value of the
 // state.version field without first unmarshaling the BeaconState. The Version is then internally used to lookup
 // the correct ConfigVersion.
@@ -128,7 +140,7 @@ var beaconBlockSlot = fieldSpec{
 	t:      typeUint64,
 }
 
-func slotFromBlock(marshaled []byte) (types.Slot, error) {
+func SlotFromBlock(marshaled []byte) (types.Slot, error) {
 	slot, err := beaconBlockSlot.uint64(marshaled)
 	if err != nil {
 		return 0, err
@@ -141,7 +153,7 @@ var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is
 // UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete SignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
 func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
-	slot, err := slotFromBlock(marshaled)
+	slot, err := SlotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +184,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
 // For Phase0 and Altair it works exactly line UnmarshalBeaconBlock.
 func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
-	slot, err := slotFromBlock(marshaled)
+	slot, err := SlotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
 	}

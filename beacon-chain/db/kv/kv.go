@@ -167,7 +167,6 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 			attestationTargetRootIndicesBucket,
 			attestationTargetEpochIndicesBucket,
 			blockSlotIndicesBucket,
-			stateSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
 			blockRootValidatorHashesBucket,

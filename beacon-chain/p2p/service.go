@@ -84,7 +84,6 @@ type Service struct {
 	host                  host.Host
 	genesisTime           time.Time
 	genesisValidatorsRoot []byte
-	activeValidatorCount  uint64
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No

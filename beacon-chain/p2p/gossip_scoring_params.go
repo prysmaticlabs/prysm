@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"context"
 	"math"
 	"reflect"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
 )
@@ -95,19 +93,19 @@ func peerScoringParams() (*pubsub.PeerScoreParams, *pubsub.PeerScoreThresholds) 
 }
 
 func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, error) {
-	activeValidators, err := s.retrieveActiveValidators()
+	c, err := s.cfg.ValCounter.ActiveValidatorCount(s.ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not compute active validator count")
 	}
 	switch {
 	case strings.Contains(topic, GossipBlockMessage):
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, GossipAggregateAndProofMessage):
-		return defaultAggregateTopicParams(activeValidators), nil
+		return defaultAggregateTopicParams(c), nil
 	case strings.Contains(topic, GossipAttestationMessage):
-		return defaultAggregateSubnetTopicParams(activeValidators), nil
+		return defaultAggregateSubnetTopicParams(c), nil
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
-		return defaultSyncSubnetTopicParams(activeValidators), nil
+		return defaultSyncSubnetTopicParams(c), nil
 	case strings.Contains(topic, GossipContributionAndProofMessage):
 		return defaultSyncContributionTopicParams(), nil
 	case strings.Contains(topic, GossipExitMessage):
@@ -119,43 +117,6 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 	default:
 		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}
-}
-
-func (s *Service) retrieveActiveValidators() (uint64, error) {
-	if s.activeValidatorCount != 0 {
-		return s.activeValidatorCount, nil
-	}
-	rt := s.cfg.DB.LastArchivedRoot(s.ctx)
-	if rt == params.BeaconConfig().ZeroHash {
-		genState, err := s.cfg.DB.GenesisState(s.ctx)
-		if err != nil {
-			return 0, err
-		}
-		if genState == nil || genState.IsNil() {
-			return 0, errors.New("no genesis state exists")
-		}
-		activeVals, err := helpers.ActiveValidatorCount(context.Background(), genState, coreTime.CurrentEpoch(genState))
-		if err != nil {
-			return 0, err
-		}
-		// Cache active validator count
-		s.activeValidatorCount = activeVals
-		return activeVals, nil
-	}
-	bState, err := s.cfg.DB.State(s.ctx, rt)
-	if err != nil {
-		return 0, err
-	}
-	if bState == nil || bState.IsNil() {
-		return 0, errors.Errorf("no state with root %#x exists", rt)
-	}
-	activeVals, err := helpers.ActiveValidatorCount(context.Background(), bState, coreTime.CurrentEpoch(bState))
-	if err != nil {
-		return 0, err
-	}
-	// Cache active validator count
-	s.activeValidatorCount = activeVals
-	return activeVals, nil
 }
 
 // Based on the lighthouse parameters.

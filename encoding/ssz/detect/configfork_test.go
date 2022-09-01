@@ -21,30 +21,31 @@ import (
 )
 
 func TestSlotFromBlock(t *testing.T) {
-	b := util.NewBeaconBlock()
-	var slot types.Slot = 3
-	b.Block.Slot = slot
-	bb, err := b.MarshalSSZ()
-	require.NoError(t, err)
-	sfb, err := slotFromBlock(bb)
-	require.NoError(t, err)
-	require.Equal(t, slot, sfb)
+	for _, slot := range []types.Slot{0, 1, 2, 3, 5, 7, 11, 13, 16, 32, 128, 2048, math.MaxUint64} {
+		b := util.NewBeaconBlock()
+		b.Block.Slot = slot
+		bb, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		sfb, err := SlotFromBlock(bb)
+		require.NoError(t, err)
+		require.Equal(t, slot, sfb)
 
-	ba := util.NewBeaconBlockAltair()
-	ba.Block.Slot = slot
-	bab, err := ba.MarshalSSZ()
-	require.NoError(t, err)
-	sfba, err := slotFromBlock(bab)
-	require.NoError(t, err)
-	require.Equal(t, slot, sfba)
+		ba := util.NewBeaconBlockAltair()
+		ba.Block.Slot = slot
+		bab, err := ba.MarshalSSZ()
+		require.NoError(t, err)
+		sfba, err := SlotFromBlock(bab)
+		require.NoError(t, err)
+		require.Equal(t, slot, sfba)
 
-	bm := util.NewBeaconBlockBellatrix()
-	bm.Block.Slot = slot
-	bmb, err := ba.MarshalSSZ()
-	require.NoError(t, err)
-	sfbm, err := slotFromBlock(bmb)
-	require.NoError(t, err)
-	require.Equal(t, slot, sfbm)
+		bm := util.NewBeaconBlockBellatrix()
+		bm.Block.Slot = slot
+		bmb, err := ba.MarshalSSZ()
+		require.NoError(t, err)
+		sfbm, err := SlotFromBlock(bmb)
+		require.NoError(t, err)
+		require.Equal(t, slot, sfbm)
+	}
 }
 
 func TestByState(t *testing.T) {
@@ -98,6 +99,9 @@ func TestByState(t *testing.T) {
 		require.Equal(t, c.version, cf.Fork)
 		require.Equal(t, c.forkversion, cf.Version)
 		require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+		s, err := SlotFromState(m)
+		require.NoError(t, err)
+		require.Equal(t, c.slot, s)
 	}
 }
 

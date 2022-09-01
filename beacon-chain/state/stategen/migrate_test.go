@@ -52,11 +52,6 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	gotState, err := service.beaconDB.State(ctx, fRoot)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, beaconState.InnerStateUnsafe(), gotState.InnerStateUnsafe(), "Did not save state")
-	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, stateSlot/service.slotsPerArchivedPoint)
-	assert.Equal(t, fRoot, gotRoot, "Did not save archived root")
-	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -102,11 +97,6 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)
 	assert.Equal(t, s1.Slot(), types.Slot(1), "Did not save state")
-	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, 1/service.slotsPerArchivedPoint)
-	assert.Equal(t, r1, gotRoot, "Did not save archived root")
-	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -128,9 +118,17 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, fRoot))
+	savedRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
 
 	service.saveHotStateDB.blockRootsOfSavedStates = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))
 	assert.DeepEqual(t, [][32]byte{{1}, {2}, {3}, {4}}, service.saveHotStateDB.blockRootsOfSavedStates)
 	assert.LogsDoNotContain(t, hook, "Saved state in DB")
+	st, err := service.beaconDB.State(ctx, fRoot)
+	require.NoError(t, err)
+	foundRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, savedRoot, foundRoot)
+	require.Equal(t, false, st.IsNil())
 }

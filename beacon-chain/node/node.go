@@ -202,12 +202,13 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Starting State Gen")
-	if err := beacon.startStateGen(ctx, bfs); err != nil {
+	stg, err := beacon.startStateGen(ctx, bfs)
+	if err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
+	if err := beacon.registerP2P(cliCtx, stg); err != nil {
 		return nil, err
 	}
 
@@ -481,13 +482,13 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) error {
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) (stategen.StateManager, error) {
 	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
 	sg := stategen.New(b.db, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r := bytesutil.ToBytes32(cp.Root)
@@ -495,31 +496,32 @@ func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status) er
 	if r == params.BeaconConfig().ZeroHash {
 		genesisBlock, err := b.db.GenesisBlock(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if genesisBlock != nil && !genesisBlock.IsNil() {
 			r, err = genesisBlock.Block().HashTreeRoot()
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	b.finalizedStateAtStartUp, err = sg.StateByRoot(ctx, r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b.stateGen = sg
-	return nil
+	return sg, err
 }
 
-func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerP2P(cliCtx *cli.Context, sg stategen.StateManager) error {
 	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
 	if err != nil {
 		return err
 	}
 
+	vc := stategen.NewLastFinalizedValidatorCounter(0, b.db, sg)
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
 		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
 		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
@@ -538,7 +540,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
 		StateNotifier:     b,
-		DB:                b.db,
+		ValCounter:        vc,
 	})
 	if err != nil {
 		return err

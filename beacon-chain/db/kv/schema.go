@@ -21,15 +21,9 @@ var (
 	feeRecipientBucket      = []byte("fee-recipient")
 	registrationBucket      = []byte("registration")
 
-	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
-	slotsHasObjectBucket = []byte("slots-has-objects")
-	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
-	archivedRootBucket = []byte("archived-index-root")
-
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
 	blockSlotIndicesBucket              = []byte("block-slot-indices")
-	stateSlotIndicesBucket              = []byte("state-slot-indices")
 	attestationHeadBlockRootBucket      = []byte("attestation-head-block-root-indices")
 	attestationSourceRootIndicesBucket  = []byte("attestation-source-root-indices")
 	attestationSourceEpochIndicesBucket = []byte("attestation-source-epoch-indices")
@@ -56,11 +50,6 @@ var (
 	originCheckpointBlockRootKey = []byte("origin-checkpoint-block-root")
 	// block root tracking the progress of backfill, or pointing at genesis if backfill has not been initiated
 	backfillBlockRootKey = []byte("backfill-block-root")
-
-	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
-	lastArchivedIndexKey = []byte("last-archived")
-	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
-	savedStateSlotsKey = []byte("saved-state-slots")
 
 	// New state management service compatibility bucket.
 	newStateServiceCompatibleBucket = []byte("new-state-compatible")
