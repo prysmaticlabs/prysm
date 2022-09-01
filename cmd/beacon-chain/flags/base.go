@@ -32,6 +32,12 @@ var (
 		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
 		Value: "http://localhost:8551",
 	}
+	// ExecutionEngineHeaders defines a list of HTTP headers to send with all execution client requests.
+	ExecutionEngineHeaders = &cli.StringFlag{
+		Name: "execution-headers",
+		Usage: "A comma separated list of key value pairs to pass as HTTP headers for all execution " +
+			"client calls. Example: --execution-headers=key1=value1,key2=value2",
+	}
 	// Deprecated: HTTPWeb3ProviderFlag is a deprecated flag and is an alias for the ExecutionEngineEndpoint flag.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:   "http-web3provider",

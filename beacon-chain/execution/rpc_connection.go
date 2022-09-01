@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -37,7 +38,13 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	// Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
-		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
+		errStr := err.Error()
+		if strings.Contains(errStr, "401 Unauthorized") {
+			errStr = "could not verify execution chain ID as your connection is not authenticated. " +
+				"If connecting to your execution client via HTTP, you will need to set up JWT authentication. " +
+				"See our documentation here https://docs.prylabs.network/docs/execution-node/authentication"
+		}
+		return errors.Wrap(err, errStr)
 	}
 	s.updateConnectedETH1(true)
 	s.runError = nil
@@ -127,6 +134,16 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 			return nil, err
 		}
 		client.SetHeader("Authorization", header)
+	}
+	for _, h := range s.cfg.headers {
+		if h != "" {
+			keyValue := strings.Split(h, "=")
+			if len(keyValue) < 2 {
+				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+				continue
+			}
+			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		}
 	}
 	return client, nil
 }
