@@ -1,17 +1,21 @@
 package p2p
 
 import (
+	"strings"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
-	knownAgentVersions = map[string]string{
-		"lighthouse": "lighthouse",
-		"nimbus":     "nimbus",
-		"prysm":      "prysm",
-		"js-libp2p":  "js-libp2p",
+	knownAgentVersions = []string{
+		"lighthouse",
+		"nimbus",
+		"prysm",
+		"teku",
+		"js-libp2p",
+		"rust-libp2p",
 	}
 	p2pPeerCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "p2p_peer_count",
@@ -85,15 +89,19 @@ func (s *Service) updateMetrics() {
 		if err != nil || !ok {
 			agent = "unknown"
 		}
-		agentName := agent
-		//if _, ok := knownAgentVersions[agent]; !ok {
-		//	agentName = "unknown"
-		//}
-		numConnectedPeersByClient[agentName] += 1
+		foundName := "unknown"
+		for _, knownAgent := range knownAgentVersions {
+			// If the agent string matches one of our known agents, we set
+			// the value to our own, sanitized string.
+			if strings.Contains(strings.ToLower(agent), knownAgent) {
+				foundName = knownAgent
+			}
+		}
+		numConnectedPeersByClient[foundName] += 1
 
 		// Get peer scoring data.
 		overallScore := s.peers.Scorers().Score(pid)
-		peerScoresByClient[agentName] = append(peerScoresByClient[agentName], overallScore)
+		peerScoresByClient[foundName] = append(peerScoresByClient[foundName], overallScore)
 	}
 	for agent, total := range numConnectedPeersByClient {
 		connectedPeersCount.WithLabelValues(agent).Set(total)
