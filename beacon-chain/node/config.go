@@ -2,7 +2,6 @@ package node
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
@@ -181,7 +180,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		log.Warnf(errors.Wrapf(err, "could not decode fee recipient %s , setting suggested-fee-recipient failed", ha).Error())
+		log.WithError(err).Error("could not decode fee recipient %s , setting suggested-fee-recipient failed", ha)
 		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
