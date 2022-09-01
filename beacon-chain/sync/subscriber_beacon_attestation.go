@@ -33,10 +33,7 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 		return nil
 	}
 
-	if err := s.cfg.attPool.SaveUnaggregatedAttestation(a); err != nil {
-		return err
-	}
-	return nil
+	return s.cfg.attPool.SaveUnaggregatedAttestation(a)
 }
 
 func (_ *Service) persistentSubnetIndices() []uint64 {
