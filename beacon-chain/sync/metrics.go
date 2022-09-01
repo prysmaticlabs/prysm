@@ -90,29 +90,6 @@ var (
 		},
 	)
 
-	sigVerificationErrorCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_signature_verification_failed_total",
-		Help: "Number of gossip messages that failed signature verification",
-	})
-
-	// Attestation processing failures and successes.
-	unaggregatedAttsProcessedCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_unaggregated_attestations_processed_total",
-		Help: "Number of unaggregated attestations processed from gossipsub",
-	})
-	unaggregatedAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_unaggregated_attestations_failed_processing_total",
-		Help: "Number of unaggregated attestations that fail processing from gossipsub",
-	})
-	aggregateAttsProcessedCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_aggregate_attestations_processed_total",
-		Help: "Number of aggregate attestations processed from gossipsub",
-	})
-	aggregateAttsFailedProcessingCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "gossip_aggregate_attestations_failed_processing_total",
-		Help: "Number of aggregate attestations that fail processing from gossipsub",
-	})
-
 	// Attestation processing granular error tracking.
 	attWrongTargetEpochCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "gossip_attestation_wrong_target_total",

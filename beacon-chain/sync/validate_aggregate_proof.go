@@ -73,7 +73,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
 		attWrongTargetEpochCount.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -97,7 +96,6 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
 		attBadBlockCount.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
@@ -139,7 +137,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, signed.Message.Aggregate); err != nil {
 		tracing.AnnotateError(span, err)
 		attBadLmdConsistencyCount.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, err
 	}
 
@@ -174,7 +171,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
 		attValidatorNotInCommitteeCount.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}
 
@@ -184,7 +180,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		wrappedErr := errors.Wrapf(err, "Could not validate selection for validator %d", signed.Message.AggregatorIndex)
 		tracing.AnnotateError(span, wrappedErr)
 		attBadSelectionProofCount.Inc()
-		aggregateAttsFailedProcessingCount.Inc()
 		return pubsub.ValidationReject, wrappedErr
 	}
 
