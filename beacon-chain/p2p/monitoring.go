@@ -7,6 +7,12 @@ import (
 )
 
 var (
+	knownAgentVersions = map[string]string{
+		"lighthouse": "lighthouse",
+		"nimbus":     "nimbus",
+		"prysm":      "prysm",
+		"js-libp2p":  "js-libp2p",
+	}
 	p2pPeerCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "p2p_peer_count",
 		Help: "The number of peers in a given state.",
@@ -15,6 +21,12 @@ var (
 	connectedPeersCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "connected_libp2p_peers",
 		Help: "Tracks the total number of connected libp2p peers by agent string",
+	},
+		[]string{"agent"},
+	)
+	avgScoreConnectedClients = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "connected_libp2p_peers_average_scores",
+		Help: "Tracks the overall p2p scores of connected libp2p peers by agent string",
 	},
 		[]string{"agent"},
 	)
@@ -58,6 +70,7 @@ func (s *Service) updateMetrics() {
 
 	store := s.Host().Peerstore()
 	numConnectedPeersByClient := make(map[string]float64)
+	peerScoresByClient := make(map[string][]float64)
 	for i := 0; i < len(connectedPeers); i++ {
 		p := connectedPeers[i]
 		pid, err := peer.Decode(p.String())
@@ -65,14 +78,36 @@ func (s *Service) updateMetrics() {
 			log.WithError(err).Debug("Could not decode peer string")
 			continue
 		}
-		agent, err := store.Get(pid, "AgentVersion")
-		aVersion, ok := agent.(string)
+
+		// Get the agent data.
+		rawAgent, err := store.Get(pid, "AgentVersion")
+		agent, ok := rawAgent.(string)
 		if err != nil || !ok {
-			aVersion = "unknown"
+			agent = "unknown"
 		}
-		numConnectedPeersByClient[aVersion] += 1
+		agentName := agent
+		//if _, ok := knownAgentVersions[agent]; !ok {
+		//	agentName = "unknown"
+		//}
+		numConnectedPeersByClient[agentName] += 1
+
+		// Get peer scoring data.
+		overallScore := s.peers.Scorers().Score(pid)
+		peerScoresByClient[agentName] = append(peerScoresByClient[agentName], overallScore)
 	}
 	for agent, total := range numConnectedPeersByClient {
 		connectedPeersCount.WithLabelValues(agent).Set(total)
 	}
+	for agent, scoringData := range peerScoresByClient {
+		avgScore := average(scoringData)
+		avgScoreConnectedClients.WithLabelValues(agent).Set(avgScore)
+	}
+}
+
+func average(xs []float64) float64 {
+	total := 0.0
+	for _, v := range xs {
+		total += v
+	}
+	return total / float64(len(xs))
 }
