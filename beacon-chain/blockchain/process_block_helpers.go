@@ -277,7 +277,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if !s.ForkChoicer().HasNode(root) {
+	if !s.ForkChoicer().HasNode(s.ensureRootNotZeros(root)) {
 		return errNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
