@@ -885,6 +885,15 @@ func (s *Store) viableForHead(node *Node) bool {
 	// It's also viable if we are in genesis epoch.
 	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
 	finalized := s.finalizedCheckpoint.Epoch == node.finalizedEpoch || s.finalizedCheckpoint.Epoch == 0
+	if features.Get().EnableDefensivePull {
+		currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
+		if !justified && s.justifiedCheckpoint.Epoch+1 == currentEpoch {
+			if node.unrealizedJustifiedEpoch+1 >= currentEpoch {
+				justified = true
+				finalized = true
+			}
+		}
+	}
 
 	return justified && finalized
 }
