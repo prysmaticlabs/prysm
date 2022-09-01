@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 )
@@ -17,6 +18,14 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 	if err != nil {
 		return err
 	}
+	if requestPath == "/beacon/blocks/head" {
+		responseDump, err := httputil.DumpResponse(httpResp, true)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("BeaconBlock: %v", responseDump)
+	}
+
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 

@@ -37,6 +37,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			return err
 		}
 		respJSON := &apimiddleware.BlockResponseJson{}
+		fmt.Printf("version: 1 current Epoch: %d", currentEpoch)
 		if err := doMiddlewareJSONGetRequest(
 			v1MiddlewarePathTemplate,
 			"/beacon/blocks/head",
@@ -45,7 +46,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		); err != nil {
 			return err
 		}
-		fmt.Printf("version: 1 current Epoch: %d BeaconBlock: %v", currentEpoch, respJSON)
+
 		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
 			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
 				respJSON.Data.Signature,
@@ -59,6 +60,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			return err
 		}
 		respJSON := &apimiddleware.BlockResponseJson{}
+		fmt.Printf("version: 2 current Epoch: %d", currentEpoch)
 		if err := doMiddlewareJSONGetRequest(
 			v2MiddlewarePathTemplate,
 			"/beacon/blocks/head",
@@ -67,7 +69,6 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		); err != nil {
 			return err
 		}
-		fmt.Printf("version: 2 current Epoch: %d BeaconBlock: %v", currentEpoch, respJSON)
 		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
 			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
 				respJSON.Data.Signature,
