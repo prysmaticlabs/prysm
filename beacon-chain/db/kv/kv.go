@@ -63,18 +63,6 @@ var (
 		Name: "db_beacon_state_saving_milliseconds",
 		Help: "Milliseconds it takes to save a beacon state to the DB",
 	})
-	blockReadingTime = promauto.NewSummary(prometheus.SummaryOpts{
-		Name: "db_beacon_block_reading_milliseconds",
-		Help: "Milliseconds it takes to read a beacon block from the DB",
-	})
-	blocksReadingTime = promauto.NewSummary(prometheus.SummaryOpts{
-		Name: "db_beacon_blocks_reading_milliseconds",
-		Help: "Milliseconds it takes to read beacon blocks from the DB",
-	})
-	blocksSavingTime = promauto.NewSummary(prometheus.SummaryOpts{
-		Name: "db_beacon_blocks_saving_milliseconds",
-		Help: "Milliseconds it takes to save beacon blocks to the DB",
-	})
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
