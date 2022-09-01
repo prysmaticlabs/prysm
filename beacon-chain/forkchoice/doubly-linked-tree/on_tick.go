@@ -70,5 +70,5 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 	if !features.Get().DisablePullTips {
 		f.updateUnrealizedCheckpoints()
 	}
-	return nil
+	return f.store.prune(ctx)
 }

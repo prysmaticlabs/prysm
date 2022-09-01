@@ -11,15 +11,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
-// depth returns the length of the path to the root of Fork Choice
-func (n *Node) depth() uint64 {
-	ret := uint64(0)
-	for node := n.parent; node != nil; node = node.parent {
-		ret += 1
-	}
-	return ret
-}
-
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
 // using the current balance stored in each node. This function requires a lock
 // in Store.nodesLock
