@@ -601,7 +601,9 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	require.Equal(t, false, b)
 
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	cfg := params.BeaconConfig().Copy()
+	cfg.MaxBuilderEpochMissedSlots = 4
+	params.OverrideBeaconConfig(cfg)
 	st, blkRoot, err = createState(params.BeaconConfig().SlotsPerEpoch, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
