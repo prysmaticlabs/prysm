@@ -27,13 +27,11 @@ func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Me
 		if err := s.cfg.attPool.SaveUnaggregatedAttestation(a.Message.Aggregate); err != nil {
 			return err
 		}
-		unaggregatedAttsProcessedCount.Inc()
 		return nil
 	}
 
 	if err := s.cfg.attPool.SaveAggregatedAttestation(a.Message.Aggregate); err != nil {
 		return err
 	}
-	aggregateAttsProcessedCount.Inc()
 	return nil
 }

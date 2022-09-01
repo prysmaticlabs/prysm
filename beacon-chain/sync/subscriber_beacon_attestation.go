@@ -36,7 +36,6 @@ func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, m
 	if err := s.cfg.attPool.SaveUnaggregatedAttestation(a); err != nil {
 		return err
 	}
-	unaggregatedAttsProcessedCount.Inc()
 	return nil
 }
 
