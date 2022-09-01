@@ -74,19 +74,19 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		return nil
 	}
 
-	// Only on an epoch boundary slot, save epoch boundary state in epoch boundary root state cache.
-	if slots.IsEpochStart(st.Slot()) {
-		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
-			return err
-		}
-	}
-
 	// On an intermediate slot, save state summary.
 	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
 	}); err != nil {
 		return err
+	}
+
+	// Only on an epoch boundary slot, save epoch boundary state in epoch boundary root state cache.
+	if slots.IsEpochStart(st.Slot()) {
+		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
+			return err
+		}
 	}
 
 	// Store the copied state in the hot state cache.

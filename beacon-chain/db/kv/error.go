@@ -9,6 +9,7 @@ var ErrDeleteJustifiedAndFinalized = errors.New("cannot delete finalized block o
 // indicate that a value couldn't be found.
 var ErrNotFound = errors.New("not found in db")
 var ErrNotFoundState = errors.Wrap(ErrNotFound, "state not found")
+var ErrNotFoundBlock = errors.Wrap(ErrNotFound, "block not found")
 
 // ErrNotFoundOriginBlockRoot is an error specifically for the origin block root getter
 var ErrNotFoundOriginBlockRoot = errors.Wrap(ErrNotFound, "OriginBlockRoot")

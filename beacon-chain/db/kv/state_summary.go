@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -97,9 +98,13 @@ func (s *Store) saveCachedStateSummariesDB(ctx context.Context) error {
 		encs[i] = enc
 	}
 	if err := s.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateSummaryBucket)
+		bBkt := tx.Bucket(blocksBucket)
+		ssBkt := tx.Bucket(stateSummaryBucket)
 		for i, s := range summaries {
-			if err := bucket.Put(s.Root, encs[i]); err != nil {
+			if bBkt.Get(s.Root) == nil {
+				return errors.Wrapf(ErrNotFoundBlock, "failed to save state summary with block root %#x", s.Root)
+			}
+			if err := ssBkt.Put(s.Root, encs[i]); err != nil {
 				return err
 			}
 		}
