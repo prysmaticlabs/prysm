@@ -278,11 +278,11 @@ type submitContributionAndProofsRequestJson struct {
 }
 
 type forkchoiceResponse struct {
-	JustifiedCheckpoint           *checkpointJson       `json:"justified_checkpoint"`
-	FinalizedCheckpoint           *checkpointJson       `json:"finalized_checkpoint"`
-	BestJustifiedCheckpoint       *checkpointJson       `json:"best_justified_checkpoint"`
-	UnrealizedJustifiedCheckpoint *checkpointJson       `json:"unrealized_justified_checkpoint"`
-	UnrealizedFinalizedCheckpoint *checkpointJson       `json:"unrealized_finalized_checkpoint"`
+	JustifiedCheckpoint           *CheckpointJson       `json:"justified_checkpoint"`
+	FinalizedCheckpoint           *CheckpointJson       `json:"finalized_checkpoint"`
+	BestJustifiedCheckpoint       *CheckpointJson       `json:"best_justified_checkpoint"`
+	UnrealizedJustifiedCheckpoint *CheckpointJson       `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *CheckpointJson       `json:"unrealized_finalized_checkpoint"`
 	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
 	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string                `json:"head_root" hex:"true"`
