@@ -537,22 +537,31 @@ func handleRPCError(err error) error {
 	}
 	switch e.ErrorCode() {
 	case -32700:
+		errParseCount.Inc()
 		return ErrParse
 	case -32600:
+		errInvalidRequestCount.Inc()
 		return ErrInvalidRequest
 	case -32601:
+		errMethodNotFoundCount.Inc()
 		return ErrMethodNotFound
 	case -32602:
+		errInvalidParamsCount.Inc()
 		return ErrInvalidParams
 	case -32603:
+		errInternalCount.Inc()
 		return ErrInternal
 	case -38001:
+		errUnknownPayloadCount.Inc()
 		return ErrUnknownPayload
 	case -38002:
+		errInvalidForkchoiceStateCount.Inc()
 		return ErrInvalidForkchoiceState
 	case -38003:
+		errInvalidPayloadAttributesCount.Inc()
 		return ErrInvalidPayloadAttributes
 	case -32000:
+		errServerErrorCount.Inc()
 		// Only -32000 status codes are data errors in the RPC specification.
 		errWithData, ok := err.(rpc.DataError)
 		if !ok {

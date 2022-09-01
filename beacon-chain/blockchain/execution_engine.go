@@ -89,7 +89,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			}
 			return payloadID, nil
 		case execution.ErrInvalidPayloadStatus:
-			newPayloadInvalidNodeCount.Inc()
+			forkchoiceUpdatedInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
 				lastValidHash = defaultLatestValidHash
