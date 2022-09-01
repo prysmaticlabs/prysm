@@ -109,12 +109,6 @@ var (
 	})
 
 	// Attestation and block gossip verification performance.
-	unaggregatedAttestationVerificationGossipSummary = promauto.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "gossip_unaggregate_attestation_verification_milliseconds",
-			Help: "Time to verify gossiped, unaggregated attestations",
-		},
-	)
 	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "gossip_aggregate_attestation_verification_milliseconds",
