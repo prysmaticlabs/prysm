@@ -30,7 +30,7 @@ func walletCreate(c *cli.Context) error {
 		return err
 	}
 
-	opts, err := ExtractWalletCreationConfigFromCli(c, keymanagerKind)
+	opts, err := ConstructCLIManagerOpts(c, keymanagerKind)
 	if err != nil {
 		return err
 	}
@@ -45,8 +45,8 @@ func walletCreate(c *cli.Context) error {
 	return nil
 }
 
-// ExtractWalletCreationConfigFromCli prompts the user for wallet creation input.
-func ExtractWalletCreationConfigFromCli(cliCtx *cli.Context, keymanagerKind keymanager.Kind) ([]accounts.Option, error) {
+// ConstructCLIManagerOpts prompts the user for wallet creation input.
+func ConstructCLIManagerOpts(cliCtx *cli.Context, keymanagerKind keymanager.Kind) ([]accounts.Option, error) {
 	cliOpts := []accounts.Option{}
 	// Get wallet dir and check that no wallet exists at the location.
 	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
@@ -155,7 +155,7 @@ func CreateAndSaveWalletCli(cliCtx *cli.Context) (*wallet.Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts, err := ExtractWalletCreationConfigFromCli(cliCtx, keymanagerKind)
+	opts, err := ConstructCLIManagerOpts(cliCtx, keymanagerKind)
 	if err != nil {
 		return nil, err
 	}
