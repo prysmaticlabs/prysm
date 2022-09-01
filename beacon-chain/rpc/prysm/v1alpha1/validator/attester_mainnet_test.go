@@ -1,4 +1,4 @@
-package test_mainnet
+package validator
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -70,7 +69,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	attesterServer := &validator.Server{
+	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},

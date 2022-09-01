@@ -189,7 +189,10 @@ go_test(
 go_test(
     name = "go_mainnet_test",
     timeout = "moderate",
-    srcs = ["proposer_bellatrix_mainnet_test.go"],
+    srcs = [
+        "attester_mainnet_test.go",
+        "proposer_bellatrix_mainnet_test.go",
+    ],
     embed = [":go_default_library"],
     deps = common_deps,
 )
