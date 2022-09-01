@@ -119,6 +119,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	log.WithFields(logrus.Fields{
 		"duration": duration,
 	}).Debug("Finished calling process_blocks on all blocks in ReplayBlocks")
+	replayBlocksSummary.Observe(float64(duration.Milliseconds()))
 	return s, nil
 }
 
@@ -150,14 +151,14 @@ func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) 
 
 	// err will be handled after the bookend log
 	s, err = ReplayProcessSlots(ctx, s, replayTo)
-
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
+	}
 	duration := time.Since(start)
 	log.WithFields(logrus.Fields{
 		"duration": duration,
 	}).Debug("time spent in process_slots")
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("ReplayToSlot failed to seek to slot %d after applying blocks", replayTo))
-	}
+	replayToSlotSummary.Observe(float64(duration.Milliseconds()))
 
 	return s, nil
 }

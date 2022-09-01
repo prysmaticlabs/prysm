@@ -98,6 +98,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{error: err}
 	}
+	startTime := time.Now()
 	b := signed.Block()
 
 	preState, err := s.getBlockPreState(ctx, b)
@@ -115,10 +116,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		return err
 	}
+	stateTransitionStartTime := time.Now()
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return invalidBlock{error: err}
 	}
+	stateTransitionProcessingTime.Observe(float64(time.Since(stateTransitionStartTime).Milliseconds()))
+
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
 		return err
@@ -266,7 +270,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	}
 	defer reportAttestationInclusion(b)
-	return s.handleEpochBoundary(ctx, postState)
+	if err := s.handleEpochBoundary(ctx, postState); err != nil {
+		return err
+	}
+	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	return nil
 }
 
 func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPayloadHeader, error) {
