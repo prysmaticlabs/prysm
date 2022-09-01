@@ -17,12 +17,6 @@ func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
 		return ErrNilSignedBeaconBlock
 	}
-	if b.Block().IsNil() {
-		return errNilBeaconBlock
-	}
-	if b.Block().Body().IsNil() {
-		return errNilBeaconBlockBody
-	}
 	return nil
 }
 
