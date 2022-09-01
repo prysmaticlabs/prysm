@@ -10,6 +10,8 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
@@ -19,6 +21,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+)
+
+var (
+	activationQueueCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "activation_queue_count",
+		Help: "Number of validators in the activation queue",
+	})
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -119,6 +128,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 			activationQ = append(activationQ, types.ValidatorIndex(idx))
 		}
 	}
+	activationQueueCount.Set(float64(len(activationQ)))
 
 	sort.Sort(sortableIndices{indices: activationQ, validators: vals})
 

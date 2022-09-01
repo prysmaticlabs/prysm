@@ -127,9 +127,8 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bid.Message.Value
-
-	if new(big.Int).SetBytes(bytesutil.ReverseByteOrder(v)).String() == "0" {
+	v := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bid.Message.Value))
+	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
@@ -159,7 +158,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	}
 
 	log.WithFields(logrus.Fields{
-		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
+		"value":         v.String(),
 		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
 		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
 	}).Info("Received header with bid")
