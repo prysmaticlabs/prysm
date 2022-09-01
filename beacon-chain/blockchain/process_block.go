@@ -387,6 +387,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	// blocks have been verified, save them and call the engine
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, len(blks))
 	var isValidPayload bool
+
+	summaries := make([]*ethpb.StateSummary, len(blks))
+	var finalized, justified []*ethpb.Checkpoint
+
 	for i, b := range blks {
 		isValidPayload, err = s.notifyNewPayload(ctx,
 			postVersionAndHeaders[i].version,
@@ -408,26 +412,39 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
+
+		summaries[i] = &ethpb.StateSummary{
 			Slot: b.Block().Slot(),
 			Root: blockRoots[i][:],
-		}); err != nil {
+		}
+
+		if i > 0 && jCheckpoints[i].Epoch > jCheckpoints[i-1].Epoch {
+			justified = append(justified, jCheckpoints[i])
+		}
+		if i > 0 && fCheckpoints[i].Epoch > fCheckpoints[i-1].Epoch {
+			finalized = append(finalized, fCheckpoints[i])
+		}
+	}
+
+	if err := s.cfg.BeaconDB.SaveStateSummariesWithPendingBlocks(ctx, summaries, s.getInitSyncBlockFromCache); err != nil {
+		tracing.AnnotateError(span, err)
+		return err
+	}
+
+	// TODO: Batch these transactions?
+	for _, c := range justified {
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, c); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if i > 0 && jCheckpoints[i].Epoch > jCheckpoints[i-1].Epoch {
-			if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, jCheckpoints[i]); err != nil {
-				tracing.AnnotateError(span, err)
-				return err
-			}
-		}
-		if i > 0 && fCheckpoints[i].Epoch > fCheckpoints[i-1].Epoch {
-			if err := s.updateFinalized(ctx, fCheckpoints[i]); err != nil {
-				tracing.AnnotateError(span, err)
-				return err
-			}
+	}
+	for _, c := range finalized {
+		if err := s.updateFinalized(ctx, c); err != nil {
+			tracing.AnnotateError(span, err)
+			return err
 		}
 	}
+
 	// Insert all nodes but the last one to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
@@ -445,6 +462,16 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 
 	for r, st := range boundaries {
+		// Ensure the cached block is saved to db before saving state boundary.
+		if !s.cfg.BeaconDB.HasBlock(ctx, r) {
+			b := s.getInitSyncBlockFromCache(r)
+			if b == nil {
+				return fmt.Errorf("could not find block for boundary state root %#x", r)
+			}
+			if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
+				return err
+			}
+		}
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 			return err
 		}

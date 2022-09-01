@@ -2,8 +2,10 @@ package kv
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -18,14 +20,23 @@ func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummar
 	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
 }
 
-// SaveStateSummaries saves state summary objects to the DB.
 func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
+	defer span.End()
+	return s.SaveStateSummariesWithPendingBlocks(ctx, summaries, nil)
+}
+
+// SaveStateSummariesWithPendingBlocks saves state summary objects to the DB.
+func (s *Store) SaveStateSummariesWithPendingBlocks(ctx context.Context, summaries []*ethpb.StateSummary, blockCache func([32]byte) interfaces.SignedBeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummariesWithPendingBlocks")
 	defer span.End()
 
 	// When we reach the state summary cache prune count,
 	// dump the cached state summaries to the DB.
 	if s.stateSummaryCache.len() >= stateSummaryCachePruneCount {
+		if err := s.ensureBlocksSaved(ctx, blockCache); err != nil {
+			return err
+		}
 		if err := s.saveCachedStateSummariesDB(ctx); err != nil {
 			return err
 		}
@@ -36,6 +47,25 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.State
 	}
 
 	return nil
+}
+
+func (s *Store) ensureBlocksSaved(ctx context.Context, blockCache func([32]byte) interfaces.SignedBeaconBlock) error {
+	if blockCache == nil {
+		return nil
+	}
+	blocks := make([]interfaces.SignedBeaconBlock, 0)
+	summaries := s.stateSummaryCache.getAll()
+	for _, ss := range summaries {
+		if s.HasBlock(ctx, bytesutil.ToBytes32(ss.Root)) {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", ss.Root)).Debug("Block already saved")
+			continue
+		}
+		if b := blockCache(bytesutil.ToBytes32(ss.Root)); !b.IsNil() {
+			blocks = append(blocks, b)
+		}
+	}
+	log.WithField("blocks", len(blocks)).WithField("summaries", len(summaries)).Debug("Saving blocks from state summary cache")
+	return s.SaveBlocks(ctx, blocks)
 }
 
 // StateSummary returns the state summary object from the db using input block root.

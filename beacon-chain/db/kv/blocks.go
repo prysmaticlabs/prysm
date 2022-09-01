@@ -296,32 +296,40 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
+
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for i, blk := range blks {
+		for i := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
 				continue
 			}
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if features.Get().EnableOnlyBlindedBeaconBlocks {
-				blindedBlock, err := blk.ToBlinded()
-				if err != nil {
-					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
-						return err
-					}
-				} else {
-					blk = blindedBlock
-				}
-			}
-			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
 				return err
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// Populate cache only after successful db update.
+	for i, blk := range blks {
+		if features.Get().EnableOnlyBlindedBeaconBlocks {
+			blindedBlock, err := blk.ToBlinded()
+			if err != nil {
+				if !errors.Is(err, blocks.ErrUnsupportedVersion) {
+					return err
+				}
+			} else {
+				blk = blindedBlock
+			}
+		}
+		s.blockCache.Set(string(blockRoots[i]), blk, 0)
+	}
+	return nil
 }
 
 // SaveHeadBlockRoot to the db.
