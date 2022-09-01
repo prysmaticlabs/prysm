@@ -194,6 +194,25 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
+func TestStore_Prune_ReturnEarly(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	for i := uint64(2); i < numOfNodes; i++ {
+		state, blkRoot, err = prepareForkchoiceState(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	}
+	require.NoError(t, f.store.prune(ctx))
+	nodeCount := f.NodeCount()
+	require.NoError(t, f.store.prune(ctx))
+	require.Equal(t, nodeCount, f.NodeCount())
+}
+
 // This unit tests starts with a simple branch like this
 //
 //       - 1

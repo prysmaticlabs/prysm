@@ -222,6 +222,10 @@ func (s *Store) prune(ctx context.Context) error {
 	if !ok || finalizedNode == nil {
 		return errUnknownFinalizedRoot
 	}
+	// return early if we haven't changed the finalized checkpoint
+	if finalizedNode.parent == nil {
+		return nil
+	}
 
 	// Prune nodeByRoot starting from root
 	if err := s.pruneFinalizedNodeByRootMap(ctx, s.treeRootNode, finalizedNode); err != nil {
