@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -677,73 +678,85 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
+		wantSlot types.Slot
 	}{
 		{
 			name:     "Common ancestor between c and b is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between c and d is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'d'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between c and e is a",
 			r1:       [32]byte{'c'},
 			r2:       [32]byte{'e'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between g and f is c",
 			r1:       [32]byte{'g'},
 			r2:       [32]byte{'f'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between f and h is c",
 			r1:       [32]byte{'f'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between g and h is c",
 			r1:       [32]byte{'g'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between b and h is a",
 			r1:       [32]byte{'b'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between e and h is a",
 			r1:       [32]byte{'e'},
 			r2:       [32]byte{'h'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between i and f is c",
 			r1:       [32]byte{'i'},
 			r2:       [32]byte{'f'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 		{
 			name:     "Common ancestor between e and h is a",
 			r1:       [32]byte{'j'},
 			r2:       [32]byte{'g'},
 			wantRoot: [32]byte{'c'},
+			wantSlot: 2,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
+			require.Equal(t, tc.wantSlot, gotSlot)
 		})
 	}
 
@@ -766,52 +779,59 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
+		wantSlot types.Slot
 	}{
 		{
 			name:     "Common ancestor between a and b is a",
 			r1:       [32]byte{'a'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 		{
 			name:     "Common ancestor between b and d is b",
 			r1:       [32]byte{'d'},
 			r2:       [32]byte{'b'},
 			wantRoot: [32]byte{'b'},
+			wantSlot: 1,
 		},
 		{
 			name:     "Common ancestor between d and a is a",
 			r1:       [32]byte{'d'},
 			r2:       [32]byte{'a'},
 			wantRoot: [32]byte{'a'},
+			wantSlot: 0,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			gotRoot, gotSlot, err := f.CommonAncestor(ctx, tc.r1, tc.r2)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, gotRoot)
+			require.Equal(t, tc.wantSlot, gotSlot)
 		})
 	}
 
 	// Equal inputs should return the same root.
-	r, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
+	r, s, err := f.CommonAncestor(ctx, [32]byte{'b'}, [32]byte{'b'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, r)
+	require.Equal(t, types.Slot(1), s)
 	// Requesting finalized root (last node) should return the same root.
-	r, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
+	r, s, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'a'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, r)
+	require.Equal(t, types.Slot(0), s)
 	// Requesting unknown root
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'z'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	// broken link
-	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
+	_, _, err = f.CommonAncestor(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
@@ -863,6 +883,43 @@ func TestStore_ViableForHead(t *testing.T) {
 		s := &Store{
 			justifiedCheckpoint: jc,
 			finalizedCheckpoint: fc,
+		}
+		assert.Equal(t, tc.want, s.viableForHead(tc.n))
+	}
+}
+
+func TestStore_ViableForHead_DefensivePull(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableDefensivePull: true,
+	})
+	defer resetCfg()
+
+	tests := []struct {
+		n              *Node
+		justifiedEpoch types.Epoch
+		finalizedEpoch types.Epoch
+		currentEpoch   types.Epoch
+		want           bool
+	}{
+		{&Node{}, 0, 0, 0, true},
+		{&Node{}, 1, 0, 1, false},
+		{&Node{}, 0, 1, 1, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, 2, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, 3, true},
+		{&Node{unrealizedFinalizedEpoch: 3, unrealizedJustifiedEpoch: 4}, 3, 2, 4, true},
+		{&Node{unrealizedFinalizedEpoch: 2, unrealizedJustifiedEpoch: 3}, 3, 2, 4, true},
+		{&Node{unrealizedFinalizedEpoch: 1, unrealizedJustifiedEpoch: 2}, 3, 2, 4, false},
+	}
+	for _, tc := range tests {
+		jc := &forkchoicetypes.Checkpoint{Epoch: tc.justifiedEpoch}
+		fc := &forkchoicetypes.Checkpoint{Epoch: tc.finalizedEpoch}
+		currentTime := uint64(time.Now().Unix())
+		driftSeconds := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
+		s := &Store{
+			justifiedCheckpoint: jc,
+			finalizedCheckpoint: fc,
+			genesisTime:         currentTime - driftSeconds*uint64(tc.currentEpoch),
 		}
 		assert.Equal(t, tc.want, s.viableForHead(tc.n))
 	}

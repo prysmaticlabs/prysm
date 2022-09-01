@@ -204,6 +204,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		"proposerIndex":      blk.Block().ProposerIndex(),
 		"graffiti":           string(blk.Block().Body().Graffiti()),
 	}).Debug("Received block")
+
+	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
 	return pubsub.ValidationAccept, nil
 }
 
@@ -253,16 +255,17 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
 // spec code:
-//   If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
-//      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
-//      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
 //
-//      If exection_payload verification of block's parent by an execution node is not complete:
-//         [REJECT] The block's parent (defined by block.parent_root) passes all validation (excluding execution
-//          node verification of the block.body.execution_payload).
-//      otherwise:
-//         [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
-//          node verification of the block.body.execution_payload).
+//	If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
+//	   [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+//	   i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+//
+//	   If exection_payload verification of block's parent by an execution node is not complete:
+//	      [REJECT] The block's parent (defined by block.parent_root) passes all validation (excluding execution
+//	       node verification of the block.body.execution_payload).
+//	   otherwise:
+//	      [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
+//	       node verification of the block.body.execution_payload).
 func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
 	// Error if block and state are not the same version
 	if parentState.Version() != blk.Version() {

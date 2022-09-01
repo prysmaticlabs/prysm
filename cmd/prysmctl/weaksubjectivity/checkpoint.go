@@ -1,4 +1,4 @@
-package checkpoint
+package weaksubjectivity
 
 import (
 	"context"
@@ -9,37 +9,38 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var latestFlags = struct {
+var checkpointFlags = struct {
 	BeaconNodeHost string
 	Timeout        time.Duration
 }{}
 
-var latestCmd = &cli.Command{
-	Name:   "latest",
-	Usage:  "Compute the latest weak subjectivity checkpoint (block_root:epoch) using trusted server data.",
-	Action: cliActionLatest,
+var checkpointCmd = &cli.Command{
+	Name:    "checkpoint",
+	Aliases: []string{"cpt"},
+	Usage:   "Compute the latest weak subjectivity checkpoint (block_root:epoch) using trusted server data.",
+	Action:  cliActionCheckpoint,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "beacon-node-host",
 			Usage:       "host:port for beacon node to query",
-			Destination: &latestFlags.BeaconNodeHost,
+			Destination: &checkpointFlags.BeaconNodeHost,
 			Value:       "http://localhost:3500",
 		},
 		&cli.DurationFlag{
 			Name:        "http-timeout",
 			Usage:       "timeout for http requests made to beacon-node-url (uses duration format, ex: 2m31s). default: 2m",
-			Destination: &latestFlags.Timeout,
+			Destination: &checkpointFlags.Timeout,
 			Value:       time.Minute * 2,
 		},
 	},
 }
 
-func cliActionLatest(_ *cli.Context) error {
+func cliActionCheckpoint(_ *cli.Context) error {
 	ctx := context.Background()
-	f := latestFlags
+	f := checkpointFlags
 
 	opts := []beacon.ClientOpt{beacon.WithTimeout(f.Timeout)}
-	client, err := beacon.NewClient(latestFlags.BeaconNodeHost, opts...)
+	client, err := beacon.NewClient(checkpointFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}

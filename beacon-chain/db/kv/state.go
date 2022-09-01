@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -30,6 +31,7 @@ import (
 func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
+	startTime := time.Now()
 	enc, err := s.stateBytes(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -44,7 +46,12 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 		return nil, valErr
 	}
 
-	return s.unmarshalState(ctx, enc, valEntries)
+	st, err := s.unmarshalState(ctx, enc, valEntries)
+	if err != nil {
+		return nil, err
+	}
+	stateReadingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	return st, err
 }
 
 // StateOrError is just like State(), except it only returns a non-error response
@@ -127,6 +134,7 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 	if states == nil {
 		return errors.New("nil state")
 	}
+	startTime := time.Now()
 	multipleEncs := make([][]byte, len(states))
 	for i, st := range states {
 		stateBytes, err := marshalState(ctx, st)
@@ -136,7 +144,7 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 		multipleEncs[i] = stateBytes
 	}
 
-	return s.db.Update(func(tx *bolt.Tx) error {
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateBucket)
 		for i, rt := range blockRoots {
 			indicesByBucket := createStateIndicesFromStateSlot(ctx, states[i].Slot())
@@ -148,7 +156,11 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	stateSavingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	return nil
 }
 
 type withValidators interface {
@@ -760,8 +772,10 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[s
 // Only following states would be kept:
 // 1.) state_slot % archived_interval == 0. (e.g. archived_interval=2048, states with slot 2048, 4096... etc)
 // 2.) archived_interval - archived_interval/3 < state_slot % archived_interval
-//   (e.g. archived_interval=2048, states with slots after 1365).
-//   This is to tolerate skip slots. Not every state lays on the boundary.
+//
+//	(e.g. archived_interval=2048, states with slots after 1365).
+//	This is to tolerate skip slots. Not every state lays on the boundary.
+//
 // 3.) state with current finalized root
 // 4.) unfinalized States
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error {
