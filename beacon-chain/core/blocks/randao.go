@@ -39,7 +39,7 @@ func ProcessRandao(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	randaoReveal := body.RandaoReveal()
 	if err := verifySignature(buf, proposerPub, randaoReveal[:], domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
