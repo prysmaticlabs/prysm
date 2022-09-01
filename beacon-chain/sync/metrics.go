@@ -89,6 +89,38 @@ var (
 			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
 		},
 	)
+
+	// Attestation processing granular error tracking.
+	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_block_total",
+		Help: "Increased when a gossip attestation references a bad block",
+	})
+	attBadLmdConsistencyCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_lmd_consistency_total",
+		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
+	})
+	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_selection_proof_total",
+		Help: "Increased when a gossip attestation has a bad selection proof",
+	})
+	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_signature_batch_total",
+		Help: "Increased when a gossip attestation has a bad signature batch",
+	})
+
+	// Attestation and block gossip verification performance.
+	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_aggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped attestations",
+		},
+	)
+	blockVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_verification_milliseconds",
+			Help: "Time to verify gossiped blocks",
+		},
+	)
 )
 
 func (s *Service) updateMetrics() {

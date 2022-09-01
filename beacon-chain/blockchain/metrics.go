@@ -170,6 +170,14 @@ var (
 		Name: "missed_payload_id_filled_count",
 		Help: "",
 	})
+	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "on_block_processing_milliseconds",
+		Help: "Total time in milliseconds to complete a call to onBlock()",
+	})
+	stateTransitionProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "state_transition_processing_milliseconds",
+		Help: "Total time to call a state transition in onBlock()",
+	})
 	processAttsElapsedTime = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "process_attestations_milliseconds",
