@@ -53,11 +53,11 @@ func (s *Store) ensureBlocksSaved(ctx context.Context, blockCache func([32]byte)
 	if blockCache == nil {
 		return nil
 	}
-	blocks := make([]interfaces.SignedBeaconBlock, 0)
 	summaries := s.stateSummaryCache.getAll()
+	blocks := make([]interfaces.SignedBeaconBlock, 0, len(summaries))
 	for _, ss := range summaries {
 		if s.HasBlock(ctx, bytesutil.ToBytes32(ss.Root)) {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", ss.Root)).Debug("Block already saved")
+			log.WithField("blockRoot", fmt.Sprintf("%#x", ss.Root)).Trace("Block already saved")
 			continue
 		}
 		if b, err := blockCache(bytesutil.ToBytes32(ss.Root)); err == nil && !b.IsNil() {
