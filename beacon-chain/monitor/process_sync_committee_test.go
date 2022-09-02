@@ -13,7 +13,7 @@ import (
 
 func TestProcessSyncCommitteeContribution(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 
 	contrib := &ethpb.SignedContributionAndProof{
 		Message: &ethpb.ContributionAndProof{
@@ -28,7 +28,7 @@ func TestProcessSyncCommitteeContribution(t *testing.T) {
 
 func TestProcessSyncAggregate(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, 256)
 
 	block := &ethpb.BeaconBlockAltair{

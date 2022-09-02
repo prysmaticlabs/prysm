@@ -501,8 +501,12 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
-	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
-	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
+	targetRoot1, err := util.SaveBlock(t, ctx, db, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
+	b := util.NewBeaconBlock()
+	b.Block.ParentRoot = targetRoot1[:]
+	targetRoot2, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+	require.NoError(t, err)
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
@@ -571,7 +575,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db),
 	}
-	err := db.SaveStateSummary(ctx, &ethpb.StateSummary{
+	err = db.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Root: targetRoot1[:],
 		Slot: 1,
 	})
@@ -610,7 +614,8 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 
-	blockRoot := bytesutil.ToBytes32([]byte("root"))
+	blockRoot, err := util.SaveBlock(t, ctx, db, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	epoch := types.Epoch(50)

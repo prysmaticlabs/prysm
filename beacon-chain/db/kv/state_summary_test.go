@@ -9,13 +9,20 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestStateSummary_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	r1 := bytesutil.ToBytes32([]byte{'A'})
-	r2 := bytesutil.ToBytes32([]byte{'B'})
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	r1, err := util.SaveBlock(t, ctx, db, b1).Block().HashTreeRoot()
+	require.NoError(t, err)
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 2
+	r2, err := util.SaveBlock(t, ctx, db, b2).Block().HashTreeRoot()
+	require.NoError(t, err)
 	s1 := &ethpb.StateSummary{Slot: 1, Root: r1[:]}
 
 	// State summary should not exist yet.
@@ -43,23 +50,42 @@ func TestStateSummary_CanSaveRetrieve(t *testing.T) {
 func TestStateSummary_CacheToDB(t *testing.T) {
 	db := setupDB(t)
 
+	ctx := context.Background()
+
 	summaries := make([]*ethpb.StateSummary, stateSummaryCachePruneCount-1)
+	roots := make([][32]byte, stateSummaryCachePruneCount-1)
 	for i := range summaries {
-		summaries[i] = &ethpb.StateSummary{Slot: types.Slot(i), Root: bytesutil.PadTo(bytesutil.Uint64ToBytesLittleEndian(uint64(i)), 32)}
+		b := util.NewBeaconBlock()
+		b.Block.Slot = types.Slot(i)
+		b.Block.Body.Graffiti = bytesutil.PadTo([]byte{byte(i)}, 32)
+		r, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+		require.NoError(t, err)
+		summaries[i] = &ethpb.StateSummary{Slot: types.Slot(i), Root: r[:]}
+		roots[i] = r
 	}
 
 	require.NoError(t, db.SaveStateSummaries(context.Background(), summaries))
 	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount-1)
 
-	require.NoError(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1000, Root: []byte{'a', 'b'}}))
+	b := util.NewBeaconBlock()
+	b.Block.Slot = types.Slot(1000)
+	r, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1000, Root: r[:]}))
 	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount)
 
-	require.NoError(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1001, Root: []byte{'c', 'd'}}))
+	b = util.NewBeaconBlock()
+	b.Block.Slot = 1001
+
+	r, err = util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1001, Root: r[:]}))
 	require.Equal(t, db.stateSummaryCache.len(), 1)
 
-	for i := range summaries {
-		r := bytesutil.Uint64ToBytesLittleEndian(uint64(i))
-		require.Equal(t, true, db.HasStateSummary(context.Background(), bytesutil.ToBytes32(r)))
+	for _, r := range roots {
+		require.Equal(t, true, db.HasStateSummary(context.Background(), r))
 	}
 }
 

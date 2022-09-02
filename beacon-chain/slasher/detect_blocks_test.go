@@ -67,7 +67,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		blksQueue: newBlocksQueue(),
 	}
 
-	parentRoot := bytesutil.ToBytes32([]byte("parent"))
+	parentRoot, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 	err = s.serviceCfg.StateGen.SaveState(ctx, parentRoot, beaconState)
 	require.NoError(t, err)
 

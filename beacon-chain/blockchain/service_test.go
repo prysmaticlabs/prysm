@@ -119,8 +119,11 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	require.NoError(t, err)
 
 	stateGen := stategen.New(beaconDB)
-	// Safe a state in stategen to purposes of testing a service stop / shutdown.
-	require.NoError(t, stateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
+
+	// Save a state and block in stategen to purposes of testing a service stop / shutdown.
+	r, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, stateGen.SaveState(ctx, r, bState))
 
 	opts := []Option{
 		WithDatabase(beaconDB),
@@ -381,7 +384,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	}
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
-	r, err := blk.HashTreeRoot()
+	r, err := util.SaveBlock(t, ctx, beaconDB, blk).Block().HashTreeRoot()
 	require.NoError(t, err)
 	newState, err := util.NewBeaconState()
 	require.NoError(t, err)

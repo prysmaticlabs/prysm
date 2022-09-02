@@ -62,7 +62,9 @@ func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	r := [32]byte{'A'}
+	b := util.NewBeaconBlock()
+	r, err := util.SaveBlock(t, ctx, beaconDB, b).Block().HashTreeRoot()
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
 
@@ -102,6 +104,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(10))
 	blk := util.NewBeaconBlock()
+	util.SaveBlock(t, ctx, beaconDB, blk)
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: blkRoot[:]}))
@@ -143,7 +146,8 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	r := [32]byte{'A'}
+	r, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
 
@@ -223,7 +227,8 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 	service := New(beaconDB)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	r := [32]byte{'A'}
+	r, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	service.hotStateCache.put(r, beaconState)
 

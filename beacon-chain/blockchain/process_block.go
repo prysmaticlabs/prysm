@@ -464,9 +464,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	for r, st := range boundaries {
 		// Ensure the cached block is saved to db before saving state boundary.
 		if !s.cfg.BeaconDB.HasBlock(ctx, r) {
-			b := s.getInitSyncBlockFromCache(r)
-			if b.IsNil() {
-				return fmt.Errorf("could not find block for boundary state root %#x", r)
+			b, err := s.getInitSyncBlockFromCache(r)
+			if err != nil || b.IsNil() {
+				return errors.Wrapf(err, "could not find block for boundary state root %#x", r)
 			}
 			if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
 				return err

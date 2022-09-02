@@ -530,13 +530,13 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 
 	optimisticBlock := util.NewBeaconBlock()
 	optimisticBlock.Block.Slot = 97
-	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
+	optimisticRoot, err := util.SaveBlock(t, ctx, beaconDB, optimisticBlock).Block().HashTreeRoot()
 	require.NoError(t, err)
 	util.SaveBlock(t, context.Background(), beaconDB, optimisticBlock)
 
 	validatedBlock := util.NewBeaconBlock()
 	validatedBlock.Block.Slot = 9
-	validatedRoot, err := validatedBlock.Block.HashTreeRoot()
+	validatedRoot, err := util.SaveBlock(t, ctx, beaconDB, validatedBlock).Block().HashTreeRoot()
 	require.NoError(t, err)
 	util.SaveBlock(t, context.Background(), beaconDB, validatedBlock)
 

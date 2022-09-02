@@ -75,10 +75,15 @@ func (s *Service) getInitSyncBlocks() []interfaces.SignedBeaconBlock {
 	return blks
 }
 
-func (s *Service) getInitSyncBlockFromCache(r [32]byte) interfaces.SignedBeaconBlock {
+// getInitSyncBlockFromCache returns a block from the initial sync blocks cache. This method
+func (s *Service) getInitSyncBlockFromCache(r [32]byte) (interfaces.SignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
-	return s.initSyncBlocks[r]
+	b := s.initSyncBlocks[r]
+	if b.IsNil() {
+		return nil, ErrNilBlockInCache
+	}
+	return b, nil
 }
 
 // This clears out the initial sync blocks cache.

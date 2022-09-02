@@ -168,7 +168,7 @@ func TestProcessProposedBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			s := setupService(t)
+			s, _ := setupService(t)
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
 			root := [32]byte{}
 			copy(root[:], "hello-world")
@@ -199,7 +199,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	genConfig.FullSyncAggregate = true
 	b, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
 	require.NoError(t, err)
-	s := setupService(t)
+	s, db := setupService(t)
 
 	pubKeys := make([][]byte, 3)
 	pubKeys[0] = genesis.Validators()[0].PublicKey
@@ -223,7 +223,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	s.RUnlock()
 	s.updateSyncCommitteeTrackedVals(genesis)
 
-	root, err := b.GetBlock().HashTreeRoot()
+	root, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=32000000000 ParentRoot=0xf732eaeb7fae ProposerIndex=15 Slot=1 Version=1 prefix=monitor", bytesutil.Trunc(root[:]))
@@ -241,7 +241,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 
 func TestLogAggregatedPerformance(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 
 	s.logAggregatedPerformance()
 	time.Sleep(3000 * time.Millisecond)

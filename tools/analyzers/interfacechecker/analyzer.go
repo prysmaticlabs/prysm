@@ -97,5 +97,6 @@ func handleConditionalExpression(exp *ast.BinaryExpr, pass *analysis.Pass) {
 
 func reportFailure(pos token.Pos, pass *analysis.Pass) {
 	pass.Reportf(pos, "A single nilness check is being performed on an interface"+
-		", this check needs another accompanying nilness check on the underlying object for the interface.")
+		", this check needs another accompanying nilness check on the underlying object for the interface. "+
+		"Please use IsNil() if it is available")
 }

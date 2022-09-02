@@ -58,7 +58,9 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	}
 
 	s, _ := util.DeterministicGenesisState(t, 2048)
-	tr := [32]byte{'a'}
+	b := util.NewBeaconBlock()
+	tr, err := util.SaveBlock(t, ctx, bs.BeaconDB, b).Block().HashTreeRoot()
+	require.NoError(t, err)
 	require.NoError(t, bs.StateGen.SaveState(ctx, tr, s))
 	c, err := helpers.BeaconCommitteeFromState(context.Background(), s, 1, 0)
 	require.NoError(t, err)
@@ -73,7 +75,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
-	b := util.NewBeaconBlock()
+	b = util.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
 	util.SaveBlock(t, ctx, bs.BeaconDB, b)

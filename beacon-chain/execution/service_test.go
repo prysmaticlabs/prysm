@@ -473,6 +473,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 
 	emptyState, err := util.NewBeaconState()
 	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), s.cfg.beaconDB, headBlock)
 	require.NoError(t, s.cfg.beaconDB.SaveGenesisBlockRoot(context.Background(), headRoot))
 	require.NoError(t, s.cfg.beaconDB.SaveState(context.Background(), emptyState, headRoot))
 	require.NoError(t, stateGen.SaveState(context.Background(), headRoot, emptyState))

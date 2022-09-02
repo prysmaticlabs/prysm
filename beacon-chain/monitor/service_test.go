@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -22,7 +23,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func setupService(t *testing.T) *Service {
+func setupService(t *testing.T) (*Service, iface.Database) {
 	beaconDB := testDB.SetupDB(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 
@@ -100,7 +101,7 @@ func setupService(t *testing.T) *Service {
 		aggregatedPerformance:       aggregatedPerformance,
 		trackedSyncCommitteeIndices: trackedSyncCommitteeIndices,
 		lastSyncedEpoch:             0,
-	}
+	}, beaconDB
 }
 
 func TestTrackedIndex(t *testing.T) {
@@ -116,7 +117,7 @@ func TestTrackedIndex(t *testing.T) {
 
 func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 1024)
 
 	s.updateSyncCommitteeTrackedVals(state)
@@ -138,7 +139,7 @@ func TestNewService(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
@@ -180,7 +181,7 @@ func TestStart(t *testing.T) {
 func TestInitializePerformanceStructures(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	s := setupService(t)
+	s, _ := setupService(t)
 	state, err := s.config.HeadFetcher.HeadState(ctx)
 	require.NoError(t, err)
 	epoch := slots.ToEpoch(state.Slot())
@@ -222,7 +223,7 @@ func TestInitializePerformanceStructures(t *testing.T) {
 func TestMonitorRoutine(t *testing.T) {
 	ctx := context.Background()
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, db := setupService(t)
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 
@@ -242,7 +243,7 @@ func TestMonitorRoutine(t *testing.T) {
 	genConfig := util.DefaultBlockGenConfig()
 	block, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
 	require.NoError(t, err)
-	root, err := block.GetBlock().HashTreeRoot()
+	root, err := util.SaveBlock(t, ctx, db, block).Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 
@@ -266,7 +267,7 @@ func TestMonitorRoutine(t *testing.T) {
 }
 
 func TestWaitForSync(t *testing.T) {
-	s := setupService(t)
+	s, _ := setupService(t)
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
@@ -290,7 +291,7 @@ func TestWaitForSync(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 

@@ -1425,12 +1425,12 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
+	r, err := util.SaveBlock(t, ctx, beaconDB, b).Block().HashTreeRoot()
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, r))
 

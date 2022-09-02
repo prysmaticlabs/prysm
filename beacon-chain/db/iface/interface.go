@@ -75,7 +75,7 @@ type NoHeadAccessDatabase interface {
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
 	SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error
-	SaveStateSummariesWithPendingBlocks(ctx context.Context, summaries []*ethpb.StateSummary, blockCache func([32]byte) interfaces.SignedBeaconBlock) error
+	SaveStateSummariesWithPendingBlocks(ctx context.Context, summaries []*ethpb.StateSummary, blockCache func([32]byte) (interfaces.SignedBeaconBlock, error)) error
 	// Checkpoint operations.
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error

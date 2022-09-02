@@ -3,6 +3,7 @@ package monitor
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -33,7 +34,7 @@ func TestGetAttestingIndices(t *testing.T) {
 
 func TestProcessIncludedAttestationTwoTracked(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	require.NoError(t, state.SetSlot(2))
 	require.NoError(t, state.SetCurrentParticipationBits(bytes.Repeat([]byte{0xff}, 13)))
@@ -66,7 +67,7 @@ func TestProcessUnaggregatedAttestationStateNotCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 
-	s := setupService(t)
+	s, _ := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	require.NoError(t, state.SetSlot(2))
 	header := state.LatestBlockHeader()
@@ -98,13 +99,13 @@ func TestProcessUnaggregatedAttestationStateCached(t *testing.T) {
 	ctx := context.Background()
 	hook := logTest.NewGlobal()
 
-	s := setupService(t)
+	s, db := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
-	copy(root[:], "hello-world")
+	root, err := util.SaveBlock(t, ctx, db, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -124,8 +125,9 @@ func TestProcessUnaggregatedAttestationStateCached(t *testing.T) {
 	}
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, state))
 	s.processUnaggregatedAttestation(context.Background(), att)
-	wanted1 := "\"Processed unaggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor"
-	wanted2 := "\"Processed unaggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=12 prefix=monitor"
+	rootStr := fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))
+	wanted1 := fmt.Sprintf("\"Processed unaggregated attestation\" Head=%s Slot=1 Source=%s Target=%s ValidatorIndex=2 prefix=monitor", rootStr, rootStr, rootStr)
+	wanted2 := fmt.Sprintf("\"Processed unaggregated attestation\" Head=%s Slot=1 Source=%s Target=%s ValidatorIndex=12 prefix=monitor", rootStr, rootStr, rootStr)
 	require.LogsContain(t, hook, wanted1)
 	require.LogsContain(t, hook, wanted2)
 }
@@ -135,7 +137,7 @@ func TestProcessAggregatedAttestationStateNotCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 
-	s := setupService(t)
+	s, _ := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	require.NoError(t, state.SetSlot(2))
 	header := state.LatestBlockHeader()
@@ -170,13 +172,13 @@ func TestProcessAggregatedAttestationStateNotCached(t *testing.T) {
 func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
-	s := setupService(t)
+	s, db := setupService(t)
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	participation := []byte{0xff, 0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	require.NoError(t, state.SetCurrentParticipationBits(participation))
 
-	root := [32]byte{}
-	copy(root[:], "hello-world")
+	root, err := util.SaveBlock(t, ctx, db, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
 
 	att := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 2,
@@ -200,14 +202,15 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, state))
 	s.processAggregatedAttestation(ctx, att)
-	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=0x68656c6c6f2d Slot=1 SourceRoot=0x68656c6c6f2d TargetRoot=0x68656c6c6f2d prefix=monitor")
-	require.LogsContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor")
-	require.LogsDoNotContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=12 prefix=monitor")
+	rootStr := fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))
+	require.LogsContain(t, hook, fmt.Sprintf("\"Processed attestation aggregation\" AggregatorIndex=2 BeaconBlockRoot=%s Slot=1 SourceRoot=%s TargetRoot=%s prefix=monitor", rootStr, rootStr, rootStr))
+	require.LogsContain(t, hook, fmt.Sprintf("\"Processed aggregated attestation\" Head=%s Slot=1 Source=%s Target=%s ValidatorIndex=2 prefix=monitor", rootStr, rootStr, rootStr))
+	require.LogsDoNotContain(t, hook, fmt.Sprintf("\"Processed aggregated attestation\" Head=%s Slot=1 Source=%s Target=%s ValidatorIndex=12 prefix=monitor", rootStr, rootStr, rootStr))
 }
 
 func TestProcessAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := setupService(t)
+	s, _ := setupService(t)
 	ctx := context.Background()
 	state, _ := util.DeterministicGenesisStateAltair(t, 256)
 	require.NoError(t, state.SetSlot(2))

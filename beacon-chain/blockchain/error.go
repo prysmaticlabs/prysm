@@ -23,6 +23,8 @@ var (
 	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
 	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
 	errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
+	// errNilBlock is returned when a nil block is returned from the cache.
+	ErrNilBlockInCache = errors.New("nil block returned from the cache")
 	// errNilStateFromStategen is returned when a nil state is returned from the state generator.
 	errNilStateFromStategen = errors.New("justified state can't be nil")
 	// errWSBlockNotFound is returned when a block is not found in the WS cache or DB.

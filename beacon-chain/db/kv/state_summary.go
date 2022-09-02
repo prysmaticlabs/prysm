@@ -27,7 +27,7 @@ func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.State
 }
 
 // SaveStateSummariesWithPendingBlocks saves state summary objects to the DB.
-func (s *Store) SaveStateSummariesWithPendingBlocks(ctx context.Context, summaries []*ethpb.StateSummary, blockCache func([32]byte) interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveStateSummariesWithPendingBlocks(ctx context.Context, summaries []*ethpb.StateSummary, blockCache func([32]byte) (interfaces.SignedBeaconBlock, error)) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummariesWithPendingBlocks")
 	defer span.End()
 
@@ -49,7 +49,7 @@ func (s *Store) SaveStateSummariesWithPendingBlocks(ctx context.Context, summari
 	return nil
 }
 
-func (s *Store) ensureBlocksSaved(ctx context.Context, blockCache func([32]byte) interfaces.SignedBeaconBlock) error {
+func (s *Store) ensureBlocksSaved(ctx context.Context, blockCache func([32]byte) (interfaces.SignedBeaconBlock, error)) error {
 	if blockCache == nil {
 		return nil
 	}
@@ -60,7 +60,7 @@ func (s *Store) ensureBlocksSaved(ctx context.Context, blockCache func([32]byte)
 			log.WithField("blockRoot", fmt.Sprintf("%#x", ss.Root)).Debug("Block already saved")
 			continue
 		}
-		if b := blockCache(bytesutil.ToBytes32(ss.Root)); !b.IsNil() {
+		if b, err := blockCache(bytesutil.ToBytes32(ss.Root)); err == nil && !b.IsNil() {
 			blocks = append(blocks, b)
 		}
 	}
