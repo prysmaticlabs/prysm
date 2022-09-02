@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -120,6 +122,60 @@ func TestStateSummary_CacheToDB_FailsIfMissingBlock(t *testing.T) {
 	require.ErrorIs(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1001, Root: r[:]}), ErrNotFoundBlock)
 
 	require.NoError(t, db.deleteStateSummary(junkRoot)) // Delete bad summary or db will throw an error on test cleanup.
+}
+
+func TestStateSummary_CacheToDB_UsesProvidedBlockCache(t *testing.T) {
+	db := setupDB(t)
+
+	ctx := context.Background()
+
+	summaries := make([]*ethpb.StateSummary, stateSummaryCachePruneCount-1)
+	bCache := make(map[[32]byte]interfaces.SignedBeaconBlock, stateSummaryCachePruneCount-1)
+	for i := range summaries {
+		b := util.NewBeaconBlock()
+		b.Block.Slot = types.Slot(i)
+		b.Block.Body.Graffiti = bytesutil.PadTo([]byte{byte(i)}, 32)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		r, err := wsb.Block().HashTreeRoot()
+		require.NoError(t, err)
+		bCache[r] = wsb
+		summaries[i] = &ethpb.StateSummary{Slot: types.Slot(i), Root: r[:]}
+	}
+
+	// Simulated initial sync block cache.
+	pendingBlocksFn := func(r [32]byte) (interfaces.SignedBeaconBlock, error) {
+		b, ok := bCache[r]
+		if !ok {
+			return nil, ErrNotFoundBlock
+		}
+		return b, nil
+	}
+
+	require.NoError(t, db.SaveStateSummariesWithPendingBlocks(context.Background(), summaries, pendingBlocksFn))
+	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount-1)
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = types.Slot(1000)
+	r, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, db.SaveStateSummariesWithPendingBlocks(context.Background(), []*ethpb.StateSummary{{Slot: 1000, Root: r[:]}}, pendingBlocksFn))
+	require.Equal(t, db.stateSummaryCache.len(), stateSummaryCachePruneCount)
+
+	// Next insertion causes the buffer to flush.
+	b = util.NewBeaconBlock()
+	b.Block.Slot = 1001
+	r, err = util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, db.SaveStateSummariesWithPendingBlocks(context.Background(), []*ethpb.StateSummary{{Slot: 1001, Root: r[:]}}, pendingBlocksFn))
+	require.Equal(t, db.stateSummaryCache.len(), 1)
+
+	// All blocks in the bCache should have been saved.
+	for r := range bCache {
+		require.Equal(t, true, db.HasBlock(ctx, r), "Block %#x was not saved to db", r)
+	}
 }
 
 func TestStateSummary_CanDelete(t *testing.T) {
