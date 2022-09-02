@@ -120,6 +120,7 @@ func TestStateSummary_CacheToDB_FailsIfMissingBlock(t *testing.T) {
 	r, err := util.SaveBlock(t, ctx, db, b).Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.ErrorIs(t, db.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1001, Root: r[:]}), ErrNotFoundBlock)
+	require.Equal(t, db.HasStateSummary(ctx, junkRoot), false)
 
 	require.NoError(t, db.deleteStateSummary(junkRoot)) // Delete bad summary or db will throw an error on test cleanup.
 }
