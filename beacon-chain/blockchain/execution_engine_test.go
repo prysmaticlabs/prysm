@@ -1088,9 +1088,9 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, genesisSummary))
 
-	// Get last validated checkpoint
-	origCheckpoint, err := service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
-	require.NoError(t, err)
+	// Set last validated checkpoint to a junk root to prevent issues
+	// with saving it due to the state summary.
+	origCheckpoint := &ethpb.Checkpoint{Root: genesisRoot[:], Epoch: 0}
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, origCheckpoint))
 
 	// Optimistic finalized checkpoint
