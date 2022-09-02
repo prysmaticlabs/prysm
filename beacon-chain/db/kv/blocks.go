@@ -327,7 +327,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 				blk = blindedBlock
 			}
 		}
-		s.blockCache.Set(string(blockRoots[i]), blk, 0)
+		s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 	}
 	return nil
 }
