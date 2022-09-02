@@ -73,6 +73,7 @@ go_library(
         "@io_etcd_go_bbolt//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
+        "@org_uber_go_multierr//:go_default_library",
     ],
 )
 

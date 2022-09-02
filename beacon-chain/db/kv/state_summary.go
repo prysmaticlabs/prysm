@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+	"go.uber.org/multierr"
 )
 
 // SaveStateSummary saves a state summary object to the DB.
@@ -127,12 +128,14 @@ func (s *Store) saveCachedStateSummariesDB(ctx context.Context) error {
 		}
 		encs[i] = enc
 	}
+	var errs []error
 	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bBkt := tx.Bucket(blocksBucket)
 		ssBkt := tx.Bucket(stateSummaryBucket)
 		for i, s := range summaries {
 			if bBkt.Get(s.Root) == nil {
-				return errors.Wrapf(ErrNotFoundBlock, "failed to save state summary with block root %#x", s.Root)
+				errs = append(errs, errors.Wrapf(ErrNotFoundBlock, "failed to save state summary with block root %#x", s.Root))
+				continue
 			}
 			if err := ssBkt.Put(s.Root, encs[i]); err != nil {
 				return err
@@ -143,7 +146,7 @@ func (s *Store) saveCachedStateSummariesDB(ctx context.Context) error {
 		return err
 	}
 	s.stateSummaryCache.clear()
-	return nil
+	return multierr.Combine(errs...)
 }
 
 // deleteStateSummary deletes a state summary object from the db using input block root.
