@@ -21,6 +21,7 @@ func (s *Store) SaveStateSummary(ctx context.Context, summary *ethpb.StateSummar
 	return s.SaveStateSummaries(ctx, []*ethpb.StateSummary{summary})
 }
 
+// SaveStateSummaries saves state summary objects to the DB.
 func (s *Store) SaveStateSummaries(ctx context.Context, summaries []*ethpb.StateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummaries")
 	defer span.End()
