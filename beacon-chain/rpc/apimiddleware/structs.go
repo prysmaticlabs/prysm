@@ -813,6 +813,7 @@ type forkChoiceNodeJson struct {
 	Weight                   string `json:"weight"`
 	ExecutionOptimistic      bool   `json:"execution_optimistic"`
 	ExecutionPayload         string `json:"execution_payload" hex:"true"`
+	TimeStamp                string `json:"timestamp" time:"true"`
 }
 
 //----------------
