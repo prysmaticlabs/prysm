@@ -563,10 +563,11 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, validated)
 
-	// Before the first finalized epoch, finalized root could be zeros.
-	validatedCheckpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	r, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
+	validatedCheckpoint = &ethpb.Checkpoint{Root: r[:]}
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, br))
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:], Slot: 10}))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:], Slot: 10}))
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
 
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
@@ -621,10 +622,11 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, validated)
 
-	// Before the first finalized epoch, finalized root could be zeros.
-	validatedCheckpoint = &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	r, err := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlock()).Block().HashTreeRoot()
+	require.NoError(t, err)
+	validatedCheckpoint = &ethpb.Checkpoint{Root: r[:]}
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, br))
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:], Slot: 10}))
+	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:], Slot: 10}))
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, validatedCheckpoint))
 
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: optimisticRoot[:], Slot: 11}))
