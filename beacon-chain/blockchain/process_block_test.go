@@ -391,6 +391,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	}
 	err = service.onBlockBatch(ctx, blks, blkRoots)
 	require.NoError(t, err)
+	require.NoError(t, service.Stop())
 }
 
 func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
@@ -1350,7 +1351,14 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	gs = gs.Copy()
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
 	assert.NoError(t, gs.SetEth1DepositIndex(8))
-	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
+	newBlock := util.NewBeaconBlock()
+	newBlock.Block.Slot = 20
+	rt, err := newBlock.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	wrappedBlk, err := consensusblocks.NewSignedBeaconBlock(newBlock)
+	assert.NoError(t, err)
+	assert.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedBlk))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, rt, gs))
 	zeroSig := [96]byte{}
 	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
 		root := []byte(strconv.Itoa(int(i)))
@@ -1361,7 +1369,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 			Signature:             zeroSig[:],
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
-	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, rt))
 	fDeposits := depositCache.FinalizedDeposits(ctx)
 	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
 	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
@@ -1384,11 +1392,27 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	gs = gs.Copy()
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 7}))
 	assert.NoError(t, gs.SetEth1DepositIndex(6))
-	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
+
+	newBlock := util.NewBeaconBlock()
+	newBlock.Block.Slot = 20
+	rt, err := newBlock.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	wrappedBlk, err := consensusblocks.NewSignedBeaconBlock(newBlock)
+	assert.NoError(t, err)
+	assert.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedBlk))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, rt, gs))
 	gs2 := gs.Copy()
 	assert.NoError(t, gs2.SetEth1Data(&ethpb.Eth1Data{DepositCount: 15}))
 	assert.NoError(t, gs2.SetEth1DepositIndex(13))
-	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}, gs2))
+
+	newBlock2 := util.NewBeaconBlock()
+	newBlock2.Block.Slot = 30
+	rt2, err := newBlock2.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	wrappedBlk2, err := consensusblocks.NewSignedBeaconBlock(newBlock2)
+	assert.NoError(t, err)
+	assert.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedBlk2))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, rt2, gs2))
 	zeroSig := [96]byte{}
 	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
 		root := []byte(strconv.Itoa(int(i)))
@@ -1402,7 +1426,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	// Insert 3 deposits before hand.
 	depositCache.InsertFinalizedDeposits(ctx, 2)
 
-	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, rt))
 	fDeposits := depositCache.FinalizedDeposits(ctx)
 	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
 
@@ -1412,7 +1436,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	}
 
 	// Insert New Finalized State with higher deposit count.
-	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}))
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, rt2))
 	fDeposits = depositCache.FinalizedDeposits(ctx)
 	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
 	deps = depositCache.AllDeposits(ctx, big.NewInt(112))

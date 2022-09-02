@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -160,10 +161,16 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	ctx := context.Background()
 
 	state, _ := util.DeterministicGenesisState(t, 100)
-	r := [32]byte{'a'}
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	balances, err := service.justifiedBalances.get(ctx, r)
+	newBlock := util.NewBeaconBlock()
+	newBlock.Block.Slot = 20
+	rt, err := newBlock.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	wrappedBlk, err := consensusblocks.NewSignedBeaconBlock(newBlock)
+	assert.NoError(t, err)
+	assert.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedBlk))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: rt[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, rt))
+	balances, err := service.justifiedBalances.get(ctx, rt)
 	require.NoError(t, err)
 	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }

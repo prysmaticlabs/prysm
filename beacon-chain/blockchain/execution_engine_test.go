@@ -1083,7 +1083,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	fcs.SetOriginRoot(genesisRoot)
 	genesisSummary := &ethpb.StateSummary{
-		Root: genesisStateRoot[:],
+		Root: genesisRoot[:],
 		Slot: 0,
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, genesisSummary))
