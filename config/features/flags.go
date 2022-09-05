@@ -128,6 +128,12 @@ var (
 		Value:  false,
 		Hidden: true,
 	}
+	enableProcessAttsEarly = &cli.BoolFlag{
+		Name:   "enable-process-atts-early",
+		Usage:  "Enables processing attestations earlier at 11s mark instead of 12s mark",
+		Value:  false,
+		Hidden: true,
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.

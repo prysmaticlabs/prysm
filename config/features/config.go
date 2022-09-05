@@ -68,6 +68,7 @@ type Flags struct {
 	EnableBatchGossipAggregation      bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
+	EnableProcessAttestationsEarly    bool // EnableProcessAttestationsEarly processes attestations at 11s mark instead of 12s mark.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
@@ -256,6 +257,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableStartupOptimistic.Name) {
 		logEnabled(enableStartupOptimistic)
 		cfg.EnableStartOptimistic = true
+	}
+	if ctx.Bool(enableProcessAttsEarly.Name) {
+		logEnabled(enableProcessAttsEarly)
+		cfg.EnableProcessAttestationsEarly = true
 	}
 	Init(cfg)
 	return nil

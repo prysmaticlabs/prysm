@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -114,20 +115,42 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			log.Warn("Genesis time received, now available to process attestations")
 		}
 
-		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case <-st.C():
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("Could not process new slot")
+		if features.Get().EnableProcessAttestationsEarly {
+			sec := time.NewTicker(time.Second)
+			for {
+				select {
+				case <-s.ctx.Done():
 					return
+				case t := <-sec.C:
+					switch {
+					case uint64(t.Second())%params.BeaconConfig().SecondsPerSlot == 0:
+						if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+							log.WithError(err).Error("Could not process new slot")
+							return
+						}
+					case uint64(t.Second())%params.BeaconConfig().SecondsPerSlot == 11:
+						if err := s.UpdateHead(s.ctx); err != nil {
+							log.WithError(err).Error("Could not process attestations and update head")
+							return
+						}
+					}
 				}
-
-				if err := s.UpdateHead(s.ctx); err != nil {
-					log.WithError(err).Error("Could not process attestations and update head")
+			}
+		} else {
+			st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+			for {
+				select {
+				case <-s.ctx.Done():
 					return
+				case <-st.C():
+					if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+						log.WithError(err).Error("Could not process new slot")
+						return
+					}
+					if err := s.UpdateHead(s.ctx); err != nil {
+						log.WithError(err).Error("Could not process attestations and update head")
+						return
+					}
 				}
 			}
 		}
