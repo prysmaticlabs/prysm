@@ -128,7 +128,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 							log.WithError(err).Error("Could not process new slot")
 							return
 						}
-					case uint64(t.Second())%params.BeaconConfig().SecondsPerSlot == 11:
+					case uint64(t.Second())%params.BeaconConfig().SecondsPerSlot == params.BeaconConfig().SecondsPerSlot-1:
 						if err := s.UpdateHead(s.ctx); err != nil {
 							log.WithError(err).Error("Could not process attestations and update head")
 							return
