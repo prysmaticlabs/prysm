@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -92,10 +93,18 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
+// WithRetry sets the number of attempts to retry failed HTTP requests.
+func WithRetry(retry int) ClientOpt {
+	return func(c *Client) {
+		c.retry = retry
+	}
+}
+
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
+	retry   int
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
@@ -143,6 +152,28 @@ func withSSZEncoding() reqOption {
 	}
 }
 
+func (c *Client) getWrapper(ctx context.Context, path string, opts ...reqOption) (res []byte, err error) {
+	if c.retry != 0 {
+		for i := 0; i < c.retry; i++ {
+			res, err = c.get(ctx, path, opts...)
+			if err == nil {
+				break
+			}
+			// Random 1-10s backoff
+			max := 10
+			min := 1
+			// #nosec G404
+			backoff := rand.Intn(max-min) + min
+			log.Printf("request error: %+v", err.Error())
+			log.Printf("try: %d. retrying in %vs...", i, backoff)
+			time.Sleep(time.Duration(backoff) * time.Second)
+		}
+	} else {
+		res, err = c.get(ctx, path, opts...)
+	}
+	return res, err
+}
+
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
@@ -182,7 +213,7 @@ func renderGetBlockPath(id StateOrBlockId) string {
 // The return value contains the ssz-encoded bytes.
 func (c *Client) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
 	blockPath := renderGetBlockPath(blockId)
-	b, err := c.get(ctx, blockPath, withSSZEncoding())
+	b, err := c.getWrapper(ctx, blockPath, withSSZEncoding())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting state by id = %s", blockId)
 	}
@@ -197,7 +228,7 @@ var getBlockRootTpl = idTemplate(getBlockRootPath)
 // for the named identifiers.
 func (c *Client) GetBlockRoot(ctx context.Context, blockId StateOrBlockId) ([32]byte, error) {
 	rootPath := getBlockRootTpl(blockId)
-	b, err := c.get(ctx, rootPath)
+	b, err := c.getWrapper(ctx, rootPath)
 	if err != nil {
 		return [32]byte{}, errors.Wrapf(err, "error requesting block root by id = %s", blockId)
 	}
@@ -220,7 +251,7 @@ var getForkTpl = idTemplate(getForkForStatePath)
 // <slot>, <hex encoded blockRoot with 0x prefix>. Variables of type StateOrBlockId are exported by this package
 // for the named identifiers.
 func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fork, error) {
-	body, err := c.get(ctx, getForkTpl(stateId))
+	body, err := c.getWrapper(ctx, getForkTpl(stateId))
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting fork by state id = %s", stateId)
 	}
@@ -236,7 +267,7 @@ func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fo
 
 // GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
 func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, error) {
-	body, err := c.get(ctx, getForkSchedulePath)
+	body, err := c.getWrapper(ctx, getForkSchedulePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting fork schedule")
 	}
@@ -275,7 +306,7 @@ func parseNodeVersion(v string) (*NodeVersion, error) {
 // GetNodeVersion requests that the beacon node identify information about its implementation in a format
 // similar to a HTTP User-Agent field. ex: Lighthouse/v0.1.5 (Linux x86_64)
 func (c *Client) GetNodeVersion(ctx context.Context) (*NodeVersion, error) {
-	b, err := c.get(ctx, getNodeVersionPath)
+	b, err := c.getWrapper(ctx, getNodeVersionPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting node version")
 	}
@@ -302,7 +333,7 @@ func renderGetStatePath(id StateOrBlockId) string {
 // The return value contains the ssz-encoded bytes.
 func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, error) {
 	statePath := path.Join(getStatePath, string(stateId))
-	b, err := c.get(ctx, statePath, withSSZEncoding())
+	b, err := c.getWrapper(ctx, statePath, withSSZEncoding())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting state by id = %s", stateId)
 	}
@@ -315,7 +346,7 @@ func (c *Client) GetState(ctx context.Context, stateId StateOrBlockId) ([]byte, 
 // - finds the highest non-skipped block preceding the epoch
 // - returns the htr of the found block and returns this + the value of state_root from the block
 func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData, error) {
-	body, err := c.get(ctx, getWeakSubjectivityPath)
+	body, err := c.getWrapper(ctx, getWeakSubjectivityPath)
 	if err != nil {
 		return nil, err
 	}
