@@ -88,28 +88,43 @@ func (r *ValidatorRegistration) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+var errInvalidUint256 = errors.New("invalid Uint256")
+var errDecodeUint256 = errors.New("unable to decode into Uint256")
+
 type Uint256 struct {
 	*big.Int
 }
 
-func stringToUint256(s string) Uint256 {
+func isValidUint256(bi *big.Int) bool {
+	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256
+}
+
+func stringToUint256(s string) (Uint256, error) {
 	bi := new(big.Int)
-	bi.SetString(s, 10)
-	return Uint256{Int: bi}
+	_, ok := bi.SetString(s, 10)
+	if !ok || !isValidUint256(bi) {
+		return Uint256{}, errors.Wrapf(errDecodeUint256, "value=%s", s)
+	}
+	return Uint256{Int: bi}, nil
 }
 
 // sszBytesToUint256 creates a Uint256 from a ssz-style (little-endian byte slice) representation.
-func sszBytesToUint256(b []byte) Uint256 {
+func sszBytesToUint256(b []byte) (Uint256, error) {
 	bi := new(big.Int)
-	return Uint256{Int: bi.SetBytes(bytesutil.ReverseByteOrder(b))}
+	bi.SetBytes(bytesutil.ReverseByteOrder(b))
+	if !isValidUint256(bi) {
+		return Uint256{}, errors.Wrapf(errDecodeUint256, "value=%s", b)
+	}
+	return Uint256{Int: bi}, nil
 }
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256
 func (s Uint256) SSZBytes() []byte {
+	if !isValidUint256(s.Int) {
+		return []byte{}
+	}
 	return bytesutil.PadTo(bytesutil.ReverseByteOrder(s.Int.Bytes()), 32)
 }
-
-var errUnmarshalUint256Failed = errors.New("unable to UnmarshalText into a Uint256 value")
 
 func (s *Uint256) UnmarshalJSON(t []byte) error {
 	start := 0
@@ -129,7 +144,10 @@ func (s *Uint256) UnmarshalText(t []byte) error {
 	}
 	z, ok := s.SetString(string(t), 10)
 	if !ok {
-		return errors.Wrapf(errUnmarshalUint256Failed, "value=%s", string(t))
+		return errors.Wrapf(errDecodeUint256, "value=%s", t)
+	}
+	if !isValidUint256(z) {
+		return errors.Wrapf(errDecodeUint256, "value=%s", t)
 	}
 	s.Int = z
 	return nil
@@ -146,6 +164,9 @@ func (s Uint256) MarshalJSON() ([]byte, error) {
 }
 
 func (s Uint256) MarshalText() ([]byte, error) {
+	if !isValidUint256(s.Int) {
+		return nil, errors.Wrapf(errInvalidUint256, "value=%s", s.Int)
+	}
 	return []byte(s.String()), nil
 }
 
@@ -237,6 +258,10 @@ type ExecutionPayloadHeader struct {
 
 func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 	type MarshalCaller ExecutionPayloadHeader
+	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeader.BaseFeePerGas)
+	if err != nil {
+		return []byte{}, errors.Wrapf(err, "invalid BaseFeePerGas")
+	}
 	return json.Marshal(&MarshalCaller{
 		ParentHash:       h.ExecutionPayloadHeader.ParentHash,
 		FeeRecipient:     h.ExecutionPayloadHeader.FeeRecipient,
@@ -249,7 +274,7 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 		GasUsed:          Uint64String(h.ExecutionPayloadHeader.GasUsed),
 		Timestamp:        Uint64String(h.ExecutionPayloadHeader.Timestamp),
 		ExtraData:        h.ExecutionPayloadHeader.ExtraData,
-		BaseFeePerGas:    sszBytesToUint256(h.ExecutionPayloadHeader.BaseFeePerGas),
+		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        h.ExecutionPayloadHeader.BlockHash,
 		TransactionsRoot: h.ExecutionPayloadHeader.TransactionsRoot,
 	})
