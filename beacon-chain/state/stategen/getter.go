@@ -237,7 +237,7 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 		}
 
 		// Is the state the genesis state.
-		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
+		parentRoot := b.Block().ParentRoot()
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			s, err := s.beaconDB.GenesisState(ctx)
 			return s, errors.Wrap(err, "could not get genesis state")

@@ -2,6 +2,7 @@ package mock
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -21,7 +22,7 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (SignedBeaconBlock) Signature() []byte {
+func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
 
@@ -86,7 +87,7 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 }
 
 type BeaconBlock struct {
-	Htr             [32]byte
+	Htr             [field_params.RootLength]byte
 	HtrErr          error
 	BeaconBlockBody interfaces.BeaconBlockBody
 	BlockSlot       types.Slot
@@ -96,7 +97,7 @@ func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) 
 	panic("implement me")
 }
 
-func (m BeaconBlock) HashTreeRoot() ([32]byte, error) {
+func (m BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	return m.Htr, m.HtrErr
 }
 
@@ -108,11 +109,11 @@ func (BeaconBlock) ProposerIndex() types.ValidatorIndex {
 	panic("implement me")
 }
 
-func (BeaconBlock) ParentRoot() []byte {
+func (BeaconBlock) ParentRoot() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
-func (BeaconBlock) StateRoot() []byte {
+func (BeaconBlock) StateRoot() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
@@ -158,7 +159,7 @@ func (BeaconBlock) Version() int {
 
 type BeaconBlockBody struct{}
 
-func (BeaconBlockBody) RandaoReveal() []byte {
+func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
 
@@ -166,7 +167,7 @@ func (BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Graffiti() []byte {
+func (BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
@@ -198,7 +199,7 @@ func (BeaconBlockBody) IsNil() bool {
 	return false
 }
 
-func (BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+func (BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	panic("implement me")
 }
 

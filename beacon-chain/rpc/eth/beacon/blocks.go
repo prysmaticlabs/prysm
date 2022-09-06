@@ -78,7 +78,7 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("block with root %#x from slot index %d not found in db", cbr, wsSlot))
 	}
-	stateRoot := bytesutil.ToBytes32(cb.Block().StateRoot())
+	stateRoot := cb.Block().StateRoot()
 	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)
 	return &ethpbv1.WeakSubjectivityResponse{
 		Data: &ethpbv1.WeakSubjectivityData{
@@ -434,11 +434,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		sig := blk.Signature()
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_ALTAIR,
 			Data: &ethpbv2.SignedBeaconBlockContainer{
 				Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Blk},
-				Signature: blk.Signature(),
+				Signature: sig[:],
 			},
 			ExecutionOptimistic: false,
 		}, nil
@@ -465,11 +466,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
+		sig := blk.Signature()
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_BELLATRIX,
 			Data: &ethpbv2.SignedBeaconBlockContainer{
 				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
-				Signature: blk.Signature(),
+				Signature: sig[:],
 			},
 			ExecutionOptimistic: isOptimistic,
 		}, nil
@@ -499,11 +501,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
+		sig := blk.Signature()
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_BELLATRIX,
 			Data: &ethpbv2.SignedBeaconBlockContainer{
 				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
-				Signature: blk.Signature(),
+				Signature: sig[:],
 			},
 			ExecutionOptimistic: isOptimistic,
 		}, nil
@@ -553,9 +556,10 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		sig := blk.Signature()
 		data := &ethpbv2.SignedBeaconBlockAltair{
 			Message:   v2Blk,
-			Signature: blk.Signature(),
+			Signature: sig[:],
 		}
 		sszData, err := data.MarshalSSZ()
 		if err != nil {
@@ -577,9 +581,10 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		sig := blk.Signature()
 		data := &ethpbv2.SignedBeaconBlockBellatrix{
 			Message:   v2Blk,
-			Signature: blk.Signature(),
+			Signature: sig[:],
 		}
 		sszData, err := data.MarshalSSZ()
 		if err != nil {
@@ -605,9 +610,10 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		sig := blk.Signature()
 		data := &ethpbv2.SignedBeaconBlockBellatrix{
 			Message:   v2Blk,
-			Signature: blk.Signature(),
+			Signature: sig[:],
 		}
 		sszData, err := data.MarshalSSZ()
 		if err != nil {
