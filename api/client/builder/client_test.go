@@ -148,6 +148,23 @@ func TestClient_GetHeader(t *testing.T) {
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			require.Equal(t, expectedPath, r.URL.Path)
 			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("No header is available."))),
+				Request:    r.Clone(ctx),
+			}, nil
+		}),
+	}
+	c = &Client{
+		hc:      hc,
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+	}
+	_, err = c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+	require.ErrorIs(t, err, ErrNoContent)
+
+	hc = &http.Client{
+		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+			require.Equal(t, expectedPath, r.URL.Path)
+			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
 				Request:    r.Clone(ctx),

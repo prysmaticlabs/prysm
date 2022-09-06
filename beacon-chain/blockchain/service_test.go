@@ -307,7 +307,13 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
 	stateGen := stategen.New(beaconDB)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	c, err := NewService(ctx,
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithDatabase(beaconDB),
+		WithStateGen(stateGen),
+		WithAttestationService(attSrv),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
 	require.NoError(t, c.StartFromSavedState(headState))
@@ -360,7 +366,13 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: headRoot[:], Epoch: slots.ToEpoch(finalizedSlot)}))
 	stateGen := stategen.New(beaconDB)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	c, err := NewService(ctx,
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithDatabase(beaconDB),
+		WithStateGen(stateGen),
+		WithAttestationService(attSrv),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 
 	require.NoError(t, c.StartFromSavedState(headState))
@@ -561,7 +573,13 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
 	stateGen := stategen.New(beaconDB)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
+	c, err := NewService(ctx,
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithDatabase(beaconDB),
+		WithStateGen(stateGen),
+		WithAttestationService(attSrv),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithFinalizedStateAtStartUp(headState))
 	require.NoError(t, err)
 	require.NoError(t, stateGen.SaveState(ctx, headRoot, headState))
 	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
