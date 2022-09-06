@@ -235,16 +235,21 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}
+	parentRoot := b.Block().ParentRoot()
+	stateRoot := b.Block().StateRoot()
+	randaoReveal := b.Block().Body().RandaoReveal()
+	graffiti := b.Block().Body().Graffiti()
+	sig := b.Signature()
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
 			Slot:          b.Block().Slot(),
 			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    b.Block().ParentRoot(),
-			StateRoot:     b.Block().StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Block().Body().RandaoReveal(),
+				RandaoReveal:           randaoReveal[:],
 				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               b.Block().Body().Graffiti(),
+				Graffiti:               graffiti[:],
 				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
 				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
 				Attestations:           b.Block().Body().Attestations(),
@@ -254,7 +259,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				ExecutionPayloadHeader: header,
 			},
 		},
-		Signature: b.Signature(),
+		Signature: sig[:],
 	}
 
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)

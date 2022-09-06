@@ -1757,7 +1757,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	logHook := logTest.NewGlobal()
 	for i := 0; i < 10; i++ {
 		fc := &ethpb.Checkpoint{}
-		st, blkRoot, err := prepareForkchoiceState(ctx, 0, bytesutil.ToBytes32(wsb1.Block().ParentRoot()), [32]byte{}, [32]byte{}, fc, fc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, 0, wsb1.Block().ParentRoot(), [32]byte{}, [32]byte{}, fc, fc)
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		var wg sync.WaitGroup

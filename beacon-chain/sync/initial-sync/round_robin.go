@@ -1,7 +1,6 @@
 package initialsync
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -240,8 +238,7 @@ func (s *Service) processBlock(
 	}
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
-	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot)
@@ -270,7 +267,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
+	parentRoot := firstBlock.Block().ParentRoot()
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
@@ -278,7 +275,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	blockRoots[0] = blkRoot
 	for i := 1; i < len(blks); i++ {
 		b := blks[i]
-		if !bytes.Equal(b.Block().ParentRoot(), blockRoots[i-1][:]) {
+		if b.Block().ParentRoot() != blockRoots[i-1] {
 			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
 				blockRoots[i-1][:], b.Block().ParentRoot())
 		}

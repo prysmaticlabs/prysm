@@ -21,6 +21,7 @@ import (
 
 var (
 	checkTransitionPollingInterval = time.Second * 10
+	logTtdInterval                 = time.Minute
 	configMismatchLog              = "Configuration mismatch between your execution client and Prysm. " +
 		"Please check your execution client and restart it with the proper configuration. If this is not done, " +
 		"your node will not be able to complete the proof-of-stake transition"
@@ -68,8 +69,10 @@ func (s *Service) checkTransitionConfiguration(
 	// This serves as a heartbeat to ensure the execution client and Prysm are ready for the
 	// Bellatrix hard-fork transition.
 	ticker := time.NewTicker(checkTransitionPollingInterval)
+	logTtdTicker := time.NewTicker(logTtdInterval)
 	hasTtdReached := false
 	defer ticker.Stop()
+	defer logTtdTicker.Stop()
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(blockNotifications)
 	defer sub.Unsubscribe()
 	for {
@@ -96,6 +99,8 @@ func (s *Service) checkTransitionConfiguration(
 			ctx, cancel := context.WithDeadline(ctx, tm.Add(network.DefaultRPCHTTPTimeout))
 			err = s.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
+			cancel()
+		case <-logTtdTicker.C:
 			currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.chainStartData.GetGenesisTime()))
 			if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch && !hasTtdReached {
 				hasTtdReached, err = s.logTtdStatus(ctx, ttd)
@@ -103,7 +108,6 @@ func (s *Service) checkTransitionConfiguration(
 					log.WithError(err).Error("Could not log ttd status")
 				}
 			}
-			cancel()
 		}
 	}
 }
