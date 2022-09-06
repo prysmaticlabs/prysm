@@ -17,8 +17,8 @@ type ActiveValidatorCounter interface {
 
 type LastFinalizedValidatorCounter struct {
 	count uint64
-	db    beacondb.HeadAccessDatabase
-	sg    StateManager
+	db beacondb.HeadAccessDatabase
+	sm StateManager
 }
 
 func (lf *LastFinalizedValidatorCounter) ActiveValidatorCount(ctx context.Context) (uint64, error) {
@@ -44,7 +44,7 @@ func (lf *LastFinalizedValidatorCounter) ActiveValidatorCount(ctx context.Contex
 			}
 		}
 	}
-	st, err := lf.sg.StateByRoot(ctx, r)
+	st, err := lf.sm.StateByRoot(ctx, r)
 	if err != nil {
 		return 0, err
 	}
@@ -63,6 +63,6 @@ func NewLastFinalizedValidatorCounter(count uint64, db beacondb.HeadAccessDataba
 	return &LastFinalizedValidatorCounter{
 		count: count,
 		db:    db,
-		sg:    sg,
+		sm:    sg,
 	}
 }
