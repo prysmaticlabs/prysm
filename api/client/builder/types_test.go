@@ -665,6 +665,49 @@ func TestMathBigUnmarshal(t *testing.T) {
 	require.NoError(t, u256.UnmarshalText([]byte("452312848583266388373324160190187140051835877600158453279131187530910662656")))
 }
 
+func TestIsValidUint256(t *testing.T) {
+	value, ok := new(big.Int), false
+
+	// negative uint256.max - 1
+	_, ok = value.SetString("-10000000000000000000000000000000000000000000000000000000000000000", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 257, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+
+	// negative uint256.max
+	_, ok = value.SetString("-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 256, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+
+	// negative number
+	_, ok = value.SetString("-1", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, false, isValidUint256(value))
+
+	// uint256.min
+	_, ok = value.SetString("0", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, true, isValidUint256(value))
+
+	// positive number
+	_, ok = value.SetString("1", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, true, isValidUint256(value))
+
+	// uint256.max
+	_, ok = value.SetString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 256, value.BitLen())
+	require.Equal(t, true, isValidUint256(value))
+
+	// uint256.max + 1
+	_, ok = value.SetString("10000000000000000000000000000000000000000000000000000000000000000", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 257, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+}
+
 func TestUint256Unmarshal(t *testing.T) {
 	base10 := "452312848583266388373324160190187140051835877600158453279131187530910662656"
 	bi := new(big.Int)
