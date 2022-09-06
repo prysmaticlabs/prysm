@@ -72,6 +72,7 @@ func (s *Service) checkTransitionConfiguration(
 	logTtdTicker := time.NewTicker(logTtdInterval)
 	hasTtdReached := false
 	defer ticker.Stop()
+	defer logTtdTicker.Stop()
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(blockNotifications)
 	defer sub.Unsubscribe()
 	for {
