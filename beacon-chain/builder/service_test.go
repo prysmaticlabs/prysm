@@ -30,7 +30,7 @@ func Test_RegisterValidator(t *testing.T) {
 	db := dbtesting.SetupDB(t)
 	headFetcher := &blockchainTesting.ChainService{}
 	builder := buildertesting.NewClient()
-	s, err := NewService(ctx, WithDatabase(db), WithHeadFetcher(headFetcher), WithBuilderClient(builder))
+	s, err := NewService(ctx, WithDatabase(db), WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
 	require.NoError(t, err)
 	pubkey := bytesutil.ToBytes48([]byte("pubkey"))
 	var feeRecipient [20]byte
