@@ -12,12 +12,17 @@ import (
 
 func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
 	var port int
-	switch bnType[0] {
-	case "lighthouse":
-		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-	default:
+	if len(bnType) > 0 {
+		switch bnType[0] {
+		case "lighthouse":
+			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+		default:
+			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+	} else {
 		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
 	}
+
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
@@ -38,10 +43,14 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 
 func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
 	var port int
-	switch bnType[0] {
-	case "lighthouse":
-		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-	default:
+	if len(bnType) > 0 {
+		switch bnType[0] {
+		case "lighthouse":
+			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+		default:
+			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+	} else {
 		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
 	}
 	b, err := json.Marshal(postData)
