@@ -10,8 +10,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 )
 
-func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(template, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
+func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+	var port int
+	switch bnType[0] {
+	case "lighthouse":
+		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	default:
+		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	}
+	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)
@@ -29,12 +36,19 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}) error {
+func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+	var port int
+	switch bnType[0] {
+	case "lighthouse":
+		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	default:
+		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	}
 	b, err := json.Marshal(postData)
 	if err != nil {
 		return err
 	}
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, port+beaconNodeIdx)
 	httpResp, err := http.Post(
 		basePath+requestPath,
 		"application/json",

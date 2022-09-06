@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -34,7 +32,8 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return err
 	}
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
-	respJSON := &apimiddleware.BlockResponseJson{}
+	respJSONPrysm := &apimiddleware.BlockResponseJson{}
+	respJSONLighthouse := &apimiddleware.BlockResponseJson{}
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
@@ -48,16 +47,44 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			v1MiddlewarePathTemplate,
 			"/beacon/blocks/head",
 			beaconNodeIdx,
-			respJSON,
+			respJSONPrysm,
 		); err != nil {
 			return err
 		}
 
-		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
+		if err := doMiddlewareJSONGetRequest(
+			v1MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			respJSONLighthouse,
+			"lighthouse",
+		); err != nil {
+			return err
+		}
+
+		if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
 			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
-				respJSON.Data.Signature,
+				respJSONPrysm.Data.Signature,
 				hexutil.Encode(resp.Data.Signature))
 		}
+
+		if respJSONPrysm.Data.Signature != respJSONLighthouse.Data.Signature {
+			p, err := json.Marshal(respJSONPrysm)
+			if err != nil {
+				return err
+			}
+			l, err := json.Marshal(respJSONLighthouse)
+			if err != nil {
+				return err
+			}
+			//return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+			//	respJSONPrysm.Data.Signature,
+			//	respJSONLighthouse.Data.Signature)
+			return fmt.Errorf("prysm response %s does not match lighthouse response %s",
+				string(p),
+				string(l))
+		}
+
 	} else {
 		resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
 			BlockId: []byte("head"),
@@ -70,33 +97,55 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			v2MiddlewarePathTemplate,
 			"/beacon/blocks/head",
 			beaconNodeIdx,
-			respJSON,
+			respJSONPrysm,
 		); err != nil {
 			return err
 		}
-		if hexutil.Encode(resp.Data.Signature) != respJSON.Data.Signature {
-			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
-				respJSON.Data.Signature,
-				hexutil.Encode(resp.Data.Signature))
+
+		if err := doMiddlewareJSONGetRequest(
+			v2MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			respJSONLighthouse,
+			"lighthouse",
+		); err != nil {
+			return err
+		}
+
+		if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
+			p, err := json.Marshal(respJSONPrysm)
+			if err != nil {
+				return err
+			}
+			l, err := json.Marshal(respJSONLighthouse)
+			if err != nil {
+				return err
+			}
+			//return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+			//	respJSONPrysm.Data.Signature,
+			//	respJSONLighthouse.Data.Signature)
+			return fmt.Errorf("prysm response %s does not match lighthouse response %s",
+				string(p),
+				string(l))
 		}
 	}
 
-	path, err := bazel.Runfile(fmt.Sprintf("/testing/endtoend/static-files/beaconapi_evaluator_testdata/BeaconBlock_Epoch%d.json", currentEpoch))
-	if err != nil {
-		return err
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	a, err := json.Marshal(respJSON)
-	if err != nil {
-		return err
-	}
-
-	if removeSpace(string(b)) != removeSpace(string(a)) {
-		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", removeSpace(string(a)), removeSpace(string(b)))
-	}
+	//path, err := bazel.Runfile(fmt.Sprintf("/testing/endtoend/static-files/beaconapi_evaluator_testdata/BeaconBlock_Epoch%d.json", currentEpoch))
+	//if err != nil {
+	//	return err
+	//}
+	//b, err := os.ReadFile(path)
+	//if err != nil {
+	//	return err
+	//}
+	//a, err := json.Marshal(respJSONPrysm)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if removeSpace(string(b)) != removeSpace(string(a)) {
+	//	return fmt.Errorf("API response:%v  does not equal deterministic static value %v", removeSpace(string(a)), removeSpace(string(b)))
+	//}
 
 	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
 		BlockId: []byte("head"),
