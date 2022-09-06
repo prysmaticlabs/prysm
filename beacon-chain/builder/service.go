@@ -57,7 +57,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 	}
-	if !reflect.ValueOf(s.cfg.builderClient).IsNil() {
+	if s.cfg.builderClient != nil && !reflect.ValueOf(s.cfg.builderClient).IsNil() {
 		s.c = s.cfg.builderClient
 
 		// Is the builder up?
@@ -156,5 +156,5 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 
 // Configured returns true if the user has configured a builder client.
 func (s *Service) Configured() bool {
-	return s.cfg.builderClient != nil
+	return s.c != nil && !reflect.ValueOf(s.c).IsNil()
 }

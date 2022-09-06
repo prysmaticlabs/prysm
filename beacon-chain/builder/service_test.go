@@ -14,9 +14,15 @@ import (
 )
 
 func Test_NewServiceWithBuilder(t *testing.T) {
-	s, err := NewService(context.Background(), WithBuilderClient(buildertesting.MockClient{}))
+	s, err := NewService(context.Background(), WithBuilderClient(&buildertesting.MockClient{}))
 	require.NoError(t, err)
 	assert.Equal(t, true, s.Configured())
+}
+
+func Test_NewServiceWithoutBuilder(t *testing.T) {
+	s, err := NewService(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, false, s.Configured())
 }
 
 func Test_RegisterValidator(t *testing.T) {
