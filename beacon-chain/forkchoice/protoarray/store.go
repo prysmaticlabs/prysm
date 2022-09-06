@@ -1003,8 +1003,8 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 	}
 	for i := len(chain) - 1; i > 0; i-- {
 		b := chain[i].Block
-		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
-		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		r := chain[i-1].Block.ParentRoot()
+		parentRoot := b.ParentRoot()
 		payloadHash, err := blocks.GetBlockPayloadHash(b)
 		if err != nil {
 			return err

@@ -223,7 +223,8 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err = blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
@@ -234,7 +235,8 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) {
@@ -249,7 +251,8 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) {
@@ -264,7 +267,8 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
@@ -302,5 +306,6 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if blks[0] == nil || blks[0].Block() == nil {
 		return nil, errors.New("nil block")
 	}
-	return blks[0].Block().StateRoot(), nil
+	stateRoot := blks[0].Block().StateRoot()
+	return stateRoot[:], nil
 }
