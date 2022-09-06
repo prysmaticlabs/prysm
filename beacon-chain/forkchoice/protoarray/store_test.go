@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -882,6 +883,43 @@ func TestStore_ViableForHead(t *testing.T) {
 		s := &Store{
 			justifiedCheckpoint: jc,
 			finalizedCheckpoint: fc,
+		}
+		assert.Equal(t, tc.want, s.viableForHead(tc.n))
+	}
+}
+
+func TestStore_ViableForHead_DefensivePull(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableDefensivePull: true,
+	})
+	defer resetCfg()
+
+	tests := []struct {
+		n              *Node
+		justifiedEpoch types.Epoch
+		finalizedEpoch types.Epoch
+		currentEpoch   types.Epoch
+		want           bool
+	}{
+		{&Node{}, 0, 0, 0, true},
+		{&Node{}, 1, 0, 1, false},
+		{&Node{}, 0, 1, 1, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, 2, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, 3, true},
+		{&Node{unrealizedFinalizedEpoch: 3, unrealizedJustifiedEpoch: 4}, 3, 2, 4, true},
+		{&Node{unrealizedFinalizedEpoch: 2, unrealizedJustifiedEpoch: 3}, 3, 2, 4, true},
+		{&Node{unrealizedFinalizedEpoch: 1, unrealizedJustifiedEpoch: 2}, 3, 2, 4, false},
+	}
+	for _, tc := range tests {
+		jc := &forkchoicetypes.Checkpoint{Epoch: tc.justifiedEpoch}
+		fc := &forkchoicetypes.Checkpoint{Epoch: tc.finalizedEpoch}
+		currentTime := uint64(time.Now().Unix())
+		driftSeconds := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
+		s := &Store{
+			justifiedCheckpoint: jc,
+			finalizedCheckpoint: fc,
+			genesisTime:         currentTime - driftSeconds*uint64(tc.currentEpoch),
 		}
 		assert.Equal(t, tc.want, s.viableForHead(tc.n))
 	}

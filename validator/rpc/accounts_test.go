@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
 	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
@@ -38,14 +37,15 @@ func TestServer_ListAccounts(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
@@ -110,14 +110,15 @@ func TestServer_BackupAccounts(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
@@ -220,14 +221,15 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
 	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(defaultWalletPath),
+		accounts.WithKeymanagerType(keymanager.Derived),
+		accounts.WithWalletPassword(strongPass),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(ctx)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
