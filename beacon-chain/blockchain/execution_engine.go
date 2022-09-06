@@ -107,9 +107,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
 				log.WithFields(logrus.Fields{
-					"slot":         headBlk.Slot(),
-					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-					"invalidCount": len(invalidRoots),
+					"slot":                 headBlk.Slot(),
+					"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidChildrenCount": len(invalidRoots),
 				}).Warn("Pruned invalid blocks, could not update head root")
 				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
@@ -137,10 +137,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			}
 
 			log.WithFields(logrus.Fields{
-				"slot":         headBlk.Slot(),
-				"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-				"invalidCount": len(invalidRoots),
-				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
+				"slot":                 headBlk.Slot(),
+				"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+				"invalidChildrenCount": len(invalidRoots),
+				"newHeadRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
 			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 
@@ -237,9 +237,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			return false, err
 		}
 		log.WithFields(logrus.Fields{
-			"slot":         blk.Block().Slot(),
-			"blockRoot":    fmt.Sprintf("%#x", root),
-			"invalidCount": len(invalidRoots),
+			"slot":                 blk.Block().Slot(),
+			"blockRoot":            fmt.Sprintf("%#x", root),
+			"invalidChildrenCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
 		return false, invalidBlock{
 			invalidAncestorRoots: invalidRoots,
