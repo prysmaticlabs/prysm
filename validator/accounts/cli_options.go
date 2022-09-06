@@ -27,6 +27,14 @@ func WithKeymanager(km keymanager.IKeymanager) Option {
 	}
 }
 
+// WithKeymanagerType provides a keymanager to the accounts cli manager.
+func WithKeymanagerType(k keymanager.Kind) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keymanagerKind = k
+		return nil
+	}
+}
+
 // WithKeymanagerOpts provides a keymanager configuration to the accounts cli manager.
 func WithKeymanagerOpts(kmo *remote.KeymanagerOpts) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -111,6 +119,14 @@ func WithReadPasswordFile(readPasswordFile bool) Option {
 func WithImportPrivateKeys(importPrivateKeys bool) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.importPrivateKeys = importPrivateKeys
+		return nil
+	}
+}
+
+// WithSkipMnemonicConfirm indicates whether to skip the mnemonic confirmation.
+func WithSkipMnemonicConfirm(s bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.skipMnemonicConfirm = s
 		return nil
 	}
 }

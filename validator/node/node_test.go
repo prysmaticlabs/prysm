@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -48,13 +47,15 @@ func TestNode_Builds(t *testing.T) {
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	ctx := cli.NewContext(&app, set, nil)
-	_, err := accounts.CreateWalletWithKeymanager(ctx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      dir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: walletPassword,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(dir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(walletPassword),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	_, err = acc.WalletCreate(ctx.Context)
 	require.NoError(t, err)
 
 	valClient, err := NewValidatorClient(ctx)

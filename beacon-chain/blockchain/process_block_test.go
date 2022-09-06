@@ -22,6 +22,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
@@ -2866,12 +2867,35 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.Equal(t, false, optimistic)
 }
 
+type newForkChoicer func() forkchoice.ForkChoicer
+
+func TestStore_NoViableHead_Reboot(t *testing.T) {
+	cases := []struct {
+		new  newForkChoicer
+		name string
+	}{
+		{
+			new:  func() forkchoice.ForkChoicer { return doublylinkedtree.New() },
+			name: "doublylinkedtree",
+		},
+		{
+			new:  func() forkchoice.ForkChoicer { return protoarray.New() },
+			name: "protoarray",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			noViableHead_Reboot(t, c.new)
+		})
+	}
+}
+
 // See the description in #10777 and #10782 for the full setup
 // We sync optimistically a chain of blocks. Block 12 is the first block in Epoch
 // 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
 // INVALID from NewPayload, with LVH block 12. No head is viable. We check that
 // the node can reboot from this state
-func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
+func noViableHead_Reboot(t *testing.T, newfc newForkChoicer) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
@@ -2890,7 +2914,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(newfc()),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -2998,10 +3022,11 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = newfc()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
@@ -3028,7 +3053,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
 	// Check that the head is still INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3056,7 +3081,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Head should still be INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3222,9 +3247,10 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = protoarray.New()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
@@ -3251,7 +3277,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
 	// Check that the head is still INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3278,7 +3304,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Head should still be INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
