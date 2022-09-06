@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
@@ -52,6 +51,7 @@ type testWalletConfig struct {
 	keysDir                 string
 	backupDir               string
 	walletDir               string
+	passwordsDir            string
 }
 
 func setupWalletCtx(
@@ -104,13 +104,14 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: keymanager.Remote,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Remote,
-			WalletPassword: "Passwordz0320$",
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Remote),
+		accounts.WithWalletPassword("Passwordz0320$"),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	originalCfg := &remote.KeymanagerOpts{

@@ -169,12 +169,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),
 		"blockRoot":       blkRoot,
 		"numAttestations": len(blk.Block().Body().Attestations()),
 		"numDeposits":     len(blk.Block().Body().Deposits()),
-		"graffiti":        string(blk.Block().Body().Graffiti()),
+		"graffiti":        string(graffiti[:]),
 		"fork":            version.String(blk.Block().Version()),
 	}).Info("Submitted new block")
 

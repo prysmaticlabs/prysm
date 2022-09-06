@@ -5,7 +5,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -43,13 +42,13 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				if err := features.ConfigureValidator(cliCtx); err != nil {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if _, err := accounts.CreateAndSaveWalletCli(cliCtx); err != nil {
+				return features.ConfigureValidator(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := walletCreate(cliCtx); err != nil {
 					log.WithError(err).Fatal("Could not create a wallet")
 				}
 				return nil

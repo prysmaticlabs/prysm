@@ -147,17 +147,22 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
 
+	start := time.Now()
 	s.processAttestations(ctx)
+	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	justified := s.ForkChoicer().JustifiedCheckpoint()
 	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}
+	start = time.Now()
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
+	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
 	s.headLock.RLock()
 	if s.headRoot() != newHeadRoot {
 		log.WithFields(logrus.Fields{

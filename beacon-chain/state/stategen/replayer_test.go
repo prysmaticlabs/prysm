@@ -16,12 +16,14 @@ func headerFromBlock(b interfaces.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, 
 	if err != nil {
 		return nil, err
 	}
+	stateRoot := b.Block().StateRoot()
+	parentRoot := b.Block().ParentRoot()
 	return &ethpb.BeaconBlockHeader{
 		Slot:          b.Block().Slot(),
-		StateRoot:     b.Block().StateRoot(),
+		StateRoot:     stateRoot[:],
 		ProposerIndex: b.Block().ProposerIndex(),
 		BodyRoot:      bodyRoot[:],
-		ParentRoot:    b.Block().ParentRoot(),
+		ParentRoot:    parentRoot[:],
 	}, nil
 }
 

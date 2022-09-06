@@ -90,8 +90,9 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		}
 		block := signedBlock.Block()
 
+		parentRoot := block.ParentRoot()
 		container := &ethpb.FinalizedBlockRootContainer{
-			ParentRoot: block.ParentRoot(),
+			ParentRoot: parentRoot[:],
 			ChildRoot:  previousRoot,
 		}
 
@@ -112,7 +113,8 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		}
 
 		// Found parent, loop exit condition.
-		if parentBytes := bkt.Get(block.ParentRoot()); parentBytes != nil {
+		pr := block.ParentRoot()
+		if parentBytes := bkt.Get(pr[:]); parentBytes != nil {
 			parent := &ethpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, parentBytes, parent); err != nil {
 				tracing.AnnotateError(span, err)
@@ -124,14 +126,14 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 				tracing.AnnotateError(span, err)
 				return err
 			}
-			if err := bkt.Put(block.ParentRoot(), enc); err != nil {
+			if err := bkt.Put(pr[:], enc); err != nil {
 				tracing.AnnotateError(span, err)
 				return err
 			}
 			break
 		}
 		previousRoot = root
-		root = block.ParentRoot()
+		root = pr[:]
 	}
 
 	// Upsert blocks from the current finalized epoch.
