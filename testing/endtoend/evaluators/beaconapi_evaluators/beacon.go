@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -92,8 +93,9 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(string(b)) != string(a) {
-		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", string(a), strings.TrimSpace(string(b)))
+
+	if removeSpace(string(b)) != removeSpace(string(a)) {
+		return fmt.Errorf("API response:%v  does not equal deterministic static value %v", removeSpace(string(a)), removeSpace(string(b)))
 	}
 
 	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
@@ -117,6 +119,15 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			hexutil.Encode(blockroot.Data.Root))
 	}
 	return nil
+}
+func removeSpace(s string) string {
+	rr := make([]rune, 0, len(s))
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			rr = append(rr, r)
+		}
+	}
+	return string(rr)
 }
 
 // GET "/eth/v1/beacon/blocks/{block_id}/attestations"
