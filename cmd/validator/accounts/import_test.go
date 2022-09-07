@@ -36,13 +36,14 @@ func TestImport_Noninteractive(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	newKm, err := local.NewKeymanager(
 		cliCtx.Context,
@@ -93,13 +94,14 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	// Create a key and then copy it to create a duplicate
@@ -141,13 +143,14 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	newKm, err := local.NewKeymanager(
 		cliCtx.Context,
@@ -224,13 +227,14 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	newKm, err := local.NewKeymanager(
 		cliCtx.Context,

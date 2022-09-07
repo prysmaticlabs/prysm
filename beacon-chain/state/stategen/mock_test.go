@@ -16,7 +16,6 @@ import (
 	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -65,7 +64,7 @@ func TestMockHistoryParentRoot(t *testing.T) {
 	endBlock, err := hist.Block(ctx, endRoot)
 	require.NoError(t, err)
 	// middle should be the parent of end, compare the middle root to endBlock's parent root
-	require.Equal(t, hist.slotMap[middle], bytesutil.ToBytes32(endBlock.Block().ParentRoot()))
+	require.Equal(t, hist.slotMap[middle], endBlock.Block().ParentRoot())
 }
 
 type mockHistorySpec struct {

@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
 	"github.com/urfave/cli/v2"
@@ -160,13 +159,14 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		// Flags required for DeleteAccounts to work.
 		deletePublicKeys: deletePublicKeys,
 	})
-	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(password),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 
 	// We attempt to import accounts.

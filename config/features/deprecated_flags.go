@@ -96,6 +96,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableNativeState,
 }
 
+// deprecatedBeaconFlags contains flags that are still used by other components
+// and therefore cannot be added to deprecatedFlags
 var deprecatedBeaconFlags = []cli.Flag{
 	deprecatedBackupWebHookFlag,
 }
