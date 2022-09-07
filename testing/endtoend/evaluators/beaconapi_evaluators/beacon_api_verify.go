@@ -24,11 +24,19 @@ func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconBlocks,
 	}
+	validator := []apiComparisonFunc{
+		withCompareAttesterDuties,
+	}
+	node := []apiComparisonFunc{
+		withCompareNodeMetaData,
+	}
+	compareFns := append(beacon, validator...)
+	compareFns = append(compareFns, node...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
-			beacon...,
+			compareFns...,
 		); err != nil {
 			return err
 		}
