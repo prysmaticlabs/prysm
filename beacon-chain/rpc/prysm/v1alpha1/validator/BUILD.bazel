@@ -191,7 +191,6 @@ go_test(
     timeout = "moderate",
     srcs = [
         "attester_mainnet_test.go",
-        "proposer_bellatrix_mainnet_test.go",
         "server_mainnet_test.go",
         "status_mainnet_test.go",
     ],
