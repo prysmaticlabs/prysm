@@ -56,7 +56,7 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.HasProposerSettings() {
-		log.Infoln("Proposer Settings have been provided will periodically update and override settings such as fee recipient in the related services")
+		log.Infoln("Provided proposer settings will periodically update settings such as fee recipient in the beacon node and custom builder if enabled")
 		if err := v.PushProposerSettings(ctx, km); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
