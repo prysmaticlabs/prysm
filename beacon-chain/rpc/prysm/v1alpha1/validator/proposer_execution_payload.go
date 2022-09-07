@@ -72,7 +72,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
 			return payload, nil
-		case errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded):
+		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
