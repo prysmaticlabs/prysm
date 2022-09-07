@@ -65,14 +65,17 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
 	}
 	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
-		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-			WalletCfg: &wallet.Config{
-				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Local,
-				WalletPassword: req.WalletPassword,
-			},
-			SkipMnemonicConfirm: true,
-		})
+		opts := []accounts.Option{
+			accounts.WithWalletDir(walletDir),
+			accounts.WithKeymanagerType(keymanager.Local),
+			accounts.WithWalletPassword(req.WalletPassword),
+			accounts.WithSkipMnemonicConfirm(true),
+		}
+		acc, err := accounts.NewCLIManager(opts...)
+		if err != nil {
+			return nil, err
+		}
+		_, err = acc.WalletCreate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +226,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // can indeed be decrypted using a password in the request. If there is no issue,
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
-func (_ *Server) ValidateKeystores(
+func (*Server) ValidateKeystores(
 	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {

@@ -94,7 +94,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if len(lastValidHash) == 0 {
 				lastValidHash = defaultLatestValidHash
 			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				log.WithError(err).Error("Could not set head root to invalid")
 				return nil, nil
@@ -107,9 +107,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
 				log.WithFields(logrus.Fields{
-					"slot":         headBlk.Slot(),
-					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-					"invalidCount": len(invalidRoots),
+					"slot":                 headBlk.Slot(),
+					"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidChildrenCount": len(invalidRoots),
 				}).Warn("Pruned invalid blocks, could not update head root")
 				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
@@ -137,10 +137,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			}
 
 			log.WithFields(logrus.Fields{
-				"slot":         headBlk.Slot(),
-				"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-				"invalidCount": len(invalidRoots),
-				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
+				"slot":                 headBlk.Slot(),
+				"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+				"invalidChildrenCount": len(invalidRoots),
+				"newHeadRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
 			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 
@@ -229,7 +229,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		if err != nil {
 			return false, err
 		}
-		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(blk.Block().ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, blk.Block().ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 		if err != nil {
 			return false, err
 		}
@@ -237,9 +237,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			return false, err
 		}
 		log.WithFields(logrus.Fields{
-			"slot":         blk.Block().Slot(),
-			"blockRoot":    fmt.Sprintf("%#x", root),
-			"invalidCount": len(invalidRoots),
+			"slot":                 blk.Block().Slot(),
+			"blockRoot":            fmt.Sprintf("%#x", root),
+			"invalidChildrenCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
 		return false, invalidBlock{
 			invalidAncestorRoots: invalidRoots,
@@ -269,7 +269,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
-	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	parent, err := s.getBlock(ctx, blk.ParentRoot())
 	if err != nil {
 		return err
 	}

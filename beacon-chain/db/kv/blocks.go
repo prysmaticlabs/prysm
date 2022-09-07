@@ -722,10 +722,10 @@ func createBlockIndicesFromBlock(ctx context.Context, block interfaces.BeaconBlo
 	indices := [][]byte{
 		bytesutil.SlotToBytesBigEndian(block.Slot()),
 	}
-	if block.ParentRoot() != nil && len(block.ParentRoot()) > 0 {
-		buckets = append(buckets, blockParentRootIndicesBucket)
-		indices = append(indices, block.ParentRoot())
-	}
+	buckets = append(buckets, blockParentRootIndicesBucket)
+	parentRoot := block.ParentRoot()
+	indices = append(indices, parentRoot[:])
+
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
 	}
