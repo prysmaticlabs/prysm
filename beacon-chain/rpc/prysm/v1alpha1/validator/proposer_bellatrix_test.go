@@ -613,7 +613,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BlockBuilder:           &builderTest.MockBuilderService{},
 	}
-	proposerServer.ProposerSlotIndexCache.SetProposerAndPayloadIDs(65, 40, [8]byte{'a'}, parentRoot)
+	proposerServer.ProposerSlotIndexCache.SetProposerAndPayloadIDs(17, 11, [8]byte{'a'}, parentRoot)
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
