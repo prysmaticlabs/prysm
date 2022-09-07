@@ -91,6 +91,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	s.headLock.RLock()
 	oldHeadBlock, err := s.headBlock()
 	if err != nil {
+		s.headLock.RUnlock()
 		return errors.Wrap(err, "could not get old head block")
 	}
 	oldStateRoot := oldHeadBlock.Block().StateRoot()
