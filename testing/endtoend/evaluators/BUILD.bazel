@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "api_gateway_v1alpha1.go",
+        "api_middleware.go",
         "data.go",
         "execution_engine.go",
         "fee_recipient.go",
@@ -35,6 +36,7 @@ go_library(
         "//math:go_default_library",
         "//network/forks:go_default_library",
         "//proto/eth/service:go_default_library",
+        "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/interop:go_default_library",

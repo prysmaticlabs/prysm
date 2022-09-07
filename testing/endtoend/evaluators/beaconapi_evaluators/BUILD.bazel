@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "api_middleware.go",
         "beacon.go",
+        "beacon_api_verify.go",
         "node.go",
         "types.go",
         "util.go",
@@ -29,8 +29,6 @@ go_library(
         "//testing/endtoend/types:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
     ],

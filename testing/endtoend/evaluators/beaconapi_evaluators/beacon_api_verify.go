@@ -6,12 +6,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-// APIMiddlewareVerifyIntegrity tests our API Middleware for the official Ethereum API.
-// This ensures our API Middleware returns good data compared to gRPC.
-var APIMiddlewareVerifyIntegrity = e2etypes.Evaluator{
-	Name:       "api_middleware_verify_integrity_epoch_%d",
+// BeaconAPIMultiClientVerifyIntegrity tests our API Middleware responses to other beacon nodes such as lighthouse.
+var BeaconAPIMultiClientVerifyIntegrity = e2etypes.Evaluator{
+	Name:       "beacon_api_multi-client_verify_integrity_epoch_%d",
 	Policy:     policies.AllEpochs,
-	Evaluation: apiMiddlewareVerify,
+	Evaluation: beaconAPIVerify,
 }
 
 const (
@@ -21,26 +20,15 @@ const (
 
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
-func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
+func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconBlocks,
-		//withCompareValidatorsEth,
-		//withCompareSyncCommittee,
-		//withCompareBlockAttestations,
 	}
-	validator := []apiComparisonFunc{
-		withCompareAttesterDuties,
-	}
-	node := []apiComparisonFunc{
-		withCompareNodeMetaData,
-	}
-	comparisons := append(beacon, validator...)
-	comparisons = append(comparisons, node...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
-			comparisons...,
+			beacon...,
 		); err != nil {
 			return err
 		}
