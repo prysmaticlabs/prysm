@@ -12,11 +12,8 @@ import (
 )
 
 type fields struct {
-	b20               []byte
-	b32               []byte
-	b48               []byte
-	b96               []byte
-	b256              []byte
+	root              [32]byte
+	sig               [96]byte
 	deposits          []*eth.Deposit
 	atts              []*eth.Attestation
 	proposerSlashings []*eth.ProposerSlashing
@@ -35,11 +32,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Block: &eth.BeaconBlock{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    f.b32,
-				StateRoot:     f.b32,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
 				Body:          bodyPbPhase0(),
 			},
-			Signature: f.b96,
+			Signature: f.sig[:],
 		}
 		block := &SignedBeaconBlock{
 			version: version.Phase0,
@@ -47,11 +44,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				version:       version.Phase0,
 				slot:          128,
 				proposerIndex: 128,
-				parentRoot:    f.b32,
-				stateRoot:     f.b32,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
 				body:          bodyPhase0(),
 			},
-			signature: f.b96,
+			signature: f.sig,
 		}
 
 		result, err := block.Proto()
@@ -69,11 +66,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Block: &eth.BeaconBlockAltair{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    f.b32,
-				StateRoot:     f.b32,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
 				Body:          bodyPbAltair(),
 			},
-			Signature: f.b96,
+			Signature: f.sig[:],
 		}
 		block := &SignedBeaconBlock{
 			version: version.Altair,
@@ -81,11 +78,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				version:       version.Altair,
 				slot:          128,
 				proposerIndex: 128,
-				parentRoot:    f.b32,
-				stateRoot:     f.b32,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
 				body:          bodyAltair(),
 			},
-			signature: f.b96,
+			signature: f.sig,
 		}
 
 		result, err := block.Proto()
@@ -103,11 +100,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Block: &eth.BeaconBlockBellatrix{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    f.b32,
-				StateRoot:     f.b32,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
 				Body:          bodyPbBellatrix(),
 			},
-			Signature: f.b96,
+			Signature: f.sig[:],
 		}
 		block := &SignedBeaconBlock{
 			version: version.Bellatrix,
@@ -115,11 +112,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				version:       version.Bellatrix,
 				slot:          128,
 				proposerIndex: 128,
-				parentRoot:    f.b32,
-				stateRoot:     f.b32,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
 				body:          bodyBellatrix(),
 			},
-			signature: f.b96,
+			signature: f.sig,
 		}
 
 		result, err := block.Proto()
@@ -137,11 +134,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Block: &eth.BlindedBeaconBlockBellatrix{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    f.b32,
-				StateRoot:     f.b32,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
 				Body:          bodyPbBlindedBellatrix(),
 			},
-			Signature: f.b96,
+			Signature: f.sig[:],
 		}
 		block := &SignedBeaconBlock{
 			version: version.Bellatrix,
@@ -149,11 +146,11 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				version:       version.Bellatrix,
 				slot:          128,
 				proposerIndex: 128,
-				parentRoot:    f.b32,
-				stateRoot:     f.b32,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
 				body:          bodyBlindedBellatrix(),
 			},
-			signature: f.b96,
+			signature: f.sig,
 		}
 
 		result, err := block.Proto()
@@ -175,16 +172,16 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := &eth.BeaconBlock{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbPhase0(),
 		}
 		block := &BeaconBlock{
 			version:       version.Phase0,
 			slot:          128,
 			proposerIndex: 128,
-			parentRoot:    f.b32,
-			stateRoot:     f.b32,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
 			body:          bodyPhase0(),
 		}
 
@@ -202,16 +199,16 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := &eth.BeaconBlockAltair{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbAltair(),
 		}
 		block := &BeaconBlock{
 			version:       version.Altair,
 			slot:          128,
 			proposerIndex: 128,
-			parentRoot:    f.b32,
-			stateRoot:     f.b32,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
 			body:          bodyAltair(),
 		}
 
@@ -229,16 +226,16 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := &eth.BeaconBlockBellatrix{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbBellatrix(),
 		}
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
 			slot:          128,
 			proposerIndex: 128,
-			parentRoot:    f.b32,
-			stateRoot:     f.b32,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
 			body:          bodyBellatrix(),
 		}
 
@@ -256,16 +253,16 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := &eth.BlindedBeaconBlockBellatrix{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbBlindedBellatrix(),
 		}
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
 			slot:          128,
 			proposerIndex: 128,
-			parentRoot:    f.b32,
-			stateRoot:     f.b32,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
 			body:          bodyBlindedBellatrix(),
 		}
 
@@ -343,11 +340,11 @@ func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 		Block: &eth.BeaconBlock{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbPhase0(),
 		},
-		Signature: f.b96,
+		Signature: f.sig[:],
 	}
 	resultBlock, err := initSignedBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
@@ -356,7 +353,7 @@ func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
 func Test_initSignedBlockFromProtoAltair(t *testing.T) {
@@ -365,11 +362,11 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 		Block: &eth.BeaconBlockAltair{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbAltair(),
 		},
-		Signature: f.b96,
+		Signature: f.sig[:],
 	}
 	resultBlock, err := initSignedBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
@@ -378,7 +375,7 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
 func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
@@ -387,11 +384,11 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 		Block: &eth.BeaconBlockBellatrix{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbBellatrix(),
 		},
-		Signature: f.b96,
+		Signature: f.sig[:],
 	}
 	resultBlock, err := initSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
@@ -400,7 +397,7 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
 func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
@@ -409,11 +406,11 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 		Block: &eth.BlindedBeaconBlockBellatrix{
 			Slot:          128,
 			ProposerIndex: 128,
-			ParentRoot:    f.b32,
-			StateRoot:     f.b32,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
 			Body:          bodyPbBlindedBellatrix(),
 		},
-		Signature: f.b96,
+		Signature: f.sig[:],
 	}
 	resultBlock, err := initBlindedSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
@@ -422,7 +419,7 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
 func Test_initBlockFromProtoPhase0(t *testing.T) {
@@ -430,8 +427,8 @@ func Test_initBlockFromProtoPhase0(t *testing.T) {
 	expectedBlock := &eth.BeaconBlock{
 		Slot:          128,
 		ProposerIndex: 128,
-		ParentRoot:    f.b32,
-		StateRoot:     f.b32,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
 		Body:          bodyPbPhase0(),
 	}
 	resultBlock, err := initBlockFromProtoPhase0(expectedBlock)
@@ -448,8 +445,8 @@ func Test_initBlockFromProtoAltair(t *testing.T) {
 	expectedBlock := &eth.BeaconBlockAltair{
 		Slot:          128,
 		ProposerIndex: 128,
-		ParentRoot:    f.b32,
-		StateRoot:     f.b32,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
 		Body:          bodyPbAltair(),
 	}
 	resultBlock, err := initBlockFromProtoAltair(expectedBlock)
@@ -466,8 +463,8 @@ func Test_initBlockFromProtoBellatrix(t *testing.T) {
 	expectedBlock := &eth.BeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
-		ParentRoot:    f.b32,
-		StateRoot:     f.b32,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
 		Body:          bodyPbBellatrix(),
 	}
 	resultBlock, err := initBlockFromProtoBellatrix(expectedBlock)
@@ -484,8 +481,8 @@ func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
 	expectedBlock := &eth.BlindedBeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
-		ParentRoot:    f.b32,
-		StateRoot:     f.b32,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
 		Body:          bodyPbBlindedBellatrix(),
 	}
 	resultBlock, err := initBlindedBlockFromProtoBellatrix(expectedBlock)
@@ -544,13 +541,13 @@ func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
 func bodyPbPhase0() *eth.BeaconBlockBody {
 	f := getFields()
 	return &eth.BeaconBlockBody{
-		RandaoReveal: f.b96,
+		RandaoReveal: f.sig[:],
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		Graffiti:          f.b32,
+		Graffiti:          f.root[:],
 		ProposerSlashings: f.proposerSlashings,
 		AttesterSlashings: f.attesterSlashings,
 		Attestations:      f.atts,
@@ -562,13 +559,13 @@ func bodyPbPhase0() *eth.BeaconBlockBody {
 func bodyPbAltair() *eth.BeaconBlockBodyAltair {
 	f := getFields()
 	return &eth.BeaconBlockBodyAltair{
-		RandaoReveal: f.b96,
+		RandaoReveal: f.sig[:],
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		Graffiti:          f.b32,
+		Graffiti:          f.root[:],
 		ProposerSlashings: f.proposerSlashings,
 		AttesterSlashings: f.attesterSlashings,
 		Attestations:      f.atts,
@@ -581,13 +578,13 @@ func bodyPbAltair() *eth.BeaconBlockBodyAltair {
 func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
 	f := getFields()
 	return &eth.BeaconBlockBodyBellatrix{
-		RandaoReveal: f.b96,
+		RandaoReveal: f.sig[:],
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		Graffiti:          f.b32,
+		Graffiti:          f.root[:],
 		ProposerSlashings: f.proposerSlashings,
 		AttesterSlashings: f.attesterSlashings,
 		Attestations:      f.atts,
@@ -601,13 +598,13 @@ func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
 func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
 	f := getFields()
 	return &eth.BlindedBeaconBlockBodyBellatrix{
-		RandaoReveal: f.b96,
+		RandaoReveal: f.sig[:],
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		Graffiti:               f.b32,
+		Graffiti:               f.root[:],
 		ProposerSlashings:      f.proposerSlashings,
 		AttesterSlashings:      f.attesterSlashings,
 		Attestations:           f.atts,
@@ -622,13 +619,13 @@ func bodyPhase0() *BeaconBlockBody {
 	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Phase0,
-		randaoReveal: f.b96,
+		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		graffiti:          f.b32,
+		graffiti:          f.root,
 		proposerSlashings: f.proposerSlashings,
 		attesterSlashings: f.attesterSlashings,
 		attestations:      f.atts,
@@ -641,13 +638,13 @@ func bodyAltair() *BeaconBlockBody {
 	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Altair,
-		randaoReveal: f.b96,
+		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		graffiti:          f.b32,
+		graffiti:          f.root,
 		proposerSlashings: f.proposerSlashings,
 		attesterSlashings: f.attesterSlashings,
 		attestations:      f.atts,
@@ -661,13 +658,13 @@ func bodyBellatrix() *BeaconBlockBody {
 	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
-		randaoReveal: f.b96,
+		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		graffiti:          f.b32,
+		graffiti:          f.root,
 		proposerSlashings: f.proposerSlashings,
 		attesterSlashings: f.attesterSlashings,
 		attestations:      f.atts,
@@ -683,13 +680,13 @@ func bodyBlindedBellatrix() *BeaconBlockBody {
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		isBlinded:    true,
-		randaoReveal: f.b96,
+		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.root[:],
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.root[:],
 		},
-		graffiti:               f.b32,
+		graffiti:               f.root,
 		proposerSlashings:      f.proposerSlashings,
 		attesterSlashings:      f.attesterSlashings,
 		attestations:           f.atts,
@@ -702,45 +699,45 @@ func bodyBlindedBellatrix() *BeaconBlockBody {
 
 func getFields() fields {
 	b20 := make([]byte, 20)
-	b32 := make([]byte, 32)
 	b48 := make([]byte, 48)
-	b96 := make([]byte, 96)
 	b256 := make([]byte, 256)
+	var root [32]byte
+	var sig [96]byte
 	b20[0], b20[5], b20[10] = 'q', 'u', 'x'
-	b32[0], b32[5], b32[10] = 'f', 'o', 'o'
 	b48[0], b48[5], b48[10] = 'b', 'a', 'r'
-	b96[0], b96[5], b96[10] = 'b', 'a', 'z'
 	b256[0], b256[5], b256[10] = 'x', 'y', 'z'
+	root[0], root[5], root[10] = 'a', 'b', 'c'
+	sig[0], sig[5], sig[10] = 'd', 'e', 'f'
 	deposits := make([]*eth.Deposit, 16)
 	for i := range deposits {
 		deposits[i] = &eth.Deposit{}
 		deposits[i].Proof = make([][]byte, 33)
 		for j := range deposits[i].Proof {
-			deposits[i].Proof[j] = b32
+			deposits[i].Proof[j] = root[:]
 		}
 		deposits[i].Data = &eth.Deposit_Data{
 			PublicKey:             b48,
-			WithdrawalCredentials: b32,
+			WithdrawalCredentials: root[:],
 			Amount:                128,
-			Signature:             b96,
+			Signature:             sig[:],
 		}
 	}
 	atts := make([]*eth.Attestation, 128)
 	for i := range atts {
 		atts[i] = &eth.Attestation{}
-		atts[i].Signature = b96
+		atts[i].Signature = sig[:]
 		atts[i].AggregationBits = bitfield.NewBitlist(1)
 		atts[i].Data = &eth.AttestationData{
 			Slot:            128,
 			CommitteeIndex:  128,
-			BeaconBlockRoot: b32,
+			BeaconBlockRoot: root[:],
 			Source: &eth.Checkpoint{
 				Epoch: 128,
-				Root:  b32,
+				Root:  root[:],
 			},
 			Target: &eth.Checkpoint{
 				Epoch: 128,
-				Root:  b32,
+				Root:  root[:],
 			},
 		}
 	}
@@ -749,21 +746,21 @@ func getFields() fields {
 			Header: &eth.BeaconBlockHeader{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    b32,
-				StateRoot:     b32,
-				BodyRoot:      b32,
+				ParentRoot:    root[:],
+				StateRoot:     root[:],
+				BodyRoot:      root[:],
 			},
-			Signature: b96,
+			Signature: sig[:],
 		},
 		Header_2: &eth.SignedBeaconBlockHeader{
 			Header: &eth.BeaconBlockHeader{
 				Slot:          128,
 				ProposerIndex: 128,
-				ParentRoot:    b32,
-				StateRoot:     b32,
-				BodyRoot:      b32,
+				ParentRoot:    root[:],
+				StateRoot:     root[:],
+				BodyRoot:      root[:],
 			},
-			Signature: b96,
+			Signature: sig[:],
 		},
 	}
 	attesterSlashing := &eth.AttesterSlashing{
@@ -772,34 +769,34 @@ func getFields() fields {
 			Data: &eth.AttestationData{
 				Slot:            128,
 				CommitteeIndex:  128,
-				BeaconBlockRoot: b32,
+				BeaconBlockRoot: root[:],
 				Source: &eth.Checkpoint{
 					Epoch: 128,
-					Root:  b32,
+					Root:  root[:],
 				},
 				Target: &eth.Checkpoint{
 					Epoch: 128,
-					Root:  b32,
+					Root:  root[:],
 				},
 			},
-			Signature: b96,
+			Signature: sig[:],
 		},
 		Attestation_2: &eth.IndexedAttestation{
 			AttestingIndices: []uint64{1, 2, 8},
 			Data: &eth.AttestationData{
 				Slot:            128,
 				CommitteeIndex:  128,
-				BeaconBlockRoot: b32,
+				BeaconBlockRoot: root[:],
 				Source: &eth.Checkpoint{
 					Epoch: 128,
-					Root:  b32,
+					Root:  root[:],
 				},
 				Target: &eth.Checkpoint{
 					Epoch: 128,
-					Root:  b32,
+					Root:  root[:],
 				},
 			},
-			Signature: b96,
+			Signature: sig[:],
 		},
 	}
 	voluntaryExit := &eth.SignedVoluntaryExit{
@@ -807,7 +804,7 @@ func getFields() fields {
 			Epoch:          128,
 			ValidatorIndex: 128,
 		},
-		Signature: b96,
+		Signature: sig[:],
 	}
 	syncCommitteeBits := bitfield.NewBitvector512()
 	syncCommitteeBits.SetBitAt(1, true)
@@ -815,22 +812,22 @@ func getFields() fields {
 	syncCommitteeBits.SetBitAt(8, true)
 	syncAggregate := &eth.SyncAggregate{
 		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: b96,
+		SyncCommitteeSignature: sig[:],
 	}
 	execPayload := &enginev1.ExecutionPayload{
-		ParentHash:    b32,
+		ParentHash:    root[:],
 		FeeRecipient:  b20,
-		StateRoot:     b32,
-		ReceiptsRoot:  b32,
+		StateRoot:     root[:],
+		ReceiptsRoot:  root[:],
 		LogsBloom:     b256,
-		PrevRandao:    b32,
+		PrevRandao:    root[:],
 		BlockNumber:   128,
 		GasLimit:      128,
 		GasUsed:       128,
 		Timestamp:     128,
-		ExtraData:     b32,
-		BaseFeePerGas: b32,
-		BlockHash:     b32,
+		ExtraData:     root[:],
+		BaseFeePerGas: root[:],
+		BlockHash:     root[:],
 		Transactions: [][]byte{
 			[]byte("transaction1"),
 			[]byte("transaction2"),
@@ -838,28 +835,25 @@ func getFields() fields {
 		},
 	}
 	execPayloadHeader := &enginev1.ExecutionPayloadHeader{
-		ParentHash:       b32,
+		ParentHash:       root[:],
 		FeeRecipient:     b20,
-		StateRoot:        b32,
-		ReceiptsRoot:     b32,
+		StateRoot:        root[:],
+		ReceiptsRoot:     root[:],
 		LogsBloom:        b256,
-		PrevRandao:       b32,
+		PrevRandao:       root[:],
 		BlockNumber:      128,
 		GasLimit:         128,
 		GasUsed:          128,
 		Timestamp:        128,
-		ExtraData:        b32,
-		BaseFeePerGas:    b32,
-		BlockHash:        b32,
-		TransactionsRoot: b32,
+		ExtraData:        root[:],
+		BaseFeePerGas:    root[:],
+		BlockHash:        root[:],
+		TransactionsRoot: root[:],
 	}
 
 	return fields{
-		b20:               b20,
-		b32:               b32,
-		b48:               b48,
-		b96:               b96,
-		b256:              b256,
+		root:              root,
+		sig:               sig,
 		deposits:          deposits,
 		atts:              atts,
 		proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},

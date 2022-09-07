@@ -104,7 +104,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check if parent is a bad block and then reject the block.
-	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if s.hasBadBlock(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		err := fmt.Errorf("received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block().ParentRoot())
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Received block with an invalid parent")
@@ -161,7 +161,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.chain.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -198,11 +198,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
+	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
 		"sinceSlotStartTime": receivedTime.Sub(startTime),
 		"proposerIndex":      blk.Block().ProposerIndex(),
-		"graffiti":           string(blk.Block().Body().Graffiti()),
+		"graffiti":           string(graffiti[:]),
 	}).Debug("Received block")
 
 	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
@@ -213,12 +214,12 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, blk.Block().ParentRoot()); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 
-	parentState, err := s.cfg.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -229,7 +230,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	}
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
-	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
+	parentRoot := blk.Block().ParentRoot()
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
 	if err != nil {
 		return err
 	}
@@ -296,8 +298,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 		return errors.New("incorrect timestamp")
 	}
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
+	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, blk.ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -373,10 +374,11 @@ func getBlockFields(b interfaces.SignedBeaconBlock) logrus.Fields {
 	if consensusblocks.BeaconBlockIsNil(b) != nil {
 		return logrus.Fields{}
 	}
+	graffiti := b.Block().Body().Graffiti()
 	return logrus.Fields{
 		"slot":          b.Block().Slot(),
 		"proposerIndex": b.Block().ProposerIndex(),
-		"graffiti":      string(b.Block().Body().Graffiti()),
+		"graffiti":      string(graffiti[:]),
 		"version":       b.Block().Version(),
 	}
 }

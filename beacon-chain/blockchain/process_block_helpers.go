@@ -39,7 +39,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 		return nil, err
 	}
 
-	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRoot(ctx, b.ParentRoot())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
@@ -65,7 +65,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
-	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+	parentRoot := b.ParentRoot()
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
@@ -73,7 +73,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyFinalizedBlkDescendant(ctx, parentRoot); err != nil {
 		return err
 	}
 
@@ -241,7 +241,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return r[:], nil
 	}
 
-	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
+	return s.ancestorByDB(ctx, b.ParentRoot(), slot)
 }
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
@@ -259,7 +259,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
 		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
-	root := bytesutil.ToBytes32(blk.ParentRoot())
+	root := blk.ParentRoot()
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
 		b, err := s.getBlock(ctx, root)
 		if err != nil {
@@ -268,7 +268,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		if b.Block().Slot() <= fSlot {
 			break
 		}
-		root = bytesutil.ToBytes32(b.Block().ParentRoot())
+		root = b.Block().ParentRoot()
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedCheckpoint: jCheckpoint,
 			FinalizedCheckpoint: fCheckpoint}

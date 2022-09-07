@@ -159,7 +159,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		slot := blk.Block().Slot()
 		graffitiInBlock := blk.Block().Body().Graffiti()
 		for _, graffiti := range helpers.Graffiti {
-			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), graffitiInBlock) {
+			if bytes.Equal(bytesutil.PadTo([]byte(graffiti), 32), graffitiInBlock[:]) {
 				e = true
 				break
 			}

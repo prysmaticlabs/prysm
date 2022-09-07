@@ -88,11 +88,12 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		aggPerf.totalProposedCount++
 		s.aggregatedPerformance[blk.ProposerIndex()] = aggPerf
 
+		parentRoot := blk.ParentRoot()
 		log.WithFields(logrus.Fields{
 			"ProposerIndex": blk.ProposerIndex(),
 			"Slot":          blk.Slot(),
 			"Version":       blk.Version(),
-			"ParentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(blk.ParentRoot())),
+			"ParentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(parentRoot[:])),
 			"BlockRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 			"NewBalance":    balance,
 			"BalanceChange": balanceChg,

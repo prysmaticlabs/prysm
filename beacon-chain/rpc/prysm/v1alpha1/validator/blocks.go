@@ -119,7 +119,8 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	signed := data.SignedBlock
-	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot); err != nil {
+	sig := signed.Signature()
+	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), sig[:], signed.Block().HashTreeRoot); err != nil {
 		log.WithError(err).Error("Could not verify block signature")
 		return nil
 	}

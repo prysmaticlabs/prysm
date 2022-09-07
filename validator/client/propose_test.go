@@ -606,7 +606,8 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			})
 
 			validator.ProposeBlock(context.Background(), 1, pubKey)
-			assert.Equal(t, string(validator.graffiti), string(sentBlock.Block().Body().Graffiti()))
+			g := sentBlock.Block().Body().Graffiti()
+			assert.Equal(t, string(validator.graffiti), string(g[:]))
 			require.LogsContain(t, hook, "Submitted new block")
 		})
 	}
