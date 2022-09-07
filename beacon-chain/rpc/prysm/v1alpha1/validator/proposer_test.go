@@ -2101,10 +2101,6 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	cfg.TerminalBlockHashActivationEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-	/*cachedState := beaconState.Copy()
-	require.NoError(t, cachedState.SetSlot(33))
-	cacheKey := [32]byte{108, 72, 225, 104, 85, 145, 235, 172, 21, 133, 73, 92, 186, 81, 41, 153, 217, 126, 128, 236, 49, 221, 175, 5, 9, 58, 121, 255, 4, 166, 57, 152}
-	transition.SkipSlotCache.Put(ctx, cacheKey, cachedState)*/
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -2225,7 +2221,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	// Operator sets default fee recipient to not be burned through beacon node cli.
 	newHook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
-	cfg = params.BeaconConfig().Copy()
+	cfg = params.MinimalSpecConfig().Copy()
 	cfg.DefaultFeeRecipient = common.Address{'b'}
 	params.OverrideBeaconConfig(cfg)
 	_, err = proposerServer.GetBeaconBlock(ctx, req)
