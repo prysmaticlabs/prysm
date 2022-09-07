@@ -179,7 +179,7 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 }
 
 // PushProposerSettings for mocking
-func (_ MockValidator) HasProposerSettings() bool {
+func (MockValidator) HasProposerSettings() bool {
 	panic("implement me")
 }
 
