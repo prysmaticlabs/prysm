@@ -3,6 +3,7 @@ package blocks
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -21,7 +22,7 @@ func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
 }
 
 // Signature returns the respective block signature.
-func (b *SignedBeaconBlock) Signature() []byte {
+func (b *SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	return b.signature
 }
 
@@ -166,12 +167,12 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 			Block: &eth.BlindedBeaconBlockBellatrix{
 				Slot:          b.block.slot,
 				ProposerIndex: b.block.proposerIndex,
-				ParentRoot:    b.block.parentRoot,
-				StateRoot:     b.block.stateRoot,
+				ParentRoot:    b.block.parentRoot[:],
+				StateRoot:     b.block.stateRoot[:],
 				Body: &eth.BlindedBeaconBlockBodyBellatrix{
-					RandaoReveal:           b.block.body.randaoReveal,
+					RandaoReveal:           b.block.body.randaoReveal[:],
 					Eth1Data:               b.block.body.eth1Data,
-					Graffiti:               b.block.body.graffiti,
+					Graffiti:               b.block.body.graffiti[:],
 					ProposerSlashings:      b.block.body.proposerSlashings,
 					AttesterSlashings:      b.block.body.attesterSlashings,
 					Attestations:           b.block.body.attestations,
@@ -181,7 +182,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 					ExecutionPayloadHeader: header,
 				},
 			},
-			Signature: b.signature,
+			Signature: b.signature[:],
 		})
 }
 
@@ -208,11 +209,11 @@ func (b *SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 		Header: &eth.BeaconBlockHeader{
 			Slot:          b.block.slot,
 			ProposerIndex: b.block.proposerIndex,
-			ParentRoot:    b.block.parentRoot,
-			StateRoot:     b.block.stateRoot,
+			ParentRoot:    b.block.parentRoot[:],
+			StateRoot:     b.block.stateRoot[:],
 			BodyRoot:      root[:],
 		},
-		Signature: b.signature,
+		Signature: b.signature[:],
 	}, nil
 }
 
@@ -349,12 +350,12 @@ func (b *BeaconBlock) ProposerIndex() types.ValidatorIndex {
 }
 
 // ParentRoot returns the parent root of beacon block.
-func (b *BeaconBlock) ParentRoot() []byte {
+func (b *BeaconBlock) ParentRoot() [field_params.RootLength]byte {
 	return b.parentRoot
 }
 
 // StateRoot returns the state root of the beacon block.
-func (b *BeaconBlock) StateRoot() []byte {
+func (b *BeaconBlock) StateRoot() [field_params.RootLength]byte {
 	return b.stateRoot
 }
 
@@ -379,10 +380,10 @@ func (b *BeaconBlock) Version() int {
 }
 
 // HashTreeRoot returns the ssz root of the block.
-func (b *BeaconBlock) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	pb, err := b.Proto()
 	if err != nil {
-		return [32]byte{}, err
+		return [field_params.RootLength]byte{}, err
 	}
 	switch b.version {
 	case version.Phase0:
@@ -395,7 +396,7 @@ func (b *BeaconBlock) HashTreeRoot() ([32]byte, error) {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).HashTreeRoot()
 	default:
-		return [32]byte{}, errIncorrectBlockVersion
+		return [field_params.RootLength]byte{}, errIncorrectBlockVersion
 	}
 }
 
@@ -570,7 +571,7 @@ func (b *BeaconBlockBody) IsNil() bool {
 }
 
 // RandaoReveal returns the randao reveal from the block body.
-func (b *BeaconBlockBody) RandaoReveal() []byte {
+func (b *BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	return b.randaoReveal
 }
 
@@ -580,7 +581,7 @@ func (b *BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 }
 
 // Graffiti returns the graffiti in the block.
-func (b *BeaconBlockBody) Graffiti() []byte {
+func (b *BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	return b.graffiti
 }
 
@@ -633,10 +634,10 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 }
 
 // HashTreeRoot returns the ssz root of the block body.
-func (b *BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	pb, err := b.Proto()
 	if err != nil {
-		return [32]byte{}, err
+		return [field_params.RootLength]byte{}, err
 	}
 	switch b.version {
 	case version.Phase0:
@@ -649,6 +650,6 @@ func (b *BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 		}
 		return pb.(*eth.BeaconBlockBodyBellatrix).HashTreeRoot()
 	default:
-		return [32]byte{}, errIncorrectBodyVersion
+		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}
 }

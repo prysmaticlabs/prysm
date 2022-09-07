@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -247,7 +246,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeac
 			return nil, err
 		}
 		parentValid := *prevRoot != [32]byte{}
-		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block().ParentRoot())
+		isLinear := *prevRoot == b.Block().ParentRoot()
 		isSingular := step == 1
 		slotDiff, err := b.Block().Slot().SafeSubSlot(startSlot)
 		if err != nil {
