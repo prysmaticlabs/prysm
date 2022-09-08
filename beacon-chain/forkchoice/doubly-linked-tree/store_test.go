@@ -12,15 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-func TestStore_PruneThreshold(t *testing.T) {
-	s := &Store{
-		pruneThreshold: defaultPruneThreshold,
-	}
-	if got := s.PruneThreshold(); got != defaultPruneThreshold {
-		t.Errorf("PruneThreshold() = %v, want %v", got, defaultPruneThreshold)
-	}
-}
-
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
 	f := setup(j, j)
@@ -154,30 +145,6 @@ func TestStore_Insert(t *testing.T) {
 	assert.Equal(t, indexToHash(100), child.root, "Incorrect root")
 }
 
-func TestStore_Prune_LessThanThreshold(t *testing.T) {
-	// Define 100 nodes in store.
-	numOfNodes := uint64(100)
-	f := setup(0, 0)
-	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	for i := uint64(2); i < numOfNodes; i++ {
-		state, blkRoot, err = prepareForkchoiceState(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0)
-		require.NoError(t, err)
-		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	}
-
-	s := f.store
-	s.pruneThreshold = 100
-
-	// Finalized root has depth 99 so everything before it should be pruned,
-	// but PruneThreshold is at 100 so nothing will be pruned.
-	s.finalizedCheckpoint.Root = indexToHash(99)
-	require.NoError(t, s.prune(context.Background()))
-	assert.Equal(t, 100, len(s.nodeByRoot), "Incorrect nodes count")
-}
-
 func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	// Define 100 nodes in store.
 	numOfNodes := uint64(100)
@@ -193,7 +160,6 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	}
 
 	s := f.store
-	s.pruneThreshold = 0
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
 	s.finalizedCheckpoint.Root = indexToHash(99)
@@ -216,7 +182,6 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	}
 
 	s := f.store
-	s.pruneThreshold = 0
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
 	s.finalizedCheckpoint.Root = indexToHash(10)
@@ -227,6 +192,25 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(20)
 	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
+}
+
+func TestStore_Prune_ReturnEarly(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	for i := uint64(2); i < numOfNodes; i++ {
+		state, blkRoot, err = prepareForkchoiceState(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	}
+	require.NoError(t, f.store.prune(ctx))
+	nodeCount := f.NodeCount()
+	require.NoError(t, f.store.prune(ctx))
+	require.Equal(t, nodeCount, f.NodeCount())
 }
 
 // This unit tests starts with a simple branch like this
@@ -245,7 +229,6 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	f.store.pruneThreshold = 0
 
 	s := f.store
 	s.finalizedCheckpoint.Root = indexToHash(1)
@@ -330,7 +313,6 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	s := f.store
-	s.pruneThreshold = 0
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
