@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -131,12 +132,13 @@ func BlockContainsKZGs(b interfaces.BeaconBlock) bool {
 
 // hashToBLSField implements hash_to_bls_field in the EIP-4844 spec, placing the computed field
 // element in r and returning error if there was a failure computing the hash.
-func hashToBLSField(r *bls.Fr, container ssz.HashRoot) error {
-	h, err := container.HashTreeRoot()
+func hashToBLSField(r *bls.Fr, container ssz.Marshaler) error {
+	ssz, err := container.MarshalSSZ()
 	if err != nil {
 		return err
 	}
-	hashToFr(r, h)
+
+	hashToFr(r, hash.Hash(ssz))
 	return nil
 }
 
