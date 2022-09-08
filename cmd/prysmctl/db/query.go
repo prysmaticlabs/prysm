@@ -20,9 +20,8 @@ var queryFlags = struct {
 }{}
 
 var queryCmd = &cli.Command{
-	Name:    "search",
-	Aliases: []string{"cpt"},
-	Usage:   "database search tool",
+	Name:    "query",
+	Usage:   "database query tool",
 	Action:  queryAction,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -42,7 +41,7 @@ var queryCmd = &cli.Command{
 		},
 		&cli.BoolFlag{
 			Name:        "print-keys",
-			Usage:       "only display keys for matching records",
+			Usage:       "only display keys, not values",
 			Destination: &queryFlags.KeysOnly,
 		},
 	},
@@ -72,8 +71,6 @@ func prefixScan(db *bolt.DB, bucket, prefix string, keysOnly bool) error {
 	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		c := b.Cursor()
-		//s := b.Stats()
-		//log.Infof("bucket \"%s\" has %d key/val pairs", bucket, s.KeyN)
 		for k, _ := c.Seek(pb); k != nil && bytes.HasPrefix(k, pb); k, _ = c.Next() {
 			fmt.Printf("%#x\n", k)
 		}
