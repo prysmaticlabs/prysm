@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -63,7 +64,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 
-		if respJSONPrysm.Data.Signature != respJSONLighthouse.Data.Signature {
+		if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
 			p, err := json.Marshal(respJSONPrysm)
 			if err != nil {
 				return err
@@ -105,6 +106,12 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		}
 
 		if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
+			return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+				respJSONPrysm.Data.Signature,
+				hexutil.Encode(resp.Data.Signature))
+		}
+
+		if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
 			p, err := json.Marshal(respJSONPrysm)
 			if err != nil {
 				return err
