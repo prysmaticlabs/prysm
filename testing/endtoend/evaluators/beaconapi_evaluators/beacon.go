@@ -1,6 +1,7 @@
 package beaconapi_evaluators
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +21,6 @@ import (
 // GET "/eth/v1/beacon/blocks/{block_id}"
 // GET "/eth/v1/beacon/blocks/{block_id}/root"
 func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
-
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
 	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
@@ -78,6 +78,31 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				string(l))
 		}
 
+		sszrspL, err := doMiddlewareSSZGetRequest(
+			v1MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			"lighthouse",
+		)
+		if err != nil {
+			return err
+		}
+
+		sszrspP, err := doMiddlewareSSZGetRequest(
+			v1MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+		)
+		if err != nil {
+			return err
+		}
+
+		if !bytes.Equal(sszrspL, sszrspP) {
+			return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+				hexutil.Encode(sszrspP),
+				hexutil.Encode(sszrspL))
+		}
+
 	} else {
 		resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
 			BlockId: []byte("head"),
@@ -123,6 +148,31 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			return fmt.Errorf("prysm response %s does not match lighthouse response %s",
 				string(p),
 				string(l))
+		}
+
+		sszrspL, err := doMiddlewareSSZGetRequest(
+			v2MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+			"lighthouse",
+		)
+		if err != nil {
+			return err
+		}
+
+		sszrspP, err := doMiddlewareSSZGetRequest(
+			v2MiddlewarePathTemplate,
+			"/beacon/blocks/head",
+			beaconNodeIdx,
+		)
+		if err != nil {
+			return err
+		}
+
+		if !bytes.Equal(sszrspL, sszrspP) {
+			return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+				hexutil.Encode(sszrspP),
+				hexutil.Encode(sszrspL))
 		}
 	}
 
