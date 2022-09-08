@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -18,8 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
@@ -704,6 +707,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 		name    string
 		args    *validatorserviceconfig.ProposerSettings
 		want    *want
+		cached  *eth.FeeRecipientByPubKeyResponse
 		wantErr bool
 	}{
 		{
@@ -724,6 +728,26 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Happy Path Test Cached",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+				},
+			},
+			want: &want{
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			cached: &eth.FeeRecipientByPubKeyResponse{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9").Bytes(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "empty settings",
 			args: nil,
 			want: &want{
@@ -734,13 +758,19 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator:        &mock.MockValidator{},
 				ProposerSettings: tt.args,
 			})
 			require.NoError(t, err)
+			if tt.args == nil || tt.args.ProposeConfig == nil {
+				mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(tt.cached, nil)
+			}
 			s := &Server{
-				validatorService: vs,
+				validatorService:          vs,
+				beaconNodeValidatorClient: mockValidatorClient,
 			}
 			got, err := s.ListFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
