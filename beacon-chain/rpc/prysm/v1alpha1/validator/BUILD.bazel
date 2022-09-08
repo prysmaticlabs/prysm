@@ -183,10 +183,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     eth_network = "minimal",
-    tags = [
-        "minimal",
-        "no-cache",  # Preston needs to fix this!
-    ],
+    tags = ["minimal"],
     deps = common_deps,
 )
 
