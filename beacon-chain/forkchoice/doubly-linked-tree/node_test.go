@@ -140,25 +140,6 @@ func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	assert.Equal(t, s.treeRootNode.children[0], s.treeRootNode.bestDescendant)
 }
 
-func TestNode_TestDepth(t *testing.T) {
-	f := setup(1, 1)
-	ctx := context.Background()
-	// Input child is best descendant
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 3, indexToHash(3), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-
-	s := f.store
-	require.Equal(t, s.nodeByRoot[indexToHash(2)].depth(), uint64(2))
-	require.Equal(t, s.nodeByRoot[indexToHash(3)].depth(), uint64(1))
-}
-
 func TestNode_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
