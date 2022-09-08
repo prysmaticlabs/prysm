@@ -68,11 +68,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
 		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
-		if err != nil {
-			return nil, err
+		switch {
+		case err == nil:
+			warnIfFeeRecipientDiffers(payload, feeRecipient)
+			return payload, nil
+		case errors.Is(err, context.DeadlineExceeded):
+		default:
+			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
-		warnIfFeeRecipientDiffers(payload, feeRecipient)
-		return payload, nil
 	}
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
