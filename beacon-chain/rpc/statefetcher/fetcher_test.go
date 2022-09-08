@@ -241,7 +241,8 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, err)
 		genesisBlock, err := db.GenesisBlock(ctx)
 		require.NoError(t, err)
-		assert.DeepEqual(t, genesisBlock.Block().StateRoot(), s)
+		sr := genesisBlock.Block().StateRoot()
+		assert.DeepEqual(t, sr[:], s)
 	})
 
 	t.Run("finalized", func(t *testing.T) {
