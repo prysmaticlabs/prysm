@@ -212,9 +212,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
 	}
-	if ctx.Bool(enableDefensivePull.Name) {
-		logEnabled(enableDefensivePull)
-		cfg.EnableDefensivePull = true
+	cfg.EnableDefensivePull = true
+	if ctx.Bool(disableDefensivePull.Name) {
+		logEnabled(disableDefensivePull)
+		cfg.EnableDefensivePull = false
 	}
 	if ctx.Bool(disableStakinContractCheck.Name) {
 		logEnabled(disableStakinContractCheck)
