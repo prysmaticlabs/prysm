@@ -45,6 +45,6 @@ func (n *Node) BestDescendant() uint64 {
 }
 
 // VotedFraction is not implemented for protoarray
-func (f *ForkChoice) VotedFraction(root [32]byte) (uint64, error) {
+func (*ForkChoice) VotedFraction(_ [32]byte) (uint64, error) {
 	return 0, nil
 }
