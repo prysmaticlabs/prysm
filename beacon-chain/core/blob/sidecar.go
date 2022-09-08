@@ -154,22 +154,16 @@ func computePowers(x *bls.Fr, n int) []bls.Fr {
 // linComb implements the function lincomb from the EIP-4844 spec
 func linComb(commitments [][]byte, scalars []bls.Fr) ([]byte, error) {
 	n := len(scalars)
-	g1s := make([]*bls.G1Point, n, n)
-	var err error
+	g1s := make([]bls.G1Point, n, n)
 	for i := 0; i < n; i++ {
-		g1s[i], err = bls.FromCompressedG1(commitments[i])
+		g1, err := bls.FromCompressedG1(commitments[i])
 		if err != nil {
 			return nil, err
 		}
+		g1s[i] = *g1
 	}
-	r := bls.ZeroG1
-	// Can theoretically make this faster using a multi-exponential algo but since n is small it
-	// may not matter.
-	for i := 0; i < n; i++ {
-		bls.MulG1(g1s[i], g1s[i], &scalars[i])
-		bls.AddG1(&r, &r, g1s[i])
-	}
-	return bls.ToCompressedG1(&r), nil
+	r := bls.LinCombG1(g1s, scalars)
+	return bls.ToCompressedG1(r), nil
 }
 
 // vectorLinComb implements the function vector_lincomb from the EIP-4844 spec
