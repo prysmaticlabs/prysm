@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/urfave/cli/v2"
 )
@@ -11,9 +12,9 @@ var bucketsFlags = struct {
 }{}
 
 var bucketsCmd = &cli.Command{
-	Name:    "buckets",
-	Usage:   "list db buckets",
-	Action:  bucketsAction,
+	Name:   "buckets",
+	Usage:  "list db buckets",
+	Action: bucketsAction,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "path",

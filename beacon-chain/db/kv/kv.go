@@ -98,7 +98,7 @@ func KVStoreDatafilePath(dirPath string) string {
 	return path.Join(dirPath, DatabaseFileName)
 }
 
-var Buckets = [][]byte {
+var Buckets = [][]byte{
 	attestationsBucket,
 	blocksBucket,
 	stateBucket,
@@ -110,7 +110,7 @@ var Buckets = [][]byte {
 	powchainBucket,
 	stateSummaryBucket,
 	stateValidatorsBucket,
-// Indices buckets.
+	// Indices buckets.
 	attestationHeadBlockRootBucket,
 	attestationSourceRootIndicesBucket,
 	attestationSourceEpochIndicesBucket,
@@ -121,9 +121,9 @@ var Buckets = [][]byte {
 	blockParentRootIndicesBucket,
 	finalizedBlockRootsIndexBucket,
 	blockRootValidatorHashesBucket,
-// State management service bucket.
+	// State management service bucket.
 	newStateServiceCompatibleBucket,
-// Migrations
+	// Migrations
 	migrationsBucket,
 
 	feeRecipientBucket,

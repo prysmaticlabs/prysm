@@ -3,26 +3,27 @@ package db
 import (
 	"bytes"
 	"fmt"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	bolt "go.etcd.io/bbolt"
-	"time"
 )
 
 var queryFlags = struct {
-	Path string
-	Bucket string
+	Path     string
+	Bucket   string
 	KeysOnly bool
-	Prefix string
+	Prefix   string
 }{}
 
 var queryCmd = &cli.Command{
-	Name:    "query",
-	Usage:   "database query tool",
-	Action:  queryAction,
+	Name:   "query",
+	Usage:  "database query tool",
+	Action: queryAction,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "bucket",
@@ -83,7 +84,7 @@ func getDB(path string) (*bolt.DB, error) {
 		path,
 		params.BeaconIoConfig().ReadWritePermissions,
 		&bolt.Options{
-			Timeout:         1 * time.Second,
+			Timeout: 1 * time.Second,
 		},
 	)
 	if err != nil {
