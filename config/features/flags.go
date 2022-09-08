@@ -101,9 +101,9 @@ var (
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
-	enableDefensivePull = &cli.BoolFlag{
-		Name:   "enable-back-pull",
-		Usage:  "Experimental enable of past boundary checks, useful for debugging, may cause bad votes.",
+	disableDefensivePull = &cli.BoolFlag{
+		Name:   "disable-back-pull",
+		Usage:  "Experimental disable of past boundary checks, useful for debugging, may cause bad votes.",
 		Hidden: true,
 	}
 	disableVecHTR = &cli.BoolFlag{
@@ -172,7 +172,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 	enableStartupOptimistic,
-	enableDefensivePull,
+	disableDefensivePull,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
