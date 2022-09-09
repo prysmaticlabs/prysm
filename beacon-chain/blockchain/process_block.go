@@ -194,6 +194,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
+	// If the block arrives between Y and new slot. Skip the below
 	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
 		return err
 	}

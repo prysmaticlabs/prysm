@@ -86,9 +86,16 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
-	// Not sure how to get the proposed here.
-	// If the proposed head is different than real head, then check real head is >10%.
-	// If it's not 10% then use the proposed head
+	// Now which head do I use?
+	// 1.) real head from attester's point of view
+	// 2.) reorg'ed head from proposer defensive point of view
+	// It's easy to get 1. It's just `vs.HeadFetcher.HeadRoot(ctx)`
+	// It's hard to get 2. We need to cache it somewhere
+
+	// We also need to perform one last check to ensure the scenarios:
+	// The block arrived between X to Y time, at Y it didnt have 10% but it now has 10%
+	//    - How do we prove this? Maybe we can compare 1.block.slot and 2.block.slot. That sounds dangerous though
+	// The block arrived between Y to new slot time, it now has 10%
 
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
