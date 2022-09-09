@@ -1,7 +1,6 @@
 package beaconapi_evaluators
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
@@ -30,6 +30,12 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
 	respJSONPrysm := &apimiddleware.BlockResponseJson{}
 	respJSONLighthouse := &apimiddleware.BlockResponseJson{}
+	var check string
+	if currentEpoch < 3 {
+		check = "genesis"
+	} else {
+		check = "finalized"
+	}
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
@@ -78,9 +84,12 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				string(l))
 		}
 
+		blockP := &ethpb.SignedBeaconBlock{}
+		blockL := &ethpb.SignedBeaconBlock{}
+
 		sszrspL, err := doMiddlewareSSZGetRequest(
 			v1MiddlewarePathTemplate,
-			"/beacon/blocks/genesis",
+			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 			"lighthouse",
 		)
@@ -90,18 +99,28 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 		sszrspP, err := doMiddlewareSSZGetRequest(
 			v1MiddlewarePathTemplate,
-			"/beacon/blocks/head",
+			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 		)
 		if err != nil {
 			return err
 		}
-
-		if !bytes.Equal(sszrspL, sszrspP) {
-			return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
-				hexutil.Encode(sszrspP),
-				hexutil.Encode(sszrspL))
+		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
+			return err
 		}
+		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+			return err
+		}
+		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
+			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+				blockP,
+				blockL)
+		}
+		//if !bytes.Equal(sszrspL, sszrspP) {
+		//	return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+		//		hexutil.Encode(sszrspP),
+		//		hexutil.Encode(sszrspL))
+		//}
 
 	} else {
 		resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
@@ -150,9 +169,12 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				string(l))
 		}
 
+		blockP := &ethpb.SignedBeaconBlock{}
+		blockL := &ethpb.SignedBeaconBlock{}
+
 		sszrspL, err := doMiddlewareSSZGetRequest(
 			v2MiddlewarePathTemplate,
-			"/beacon/blocks/head",
+			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 			"lighthouse",
 		)
@@ -162,18 +184,28 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 		sszrspP, err := doMiddlewareSSZGetRequest(
 			v2MiddlewarePathTemplate,
-			"/beacon/blocks/head",
+			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 		)
 		if err != nil {
 			return err
 		}
-
-		if !bytes.Equal(sszrspL, sszrspP) {
-			return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
-				hexutil.Encode(sszrspP),
-				hexutil.Encode(sszrspL))
+		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
+			return err
 		}
+		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+			return err
+		}
+		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
+			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+				blockP,
+				blockL)
+		}
+		//if !bytes.Equal(sszrspL, sszrspP) {
+		//	return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+		//		hexutil.Encode(sszrspP),
+		//		hexutil.Encode(sszrspL))
+		//}
 	}
 
 	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
