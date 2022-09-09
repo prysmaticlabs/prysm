@@ -47,6 +47,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableDefensivePull = &cli.BoolFlag{
+		Name:   "enable-back-pull",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDutyCountdown = &cli.BoolFlag{
 		Name:   "enable-duty-count-down",
 		Usage:  deprecatedUsage,
@@ -93,6 +98,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedGossipBatchAggregation,
 	deprecatedEnableLargerGossipHistory,
 	deprecatedFallbackProvider,
+	deprecatedEnableDefensivePull,
 	deprecatedDisableNativeState,
 }
 
