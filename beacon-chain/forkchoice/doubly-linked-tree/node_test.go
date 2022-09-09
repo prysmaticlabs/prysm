@@ -287,7 +287,7 @@ func TestStore_VotedFraction(t *testing.T) {
 	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance}
 	_, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	f.ProcessAttestation(context.Background(), []uint64{0}, [32]byte{'b'}, 2)
+	f.ProcessAttestation(context.Background(), []uint64{0, 1}, [32]byte{'b'}, 2)
 	vote, err = f.VotedFraction([32]byte{'b'})
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), vote)
@@ -297,7 +297,7 @@ func TestStore_VotedFraction(t *testing.T) {
 	require.NoError(t, err)
 	vote, err = f.VotedFraction([32]byte{'b'})
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), vote)
+	require.Equal(t, uint64(2), vote)
 
 	// Check for non-existent root
 	_, err = f.VotedFraction([32]byte{'c'})
