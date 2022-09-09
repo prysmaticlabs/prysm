@@ -80,7 +80,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 		sszrspL, err := doMiddlewareSSZGetRequest(
 			v1MiddlewarePathTemplate,
-			"/beacon/blocks/head",
+			"/beacon/blocks/genesis",
 			beaconNodeIdx,
 			"lighthouse",
 		)

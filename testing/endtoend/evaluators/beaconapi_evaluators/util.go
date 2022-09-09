@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	log "github.com/sirupsen/logrus"
 )
@@ -57,8 +56,10 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
-	rsp, _ := client.Do(req)
-
+	rsp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	if rsp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("request failed with response code: %d", rsp.StatusCode)
 	}
@@ -67,11 +68,8 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 	if err != nil {
 		return nil, err
 	}
-	ssz, err := hexutil.Decode(string(body))
-	if err != nil {
-		return nil, err
-	}
-	return ssz, nil
+
+	return body, nil
 }
 
 func closeBody(body io.Closer) {
