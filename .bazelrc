@@ -13,7 +13,6 @@ coverage --define=coverage_enabled=1
 
 # Fix for rules_docker. See: https://github.com/bazelbuild/rules_docker/issues/842
 build --host_force_python=PY2
-test --host_force_python=PY2
 run --host_force_python=PY2
 
 # Networking is blocked for tests by default, add "requires-network" tag to your test if networking
@@ -26,11 +25,9 @@ build --stamp
 
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
-test --incompatible_strict_action_env
 run --incompatible_strict_action_env
 
 build --define blst_disabled=false
-test --define blst_disabled=false
 run --define blst_disabled=false
 
 build:blst_disabled --define blst_disabled=true
