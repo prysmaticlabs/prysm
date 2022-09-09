@@ -666,10 +666,11 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
+		var sentFcuForMissBlock bool
 		for {
 			select {
 			case ti := <-ticker.C:
-				if !atHalfSlot(ti) {
+				if !missBlockSendFcu(ti) {
 					continue
 				}
 				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, s.headRoot())
@@ -686,9 +687,28 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 						}); err != nil {
 							log.WithError(err).Error("Could not prepare payload on empty ID")
 						}
+						sentFcuForMissBlock = true
 					}
 					missedPayloadIDFilledCount.Inc()
 				}
+			case ti := <-ticker.C:
+				if !processMissBlockAtts(ti) {
+					continue
+				}
+				if !sentFcuForMissBlock {
+					continue
+				}
+				// If the head slot hasn't moved, even we have received the block for current slot
+				// it's unlikely that the block will be worth building on
+				// TODO: do we need to lock s.head?
+				if s.head.slot != s.CurrentSlot() {
+					continue
+				}
+				// Use Potuz PR to check how much weight head root has
+				// If the weight has more than 10% we can do nothing, the new FCU has been called earlier
+				// If the weight is less than 10% we can call FCU again with the previous head root
+				// TODO: Find previous head root (This is hard)
+
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
 				return
@@ -697,8 +717,14 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// Returns true if time `t` is halfway through the slot in sec.
-func atHalfSlot(t time.Time) bool {
+// Returns true if time `t` at  `MissBlockFcuSecsInSlot` during the slot.
+func missBlockSendFcu(t time.Time) bool {
 	s := params.BeaconConfig().SecondsPerSlot
-	return uint64(t.Second())%s == s/2
+	return uint64(t.Second())%s == params.BeaconConfig().MissBlockFcuSecsInSlot
+}
+
+// Returns true if time `t` at `ProcessMissBlockAttsSecsInSlot` during the slot.
+func processMissBlockAtts(t time.Time) bool {
+	s := params.BeaconConfig().SecondsPerSlot
+	return uint64(t.Second())%s == params.BeaconConfig().ProcessMissBlockAttsSecsInSlot
 }

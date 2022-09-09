@@ -255,6 +255,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,
 	MaxBuilderEpochMissedSlots:       8,
+
+	// Reorg late block thresholds.
+	MissBlockFcuSecsInSlot: 4,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
