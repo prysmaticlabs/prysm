@@ -105,6 +105,7 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
 	assert.LogsContain(t, hook, "0xB is not a valid fee recipient address")
+	require.NoError(t, err)
 
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)
