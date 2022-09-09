@@ -42,7 +42,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		if block.Block == nil || block.Block.Body == nil {
+		if block.Block == nil || block.Block.Body == nil || block.Block.Body.Eth1Data == nil {
 			continue
 		}
 		wsb, err := blocks.NewSignedBeaconBlock(block)

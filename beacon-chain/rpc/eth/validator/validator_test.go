@@ -998,12 +998,12 @@ func TestProduceBlockV2(t *testing.T) {
 		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
-
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -1489,6 +1489,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
 		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -2504,6 +2505,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
 		resp, err := v1Server.ProduceBlindedBlockSSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)

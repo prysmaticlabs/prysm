@@ -248,12 +248,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
+			stateRoot := signed.Block().StateRoot()
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
 					Epoch:               postState.FinalizedCheckpoint().Epoch,
 					Block:               postState.FinalizedCheckpoint().Root,
-					State:               signed.Block().StateRoot(),
+					State:               stateRoot[:],
 					ExecutionOptimistic: isOptimistic,
 				},
 			})
@@ -317,7 +318,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
 		return err
 	}
-	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, b.ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -516,7 +517,7 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
-	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
+	if !s.cfg.ForkChoiceStore.HasNode(blk.ParentRoot()) {
 		fCheckpoint := st.FinalizedCheckpoint()
 		jCheckpoint := st.CurrentJustifiedCheckpoint()
 		if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {

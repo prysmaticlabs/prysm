@@ -100,7 +100,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	newStateRoot := headBlock.Block().StateRoot()
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
-	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
+	if headBlock.Block().ParentRoot() != oldHeadRoot {
 		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
 			log.WithError(err).Error("Could not find common ancestor root")
@@ -126,8 +126,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 				Depth:               math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
 				OldHeadBlock:        oldHeadRoot[:],
 				NewHeadBlock:        newHeadRoot[:],
-				OldHeadState:        oldStateRoot,
-				NewHeadState:        newStateRoot,
+				OldHeadState:        oldStateRoot[:],
+				NewHeadState:        newStateRoot[:],
 				Epoch:               slots.ToEpoch(newHeadSlot),
 				ExecutionOptimistic: isOptimistic,
 			},
@@ -152,7 +152,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot, newHeadRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot[:], newHeadRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
@@ -382,7 +382,8 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, n
 			}
 			saveOrphanedAttCount.Inc()
 		}
-		orphanedRoot = bytesutil.ToBytes32(orphanedBlk.Block().ParentRoot())
+		parentRoot := orphanedBlk.Block().ParentRoot()
+		orphanedRoot = bytesutil.ToBytes32(parentRoot[:])
 	}
 	return nil
 }

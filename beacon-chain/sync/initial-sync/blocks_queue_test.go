@@ -255,7 +255,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block interfaces.SignedBeaconBlock) error {
-				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
+				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
 				root, err := block.Block().HashTreeRoot()
@@ -1336,7 +1336,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 				continue
 			}
 
-			parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
+			parentRoot := blk.Block().ParentRoot()
 			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasBlock(ctx, parentRoot) {
 				log.Errorf("%v: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 				continue

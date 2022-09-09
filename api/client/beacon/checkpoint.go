@@ -74,6 +74,9 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
 	}
+	if s.Slot() != s.LatestBlockHeader().Slot {
+		return nil, fmt.Errorf("finalized state slot does not match latest block header slot %d != %d", s.Slot(), s.LatestBlockHeader().Slot)
+	}
 
 	sr, err := s.HashTreeRoot(ctx)
 	if err != nil {

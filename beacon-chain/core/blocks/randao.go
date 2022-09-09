@@ -39,11 +39,13 @@ func ProcessRandao(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal(), domain); err != nil {
+
+	randaoReveal := body.RandaoReveal()
+	if err := verifySignature(buf, proposerPub, randaoReveal[:], domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body.RandaoReveal())
+	beaconState, err = ProcessRandaoNoVerify(beaconState, randaoReveal[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
