@@ -150,29 +150,32 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 			log.WithError(err).Error("Failed to get execution payload")
 			return
 		}
-		txs, err := p.Transactions()
-		if err != nil {
-			log.WithError(err).Error("Failed to get execution payload transactions")
-			return
-		}
 		log = log.WithFields(logrus.Fields{
 			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
 			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash())),
 			"blockNumber": p.BlockNumber,
-			"txCount":     len(txs),
 		})
+		if !blk.IsBlinded() {
+			txs, err := p.Transactions()
+			if err != nil {
+				log.WithError(err).Error("Failed to get execution payload transactions")
+				return
+			}
+			log = log.WithField("txCount", len(txs))
+		}
 		if p.GasLimit() != 0 {
 			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
 		}
 	}
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),
 		"blockRoot":       blkRoot,
 		"numAttestations": len(blk.Block().Body().Attestations()),
 		"numDeposits":     len(blk.Block().Body().Deposits()),
-		"graffiti":        string(blk.Block().Body().Graffiti()),
+		"graffiti":        string(graffiti[:]),
 		"fork":            version.String(blk.Block().Version()),
 	}).Info("Submitted new block")
 

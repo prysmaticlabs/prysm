@@ -244,7 +244,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract")
+	log.Info("Syncing with beacon node to align on chain genesis info")
 	chainStartRes, err := stream.Recv()
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
@@ -938,7 +938,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
-		durationTillDuty := time.Until(startTime)
+		durationTillDuty := time.Until(startTime) + time.Second
 
 		if len(attesterKeys[i]) > 0 {
 			log.WithFields(logrus.Fields{

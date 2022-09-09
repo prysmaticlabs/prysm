@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -237,7 +236,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
-		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
+		parentRoot := block.Block().ParentRoot()
 		if !f.chain.HasBlock(ctx, parentRoot) {
 			log.WithFields(logrus.Fields{
 				"peer": pid,
@@ -264,7 +263,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfaces.SignedBeaconBlock) (*forkData, error) {
 	outBlocks := []interfaces.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
-		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
+		parentRoot := outBlocks[len(outBlocks)-1].Block().ParentRoot()
 		if f.chain.HasBlock(ctx, parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {

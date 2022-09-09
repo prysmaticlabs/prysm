@@ -12,10 +12,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// This defines the minimal number of block nodes that can be in the tree
-// before getting pruned upon new finalization.
-const defaultPruneThreshold = 256
-
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes. This function requires a lock in Store.nodesLock.
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
@@ -59,11 +55,6 @@ func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 	return s.proposerBoostRoot
 }
 
-// PruneThreshold of fork choice store.
-func (s *Store) PruneThreshold() uint64 {
-	return s.pruneThreshold
-}
-
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
@@ -95,8 +86,8 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	if bestDescendant == nil {
 		bestDescendant = justifiedNode
 	}
-
-	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch) {
+	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch, currentEpoch) {
 		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
@@ -175,7 +166,7 @@ func (s *Store) insert(ctx context.Context,
 		jEpoch := s.justifiedCheckpoint.Epoch
 		fEpoch := s.finalizedCheckpoint.Epoch
 		s.checkpointsLock.RUnlock()
-		if err := s.treeRootNode.updateBestDescendant(ctx, jEpoch, fEpoch); err != nil {
+		if err := s.treeRootNode.updateBestDescendant(ctx, jEpoch, fEpoch, slots.ToEpoch(currentSlot)); err != nil {
 			return n, err
 		}
 	}
@@ -211,12 +202,12 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 		}
 	}
 
+	node.children = nil
 	delete(s.nodeByRoot, node.root)
 	return nil
 }
 
-// prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
-// root is different than the current store finalized root, and the number of the store has met prune threshold.
+// prune prunes the fork choice store. It removes all nodes that compete with the finalized root.
 // This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
 func (s *Store) prune(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
@@ -232,10 +223,8 @@ func (s *Store) prune(ctx context.Context) error {
 	if !ok || finalizedNode == nil {
 		return errUnknownFinalizedRoot
 	}
-
-	// The number of the nodes has not met the prune threshold.
-	// Pruning at small numbers incurs more cost than benefit.
-	if finalizedNode.depth() < s.pruneThreshold {
+	// return early if we haven't changed the finalized checkpoint
+	if finalizedNode.parent == nil {
 		return nil
 	}
 

@@ -174,7 +174,8 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 	if s.State == nil {
 		return ErrNilState
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+	parentRoot := block.Block().ParentRoot()
+	if !bytes.Equal(s.Root, parentRoot[:]) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
@@ -202,7 +203,8 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 		return ErrNilState
 	}
 	for _, b := range blks {
-		if !bytes.Equal(s.Root, b.Block().ParentRoot()) {
+		parentRoot := b.Block().ParentRoot()
+		if !bytes.Equal(s.Root, parentRoot[:]) {
 			return errors.Errorf("wanted %#x but got %#x", s.Root, b.Block().ParentRoot())
 		}
 		if err := s.State.SetSlot(b.Block().Slot()); err != nil {
@@ -233,7 +235,8 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 	if s.State == nil {
 		return ErrNilState
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+	parentRoot := block.Block().ParentRoot()
+	if !bytes.Equal(s.Root, parentRoot[:]) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {

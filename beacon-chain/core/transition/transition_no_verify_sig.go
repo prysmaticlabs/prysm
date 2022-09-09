@@ -59,7 +59,8 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(st)
 
-	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, signed.Block().ParentRoot(), signed.Block().Slot())
+	parentRoot := signed.Block().ParentRoot()
+	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process slots")
 	}
@@ -75,7 +76,8 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if !bytes.Equal(postStateRoot[:], signed.Block().StateRoot()) {
+	stateRoot := signed.Block().StateRoot()
+	if !bytes.Equal(postStateRoot[:], stateRoot[:]) {
 		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block().StateRoot())
 	}
@@ -127,7 +129,8 @@ func CalculateStateRoot(
 
 	// Execute per slots transition.
 	var err error
-	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	parentRoot := signed.Block().ParentRoot()
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, parentRoot[:], signed.Block().Slot())
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slots")
 	}
@@ -174,12 +177,14 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	bSet, err := b.BlockSignatureBatch(st, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
+	sig := signed.Signature()
+	bSet, err := b.BlockSignatureBatch(st, blk.ProposerIndex(), sig[:], blk.HashTreeRoot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureBatch(ctx, st, signed.Block().Body().RandaoReveal())
+	randaoReveal := signed.Block().Body().RandaoReveal()
+	rSet, err := b.RandaoSignatureBatch(ctx, st, randaoReveal[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
@@ -279,7 +284,8 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
 	}
-	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
+	parentRoot := blk.ParentRoot()
+	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), parentRoot[:], bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
@@ -304,7 +310,8 @@ func ProcessBlockForStateRoot(
 		}
 	}
 
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())
+	randaoReveal := signed.Block().Body().RandaoReveal()
+	state, err = b.ProcessRandaoNoVerify(state, randaoReveal[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")

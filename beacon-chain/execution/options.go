@@ -36,6 +36,14 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 	}
 }
 
+// WithHeaders adds headers to the execution node JSON-RPC requests.
+func WithHeaders(headers []string) Option {
+	return func(s *Service) error {
+		s.cfg.headers = headers
+		return nil
+	}
+}
+
 // WithDepositContractAddress for the deposit contract.
 func WithDepositContractAddress(addr common.Address) Option {
 	return func(s *Service) error {

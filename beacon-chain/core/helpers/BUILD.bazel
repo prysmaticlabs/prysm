@@ -7,6 +7,7 @@ go_library(
         "beacon_committee.go",
         "block.go",
         "genesis.go",
+        "metrics.go",
         "randao.go",
         "rewards_penalties.go",
         "shuffle.go",

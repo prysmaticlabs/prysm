@@ -27,6 +27,7 @@ type EngineClient struct {
 	ErrExecBlockByHash          error
 	ErrForkchoiceUpdated        error
 	ErrNewPayload               error
+	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
@@ -52,7 +53,7 @@ func (e *EngineClient) ForkchoiceUpdated(
 
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, nil
+	return e.ExecutionPayload, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --

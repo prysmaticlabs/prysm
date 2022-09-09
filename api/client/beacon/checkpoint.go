@@ -21,14 +21,13 @@ import (
 // OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
 type OriginData struct {
-	wsd *WeakSubjectivityData
-	sb  []byte
-	bb  []byte
-	st  state.BeaconState
-	b   interfaces.SignedBeaconBlock
-	vu  *detect.VersionedUnmarshaler
-	br  [32]byte
-	sr  [32]byte
+	sb []byte
+	bb []byte
+	st state.BeaconState
+	b  interfaces.SignedBeaconBlock
+	vu *detect.VersionedUnmarshaler
+	br [32]byte
+	sr [32]byte
 }
 
 // SaveBlock saves the downloaded block to a unique file in the given path.
@@ -74,6 +73,9 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
+	}
+	if s.Slot() != s.LatestBlockHeader().Slot {
+		return nil, fmt.Errorf("finalized state slot does not match latest block header slot %d != %d", s.Slot(), s.LatestBlockHeader().Slot)
 	}
 
 	sr, err := s.HashTreeRoot(ctx)

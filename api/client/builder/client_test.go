@@ -148,6 +148,23 @@ func TestClient_GetHeader(t *testing.T) {
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			require.Equal(t, expectedPath, r.URL.Path)
 			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("No header is available."))),
+				Request:    r.Clone(ctx),
+			}, nil
+		}),
+	}
+	c = &Client{
+		hc:      hc,
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+	}
+	_, err = c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+	require.ErrorIs(t, err, ErrNoContent)
+
+	hc = &http.Client{
+		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+			require.Equal(t, expectedPath, r.URL.Path)
+			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
 				Request:    r.Clone(ctx),
@@ -165,7 +182,8 @@ func TestClient_GetHeader(t *testing.T) {
 	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.Equal(t, true, bytes.Equal(expectedTxRoot, h.Message.Header.TransactionsRoot))
 	require.Equal(t, uint64(1), h.Message.Header.GasUsed)
-	value := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", h.Message.Value))
 }
 
@@ -189,7 +207,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	ep, err := c.SubmitBlindedBlock(ctx, sbbb)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash))
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas))
 	require.Equal(t, uint64(1), ep.GasLimit)
 }

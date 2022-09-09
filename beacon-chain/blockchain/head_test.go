@@ -50,7 +50,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, err)
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, ojc, ofc)
+	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
@@ -66,11 +66,11 @@ func TestSaveHead_Different(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot()-1, bytesutil.ToBytes32(wsb.Block().ParentRoot()), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, ojc, ofc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	headState, err := util.NewBeaconState()
@@ -104,7 +104,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, err)
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, ojc, ofc)
+	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
@@ -114,7 +114,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	}
 
 	reorgChainParent := [32]byte{'B'}
-	state, blkRoot, err = prepareForkchoiceState(ctx, 0, reorgChainParent, oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), ojc, ofc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 0, reorgChainParent, oldRoot, oldBlock.Block().ParentRoot(), ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
@@ -126,7 +126,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, ojc, ofc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	headState, err := util.NewBeaconState()

@@ -66,10 +66,6 @@ var (
 	logThreshold = 8
 	// period to log chainstart related information
 	logPeriod = 1 * time.Minute
-	// threshold of how old we will accept an eth1 node's head to be.
-	eth1Threshold = 20 * time.Minute
-	// error when eth1 node is too far behind.
-	errFarBehind = errors.Errorf("eth1 head is more than %s behind from current wall clock time", eth1Threshold.String())
 )
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
@@ -128,6 +124,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
+	headers                 []string
 	finalizedStateAtStartup state.BeaconState
 }
 
@@ -314,11 +311,6 @@ func (s *Service) updateBeaconNodeStats() {
 		bs.SyncEth1Connected = true
 	}
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
-}
-
-func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
-	s.cfg.currHttpEndpoint = endpoint
-	s.updateBeaconNodeStats()
 }
 
 func (s *Service) updateConnectedETH1(state bool) {
@@ -549,7 +541,7 @@ func (s *Service) initPOWService() {
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
-					log.WithError(err).Warn("Unable to cache headers for execution client votes")
+					log.WithError(err).Debug("Unable to cache headers for execution client votes")
 				} else {
 					errorLogger(err, "Unable to cache headers for execution client votes")
 				}
@@ -606,11 +598,6 @@ func (s *Service) run(done <-chan struct{}) {
 			if err != nil {
 				s.pollConnectionStatus(s.ctx)
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
-				continue
-			}
-			if eth1HeadIsBehind(head.Time) {
-				s.pollConnectionStatus(s.ctx)
-				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
 				continue
 			}
 			s.processBlockHeader(head)
@@ -837,12 +824,4 @@ func dedupEndpoints(endpoints []string) []string {
 		selectionMap[point] = true
 	}
 	return newEndpoints
-}
-
-// Checks if the provided timestamp is beyond the prescribed bound from
-// the current wall clock time.
-func eth1HeadIsBehind(timestamp uint64) bool {
-	timeout := prysmTime.Now().Add(-eth1Threshold)
-	// check that web3 client is syncing
-	return time.Unix(int64(timestamp), 0).Before(timeout) // lint:ignore uintcast -- timestamp will not exceed int64 in your lifetime.
 }
