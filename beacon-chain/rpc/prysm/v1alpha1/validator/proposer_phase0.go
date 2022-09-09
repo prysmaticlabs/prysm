@@ -86,6 +86,10 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
+	// Not sure how to get the proposed here.
+	// If the proposed head is different than real head, then check real head is >10%.
+	// If it's not 10% then use the proposed head
+
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
