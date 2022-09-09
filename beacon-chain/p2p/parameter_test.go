@@ -44,5 +44,5 @@ func TestHeartbeatParameters(t *testing.T) {
 func TestMiscParameters(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	setPubSubParameters()
-	assert.Equal(t, randomSubD, pubsub.RandomSubD, "randomSubD")
+	assert.Equal(t, rSubD, 8, "rSubD")
 }
