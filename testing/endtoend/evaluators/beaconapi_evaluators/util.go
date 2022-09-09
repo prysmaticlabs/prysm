@@ -55,7 +55,7 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Accept", "application/octet-stream")
 	rsp, err := client.Do(req)
 	if err != nil {
 		return nil, err

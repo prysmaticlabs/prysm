@@ -1,6 +1,7 @@
 package beaconapi_evaluators
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -31,11 +32,12 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	respJSONPrysm := &apimiddleware.BlockResponseJson{}
 	respJSONLighthouse := &apimiddleware.BlockResponseJson{}
 	var check string
-	if currentEpoch < 3 {
-		check = "genesis"
-	} else {
-		check = "finalized"
-	}
+	check = "genesis"
+	//if currentEpoch < 4 {
+	//	check = "genesis"
+	//} else {
+	//	check = "finalized"
+	//}
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		resp, err := beaconClient.GetBlock(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
@@ -70,25 +72,24 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				hexutil.Encode(resp.Data.Signature))
 		}
 
+		p, err := json.Marshal(respJSONPrysm)
+		if err != nil {
+			return err
+		}
+		l, err := json.Marshal(respJSONLighthouse)
+		if err != nil {
+			return err
+		}
+
 		if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
-			p, err := json.Marshal(respJSONPrysm)
-			if err != nil {
-				return err
-			}
-			l, err := json.Marshal(respJSONLighthouse)
-			if err != nil {
-				return err
-			}
+
 			return fmt.Errorf("prysm response %s does not match lighthouse response %s",
 				string(p),
 				string(l))
 		}
 
-		blockP := &ethpb.SignedBeaconBlock{}
-		blockL := &ethpb.SignedBeaconBlock{}
-
 		sszrspL, err := doMiddlewareSSZGetRequest(
-			v1MiddlewarePathTemplate,
+			v2MiddlewarePathTemplate,
 			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 			"lighthouse",
@@ -98,13 +99,20 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		}
 
 		sszrspP, err := doMiddlewareSSZGetRequest(
-			v1MiddlewarePathTemplate,
+			v2MiddlewarePathTemplate,
 			"/beacon/blocks/"+check,
 			beaconNodeIdx,
 		)
 		if err != nil {
 			return err
 		}
+		if !bytes.Equal(sszrspL, sszrspP) {
+			return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+				hexutil.Encode(sszrspP),
+				hexutil.Encode(sszrspL))
+		}
+		blockP := &ethpb.SignedBeaconBlock{}
+		blockL := &ethpb.SignedBeaconBlock{}
 		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
 			return err
 		}
@@ -116,11 +124,6 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockP,
 				blockL)
 		}
-		//if !bytes.Equal(sszrspL, sszrspP) {
-		//	return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
-		//		hexutil.Encode(sszrspP),
-		//		hexutil.Encode(sszrspL))
-		//}
 
 	} else {
 		resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
