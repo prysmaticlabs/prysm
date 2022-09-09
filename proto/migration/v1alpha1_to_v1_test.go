@@ -568,11 +568,11 @@ func TestBeaconStateToProto(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhstateroot"), 32), resultLatestBlockHeader.StateRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("lbhbodyroot"), 32), resultLatestBlockHeader.BodyRoot)
 	assert.Equal(t, 8192, len(result.BlockRoots))
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("blockroots"), 32), result.BlockRoots[0][:])
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blockroots"), 32), result.BlockRoots[0])
 	assert.Equal(t, 8192, len(result.StateRoots))
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroots"), 32), result.StateRoots[0][:])
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroots"), 32), result.StateRoots[0])
 	assert.Equal(t, 1, len(result.HistoricalRoots))
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("historicalroots"), 32), result.HistoricalRoots[0][:])
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("historicalroots"), 32), result.HistoricalRoots[0])
 	resultEth1Data := result.Eth1Data
 	require.NotNil(t, resultEth1Data)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("e1ddepositroot"), 32), resultEth1Data.DepositRoot)
@@ -598,7 +598,7 @@ func TestBeaconStateToProto(t *testing.T) {
 	assert.Equal(t, types.Epoch(13), resultValidator.WithdrawableEpoch)
 	assert.DeepEqual(t, []uint64{14}, result.Balances)
 	assert.Equal(t, 65536, len(result.RandaoMixes))
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("randaomixes"), 32), result.RandaoMixes[0][:])
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("randaomixes"), 32), result.RandaoMixes[0])
 	assert.DeepEqual(t, []uint64{15}, result.Slashings)
 	require.Equal(t, 1, len(result.PreviousEpochAttestations))
 	resultPrevEpochAtt := result.PreviousEpochAttestations[0]
