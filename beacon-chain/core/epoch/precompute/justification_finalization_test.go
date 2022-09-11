@@ -243,10 +243,12 @@ func TestUnrealizedCheckpoints(t *testing.T) {
 			_, _, err = altair.InitializePrecomputeValidators(context.Background(), state)
 			require.NoError(t, err)
 
-			jc, fc, err := precompute.UnrealizedCheckpoints(state)
+			ab, jc, fc, err := precompute.UnrealizedCheckpoints(state)
 			require.NoError(t, err)
 			require.DeepEqual(t, test.expectedJustified, jc.Epoch)
 			require.DeepEqual(t, test.expectedFinalized, fc.Epoch)
+			eb := params.BeaconConfig().MinGenesisActiveValidatorCount * params.BeaconConfig().MaxEffectiveBalance
+			require.Equal(t, eb, ab)
 		})
 	}
 }
