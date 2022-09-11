@@ -261,3 +261,45 @@ func TestNode_SetFullyValidated(t *testing.T) {
 		require.Equal(t, storeNodes[i].timestamp, respNode.Timestamp)
 	}
 }
+
+func TestStore_VotedFraction(t *testing.T) {
+	f := setup(1, 1)
+	ctx := context.Background()
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+
+	// No division by zero error
+	vote, err := f.VotedFraction([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), vote)
+
+	// Zero balance in the node
+	f.store.committeeBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
+	vote, err = f.VotedFraction([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), vote)
+
+	// Attestations are not counted until we process Head
+	balances := []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance}
+	_, err = f.Head(context.Background(), balances)
+	require.NoError(t, err)
+	f.ProcessAttestation(context.Background(), []uint64{0, 1}, [32]byte{'b'}, 2)
+	vote, err = f.VotedFraction([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), vote)
+
+	// After we call head the voted fraction is obtained.
+	_, err = f.Head(context.Background(), balances)
+	require.NoError(t, err)
+	vote, err = f.VotedFraction([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), vote)
+
+	// Check for non-existent root
+	_, err = f.VotedFraction([32]byte{'c'})
+	require.ErrorIs(t, err, ErrNilNode)
+}
