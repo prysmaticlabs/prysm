@@ -181,6 +181,7 @@ func (s *Store) insert(ctx context.Context,
 	// Update highest slot tracking.
 	if slot > s.highestReceivedSlot {
 		s.highestReceivedSlot = slot
+		s.highestReceivedRoot = root
 	}
 
 	return n, nil
@@ -263,6 +264,13 @@ func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	return f.store.highestReceivedSlot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.highestReceivedRoot
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

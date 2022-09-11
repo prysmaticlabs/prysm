@@ -40,6 +40,7 @@ type Store struct {
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
 	highestReceivedSlot           types.Slot                            // The highest received slot in the chain.
+	highestReceivedRoot           [fieldparams.RootLength]byte          // The highest received root in the chain.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
 }
