@@ -142,6 +142,7 @@ func (s *Store) insert(ctx context.Context,
 		if s.treeRootNode == nil {
 			s.treeRootNode = n
 			s.headNode = n
+			s.highestReceivedNode = n
 		} else {
 			return n, errInvalidParentRoot
 		}
@@ -179,7 +180,7 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if n != nil && slot > s.highestReceivedNode.slot {
+	if slot > s.highestReceivedNode.slot {
 		s.highestReceivedNode = n
 	}
 
