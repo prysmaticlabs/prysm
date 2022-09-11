@@ -46,6 +46,7 @@ func New() *ForkChoice {
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
 		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
+		highestReceivedNode:           &Node{},
 	}
 
 	b := make([]uint64, 0)
@@ -559,9 +560,8 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if slot > s.highestReceivedSlot {
-		s.highestReceivedSlot = slot
-		s.highestReceivedRoot = root
+	if slot > s.highestReceivedNode.slot {
+		s.highestReceivedNode = n
 	}
 	return n, nil
 }
@@ -1069,14 +1069,14 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedSlot
+	return f.store.highestReceivedNode.slot
 }
 
 // HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
 func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedRoot
+	return f.store.highestReceivedNode.root
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

@@ -37,6 +37,7 @@ func New() *ForkChoice {
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
+		highestReceivedNode:           &Node{},
 	}
 
 	b := make([]uint64, 0)
