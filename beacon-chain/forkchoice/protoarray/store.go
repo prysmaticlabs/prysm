@@ -560,7 +560,7 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if slot > s.highestReceivedNode.slot {
+	if n != nil && slot > s.highestReceivedNode.slot {
 		s.highestReceivedNode = n
 	}
 	return n, nil
