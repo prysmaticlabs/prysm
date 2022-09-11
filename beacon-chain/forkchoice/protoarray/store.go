@@ -46,7 +46,6 @@ func New() *ForkChoice {
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
 		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
-		highestReceivedNode:           &Node{},
 	}
 
 	b := make([]uint64, 0)
@@ -560,8 +559,9 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if n != nil && slot > s.highestReceivedNode.slot {
-		s.highestReceivedNode = n
+	highestSlot := s.nodes[s.highestReceivedIndex].slot
+	if slot > highestSlot {
+		s.highestReceivedIndex = uint64(len(s.nodes) - 1)
 	}
 	return n, nil
 }
@@ -1065,20 +1065,6 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
-// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedNode.slot
-}
-
-// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedNode.root
-}
-
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
 func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	f.store.nodesLock.RLock()
@@ -1103,4 +1089,26 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 
 func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, error) {
 	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].slot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].root
 }
