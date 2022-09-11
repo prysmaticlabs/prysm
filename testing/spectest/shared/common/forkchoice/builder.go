@@ -58,9 +58,6 @@ func (bb *Builder) SetPayloadStatus(resp *MockEngineResp) error {
 		return errors.New("invalid nil payload status")
 	}
 	if resp.LatestValidHash == nil {
-		return errors.New("invalid nil latest valid hash")
-	}
-	if *resp.LatestValidHash == "null" {
 		bb.execMock.latestValidHash = common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000")
 	} else {
 		bb.execMock.latestValidHash = common.FromHex(*resp.LatestValidHash)
@@ -69,11 +66,11 @@ func (bb *Builder) SetPayloadStatus(resp *MockEngineResp) error {
 		return errors.New("invalid nil status")
 	}
 	switch *resp.Status {
-	case "PayloadStatusV1Status.SYNCING":
+	case "SYNCING":
 		bb.execMock.payloadStatus = execution.ErrAcceptedSyncingPayloadStatus
-	case "PayloadStatusV1Status.VALID":
+	case "VALID":
 		bb.execMock.payloadStatus = nil
-	case "PayloadStatusV1Status.INVALID":
+	case "INVALID":
 		bb.execMock.payloadStatus = execution.ErrInvalidPayloadStatus
 	default:
 		return errors.New("unknown payload status")
