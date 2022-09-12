@@ -106,15 +106,20 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			log.WithError(err).Error("Could not find common ancestor root")
 			commonRoot = params.BeaconConfig().ZeroHash
 		}
+		dis := headSlot + newHeadSlot - 2*forkSlot
+		dep := math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot))
 		log.WithFields(logrus.Fields{
 			"newSlot":            fmt.Sprintf("%d", newHeadSlot),
 			"newRoot":            fmt.Sprintf("%#x", newHeadRoot),
 			"oldSlot":            fmt.Sprintf("%d", headSlot),
 			"oldRoot":            fmt.Sprintf("%#x", oldHeadRoot),
 			"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
-			"distance":           headSlot + newHeadSlot - 2*forkSlot,
-			"depth":              math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot)),
+			"distance":           dis,
+			"depth":              dep,
 		}).Info("Chain reorg occurred")
+		reorgDistance.Observe(float64(dis))
+		reorgDepth.Observe(float64(dep))
+
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
