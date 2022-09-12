@@ -748,12 +748,23 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "empty settings",
+			name: "empty settings non cached",
 			args: nil,
 			want: &want{
 				EthAddress: params.BeaconConfig().DefaultFeeRecipient.Hex(),
 			},
 			wantErr: false,
+		},
+		{
+			name: "empty settings cached",
+			args: nil,
+			want: &want{
+				EthAddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+			},
+			wantErr: false,
+			cached: &eth.FeeRecipientByPubKeyResponse{
+				FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Bytes(),
+			},
 		},
 	}
 	for _, tt := range tests {
