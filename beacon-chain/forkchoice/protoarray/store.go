@@ -1095,6 +1095,9 @@ func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, er
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return 0
+	}
 	idx := uint64(len(f.store.nodes) - 1)
 	if f.store.highestReceivedIndex < idx {
 		idx = f.store.highestReceivedIndex
@@ -1106,6 +1109,9 @@ func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return [32]byte{}
+	}
 	idx := uint64(len(f.store.nodes) - 1)
 	if f.store.highestReceivedIndex < idx {
 		idx = f.store.highestReceivedIndex
