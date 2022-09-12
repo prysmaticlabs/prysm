@@ -9,9 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -31,7 +31,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	respJSONPrysm := &apimiddleware.BlockResponseJson{}
 	respJSONLighthouse := &apimiddleware.BlockResponseJson{}
 	var check string
-	if currentEpoch < 3 {
+	if currentEpoch < 4 {
 		check = "genesis"
 	} else {
 		check = "finalized"
@@ -50,7 +50,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		beaconNodeIdx,
 		respJSONPrysm,
 	); err != nil {
-		return err
+		return errors.Wrap(err, "prysm json error")
 	}
 
 	if err := doMiddlewareJSONGetRequest(
@@ -60,7 +60,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		respJSONLighthouse,
 		"lighthouse",
 	); err != nil {
-		return err
+		return errors.Wrap(err, "lighthouse json error")
 	}
 
 	if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
@@ -90,7 +90,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		"lighthouse",
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "lighthouse json error")
 	}
 
 	sszrspP, err := doMiddlewareSSZGetRequest(
@@ -99,7 +99,7 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		beaconNodeIdx,
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "prysm json error")
 	}
 	if !bytes.Equal(sszrspL, sszrspP) {
 		return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
@@ -120,25 +120,25 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			blockL)
 	}
 
-	blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
-		BlockId: []byte("head"),
-	})
-	if err != nil {
-		return err
-	}
-	blockrootJSON := &apimiddleware.BlockRootResponseJson{}
-	if err := doMiddlewareJSONGetRequest(
-		v1MiddlewarePathTemplate,
-		"/beacon/blocks/head/root",
-		beaconNodeIdx,
-		blockrootJSON,
-	); err != nil {
-		return err
-	}
-	if hexutil.Encode(blockroot.Data.Root) != blockrootJSON.Data.Root {
-		return fmt.Errorf("API Middleware block root  %s does not match gRPC block root %s",
-			blockrootJSON.Data.Root,
-			hexutil.Encode(blockroot.Data.Root))
-	}
+	//blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+	//	BlockId: []byte("head"),
+	//})
+	//if err != nil {
+	//	return err
+	//}
+	//blockrootJSON := &apimiddleware.BlockRootResponseJson{}
+	//if err := doMiddlewareJSONGetRequest(
+	//	v1MiddlewarePathTemplate,
+	//	"/beacon/blocks/head/root",
+	//	beaconNodeIdx,
+	//	blockrootJSON,
+	//); err != nil {
+	//	return err
+	//}
+	//if hexutil.Encode(blockroot.Data.Root) != blockrootJSON.Data.Root {
+	//	return fmt.Errorf("API Middleware block root  %s does not match gRPC block root %s",
+	//		blockrootJSON.Data.Root,
+	//		hexutil.Encode(blockroot.Data.Root))
+	//}
 	return nil
 }
