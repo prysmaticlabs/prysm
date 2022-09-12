@@ -117,8 +117,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			"distance":           dis,
 			"depth":              dep,
 		}).Info("Chain reorg occurred")
-		reorgDistance.Set(float64(dis))
-		reorgDepth.Set(float64(dep))
+		reorgDistance.Observe(float64(dis))
+		reorgDepth.Observe(float64(dep))
 
 		isOptimistic, err := s.IsOptimistic(ctx)
 		if err != nil {
