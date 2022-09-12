@@ -3411,6 +3411,6 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot int64, delay int64) {
-	offset := int64(slot*int64(params.BeaconConfig().SecondsPerSlot) - delay)
+	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) - delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
 }
