@@ -450,11 +450,26 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	pOption.BuilderConfig = pBuilderConfig
 
 	if s.validatorService.ProposerSettings == nil {
-		s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
-			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
-				bytesutil.ToBytes48(validatorKey): &pOption,
-			},
-			DefaultConfig: &defaultOption,
+		// get the default fee recipient defined with an invalid public key from beacon node
+		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
+			PublicKey: []byte("0x0"),
+		})
+		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
+			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+					bytesutil.ToBytes48(validatorKey): &pOption,
+				},
+				DefaultConfig: &defaultOption,
+			}
+		} else {
+			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+					bytesutil.ToBytes48(validatorKey): &pOption,
+				},
+				DefaultConfig: &validatorServiceConfig.ProposerOption{
+					FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
+				},
+			}
 		}
 	} else if s.validatorService.ProposerSettings.ProposeConfig == nil {
 		s.validatorService.ProposerSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
@@ -584,7 +599,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
 	switch {
 	case s.validatorService.ProposerSettings == nil:
-		//get the default fee recipient defined with a
+		// get the default fee recipient defined with an invalid public key from beacon node
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
 			PublicKey: []byte("0x0"),
 		})
