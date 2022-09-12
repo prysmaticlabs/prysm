@@ -188,15 +188,19 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 
 	start := time.Now()
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
-	if err != nil {
-		log.WithError(err).Warn("Could not update head")
-	}
-	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+	secondsIntoSlot := (uint64(start.Unix()) - uint64(s.genesisTime.Unix())) % params.BeaconConfig().SecondsPerSlot
 
-	// If the block arrives between Y and new slot. Skip the below
-	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
-		return err
+	// Only update head and call FCU if the block is on-time.
+	if s.CurrentSlot() == b.Slot() || secondsIntoSlot <= params.BeaconConfig().MissBlockFcuSecsInSlot {
+		headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+		if err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
+		newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
+		if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
+			return err
+		}
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
