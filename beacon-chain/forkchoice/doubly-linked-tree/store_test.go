@@ -131,7 +131,7 @@ func TestStore_Insert(t *testing.T) {
 	nodeByPayload := map[[32]byte]*Node{indexToHash(0): treeRootNode}
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
-	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc, highestReceivedNode: &Node{}}
 	payloadHash := [32]byte{'a'}
 	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1)
 	require.NoError(t, err)
