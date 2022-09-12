@@ -199,6 +199,16 @@ var (
 			Buckets: []float64{1, 5, 20, 100, 500, 1000},
 		},
 	)
+	reorgDistance = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "reorg_distance",
+		Help: "The distance of the reorg",
+	},
+	)
+	reorgDepth = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "reorg_depth",
+		Help: "The depth of the reorg",
+	},
+	)
 )
 
 // reportSlotMetrics reports slot related metrics.
