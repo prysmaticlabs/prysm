@@ -1331,21 +1331,25 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 	}
 }
 
-func TestForkChoice_HighestReceivedBlockSlot(t *testing.T) {
+func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store
 	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(100), s.highestReceivedSlot)
+
+	require.Equal(t, uint64(len(s.nodes)-1), s.highestReceivedIndex)
 	require.Equal(t, types.Slot(100), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{'A'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, uint64(len(s.nodes)-1), s.highestReceivedIndex)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{'A'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, uint64(len(s.nodes)-2), s.highestReceivedIndex)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 }
 
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
