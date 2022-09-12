@@ -2179,17 +2179,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_libp2p_go_libp2p_core",
-        build_directives = [
-            "gazelle:resolve go github.com/btcsuite/btcd/btcec @com_github_btcsuite_btcd//btcec:btcec",
-        ],
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/libp2p/go-libp2p-core",
-        sum = "h1:KDw7hanmh0EuVdZqsHCAzmkdiYMk5uR5h0UGSCVTxSU=",
-        version = "v0.19.0",
-    )
-
-    go_repository(
         name = "com_github_libp2p_go_libp2p_peerstore",
         importpath = "github.com/libp2p/go-libp2p-peerstore",
         sum = "h1:2iIUwok3vtmnWJTZeTeLgnBO6GbkXcwSRwgZHEKrQZs=",
