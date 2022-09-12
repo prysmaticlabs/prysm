@@ -37,7 +37,7 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
-	highestReceivedSlot           types.Slot                            // The highest received slot in the chain.
+	highestReceivedNode           *Node                                 // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
 	committeeBalance              uint64                                // tracks the total active validator balance divided by slots per epoch. Requires a lock on nodes to read/write
