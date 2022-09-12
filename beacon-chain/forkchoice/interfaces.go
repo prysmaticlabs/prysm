@@ -62,6 +62,7 @@ type Getter interface {
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	NodeCount() int
 	HighestReceivedBlockSlot() types.Slot
+	HighestReceivedBlockRoot() [32]byte
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceResponse, error)
 	VotedFraction(root [32]byte) (uint64, error)
