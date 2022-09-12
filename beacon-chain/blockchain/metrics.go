@@ -199,15 +199,19 @@ var (
 			Buckets: []float64{1, 5, 20, 100, 500, 1000},
 		},
 	)
-	reorgDistance = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "reorg_distance",
-		Help: "The distance of the reorg",
-	},
+	reorgDistance = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_distance",
+			Help:    "Captures distance of reorgs",
+			Buckets: []float64{1, 2, 4, 8, 16, 32, 64},
+		},
 	)
-	reorgDepth = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "reorg_depth",
-		Help: "The depth of the reorg",
-	},
+	reorgDepth = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_depth",
+			Help:    "Captures depth of reorgs",
+			Buckets: []float64{1, 2, 4, 8, 16, 32},
+		},
 	)
 )
 
