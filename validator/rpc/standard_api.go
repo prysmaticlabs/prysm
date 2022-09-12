@@ -542,6 +542,8 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 		}
 	}
 	if s.validatorService.ProposerSettings.ProposeConfig != nil {
+		hexv := hexutil.Encode(validatorKey)
+		fmt.Println(hexv)
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
@@ -582,11 +584,26 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
 	switch {
 	case s.validatorService.ProposerSettings == nil:
-		s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
-			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
-				bytesutil.ToBytes48(validatorKey): &pOption,
-			},
-			DefaultConfig: &defaultOption,
+		//get the default fee recipient defined with a
+		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
+			PublicKey: []byte("0x0"),
+		})
+		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
+			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+					bytesutil.ToBytes48(validatorKey): &pOption,
+				},
+				DefaultConfig: &defaultOption,
+			}
+		} else {
+			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+					bytesutil.ToBytes48(validatorKey): &pOption,
+				},
+				DefaultConfig: &validatorServiceConfig.ProposerOption{
+					FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
+				},
+			}
 		}
 	case s.validatorService.ProposerSettings.ProposeConfig == nil:
 		pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
