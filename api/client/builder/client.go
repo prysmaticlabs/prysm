@@ -262,8 +262,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlinded
 		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 	}
 
-	d := time.Now().Add(submitBlindedBlockTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
+	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
 	defer cancel()
 	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
 
