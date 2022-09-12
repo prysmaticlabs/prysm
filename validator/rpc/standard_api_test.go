@@ -1016,12 +1016,18 @@ func TestServer_GetGasLimit(t *testing.T) {
 }
 
 func TestServer_SetGasLimit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	beaconClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")
 	require.NoError(t, err)
 	require.NoError(t, err2)
-
+	type beaconResp struct {
+		resp  *eth.FeeRecipientByPubKeyResponse
+		error error
+	}
 	type want struct {
 		pubkey   []byte
 		gaslimit uint64
@@ -1033,6 +1039,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 		newGasLimit      uint64
 		proposerSettings *validatorserviceconfig.ProposerSettings
 		w                []want
+		beaconReturn     *beaconResp
 	}{
 		{
 			name:        "update existing gas limit",
@@ -1097,7 +1104,25 @@ func TestServer_SetGasLimit(t *testing.T) {
 			},
 		},
 		{
-			name:        "create new gas limit value for nil proposerSettings",
+			name:        "create new gas limit value for nil proposerSettings with beacon node fee recipient",
+			pubkey:      pubkey1,
+			newGasLimit: 7777,
+			// proposerSettings is not set - we need to create proposerSettings and set gaslimit properly
+			w: []want{
+				want{
+					pubkey:   pubkey1,
+					gaslimit: 7777,
+				},
+			},
+			beaconReturn: &beaconResp{
+				resp: &eth.FeeRecipientByPubKeyResponse{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Bytes(),
+				},
+				error: nil,
+			},
+		},
+		{
+			name:        "create new gas limit value for nil proposerSettings without beacon node fee recipient",
 			pubkey:      pubkey1,
 			newGasLimit: 7777,
 			// proposerSettings is not set - we need to create proposerSettings and set gaslimit properly
@@ -1107,23 +1132,39 @@ func TestServer_SetGasLimit(t *testing.T) {
 					gaslimit: 7777,
 				},
 			},
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			feeRecipient := params.BeaconConfig().DefaultFeeRecipient.Hex()
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator:        &mock.MockValidator{},
 				ProposerSettings: tt.proposerSettings,
 			})
 			require.NoError(t, err)
 			s := &Server{
-				validatorService: vs,
+				validatorService:          vs,
+				beaconNodeValidatorClient: beaconClient,
+			}
+			if tt.beaconReturn != nil {
+				beaconClient.EXPECT().GetFeeRecipientByPubKey(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
+				if tt.beaconReturn.resp != nil {
+					feeRecipient = common.BytesToAddress(tt.beaconReturn.resp.FeeRecipient).Hex()
+				}
 			}
 			_, err = s.SetGasLimit(ctx, &ethpbservice.SetGasLimitRequest{Pubkey: tt.pubkey, GasLimit: tt.newGasLimit})
 			require.NoError(t, err)
 			for _, w := range tt.w {
 				assert.Equal(t, w.gaslimit, uint64(s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(w.pubkey)].BuilderConfig.GasLimit))
 			}
+			assert.Equal(t, s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Hex(), feeRecipient)
 		})
 	}
 }
