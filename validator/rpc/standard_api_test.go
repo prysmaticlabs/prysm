@@ -779,11 +779,19 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	}
 }
 func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	beaconClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	require.NoError(t, err)
 	type want struct {
-		EthAddress string
+		valEthAddress     string
+		defaultEthaddress string
+	}
+	type beaconResp struct {
+		resp  *eth.FeeRecipientByPubKeyResponse
+		error error
 	}
 	tests := []struct {
 		name             string
@@ -791,12 +799,66 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 		proposerSettings *validatorserviceconfig.ProposerSettings
 		want             *want
 		wantErr          bool
+		beaconReturn     *beaconResp
 	}{
 		{
 			name: "Happy Path Test",
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
 			want: &want{
-				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+				valEthAddress:     "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+				defaultEthaddress: params.BeaconConfig().DefaultFeeRecipient.Hex(),
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "Happy Path Test Beacon Cached",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			want: &want{
+				valEthAddress:     "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp: &eth.FeeRecipientByPubKeyResponse{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Bytes(),
+				},
+				error: nil,
+			},
+		},
+		{
+			name: "Happy Path Test Beacon Cached prexisting proposer data",
+			args: "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+			want: &want{
+				valEthAddress:     "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+			},
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipient: common.HexToAddress("0x055Fb65722e7b2455012Bfebf6177f1d2e9738d8"),
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test Beacon Cached prexisting default data",
+			args: "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+			want: &want{
+				valEthAddress:     "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+			},
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387"),
+				},
 			},
 			wantErr: false,
 		},
@@ -807,13 +869,21 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 				Validator:        &mock.MockValidator{},
 				ProposerSettings: tt.proposerSettings,
 			})
+			if tt.beaconReturn != nil {
+				beaconClient.EXPECT().GetFeeRecipientByPubKey(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
+			}
 			require.NoError(t, err)
 			s := &Server{
-				validatorService: vs,
+				validatorService:          vs,
+				beaconNodeValidatorClient: beaconClient,
 			}
 			_, err = s.SetFeeRecipientByPubkey(ctx, &ethpbservice.SetFeeRecipientByPubkeyRequest{Pubkey: byteval, Ethaddress: common.HexToAddress(tt.args).Bytes()})
 			require.NoError(t, err)
-			assert.Equal(t, tt.want.EthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
+			assert.Equal(t, tt.want.valEthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
+			assert.Equal(t, tt.want.defaultEthaddress, s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Hex())
 		})
 	}
 }
