@@ -40,7 +40,6 @@ go_library(
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
-        "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//math:go_default_library",
         "//monitoring/tracing:go_default_library",
