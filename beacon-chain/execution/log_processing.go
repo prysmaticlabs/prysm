@@ -51,7 +51,7 @@ func clientTimedOutError(err error) bool {
 	return strings.Contains(err.Error(), errTimedOut.Error())
 }
 
-// Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
+// GenesisExecutionChainInfo retrieves the genesis time and execution block number of the beacon chain
 // from the deposit contract.
 func (s *Service) GenesisExecutionChainInfo() (uint64, *big.Int) {
 	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))

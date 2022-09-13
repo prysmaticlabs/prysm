@@ -682,16 +682,6 @@ func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellat
 	}
 }
 
-func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBellatrix{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(),
-		StateRoot:     bytes(),
-		Body:          genBlindedBeaconBlockBodyBellatrix(),
-	}
-}
-
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
