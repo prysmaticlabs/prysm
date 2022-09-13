@@ -191,7 +191,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	secondsIntoSlot := (uint64(start.Unix()) - uint64(s.genesisTime.Unix())) % params.BeaconConfig().SecondsPerSlot
 
 	// Only update head and call FCU if the block is on-time.
-	if s.CurrentSlot() == b.Slot() || secondsIntoSlot <= params.BeaconConfig().MissBlockFcuSecsInSlot {
+	if s.CurrentSlot() == b.Slot() || secondsIntoSlot <= params.BeaconConfig().LateBlockSecsInSlot {
 		headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 		if err != nil {
 			log.WithError(err).Warn("Could not update head")
@@ -671,11 +671,11 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
-		var sentFcuForMissBlock bool
+		var lateBlock bool
 		for {
 			select {
 			case ti := <-ticker.C:
-				if !missBlockSendFcu(ti) {
+				if !lateBlockTime(ti) {
 					continue
 				}
 				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, s.headRoot())
@@ -692,23 +692,33 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 						}); err != nil {
 							log.WithError(err).Error("Could not prepare payload on empty ID")
 						}
-						sentFcuForMissBlock = true
+						lateBlock = true
 					}
 					missedPayloadIDFilledCount.Inc()
 				}
 			case ti := <-ticker.C:
-				if !processMissBlockAtts(ti) {
+				if !processAttsTime(ti) {
 					continue
 				}
-				if !sentFcuForMissBlock {
+				if !lateBlock {
 					continue
 				}
-				// If the head slot hasn't moved, even we have received the block for current slot
-				// it's unlikely that the block will be worth building on
-				// TODO: do we need to lock s.head?
-				if s.head.slot != s.CurrentSlot() {
+
+				if s.CurrentSlot() != s.ForkChoicer().HighestReceivedBlockSlot() {
 					continue
 				}
+
+				hr := s.ForkChoicer().HighestReceivedBlockRoot()
+				vf, err := s.ForkChoicer().VotedFraction(hr)
+				if err != nil {
+					log.WithError(err).Error("Could not get voted fraction")
+					continue
+				}
+
+				if vf > 10 {
+
+				}
+
 				// Use Potuz PR to check how much weight head root has
 				// If the weight has more than 10% we can do nothing, the new FCU has been called earlier
 				// If the weight is less than 10% we can call FCU again with the previous head root
@@ -722,14 +732,14 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 	}()
 }
 
-// Returns true if time `t` at  `MissBlockFcuSecsInSlot` during the slot.
-func missBlockSendFcu(t time.Time) bool {
+// Returns true if time `t` at  `LateBlockSecsInSlot` during the slot.
+func lateBlockTime(t time.Time) bool {
 	s := params.BeaconConfig().SecondsPerSlot
-	return uint64(t.Second())%s == params.BeaconConfig().MissBlockFcuSecsInSlot
+	return uint64(t.Second())%s == params.BeaconConfig().LateBlockSecsInSlot
 }
 
-// Returns true if time `t` at `ProcessMissBlockAttsSecsInSlot` during the slot.
-func processMissBlockAtts(t time.Time) bool {
+// Returns true if time `t` at `ProcessAttsSecsInSlot` during the slot.
+func processAttsTime(t time.Time) bool {
 	s := params.BeaconConfig().SecondsPerSlot
-	return uint64(t.Second())%s == params.BeaconConfig().ProcessMissBlockAttsSecsInSlot
+	return uint64(t.Second())%s == params.BeaconConfig().ProcessAttsSecsInSlot
 }

@@ -204,8 +204,8 @@ type BeaconChainConfig struct {
 	MaxBuilderConsecutiveMissedSlots types.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
 	MaxBuilderEpochMissedSlots       types.Slot // MaxBuilderEpochMissedSlots is defines the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
 
-	MissBlockFcuSecsInSlot         uint64 // MissBlockFcuSecsInSlot defines the number of seconds in a slot to send a miss block skip slot FCU to the execution client.
-	ProcessMissBlockAttsSecsInSlot uint64 // ProcessMissBlockAttsSecsInSlot defines the number of seconds in a slot to process attestations in the event the block was missed.
+	LateBlockSecsInSlot   uint64 // LateBlockSecsInSlot defines the number of seconds in a slot to send a miss block skip slot FCU to the execution client.
+	ProcessAttsSecsInSlot uint64 // ProcessAttsSecsInSlot defines the number of seconds in a slot to process attestations in the event the block was late.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
