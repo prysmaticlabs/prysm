@@ -65,7 +65,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.Info("Proposer Settings such as fee recipient are not defined in the validator client" +
+		log.Info("Proposer settings such as fee recipient are not defined in the validator client" +
 			" and will continue to use settings provided in the beacon node.")
 	}
 
