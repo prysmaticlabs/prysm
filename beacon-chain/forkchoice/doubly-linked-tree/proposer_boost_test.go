@@ -430,7 +430,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		f := setup(0, 0)
 		slot := types.Slot(1)
 		currentSlot := types.Slot(1)
-		driftGenesisTime(f, currentSlot, uint64(params.BeaconConfig().SecondsPerSlot-1))
+		driftGenesisTime(f, currentSlot, params.BeaconConfig().SecondsPerSlot-1)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)
 		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
