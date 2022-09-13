@@ -44,8 +44,8 @@ type stateRootResponse_StateRootJson struct {
 	StateRoot string `json:"root" hex:"true"`
 }
 
-type stateForkResponseJson struct {
-	Data                *forkJson `json:"data"`
+type StateForkResponseJson struct {
+	Data                *ForkJson `json:"data"`
 	ExecutionOptimistic bool      `json:"execution_optimistic"`
 }
 
@@ -188,8 +188,8 @@ type v2ForkChoiceHeadsResponseJson struct {
 	Data []*v2ForkChoiceHeadJson `json:"data"`
 }
 
-type forkScheduleResponseJson struct {
-	Data []*forkJson `json:"data"`
+type ForkScheduleResponseJson struct {
+	Data []*ForkJson `json:"data"`
 }
 
 type depositContractResponseJson struct {
@@ -584,7 +584,7 @@ type beaconStateJson struct {
 	GenesisTime                 string                    `json:"genesis_time"`
 	GenesisValidatorsRoot       string                    `json:"genesis_validators_root" hex:"true"`
 	Slot                        string                    `json:"slot"`
-	Fork                        *forkJson                 `json:"fork"`
+	Fork                        *ForkJson                 `json:"fork"`
 	LatestBlockHeader           *beaconBlockHeaderJson    `json:"latest_block_header"`
 	BlockRoots                  []string                  `json:"block_roots" hex:"true"`
 	StateRoots                  []string                  `json:"state_roots" hex:"true"`
@@ -608,7 +608,7 @@ type beaconStateAltairJson struct {
 	GenesisTime                 string                 `json:"genesis_time"`
 	GenesisValidatorsRoot       string                 `json:"genesis_validators_root" hex:"true"`
 	Slot                        string                 `json:"slot"`
-	Fork                        *forkJson              `json:"fork"`
+	Fork                        *ForkJson              `json:"fork"`
 	LatestBlockHeader           *beaconBlockHeaderJson `json:"latest_block_header"`
 	BlockRoots                  []string               `json:"block_roots" hex:"true"`
 	StateRoots                  []string               `json:"state_roots" hex:"true"`
@@ -635,7 +635,7 @@ type beaconStateBellatrixJson struct {
 	GenesisTime                  string                      `json:"genesis_time"`
 	GenesisValidatorsRoot        string                      `json:"genesis_validators_root" hex:"true"`
 	Slot                         string                      `json:"slot"`
-	Fork                         *forkJson                   `json:"fork"`
+	Fork                         *ForkJson                   `json:"fork"`
 	LatestBlockHeader            *beaconBlockHeaderJson      `json:"latest_block_header"`
 	BlockRoots                   []string                    `json:"block_roots" hex:"true"`
 	StateRoots                   []string                    `json:"state_roots" hex:"true"`
@@ -665,7 +665,7 @@ type beaconStateContainerV2Json struct {
 	BellatrixState *beaconStateBellatrixJson `json:"bellatrix_state"`
 }
 
-type forkJson struct {
+type ForkJson struct {
 	PreviousVersion string `json:"previous_version" hex:"true"`
 	CurrentVersion  string `json:"current_version" hex:"true"`
 	Epoch           string `json:"epoch"`

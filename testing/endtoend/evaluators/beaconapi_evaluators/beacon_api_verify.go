@@ -1,6 +1,7 @@
 package beaconapi_evaluators
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"google.golang.org/grpc"
@@ -24,21 +25,21 @@ func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconBlocks,
 	}
-	validator := []apiComparisonFunc{
-		withCompareAttesterDuties,
-	}
-	node := []apiComparisonFunc{
-		withCompareNodeMetaData,
-	}
-	compareFns := append(beacon, validator...)
-	compareFns = append(compareFns, node...)
+	//validator := []apiComparisonFunc{
+	//	withCompareAttesterDuties,
+	//}
+	//node := []apiComparisonFunc{
+	//	withCompareNodeMetaData,
+	//}
+	//compareFns := append(beacon, validator...)
+	//compareFns = append(compareFns, node...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
-			compareFns...,
+			beacon...,
 		); err != nil {
-			return err
+			return errors.Wrap(err, "beaconAPI verify")
 		}
 	}
 	return nil
@@ -47,7 +48,7 @@ func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 func runAPIComparisonFunctions(beaconNodeIdx int, conn *grpc.ClientConn, fs ...apiComparisonFunc) error {
 	for _, f := range fs {
 		if err := f(beaconNodeIdx, conn); err != nil {
-			return err
+			return errors.Wrap(err, "runAPIComparisonFunctions")
 		}
 	}
 	return nil

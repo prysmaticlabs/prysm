@@ -82,7 +82,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/states/{state_id}/root":
 		endpoint.GetResponse = &stateRootResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/fork":
-		endpoint.GetResponse = &stateForkResponseJson{}
+		endpoint.GetResponse = &StateForkResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
 		endpoint.GetResponse = &stateFinalityCheckpointResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/validators":
@@ -189,7 +189,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/debug/beacon/forkchoice":
 		endpoint.GetResponse = &forkchoiceResponse{}
 	case "/eth/v1/config/fork_schedule":
-		endpoint.GetResponse = &forkScheduleResponseJson{}
+		endpoint.GetResponse = &ForkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
 		endpoint.GetResponse = &depositContractResponseJson{}
 	case "/eth/v1/config/spec":
