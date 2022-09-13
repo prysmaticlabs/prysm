@@ -200,7 +200,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 	}
 
 	highestSlot := state.Slot()
-	key, err := cacheKey(ctx, state)
+	key, err := SkipSlotCacheKey(ctx, state)
 	if err != nil {
 		return nil, err
 	}

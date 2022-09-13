@@ -10,6 +10,8 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -166,4 +168,29 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 	// Wait for all transitions to finish
 	wg.Wait()
+}
+
+func TestSkipSlotCacheKey(t *testing.T) {
+	st, _ := util.DeterministicGenesisState(t, 100)
+	require.NoError(t, st.SetSlot(1))
+	k, err := transition.SkipSlotCacheKey(context.Background(), st)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, k)
+
+	require.NoError(t, st.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		StateRoot: bytesutil.PadTo([]byte{1, 2, 3, 4}, 32),
+	}))
+	k, err = transition.SkipSlotCacheKey(context.Background(), st)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, k)
+}
+
+func BenchmarkCacheKey(b *testing.B) {
+	st, _ := util.DeterministicGenesisState(b, 100)
+	for i := 0; i < b.N; i++ {
+		_, err := transition.SkipSlotCacheKey(context.Background(), st)
+		require.NoError(b, err)
+	}
 }
