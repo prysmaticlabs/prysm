@@ -860,7 +860,7 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Happy Path Test Beacon Cached prexisting default data",
+			name: "Happy Path Test Beacon Cached preexisting default data",
 			args: "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
 			want: &want{
 				valEthAddress:     "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
