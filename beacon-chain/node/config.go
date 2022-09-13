@@ -182,7 +182,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		log.WithError(err).Error(fmt.Sprintf("could not decode fee recipient %s , setting suggested-fee-recipient failed", ha))
+		log.WithError(err).Error(fmt.Sprintf("Could not decode fee recipient %s, setting suggested-fee-recipient failed", ha))
 		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
