@@ -26,6 +26,10 @@ func SkipSlotCacheKey(_ context.Context, state state.ReadOnlyBeaconState) ([32]b
 		return [32]byte{}, errors.New("block head in state can't be nil")
 	}
 	sr := bh.StateRoot
+	if len(sr) != 32 {
+		return [32]byte{}, errors.New("invalid state root in latest block header")
+	}
+
 	var b [8]byte
 	copy(b[:], bytesutil.SlotToBytesBigEndian(state.Slot()))
 	sr = append(sr[:24], b[:]...)
