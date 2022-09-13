@@ -275,7 +275,7 @@ func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
 	var latestHash *common.Hash
 	if p.LatestValidHash != nil {
 		hash := common.Hash(bytesutil.ToBytes32(p.LatestValidHash))
-		latestHash = (*common.Hash)(&hash)
+		latestHash = &hash
 	}
 	return json.Marshal(payloadStatusJSON{
 		LatestValidHash: latestHash,
@@ -324,7 +324,7 @@ func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(transitionConfigurationJSON{
 		TerminalTotalDifficulty: hexNum,
-		TerminalBlockHash:       common.Hash(*(*[32]byte)(t.TerminalBlockHash)),
+		TerminalBlockHash:       *(*[32]byte)(t.TerminalBlockHash),
 		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
 	})
 }

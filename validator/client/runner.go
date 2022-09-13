@@ -137,6 +137,7 @@ func run(ctx context.Context, v iface.Validator) {
 			allRoles, err := v.RolesAt(ctx, slot)
 			if err != nil {
 				log.WithError(err).Error("Could not get validator roles")
+				cancel()
 				span.End()
 				continue
 			}
