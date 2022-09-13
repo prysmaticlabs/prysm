@@ -24,7 +24,6 @@ type Store struct {
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized finalized checkpoint in store.
 	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.
 	finalizedCheckpoint           *forkchoicetypes.Checkpoint            // latest finalized epoch in store.
-	pruneThreshold                uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot             [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot     [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
@@ -38,9 +37,10 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
-	highestReceivedSlot           types.Slot                            // The highest received slot in the chain.
+	highestReceivedNode           *Node                                 // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
+	committeeBalance              uint64                                // tracks the total active validator balance divided by slots per epoch. Requires a lock on nodes to read/write
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

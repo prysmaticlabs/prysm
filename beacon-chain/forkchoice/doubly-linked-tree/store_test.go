@@ -12,15 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-func TestStore_PruneThreshold(t *testing.T) {
-	s := &Store{
-		pruneThreshold: defaultPruneThreshold,
-	}
-	if got := s.PruneThreshold(); got != defaultPruneThreshold {
-		t.Errorf("PruneThreshold() = %v, want %v", got, defaultPruneThreshold)
-	}
-}
-
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
 	f := setup(j, j)
@@ -140,7 +131,7 @@ func TestStore_Insert(t *testing.T) {
 	nodeByPayload := map[[32]byte]*Node{indexToHash(0): treeRootNode}
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
-	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc, highestReceivedNode: &Node{}}
 	payloadHash := [32]byte{'a'}
 	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1)
 	require.NoError(t, err)
@@ -152,30 +143,6 @@ func TestStore_Insert(t *testing.T) {
 	assert.Equal(t, types.Epoch(1), child.justifiedEpoch, "Incorrect justification")
 	assert.Equal(t, types.Epoch(1), child.finalizedEpoch, "Incorrect finalization")
 	assert.Equal(t, indexToHash(100), child.root, "Incorrect root")
-}
-
-func TestStore_Prune_LessThanThreshold(t *testing.T) {
-	// Define 100 nodes in store.
-	numOfNodes := uint64(100)
-	f := setup(0, 0)
-	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	for i := uint64(2); i < numOfNodes; i++ {
-		state, blkRoot, err = prepareForkchoiceState(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0)
-		require.NoError(t, err)
-		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	}
-
-	s := f.store
-	s.pruneThreshold = 100
-
-	// Finalized root has depth 99 so everything before it should be pruned,
-	// but PruneThreshold is at 100 so nothing will be pruned.
-	s.finalizedCheckpoint.Root = indexToHash(99)
-	require.NoError(t, s.prune(context.Background()))
-	assert.Equal(t, 100, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
 func TestStore_Prune_MoreThanThreshold(t *testing.T) {
@@ -193,7 +160,6 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	}
 
 	s := f.store
-	s.pruneThreshold = 0
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
 	s.finalizedCheckpoint.Root = indexToHash(99)
@@ -216,7 +182,6 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	}
 
 	s := f.store
-	s.pruneThreshold = 0
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
 	s.finalizedCheckpoint.Root = indexToHash(10)
@@ -227,6 +192,25 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(20)
 	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
+}
+
+func TestStore_Prune_ReturnEarly(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := uint64(100)
+	f := setup(0, 0)
+	ctx := context.Background()
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	for i := uint64(2); i < numOfNodes; i++ {
+		state, blkRoot, err = prepareForkchoiceState(ctx, types.Slot(i), indexToHash(i), indexToHash(i-1), params.BeaconConfig().ZeroHash, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	}
+	require.NoError(t, f.store.prune(ctx))
+	nodeCount := f.NodeCount()
+	require.NoError(t, f.store.prune(ctx))
+	require.Equal(t, nodeCount, f.NodeCount())
 }
 
 // This unit tests starts with a simple branch like this
@@ -245,7 +229,6 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	f.store.pruneThreshold = 0
 
 	s := f.store
 	s.finalizedCheckpoint.Root = indexToHash(1)
@@ -330,7 +313,6 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	s := f.store
-	s.pruneThreshold = 0
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
@@ -356,21 +338,24 @@ func TestStore_HasParent(t *testing.T) {
 	require.Equal(t, false, f.HasParent(indexToHash(4)))
 }
 
-func TestForkChoice_HighestReceivedBlockSlot(t *testing.T) {
+func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store
 	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(100), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(100), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(100), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 }
 
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
