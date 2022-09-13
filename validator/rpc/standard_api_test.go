@@ -728,7 +728,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Happy Path Test Cached",
+			name: "happy path test cached",
 			args: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
