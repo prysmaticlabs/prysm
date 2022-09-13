@@ -373,20 +373,14 @@ def prysm_deps():
     go_repository(
         name = "com_github_btcsuite_btcd",
         importpath = "github.com/btcsuite/btcd",
-        sum = "h1:IB8cVQcC2X5mHbnfirLG5IZnkWYNTPlLZVrxUYSotbE=",
-        version = "v0.23.1",
+        sum = "h1:LTDpDKUM5EeOFBPM8IXpinEcmZ6FWfNZbE3lfrfdnWo=",
+        version = "v0.22.0-beta",
     )
     go_repository(
         name = "com_github_btcsuite_btcd_btcec_v2",
         importpath = "github.com/btcsuite/btcd/btcec/v2",
         sum = "h1:fzn1qaOt32TuLjFlkzYSsBC35Q3KUjT1SwPxiMSCF5k=",
         version = "v2.2.0",
-    )
-    go_repository(
-        name = "com_github_btcsuite_btcd_btcutil",
-        importpath = "github.com/btcsuite/btcd/btcutil",
-        sum = "h1:MO4klnGY+EWJdoWF12Wkuf4AWDBPMpZNeN/jRLrklUU=",
-        version = "v1.1.0",
     )
 
     go_repository(
