@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"text/template"
-	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -36,13 +35,6 @@ var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
-
-// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
-func WithTimeout(timeout time.Duration) ClientOpt {
-	return func(c *Client) {
-		c.hc.Timeout = timeout
-	}
-}
 
 type observer interface {
 	observe(r *http.Request) error
