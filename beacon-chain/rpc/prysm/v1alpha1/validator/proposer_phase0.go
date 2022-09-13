@@ -86,22 +86,13 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
-	// Now which head do I use?
-	// 1.) real head from attester's point of view
-	// 2.) reorg'ed head from proposer defensive point of view
-	// It's easy to get 1. It's just `vs.HeadFetcher.HeadRoot(ctx)`
-	// It's hard to get 2. We need to cache it somewhere
-
-	// We also need to perform one last check to ensure the scenarios:
-	// The block arrived between X to Y time, at Y it didnt have 10% but it now has 10%
-	//    - How do we prove this? Maybe we can compare 1.block.slot and 2.block.slot. That sounds dangerous though
-	// The block arrived between Y to new slot time, it now has 10%
-
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve head root: %v", err)
 	}
+
+	// TODO: we must consider the edge case where the late block root didnt have 10% at Y but it has 10% now
 
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {

@@ -190,8 +190,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	start := time.Now()
 	secondsIntoSlot := (uint64(start.Unix()) - uint64(s.genesisTime.Unix())) % params.BeaconConfig().SecondsPerSlot
 
-	// Only update head and call FCU if the block is on-time.
-	if s.CurrentSlot() == b.Slot() || secondsIntoSlot <= params.BeaconConfig().LateBlockSecsInSlot {
+	// Only update head and call FCU if you are not proposing next slot
+	// Or the block is on time within current slot.
+	_, _, proposingNextSlot := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{})
+	if !proposingNextSlot || (s.CurrentSlot() == b.Slot() && secondsIntoSlot <= params.BeaconConfig().LateBlockSecsInSlot) {
 		headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 		if err != nil {
 			log.WithError(err).Warn("Could not update head")
@@ -708,6 +710,9 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 					continue
 				}
 
+				// TODO: We can't process attestations until the subsequent slot has started.
+				s.processAttestations(ctx)
+
 				hr := s.ForkChoicer().HighestReceivedBlockRoot()
 				vf, err := s.ForkChoicer().VotedFraction(hr)
 				if err != nil {
@@ -716,13 +721,26 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 				}
 
 				if vf > 10 {
-
+					// TODO: Check justified balances edge cases.
+					justified := s.ForkChoicer().JustifiedCheckpoint()
+					bal, err := s.justifiedBalances.get(ctx, justified.Root)
+					if err != nil {
+						log.WithError(err).Error("Could not get justified balances")
+						continue
+					}
+					newR, err := s.ForkChoicer().Head(ctx, bal)
+					if err != nil {
+						log.WithError(err).Error("Could not get fork choice head")
+						continue
+					}
+					// There's no reason to call FCU unless the head is the late block
+					if newR == hr {
+						if err := s.notifyEngineIfChangedHead(ctx, hr); err != nil {
+							log.WithError(err).Error("Could not notify engine of new head")
+							continue
+						}
+					}
 				}
-
-				// Use Potuz PR to check how much weight head root has
-				// If the weight has more than 10% we can do nothing, the new FCU has been called earlier
-				// If the weight is less than 10% we can call FCU again with the previous head root
-				// TODO: Find previous head root (This is hard)
 
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
