@@ -139,19 +139,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
-	psOpts := []pubsub.Option{
-		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		pubsub.WithNoAuthor(),
-		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot, pmsg)
-		}),
-		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
-		pubsub.WithValidateQueueSize(pubsubQueueSize),
-		pubsub.WithPeerScore(peerScoringParams()),
-		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
-		pubsub.WithGossipSubParams(pubsubGossipParam()),
-	}
+	psOpts := s.pubsubOptions()
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
 	// Reinitialize them in the event we are running a custom config.
