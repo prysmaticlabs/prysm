@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
