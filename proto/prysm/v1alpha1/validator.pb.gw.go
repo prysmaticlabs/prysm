@@ -2015,7 +2015,7 @@ var (
 
 	pattern_BeaconNodeValidator_PrepareBeaconProposer_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "prepare_beacon_proposer"}, ""))
 
-	pattern_BeaconNodeValidator_GetFeeRecipientByPubKey_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "fee_recipient_by_validator_index"}, ""))
+	pattern_BeaconNodeValidator_GetFeeRecipientByPubKey_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "fee_recipient_by_pub_key"}, ""))
 
 	pattern_BeaconNodeValidator_GetAttestationData_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "attestation"}, ""))
 
