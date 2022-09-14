@@ -2468,6 +2468,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	numDeposits := uint64(64)
 	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
 	bsRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
 	proposerServer := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Root: bsRoot[:], State: beaconState},
