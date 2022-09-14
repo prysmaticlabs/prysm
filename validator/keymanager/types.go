@@ -83,12 +83,12 @@ type AccountLister interface {
 
 // Keystore json file representation as a Go struct.
 type Keystore struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
-	Path    string                 `json:"path"`
+	Crypto      map[string]interface{} `json:"crypto"`
+	ID          string                 `json:"uuid"`
+	Pubkey      string                 `json:"pubkey"`
+	Version     uint                   `json:"version"`
+	Description string                 `json:"description"`
+	Path        string                 `json:"path"`
 }
 
 // Kind defines an enum for either local, derived, or remote-signing

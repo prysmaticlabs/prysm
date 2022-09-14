@@ -283,11 +283,11 @@ func createKeystoreFromPrivateKey(privKey bls.SecretKey, walletPassword string) 
 		)
 	}
 	return &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Version: encryptor.Version(),
-		Pubkey:  fmt.Sprintf("%x", privKey.PublicKey().Marshal()),
-		Name:    encryptor.Name(),
+		Crypto:      cryptoFields,
+		ID:          id.String(),
+		Version:     encryptor.Version(),
+		Pubkey:      fmt.Sprintf("%x", privKey.PublicKey().Marshal()),
+		Description: encryptor.Name(),
 	}, nil
 }
 
