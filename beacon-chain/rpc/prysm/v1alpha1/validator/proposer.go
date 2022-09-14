@@ -135,7 +135,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 			}, nil
 		} else {
 			log.WithError(err).Error("An error occurred while retrieving validator index")
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, err
 		}
 
 	}
