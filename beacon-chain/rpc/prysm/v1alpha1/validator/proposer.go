@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -128,9 +129,15 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 
 	resp, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: request.PublicKey})
 	if err != nil {
-		return &ethpb.FeeRecipientByPubKeyResponse{
-			FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
-		}, nil
+		if strings.Contains(err.Error(), "Could not find validator index") {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving validator index")
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+
 	}
 	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
 	if err != nil {
@@ -140,7 +147,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 			}, nil
 		} else {
 			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
-			return nil, err
+			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 	}
 	return &ethpb.FeeRecipientByPubKeyResponse{
