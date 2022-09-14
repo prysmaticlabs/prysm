@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const nonExistantPublicKey = "0x0"
+
 // ListKeystores implements the standard validator key management API.
 func (s *Server) ListKeystores(
 	ctx context.Context, _ *empty.Empty,
@@ -451,7 +453,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	if s.validatorService.ProposerSettings == nil {
 		// get the default fee recipient defined with an invalid public key from beacon node
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
-			PublicKey: []byte("0x0"),
+			PublicKey: []byte(nonExistantPublicKey),
 		})
 		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
 			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
@@ -535,48 +537,34 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	finalResp := &ethpbservice.GetFeeRecipientByPubkeyResponse{
+		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+			Pubkey:     validatorKey,
+			Ethaddress: defaultFeeRecipient,
+		},
+	}
 	if s.validatorService.ProposerSettings == nil {
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
 			PublicKey: validatorKey,
 		})
-		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
-			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-					Pubkey:     validatorKey,
-					Ethaddress: defaultFeeRecipient,
-				},
-			}, nil
-		} else {
-			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-					Pubkey:     validatorKey,
-					Ethaddress: resp.FeeRecipient,
-				},
-			}, nil
+		if resp != nil && len(resp.FeeRecipient) != 0 && err == nil {
+			finalResp.Data.Ethaddress = resp.FeeRecipient
 		}
+		return finalResp, nil
 	}
 	if s.validatorService.ProposerSettings.ProposeConfig != nil {
 		hexv := hexutil.Encode(validatorKey)
 		fmt.Println(hexv)
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
-			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-					Pubkey:     validatorKey,
-					Ethaddress: proposerOption.FeeRecipient.Bytes(),
-				},
-			}, nil
+			finalResp.Data.Ethaddress = proposerOption.FeeRecipient.Bytes()
+			return finalResp, nil
 		}
 	}
 	if s.validatorService.ProposerSettings.DefaultConfig != nil {
-		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
+		finalResp.Data.Ethaddress = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
 	}
-	return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-			Pubkey:     validatorKey,
-			Ethaddress: defaultFeeRecipient,
-		},
-	}, nil
+	return finalResp, nil
 }
 
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.
@@ -600,25 +588,21 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	case s.validatorService.ProposerSettings == nil:
 		// get the default fee recipient defined with an invalid public key from beacon node
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
-			PublicKey: []byte("0x0"),
+			PublicKey: []byte(nonExistantPublicKey),
 		})
+		settings := &validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(validatorKey): &pOption,
+			},
+		}
 		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
-			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
-				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
-					bytesutil.ToBytes48(validatorKey): &pOption,
-				},
-				DefaultConfig: &defaultOption,
-			}
+			settings.DefaultConfig = &defaultOption
 		} else {
-			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
-				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
-					bytesutil.ToBytes48(validatorKey): &pOption,
-				},
-				DefaultConfig: &validatorServiceConfig.ProposerOption{
-					FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
-				},
+			settings.DefaultConfig = &validatorServiceConfig.ProposerOption{
+				FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
 			}
 		}
+		s.validatorService.ProposerSettings = settings
 	case s.validatorService.ProposerSettings.ProposeConfig == nil:
 		pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
 		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{

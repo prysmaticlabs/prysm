@@ -171,7 +171,7 @@ service BeaconNodeValidator {
     // GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
     rpc GetFeeRecipientByPubKey(FeeRecipientByPubKeyRequest) returns (FeeRecipientByPubKeyResponse){
         option (google.api.http) = {
-            post: "/eth/v1alpha1/validator/fee_recipient_by_validator_index"
+            post: "/eth/v1alpha1/validator/fee_recipient_by_pub_key"
             body: "*"
         };
     }

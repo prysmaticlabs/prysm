@@ -193,7 +193,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
-	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and percists in db."+
+	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
 		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
 }
