@@ -82,6 +82,8 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		require.NoError(t, err)
 		s1, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wsb)
 		require.NoError(t, err, "Could not run state transition")
+		s1, err = transition.ProcessSlot(context.Background(), s1)
+		require.NoError(t, err, "Could not process slot")
 	}
 
 	{
@@ -95,6 +97,8 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		require.NoError(t, err)
 		s0, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wsb)
 		require.NoError(t, err, "Could not run state transition")
+		s0, err = transition.ProcessSlot(context.Background(), s0)
+		require.NoError(t, err, "Could not process slot")
 	}
 
 	r1, err := s1.HashTreeRoot(context.Background())
