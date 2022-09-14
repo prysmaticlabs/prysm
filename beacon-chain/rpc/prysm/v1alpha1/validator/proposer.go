@@ -134,9 +134,14 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}
 	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
 	if err != nil {
-		return &ethpb.FeeRecipientByPubKeyResponse{
-			FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
-		}, nil
+		if errors.Is(err, kv.ErrNotFoundFeeRecipient) {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
+			return nil, err
+		}
 	}
 	return &ethpb.FeeRecipientByPubKeyResponse{
 		FeeRecipient: address.Bytes(),
