@@ -10,9 +10,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -96,7 +94,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 		}
 	}
 
-	var st, err = v1.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafePhase0(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +149,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 		}
 	}
 
-	var st, err = v2.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafeAltair(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +216,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 		}
 	}
 
-	var st, err = v3.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafeBellatrix(seed)
 	if err != nil {
 		return nil, err
 	}
