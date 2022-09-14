@@ -795,6 +795,8 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 	beaconClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	wantAddress := "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7"
+	cachedAddress := "0x055Fb65722E7b2455012BFEBf6177F1D2e97387"
 	require.NoError(t, err)
 	type want struct {
 		valEthAddress     string
@@ -830,22 +832,22 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
 			want: &want{
 				valEthAddress:     "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
-				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+				defaultEthaddress: common.HexToAddress(cachedAddress).Hex(),
 			},
 			wantErr: false,
 			beaconReturn: &beaconResp{
 				resp: &eth.FeeRecipientByPubKeyResponse{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Bytes(),
+					FeeRecipient: common.HexToAddress(cachedAddress).Bytes(),
 				},
 				error: nil,
 			},
 		},
 		{
 			name: "Happy Path Test Beacon Cached preexisting proposer data",
-			args: "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+			args: wantAddress,
 			want: &want{
-				valEthAddress:     "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
-				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+				valEthAddress:     wantAddress,
+				defaultEthaddress: common.HexToAddress(cachedAddress).Hex(),
 			},
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
@@ -854,21 +856,21 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387"),
+					FeeRecipient: common.HexToAddress(cachedAddress),
 				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "Happy Path Test Beacon Cached preexisting default data",
-			args: "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
+			args: wantAddress,
 			want: &want{
-				valEthAddress:     "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7",
-				defaultEthaddress: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387").Hex(),
+				valEthAddress:     wantAddress,
+				defaultEthaddress: common.HexToAddress(cachedAddress).Hex(),
 			},
 			proposerSettings: &validatorserviceconfig.ProposerSettings{
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e97387"),
+					FeeRecipient: common.HexToAddress(cachedAddress),
 				},
 			},
 			wantErr: false,
