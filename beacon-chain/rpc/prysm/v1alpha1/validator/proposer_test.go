@@ -2481,10 +2481,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), hexutil.Encode(resp.FeeRecipient))
-
-	params.OverrideBeaconConfig(&params.BeaconChainConfig{
-		DefaultFeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9728D9"),
-	})
+	params.BeaconConfig().DefaultFeeRecipient = common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
 	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
 		PublicKey: beaconState.Validators()[0].PublicKey,
 	})
