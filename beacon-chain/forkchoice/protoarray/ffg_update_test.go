@@ -6,7 +6,7 @@ import (
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -53,7 +53,7 @@ func prepareForkchoiceState(
 	}
 
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
-	st, err := v3.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
 }
 func TestFFGUpdates_OneBranch(t *testing.T) {

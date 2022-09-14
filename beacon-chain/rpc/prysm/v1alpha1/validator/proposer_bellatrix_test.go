@@ -23,8 +23,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -914,6 +914,6 @@ func createState(
 	}
 
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
-	st, err := v3.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
 }

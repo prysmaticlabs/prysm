@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -20,9 +20,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	transition.SkipSlotCache.Enable()
 	defer transition.SkipSlotCache.Disable()
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.CloneInnerState())
 	require.NoError(t, err)
-	originalState, err := v1.InitializeFromProto(pbState)
+	originalState, err := state_native.InitializeFromProtoPhase0(pbState)
 	require.NoError(t, err)
 
 	blkCfg := util.DefaultBlockGenConfig()
@@ -47,9 +47,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.CloneInnerState())
 	require.NoError(t, err)
-	originalState, err := v1.InitializeFromProto(pbState)
+	originalState, err := state_native.InitializeFromProtoPhase0(pbState)
 	require.NoError(t, err)
 
 	blkCfg := util.DefaultBlockGenConfig()

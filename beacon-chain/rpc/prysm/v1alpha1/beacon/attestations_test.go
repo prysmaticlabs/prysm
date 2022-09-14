@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -42,7 +42,7 @@ func TestServer_ListAttestations_NoResults(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)
