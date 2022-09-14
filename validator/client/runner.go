@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -56,7 +57,8 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.HasProposerSettings() {
-		log.Infoln("Provided proposer settings will periodically update settings such as fee recipient in the beacon node and custom builder if enabled")
+		log.Infof("Provided proposer settings will periodically update settings such as fee recipient"+
+			" in the beacon node and custom builder ( if --%s)", flags.EnableBuilderFlag.Name)
 		if err := v.PushProposerSettings(ctx, km); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
