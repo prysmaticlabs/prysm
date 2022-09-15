@@ -242,6 +242,12 @@ func (s *Store) prune(ctx context.Context) error {
 			s.previousProposerBoostRoot = [32]byte{}
 		}
 	}
+	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
+		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
+		if !ok || currentNode == nil {
+			s.proposerBoostRoot = [32]byte{}
+		}
+	}
 	s.proposerBoostLock.Unlock()
 
 	finalizedNode.parent = nil
