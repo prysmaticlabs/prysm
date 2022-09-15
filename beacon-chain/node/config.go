@@ -54,17 +54,6 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 	return nil
 }
 
-func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
-	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
-		c := params.BeaconConfig().Copy()
-		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
-		if err := params.SetActive(c); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
