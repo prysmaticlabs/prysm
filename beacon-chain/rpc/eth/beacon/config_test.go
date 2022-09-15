@@ -354,6 +354,7 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "40", v)
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
+		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
