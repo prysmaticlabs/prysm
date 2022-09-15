@@ -25,9 +25,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 		if !ok || previousNode == nil {
 			s.previousProposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
-			return nil
+		} else {
+			previousNode.balance -= s.previousProposerBoostScore
 		}
-		previousNode.balance -= s.previousProposerBoostScore
 	}
 
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
@@ -35,13 +35,13 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 		if !ok || currentNode == nil {
 			s.proposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
-			return nil
+		} else {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				return err
+			}
+			currentNode.balance += proposerScore
 		}
-		proposerScore, err = computeProposerBoostScore(newBalances)
-		if err != nil {
-			return err
-		}
-		currentNode.balance += proposerScore
 	}
 	s.previousProposerBoostRoot = s.proposerBoostRoot
 	s.previousProposerBoostScore = proposerScore
