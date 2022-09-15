@@ -25,13 +25,21 @@ func init() {
 	transition.SkipSlotCache.Disable()
 }
 
-// Run executes "forkchoice" test.
+// Run executes "forkchoice"  and "sync" test.
 func Run(t *testing.T, config string, fork int) {
+	runTest(t, config, fork, "fork_choice")
+	runTest(t, config, fork, "sync")
+}
+
+func runTest(t *testing.T, config string, fork int, basePath string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, _ := utils.TestFolders(t, config, version.String(fork), "fork_choice")
+	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
+	if testFolders == nil {
+		return
+	}
 
 	for _, folder := range testFolders {
-		folderPath := path.Join("fork_choice", folder.Name(), "pyspec_tests")
+		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
 		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
 
 		for _, folder := range testFolders {
@@ -112,6 +120,10 @@ func Run(t *testing.T, config string, fork int) {
 						att := &ethpb.Attestation{}
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						builder.Attestation(t, att)
+					}
+					if step.PayloadStatus != nil {
+						require.NoError(t, builder.SetPayloadStatus(step.PayloadStatus))
+
 					}
 					if step.PowBlock != nil {
 						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
