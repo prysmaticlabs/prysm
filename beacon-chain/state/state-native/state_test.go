@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -66,7 +65,6 @@ func TestBeaconState_NoDeadlock_Phase0(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	features.Init(&features.Flags{EnableNativeState: true})
 	newState, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
 		Validators: vals,
 	})
@@ -123,7 +121,6 @@ func TestBeaconState_NoDeadlock_Altair(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	features.Init(&features.Flags{EnableNativeState: true})
 	st, err := InitializeFromProtoUnsafeAltair(&ethpb.BeaconStateAltair{
 		Validators: vals,
 	})
@@ -180,7 +177,6 @@ func TestBeaconState_NoDeadlock_Bellatrix(t *testing.T) {
 			WithdrawableEpoch:          1,
 		})
 	}
-	features.Init(&features.Flags{EnableNativeState: true})
 	st, err := InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{
 		Validators: vals,
 	})
@@ -253,7 +249,6 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	for i := 0; i < len(mockrandaoMixes); i++ {
 		mockrandaoMixes[i] = zeroHash[:]
 	}
-	features.Init(&features.Flags{EnableNativeState: true})
 	newState, err := InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:                  1,
 		GenesisValidatorsRoot: make([]byte, 32),
@@ -305,7 +300,6 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 }
 
 func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	assert.NoError(t, err)
 	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
@@ -314,7 +308,6 @@ func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
 }
 
 func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	st, err := InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	assert.NoError(t, err)
 	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {

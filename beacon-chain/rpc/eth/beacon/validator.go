@@ -8,6 +8,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -255,7 +256,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				valIndex = types.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
-			if _, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
+			if _, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
 				// Ignore well-formed yet unknown indexes.
 				continue
 			}

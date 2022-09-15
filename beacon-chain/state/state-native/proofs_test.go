@@ -6,14 +6,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestBeaconStateMerkleProofs_phase0_notsupported(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisState(t, 256)
 	t.Run("current sync committee", func(t *testing.T) {
@@ -28,10 +26,8 @@ func TestBeaconStateMerkleProofs_phase0_notsupported(t *testing.T) {
 		_, err := st.FinalizedRootProof(ctx)
 		require.ErrorContains(t, "not supported", err)
 	})
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 func TestBeaconStateMerkleProofs_altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := context.Background()
 	altair, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
@@ -98,11 +94,9 @@ func TestBeaconStateMerkleProofs_altair(t *testing.T) {
 		valid = trie.VerifyMerkleProof(newRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := context.Background()
 	bellatrix, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
@@ -169,5 +163,4 @@ func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
 		valid = trie.VerifyMerkleProof(newRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
-	features.Init(&features.Flags{EnableNativeState: false})
 }
