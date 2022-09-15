@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -552,13 +550,7 @@ func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]by
 
 // savePowchainData saves all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	var pbState *ethpb.BeaconState
-	var err error
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-	} else {
-		pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
-	}
+	pbState, err := statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

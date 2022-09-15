@@ -17,7 +17,6 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -34,7 +33,6 @@ var _ statefeed.Notifier = (*BeaconNode)(nil)
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	features.Init(&features.Flags{EnableNativeState: true})
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 
 	app := cli.App{}
@@ -54,7 +52,6 @@ func TestNodeClose_OK(t *testing.T) {
 	node.Close()
 
 	require.LogsContain(t, hook, "Stopping beacon node")
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestNodeStart_Ok(t *testing.T) {
@@ -63,7 +60,6 @@ func TestNodeStart_Ok(t *testing.T) {
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
-	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
@@ -80,7 +76,6 @@ func TestNodeStart_Ok(t *testing.T) {
 }
 
 func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	numValidators := uint64(1)
 	hook := logTest.NewGlobal()
 	app := cli.App{}
@@ -124,7 +119,6 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 	require.NoError(t, os.Remove("genesis_ssz.json"))
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 // TestClearDB tests clearing the database

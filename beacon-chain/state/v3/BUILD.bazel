@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
@@ -42,7 +42,6 @@ go_library(
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/types:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/interfaces:go_default_library",
@@ -58,46 +57,5 @@ go_library(
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = [
-        "deprecated_getters_test.go",
-        "deprecated_setters_test.go",
-        "getters_block_test.go",
-        "getters_checkpoint_test.go",
-        "getters_participation_test.go",
-        "getters_test.go",
-        "getters_validator_test.go",
-        "proofs_test.go",
-        "references_test.go",
-        "setters_test.go",
-        "state_fuzz_test.go",
-        "state_test.go",
-        "state_trie_test.go",
-    ],
-    embed = [":go_default_library"],
-    deps = [
-        "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/state-native:go_default_library",
-        "//beacon-chain/state/stateutil:go_default_library",
-        "//beacon-chain/state/testing:go_default_library",
-        "//beacon-chain/state/types:go_default_library",
-        "//config/fieldparams:go_default_library",
-        "//config/params:go_default_library",
-        "//consensus-types/primitives:go_default_library",
-        "//container/trie:go_default_library",
-        "//crypto/bls:go_default_library",
-        "//crypto/rand:go_default_library",
-        "//encoding/bytesutil:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
-        "//testing/assert:go_default_library",
-        "//testing/require:go_default_library",
-        "//testing/util:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
