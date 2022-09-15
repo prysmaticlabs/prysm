@@ -242,6 +242,7 @@ func (s *Store) prune(ctx context.Context) error {
 			s.previousProposerBoostRoot = [32]byte{}
 		}
 	}
+	s.proposerBoostLock.Unlock()
 
 	finalizedNode.parent = nil
 	s.treeRootNode = finalizedNode
