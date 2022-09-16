@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -1123,20 +1122,6 @@ func TestVerifyBlkDescendant(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
-}
-
-func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
-	ctx := context.Background()
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(1))
-	service.head = &head{state: (*v1.BeaconState)(nil)}
-
-	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
 }
 
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {

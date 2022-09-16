@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -18,7 +18,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
-	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
 		Slot:                  64,
 	})
@@ -33,16 +33,16 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := v1.ProtobufBeaconState(s.InnerStateUnsafe())
+	pbState1, err := state_native.ProtobufBeaconStatePhase0(s.InnerStateUnsafe())
 	require.NoError(t, err)
-	pbstate, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
 	require.NoError(t, err)
 	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
-	st2, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st2, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 128,
 	})
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	c := NewCheckpointStateCache()
-	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0,
 	})
 	require.NoError(t, err)

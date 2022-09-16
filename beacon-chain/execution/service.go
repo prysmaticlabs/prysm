@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
@@ -726,7 +725,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = v1.InitializeFromProto(eth1DataInDB.BeaconState)
+		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
