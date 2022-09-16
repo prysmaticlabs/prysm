@@ -8,8 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	statealtair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -36,11 +35,11 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := v1.InitializeFromProto(preStateBase)
+			preState, err := state_native.InitializeFromProtoPhase0(preStateBase)
 			require.NoError(t, err)
 			postState, err := altair.UpgradeToAltair(context.Background(), preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconStateAltair(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))

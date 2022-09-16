@@ -91,8 +91,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
-			params.SetupTestConfigCleanup(t)
-			params.OverrideBeaconConfig(params.MainnetConfig())
 
 			genesis := util.NewBeaconBlock()
 			util.SaveBlock(t, ctx, db, genesis)
@@ -129,9 +127,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
 	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 100)
 
 	proposerServer := &Server{
@@ -141,7 +136,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:          stategen.New(db),
 	}
 	req := util.NewBeaconBlock()
-	req.Block.ProposerIndex = 21
+	req.Block.ProposerIndex = 84
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -1655,8 +1650,6 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 }
 
 func TestProposer_FilterAttestation(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	genesis := util.NewBeaconBlock()
 
 	numValidators := uint64(64)
@@ -1709,7 +1702,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 						},
-						AggregationBits: bitfield.Bitlist{0b00000110},
+						AggregationBits: bitfield.Bitlist{0b00010010},
 					})
 					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
@@ -1733,7 +1726,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 				return atts
 			},
 			expectedAtts: func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation {
-				return []*ethpb.Attestation{inputAtts[0]}
+				return []*ethpb.Attestation{inputAtts[0], inputAtts[1]}
 			},
 		},
 	}
@@ -1886,8 +1879,6 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
@@ -1988,7 +1979,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
@@ -2007,6 +1998,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	altairSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	require.NoError(t, err)
 
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	genAltair := &ethpb.SignedBeaconBlockAltair{
 		Block: &ethpb.BeaconBlockAltair{
 			Slot:       altairSlot + 1,
@@ -2016,7 +2008,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 			},
 		},
 		Signature: genesis.Signature,
@@ -2103,7 +2095,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	terminalBlockHash := bytesutil.PadTo([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 32)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	cfg.TerminalBlockHash = common.BytesToHash(terminalBlockHash)
@@ -2125,6 +2117,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:       bellatrixSlot + 1,
@@ -2134,7 +2127,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
 				Eth1Data:      genesis.Block.Body.Eth1Data,
-				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: bitfield.NewBitvector512(), SyncCommitteeSignature: make([]byte, 96)},
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 				ExecutionPayload: &enginev1.ExecutionPayload{
 					ParentHash:    make([]byte, fieldparams.RootLength),
 					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
@@ -2229,7 +2222,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	// Operator sets default fee recipient to not be burned through beacon node cli.
 	newHook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
-	cfg = params.MainnetConfig().Copy()
+	cfg = params.MinimalSpecConfig().Copy()
 	cfg.DefaultFeeRecipient = common.Address{'b'}
 	params.OverrideBeaconConfig(cfg)
 	_, err = proposerServer.GetBeaconBlock(ctx, req)
@@ -2239,7 +2232,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	cfg.AltairForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
@@ -2290,15 +2283,15 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 
 	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector512{0xf, 0xf, 0xf, 0xf}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector32{0xf, 0xf, 0xf, 0xf}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector512{0xaa, 0xaa, 0xaa, 0xaa}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector32{0xaa, 0xaa, 0xaa, 0xaa}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot))
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.NewBitvector32(), aggregate.SyncCommitteeBits)
 }
 
 func TestProposer_PrepareBeaconProposer(t *testing.T) {
