@@ -64,7 +64,6 @@ func TestNodeStart_Ok(t *testing.T) {
 	set.String("datadir", tmp, "node data directory")
 	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
-	features.Init(&features.Flags{EnableNativeState: true})
 
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
