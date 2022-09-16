@@ -31,7 +31,6 @@ import (
 	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
@@ -262,11 +261,7 @@ func (s *Service) Stop() error {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	if features.Get().EnableNativeState {
-		s.preGenesisState = &native.BeaconState{}
-	} else {
-		s.preGenesisState = &v1.BeaconState{}
-	}
+	s.preGenesisState = &native.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -784,13 +779,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		var pbState *ethpb.BeaconState
-		var err error
-		if features.Get().EnableNativeState {
-			pbState, err = native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-		} else {
-			pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
-		}
+		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}

@@ -382,7 +382,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
@@ -421,7 +421,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()

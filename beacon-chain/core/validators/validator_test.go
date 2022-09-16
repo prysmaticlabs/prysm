@@ -132,7 +132,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 
-	slashedIdx := types.ValidatorIndex(2)
+	slashedIdx := types.ValidatorIndex(3)
 
 	proposer, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err, "Could not get proposer")
