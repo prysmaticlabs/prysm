@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -57,7 +57,7 @@ func prepareForkchoiceState(
 		LatestBlockHeader:            blockHeader,
 	}
 
-	st, err := v3.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
 }
 
