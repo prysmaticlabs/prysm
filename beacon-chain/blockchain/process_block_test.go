@@ -1805,7 +1805,6 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -1965,7 +1964,6 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2125,7 +2123,6 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2285,7 +2282,6 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2446,7 +2442,6 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2656,7 +2651,6 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2887,7 +2881,6 @@ func noViableHead_Reboot(t *testing.T, newfc newForkChoicer) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -3112,7 +3105,6 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
