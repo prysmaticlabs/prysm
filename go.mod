@@ -255,7 +255,7 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.1-alpha.0.20220303211031-f753e083138c
-	golang.org/x/sys v0.0.0-20220702020025-31831981b65f // indirect
+	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6 // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	k8s.io/klog/v2 v2.3.0 // indirect
@@ -271,3 +271,9 @@ replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-2
 
 // For eip-4844 types
 replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20220719053341-c76d2bd57d77
+
+// For BatchInvModFr
+replace github.com/protolambda/go-kzg => github.com/Inphi/go-kzg v0.0.0-20220819034031-381084440411
+
+// For Inphi/go-kzg's bls12381.RedInverseBatchFr
+replace github.com/kilic/bls12-381 => github.com/Inphi/bls12-381 v0.0.0-20220819032644-3ae7bcd28efc
