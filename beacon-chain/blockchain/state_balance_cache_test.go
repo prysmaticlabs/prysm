@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -34,7 +34,7 @@ func testStateFixture(opts ...testStateOpt) state.BeaconState {
 	for _, o := range opts {
 		o(a)
 	}
-	s, _ := v2.InitializeFromProtoUnsafe(a)
+	s, _ := state_native.InitializeFromProtoUnsafeAltair(a)
 	return s
 }
 

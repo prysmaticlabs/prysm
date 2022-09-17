@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -102,7 +101,7 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 	epoch := slots.ToEpoch(st.Slot())
 	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
 	for _, vc := range valContainers {
-		readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
+		readOnlyVal, err := statenative.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 		}
@@ -221,7 +220,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 		allValidators := state.Validators()
 		valContainers = make([]*ethpb.ValidatorContainer, len(allValidators))
 		for i, validator := range allValidators {
-			readOnlyVal, err := v1.NewValidator(validator)
+			readOnlyVal, err := statenative.NewValidator(validator)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -264,7 +263,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				return nil, errors.Wrap(err, "could not get validator")
 			}
 			v1Validator := migration.V1Alpha1ValidatorToV1(validator)
-			readOnlyVal, err := v1.NewValidator(validator)
+			readOnlyVal, err := statenative.NewValidator(validator)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
 			}
@@ -285,7 +284,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 }
 
 func handleValContainerErr(err error) error {
-	if outOfRangeErr, ok := err.(*v1.ValidatorIndexOutOfRangeError); ok {
+	if outOfRangeErr, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 	}
 	if invalidIdErr, ok := err.(*invalidValidatorIdError); ok {
