@@ -122,7 +122,6 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-st.C():
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
-					return
 				}
 
 				if err := s.UpdateHead(s.ctx); err != nil {
