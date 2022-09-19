@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	grpc "google.golang.org/grpc"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )

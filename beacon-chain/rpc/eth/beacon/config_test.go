@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -31,7 +31,6 @@ func TestGetSpec(t *testing.T) {
 	config.HysteresisQuotient = 9
 	config.HysteresisDownwardMultiplier = 10
 	config.HysteresisUpwardMultiplier = 11
-	config.SafeSlotsToImportOptimistically = 128
 	config.SafeSlotsToUpdateJustified = 12
 	config.Eth1FollowDistance = 13
 	config.TargetAggregatorsPerCommittee = 14
@@ -356,7 +355,6 @@ func TestGetSpec(t *testing.T) {
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
-			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

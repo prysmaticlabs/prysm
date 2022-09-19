@@ -7,9 +7,10 @@ import "proto/prysm/v1alpha1/node.proto";
 import "proto/prysm/v1alpha1/p2p_messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "proto/prysm/v1alpha1/attestation.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "DebugProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -39,12 +40,6 @@ service Debug {
             post: "/eth/v1alpha1/debug/logging"
         };
     }
-    // Returns a proto array fork choice object from the beacon node.
-    rpc GetForkChoice(google.protobuf.Empty) returns (ForkChoiceResponse) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/debug/forkchoice"
-        };
-    }
     // Returns all the related data for every peer tracked by the host node.
     rpc ListPeers(google.protobuf.Empty) returns (DebugPeerResponses){
         option (google.api.http) = {
@@ -67,17 +62,17 @@ service Debug {
 
 message InclusionSlotRequest {
     uint64 id = 1;
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 }
 
 message InclusionSlotResponse {
-    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 }
 
 message BeaconStateRequest {
     oneof query_filter {
         // The slot corresponding to a desired beacon state.
-        uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+        uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
         // The block root corresponding to a desired beacon state.
         bytes block_root = 2;
@@ -101,32 +96,6 @@ message LoggingLevelRequest {
         TRACE = 2;
     }
     Level level = 1;
-}
-
-message ForkChoiceResponse {
-    // Latest justified epoch in forkchoice store.
-    uint64 justified_epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
-    // Latest finalized epoch in forkchoice store.
-    uint64 finalized_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
-    // The list of the forkchoice nodes in store.
-    repeated ForkChoiceNode forkchoice_nodes = 4;
-}
-
-message ForkChoiceNode {
-    // Slot of the forkchoice node.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
-    // Root of the forkchoice node.
-    bytes root = 2;
-    // Parent of the forkchoice node.
-    bytes parent = 3;
-    // Justified epoch of the current forkchoice node.
-    uint64 justified_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
-    // finalized epoch of the current forkchoice node.
-    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
-    // Current weight of the current forkchoice node.
-    uint64 weight = 6;
-    // Best descendant of the forkchoice node.
-    bytes best_descendant = 7;
 }
 
 message DebugPeerResponses {

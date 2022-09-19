@@ -3,16 +3,16 @@ package forkchoice
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestBuilderTick(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
 	builder.Tick(t, 10)
@@ -23,7 +23,7 @@ func TestBuilderTick(t *testing.T) {
 func TestBuilderInvalidBlock(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
 	builder.InvalidBlock(t, blk)
@@ -32,7 +32,7 @@ func TestBuilderInvalidBlock(t *testing.T) {
 func TestPoWBlock(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
 	builder.PoWBlock(&ethpb.PowBlock{BlockHash: []byte{1, 2, 3}})

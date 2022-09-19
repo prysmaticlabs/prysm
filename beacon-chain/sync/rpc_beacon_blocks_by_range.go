@@ -6,16 +6,15 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -163,22 +162,34 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	start := time.Now()
+	// If the blocks are blinded, we reconstruct the full block via the execution client.
+	blindedExists := false
+	blindedIndex := 0
+	for i, b := range blks {
+		// Since the blocks are sorted in ascending order, we assume that the following
+		// blocks from the first blinded block are also ascending.
+		if b.IsBlinded() {
+			blindedExists = true
+			blindedIndex = i
+			break
+		}
+	}
+	if blindedExists {
+		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
+		if err != nil {
+			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			return err
+		}
+		copy(blks[blindedIndex:], reconstructedBlks)
+	}
+
 	for _, b := range blks {
-		if err := wrapper.BeaconBlockIsNil(b); err != nil {
+		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
-		blockToWrite := b
-		if blockToWrite.Block().IsBlinded() {
-			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blockToWrite)
-			if err != nil {
-				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return err
-			}
-			blockToWrite = fullBlock
-		}
-		if chunkErr := s.chunkBlockWriter(stream, blockToWrite); chunkErr != nil {
-			log.WithError(chunkErr).Error("Could not send a chunked response")
+		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
@@ -235,7 +246,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeac
 			return nil, err
 		}
 		parentValid := *prevRoot != [32]byte{}
-		isLinear := *prevRoot == bytesutil.ToBytes32(b.Block().ParentRoot())
+		isLinear := *prevRoot == b.Block().ParentRoot()
 		isSingular := step == 1
 		slotDiff, err := b.Block().Slot().SafeSubSlot(startSlot)
 		if err != nil {

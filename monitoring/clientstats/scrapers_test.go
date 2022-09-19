@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -55,8 +55,6 @@ func TestBeaconNodeScraper(t *testing.T) {
 	require.Equal(t, int64(7365341184), bs.DiskBeaconchainBytesTotal)
 	require.Equal(t, int64(37), bs.NetworkPeersConnected)
 	require.Equal(t, true, bs.SyncEth1Connected)
-	require.Equal(t, true, bs.SyncEth1FallbackConfigured)
-	require.Equal(t, true, bs.SyncEth1FallbackConnected)
 }
 
 // helper function to wrap up all the scrape logic so tests can focus on data cases and assertions
@@ -85,21 +83,7 @@ func TestInvertEth1Metrics(t *testing.T) {
 			key:  "SyncEth1Connected",
 			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_connected 1", "powchain_sync_eth1_connected 0", 1),
 			test: func(bs *BeaconNodeStats) bool {
-				return bs.SyncEth1Connected == false && bs.SyncEth1FallbackConfigured == true && bs.SyncEth1FallbackConnected == true
-			},
-		},
-		{
-			key:  "SyncEth1FallbackConfigured",
-			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_fallback_configured 1", "powchain_sync_eth1_fallback_configured 0", 1),
-			test: func(bs *BeaconNodeStats) bool {
-				return bs.SyncEth1Connected == true && bs.SyncEth1FallbackConfigured == false && bs.SyncEth1FallbackConnected == true
-			},
-		},
-		{
-			key:  "SyncEth1FallbackConnected",
-			body: strings.Replace(prometheusTestBody, "powchain_sync_eth1_fallback_connected 1", "powchain_sync_eth1_fallback_connected 0", 1),
-			test: func(bs *BeaconNodeStats) bool {
-				return bs.SyncEth1Connected == true && bs.SyncEth1FallbackConfigured == true && bs.SyncEth1FallbackConnected == false
+				return bs.SyncEth1Connected == false
 			},
 		},
 	}

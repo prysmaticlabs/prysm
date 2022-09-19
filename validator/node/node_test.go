@@ -12,17 +12,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -48,13 +47,15 @@ func TestNode_Builds(t *testing.T) {
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
 	ctx := cli.NewContext(&app, set, nil)
-	_, err := accounts.CreateWalletWithKeymanager(ctx.Context, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      dir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: walletPassword,
-		},
-	})
+	opts := []accounts.Option{
+		accounts.WithWalletDir(dir),
+		accounts.WithKeymanagerType(keymanager.Local),
+		accounts.WithWalletPassword(walletPassword),
+		accounts.WithSkipMnemonicConfirm(true),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	require.NoError(t, err)
+	_, err = acc.WalletCreate(ctx.Context)
 	require.NoError(t, err)
 
 	valClient, err := NewValidatorClient(ctx)
@@ -169,16 +170,6 @@ func TestWeb3SignerConfig(t *testing.T) {
 			wantErrMsg: "could not decode public key for web3signer: localhost:8545: hex string without 0x prefix",
 		},
 		{
-			name: "incorrect amount of flag calls used",
-			args: &args{
-				baseURL: "http://localhost:8545",
-				publicKeysOrURLs: []string{"0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c," +
-					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b", "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"},
-			},
-			want:       nil,
-			wantErrMsg: "could not decode public key for web3signer",
-		},
-		{
 			name: "incorrect amount of flag calls used with url",
 			args: &args{
 				baseURL: "http://localhost:8545",
@@ -221,6 +212,7 @@ func TestProposerSettings(t *testing.T) {
 		dir        string
 		url        string
 		defaultfee string
+		defaultgas string
 	}
 
 	type args struct {
@@ -281,14 +273,14 @@ func TestProposerSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 							},
 						},
 						bytesutil.ToBytes48(key2): {
 							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+								GasLimit: validatorserviceconfig.Uint64(35000000),
 							},
 						},
 					},
@@ -296,7 +288,7 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(40000000),
 						},
 					},
 				}
@@ -346,7 +338,7 @@ func TestProposerSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							BuilderConfig: &validatorserviceconfig.BuilderConfig{
 								Enabled:  true,
-								GasLimit: uint64(40000000),
+								GasLimit: 40000000,
 							},
 						},
 					},
@@ -354,7 +346,7 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  false,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 						},
 					},
 				}
@@ -396,7 +388,32 @@ func TestProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						BuilderConfig: &validatorserviceconfig.BuilderConfig{
 							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
+			wantErr:                      "",
+			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "Happy Path Suggested Fee , validator registration enabled and default gas",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultgas: "50000000",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: nil,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
+							GasLimit: 50000000,
 						},
 					},
 				}
@@ -497,6 +514,20 @@ func TestProposerSettings(t *testing.T) {
 			},
 			wantErr: "cannot specify both",
 		},
+		{
+			name: "Bad Gas value in JSON",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/bad-gas-value-proposer-settings.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return nil
+			},
+			wantErr: "failed to unmarshal yaml file",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -523,6 +554,10 @@ func TestProposerSettings(t *testing.T) {
 			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
 				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
 				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
+			}
+			if tt.args.proposerSettingsFlagValues.defaultgas != "" {
+				set.String(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas, "")
+				require.NoError(t, set.Set(flags.BuilderGasLimitFlag.Name, tt.args.proposerSettingsFlagValues.defaultgas))
 			}
 			if tt.validatorRegistrationEnabled {
 				set.Bool(flags.EnableBuilderFlag.Name, true, "")

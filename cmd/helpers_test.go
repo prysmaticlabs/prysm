@@ -8,9 +8,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/mock"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/cmd/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -110,44 +110,4 @@ func TestExpandSingleEndpointIfFile(t *testing.T) {
 	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "./path.ipc"))
 	require.NoError(t, ExpandSingleEndpointIfFile(context, HTTPWeb3ProviderFlag))
 	require.Equal(t, curentdir+"/path.ipc", context.String(HTTPWeb3ProviderFlag.Name))
-}
-
-func TestExpandWeb3EndpointsIfFile(t *testing.T) {
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	HTTPWeb3ProviderFlag := &cli.StringSliceFlag{Name: "fallback-web3provider", Value: cli.NewStringSlice()}
-	set.Var(cli.NewStringSlice(), HTTPWeb3ProviderFlag.Name, "")
-	context := cli.NewContext(&app, set, nil)
-	// with nothing set
-	require.NoError(t, ExpandWeb3EndpointsIfFile(context, HTTPWeb3ProviderFlag))
-	require.DeepEqual(t, []string{}, context.StringSlice(HTTPWeb3ProviderFlag.Name))
-
-	// with url scheme
-	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "http://localhost:8545"))
-	require.NoError(t, ExpandWeb3EndpointsIfFile(context, HTTPWeb3ProviderFlag))
-	require.DeepEqual(t, []string{"http://localhost:8545"}, context.StringSlice(HTTPWeb3ProviderFlag.Name))
-
-	// reset context
-	set = flag.NewFlagSet("test", 0)
-	set.Var(cli.NewStringSlice(), HTTPWeb3ProviderFlag.Name, "")
-	context = cli.NewContext(&app, set, nil)
-
-	// relative user home path
-	usr, err := user.Current()
-	require.NoError(t, err)
-	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "~/relative/path.ipc"))
-	require.NoError(t, ExpandWeb3EndpointsIfFile(context, HTTPWeb3ProviderFlag))
-	require.DeepEqual(t, []string{usr.HomeDir + "/relative/path.ipc"}, context.StringSlice(HTTPWeb3ProviderFlag.Name))
-
-	// reset context
-	set = flag.NewFlagSet("test", 0)
-	set.Var(cli.NewStringSlice(), HTTPWeb3ProviderFlag.Name, "")
-	context = cli.NewContext(&app, set, nil)
-
-	// current dir path
-	curentdir, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, context.Set(HTTPWeb3ProviderFlag.Name, "./path.ipc"))
-	require.NoError(t, ExpandWeb3EndpointsIfFile(context, HTTPWeb3ProviderFlag))
-	require.DeepEqual(t, []string{curentdir + "/path.ipc"}, context.StringSlice(HTTPWeb3ProviderFlag.Name))
 }

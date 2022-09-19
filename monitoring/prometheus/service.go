@@ -14,7 +14,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prysmaticlabs/prysm/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,7 +66,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 		Err    string `json:"error"`
 	}
 	var hasError bool
-	var statuses []serviceStatus
+	statuses := make([]serviceStatus, 0, len(s.svcRegistry.Statuses()))
 	for k, v := range s.svcRegistry.Statuses() {
 		s := serviceStatus{
 			Name:   k.String(),
@@ -109,7 +109,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeResponse(w, r, response); err != nil {
-		log.Errorf("Error writing response: %v", err)
+		log.WithError(err).Error("Error writing response")
 	}
 }
 
@@ -139,7 +139,7 @@ func (s *Service) Start() {
 			log.WithField("address", s.server.Addr).Debug("Starting prometheus service")
 			err := s.server.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
-				log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
+				log.WithError(err).Errorf("Could not listen to host:port :%s", s.server.Addr)
 				s.failStatus = err
 			}
 		}

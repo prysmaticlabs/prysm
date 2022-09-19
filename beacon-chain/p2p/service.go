@@ -18,21 +18,21 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	prysmnetwork "github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -107,7 +107,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	cfg.Discv5BootStrapAddr = dv5Nodes
 
-	ipAddr := ipAddr()
+	ipAddr := prysmnetwork.IPAddr()
 	s.privKey, err = privKey(s.cfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate p2p private key")
@@ -138,19 +138,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// due to libp2p's gossipsub implementation not taking into
 	// account previously added peers when creating the gossipsub
 	// object.
-	psOpts := []pubsub.Option{
-		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		pubsub.WithNoAuthor(),
-		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot, pmsg)
-		}),
-		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
-		pubsub.WithValidateQueueSize(pubsubQueueSize),
-		pubsub.WithPeerScore(peerScoringParams()),
-		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
-		pubsub.WithGossipSubParams(pubsubGossipParam()),
-	}
+	psOpts := s.pubsubOptions()
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
 	// Reinitialize them in the event we are running a custom config.
@@ -200,8 +188,8 @@ func (s *Service) Start() {
 		}
 	}
 
-	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
-		ipAddr := ipAddr()
+	if !s.cfg.NoDiscovery {
+		ipAddr := prysmnetwork.IPAddr()
 		listener, err := s.startDiscoveryV5(
 			ipAddr,
 			s.privKey,
@@ -224,9 +212,9 @@ func (s *Service) Start() {
 	s.started = true
 
 	if len(s.cfg.StaticPeers) > 0 {
-		addrs, err := peersFromStringAddrs(s.cfg.StaticPeers)
+		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
-			log.Errorf("Could not connect to static peer: %v", err)
+			log.WithError(err).Error("Could not connect to static peer")
 		}
 		s.connectWithAllPeers(addrs)
 	}
@@ -244,9 +232,7 @@ func (s *Service) Start() {
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
 	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
-	async.RunEvery(s.ctx, refreshRate, func() {
-		s.RefreshENR()
-	})
+	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
 			"inbound":     len(s.peers.InboundConnected()),
@@ -437,7 +423,7 @@ func (s *Service) awaitStateInitialized() {
 func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
-		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)
+		log.WithError(err).Error("Could not convert to peer address info's from multiaddresses")
 		return
 	}
 	for _, info := range addrInfos {

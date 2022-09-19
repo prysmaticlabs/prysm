@@ -7,12 +7,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 var (
@@ -86,7 +86,39 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{250, 500, 1000, 1500, 2000, 4000, 8000, 16000},
+			Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000},
+		},
+	)
+
+	// Attestation processing granular error tracking.
+	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_block_total",
+		Help: "Increased when a gossip attestation references a bad block",
+	})
+	attBadLmdConsistencyCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_lmd_consistency_total",
+		Help: "Increased when a gossip attestation has bad LMD GHOST consistency",
+	})
+	attBadSelectionProofCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_selection_proof_total",
+		Help: "Increased when a gossip attestation has a bad selection proof",
+	})
+	attBadSignatureBatchCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_attestation_bad_signature_batch_total",
+		Help: "Increased when a gossip attestation has a bad signature batch",
+	})
+
+	// Attestation and block gossip verification performance.
+	aggregateAttestationVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_aggregate_attestation_verification_milliseconds",
+			Help: "Time to verify gossiped attestations",
+		},
+	)
+	blockVerificationGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_verification_milliseconds",
+			Help: "Time to verify gossiped blocks",
 		},
 	)
 )

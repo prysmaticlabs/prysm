@@ -5,8 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/container/slice"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSubsetUint64(t *testing.T) {
@@ -586,4 +587,15 @@ func TestIsInSlots(t *testing.T) {
 				tt.a, tt.b, result, tt.result)
 		}
 	}
+}
+
+func TestUnique(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		result := slice.Unique[string]([]string{"a", "b", "a"})
+		require.DeepEqual(t, []string{"a", "b"}, result)
+	})
+	t.Run("uint64", func(t *testing.T) {
+		result := slice.Unique[uint64]([]uint64{1, 2, 1})
+		require.DeepEqual(t, []uint64{1, 2}, result)
+	})
 }

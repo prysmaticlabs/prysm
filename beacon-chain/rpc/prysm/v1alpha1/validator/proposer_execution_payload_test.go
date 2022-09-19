@@ -7,19 +7,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	powtesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -48,7 +48,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
 	require.NoError(t, err)
 	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
@@ -88,7 +88,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			validatorIndx: 1,
 		},
 		{
-			name:          "transition completed, happy case, payload ID cached)",
+			name:          "transition completed, happy case, (payload ID cached)",
 			st:            transitionSt,
 			validatorIndx: 100,
 		},
@@ -123,8 +123,8 @@ func TestServer_getExecutionPayload(t *testing.T) {
 				BeaconDB:               beaconDB,
 				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
-			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100})
-			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100}, [32]byte{'a'})
+			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx, [32]byte{'a'})
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -132,6 +132,36 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	b1pb := util.NewBeaconBlock()
+	b1r, err := b1pb.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
+	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b1r[:],
+	}))
+
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
+
+	cfg := params.BeaconConfig().Copy()
+	cfg.TerminalBlockHash = common.Hash{'a'}
+	cfg.TerminalBlockHashActivationEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	vs := &Server{
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded},
+		HeadFetcher:            &chainMock.ChainService{State: nonTransitionSt},
+		BeaconDB:               beaconDB,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+	}
+	vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nonTransitionSt.Slot(), 100, [8]byte{100}, [32]byte{'a'})
+
+	_, err = vs.getExecutionPayload(context.Background(), nonTransitionSt.Slot(), 100, [32]byte{'a'})
+	require.NoError(t, err)
 }
 
 func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
@@ -147,7 +177,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
 	require.NoError(t, err)
 	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
@@ -175,7 +205,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
-	gotPayload, err := vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
+	gotPayload, err := vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0, [32]byte{})
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -187,7 +217,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payload.FeeRecipient = evilRecipientAddress[:]
 	vs.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	gotPayload, err = vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
+	gotPayload, err = vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0, [32]byte{})
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -272,7 +302,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
-			c := powtesting.NewPOWChain()
+			c := powtesting.New()
 			c.HashesByHeight[0] = tt.wantTerminalBlockHash
 			vs := &Server{
 				Eth1BlockFetcher: c,

@@ -2,11 +2,11 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -16,15 +16,18 @@ func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpbv1.Sig
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
+	parentRoot := block.Block().ParentRoot()
+	stateRoot := block.Block().StateRoot()
+	sig := block.Signature()
 	return &ethpbv1.SignedBeaconBlockHeader{
 		Message: &ethpbv1.BeaconBlockHeader{
 			Slot:          block.Block().Slot(),
 			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    block.Block().ParentRoot(),
-			StateRoot:     block.Block().StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			BodyRoot:      bodyRoot[:],
 		},
-		Signature: block.Signature(),
+		Signature: sig[:],
 	}, nil
 }
 

@@ -16,11 +16,9 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 var (
@@ -39,7 +37,7 @@ type node struct {
 
 func main() {
 	flag.Parse()
-	database, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
+	database, err := db.NewDB(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}
@@ -87,7 +85,7 @@ func main() {
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
-			parentRoot: bytesutil.ToBytes32(b.Block().ParentRoot()),
+			parentRoot: b.Block().ParentRoot(),
 			dothNode:   &dotN,
 		}
 		m[r] = n

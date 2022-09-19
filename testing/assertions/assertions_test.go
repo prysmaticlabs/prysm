@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	testpb "github.com/prysmaticlabs/prysm/proto/testing"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/assertions"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	testpb "github.com/prysmaticlabs/prysm/v3/proto/testing"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/assertions"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -563,6 +563,16 @@ func TestAssert_ErrorContains(t *testing.T) {
 				msgs: []interface{}{"Something wrong (for slot %d)", 12},
 			},
 			expectedErr: "",
+		},
+		{
+			name: "expected error with params",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "",
+				err:  errors.New("failed"),
+				msgs: []interface{}{"Something wrong (for slot %d)", 12},
+			},
+			expectedErr: "Want string can't be empty",
 		},
 	}
 	for _, tt := range tests {

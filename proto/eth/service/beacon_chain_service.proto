@@ -26,7 +26,7 @@ import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconChainServiceProto";
 option java_package = "org.ethereum.eth.service";
@@ -154,7 +154,7 @@ service BeaconChain {
   // still broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlock(v2.SignedBeaconBlockContainerV2) returns (google.protobuf.Empty) {
+  rpc SubmitBlock(v2.SignedBeaconBlockContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
       body: "*"

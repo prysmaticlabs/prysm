@@ -24,7 +24,7 @@ type deleteKeystoresRequestJson struct {
 }
 
 type statusJson struct {
-	Status  string `json:"status"`
+	Status  string `json:"status" enum:"true"`
 	Message string `json:"message"`
 }
 
@@ -72,10 +72,27 @@ type feeRecipientJson struct {
 	Ethaddress string `json:"ethaddress" address:"true"`
 }
 
+type gasLimitJson struct {
+	Pubkey   string `json:"pubkey" hex:"true"`
+	GasLimit string `json:"gas_limit"`
+}
+
 type getFeeRecipientByPubkeyResponseJson struct {
 	Data *feeRecipientJson `json:"data"`
 }
 
 type setFeeRecipientByPubkeyRequestJson struct {
 	Ethaddress string `json:"ethaddress" hex:"true"`
+}
+
+type getGasLimitResponseJson struct {
+	Data *gasLimitJson `json:"data"`
+}
+
+type setGasLimitRequestJson struct {
+	GasLimit string `json:"gas_limit"`
+}
+
+type deleteGasLimitRequestJson struct {
+	Pubkey string `json:"pubkey" hex:"true"`
 }

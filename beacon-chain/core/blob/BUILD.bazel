@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["sidecar.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blob",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blob",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

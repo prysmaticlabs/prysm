@@ -8,7 +8,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ghodss/yaml"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 var json = jsoniter.Config{
@@ -33,7 +33,9 @@ func UnmarshalYaml(y []byte, dest interface{}) error {
 func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.DirEntry, string) {
 	testsFolderPath := path.Join("tests", config, forkOrPhase, folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, ""
+	}
 	testFolders, err := os.ReadDir(filepath)
 	require.NoError(t, err)
 

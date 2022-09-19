@@ -5,10 +5,10 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -23,16 +23,6 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 
 	// The head state will be too far away to validate any slashing.
 	if s.cfg.initialSync.Syncing() {
-		return pubsub.ValidationIgnore, nil
-	}
-
-	// We should not attempt to process this message if the node is running in optimistic mode.
-	// We just ignore in p2p so that the peer is not penalized.
-	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
-	if err != nil {
-		return pubsub.ValidationReject, err
-	}
-	if optimistic {
 		return pubsub.ValidationIgnore, nil
 	}
 

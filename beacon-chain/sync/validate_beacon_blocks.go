@@ -9,23 +9,23 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/protolambda/go-kzg/bls"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/forks/eip4844"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -107,7 +107,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check if parent is a bad block and then reject the block.
-	if s.hasBadBlock(bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if s.hasBadBlock(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		err := fmt.Errorf("received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block().ParentRoot())
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Received block with an invalid parent")
@@ -164,7 +164,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
-	if !s.cfg.chain.HasBlock(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())) {
+	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -189,19 +189,27 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
-	msg.ValidatorData = blk.Proto() // Used in downstream subscriber
+	blkPb, err := blk.Proto()
+	if err != nil {
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not convert beacon block to protobuf type")
+		return pubsub.ValidationIgnore, err
+	}
+	msg.ValidatorData = blkPb // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
 	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
+	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
 		"sinceSlotStartTime": receivedTime.Sub(startTime),
 		"proposerIndex":      blk.Block().ProposerIndex(),
-		"graffiti":           string(blk.Block().Body().Graffiti()),
+		"graffiti":           string(graffiti[:]),
 	}).Debug("Received block")
+
+	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
 	return pubsub.ValidationAccept, nil
 }
 
@@ -209,19 +217,12 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, blk.Block().ParentRoot()); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 
-	hasStateSummaryDB := s.cfg.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
-	if !hasStateSummaryDB {
-		_, err := s.cfg.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
-		if err != nil {
-			return err
-		}
-	}
-	parentState, err := s.cfg.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
+	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -232,7 +233,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	}
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
-	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, blk.Block().ParentRoot(), blk.Block().Slot())
+	parentRoot := blk.Block().ParentRoot()
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
 	if err != nil {
 		return err
 	}
@@ -311,16 +313,17 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
 // spec code:
-//   If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
-//      [REJECT] The block's execution payload timestamp is correct with respect to the slot --
-//      i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
 //
-//      If exection_payload verification of block's parent by an execution node is not complete:
-//         [REJECT] The block's parent (defined by block.parent_root) passes all validation (excluding execution
-//          node verification of the block.body.execution_payload).
-//      otherwise:
-//         [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
-//          node verification of the block.body.execution_payload).
+//	If the execution is enabled for the block -- i.e. is_execution_enabled(state, block.body) then validate the following:
+//	   [REJECT] The block's execution payload timestamp is correct with respect to the slot --
+//	   i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+//
+//	   If exection_payload verification of block's parent by an execution node is not complete:
+//	      [REJECT] The block's parent (defined by block.parent_root) passes all validation (excluding execution
+//	       node verification of the block.body.execution_payload).
+//	   otherwise:
+//	      [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
+//	       node verification of the block.body.execution_payload).
 func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
 	sv := parentState.Version()
 	bv := blk.Version()
@@ -356,8 +359,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 		return errors.New("incorrect timestamp")
 	}
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
+	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, blk.ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -430,13 +432,14 @@ func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Tim
 }
 
 func getBlockFields(b interfaces.SignedBeaconBlock) logrus.Fields {
-	if wrapper.BeaconBlockIsNil(b) != nil {
+	if consensusblocks.BeaconBlockIsNil(b) != nil {
 		return logrus.Fields{}
 	}
+	graffiti := b.Block().Body().Graffiti()
 	return logrus.Fields{
 		"slot":          b.Block().Slot(),
 		"proposerIndex": b.Block().ProposerIndex(),
-		"graffiti":      string(b.Block().Body().Graffiti()),
+		"graffiti":      string(graffiti[:]),
 		"version":       b.Block().Version(),
 	}
 }

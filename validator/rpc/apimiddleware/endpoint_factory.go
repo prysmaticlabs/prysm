@@ -2,7 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 )
 
 // ValidatorEndpointFactory creates endpoints used for running validator API calls through the API Middleware.
@@ -19,6 +19,7 @@ func (*ValidatorEndpointFactory) Paths() []string {
 		"/eth/v1/keystores",
 		"/eth/v1/remotekeys",
 		"/eth/v1/validator/{pubkey}/feerecipient",
+		"/eth/v1/validator/{pubkey}/gas_limit",
 	}
 }
 
@@ -41,6 +42,10 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 	case "/eth/v1/validator/{pubkey}/feerecipient":
 		endpoint.GetResponse = &getFeeRecipientByPubkeyResponseJson{}
 		endpoint.PostRequest = &setFeeRecipientByPubkeyRequestJson{}
+	case "/eth/v1/validator/{pubkey}/gas_limit":
+		endpoint.GetResponse = &getGasLimitResponseJson{}
+		endpoint.PostRequest = &setGasLimitRequestJson{}
+		endpoint.DeleteRequest = &deleteGasLimitRequestJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}

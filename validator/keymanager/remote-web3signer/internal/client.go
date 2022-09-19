@@ -15,10 +15,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -218,6 +218,6 @@ func unmarshalSignatureResponse(responseBody io.ReadCloser) (bls.Signature, erro
 // closeBody a utility method to wrap an error for closing
 func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
-		log.Errorf("could not close response body: %v", err)
+		log.WithError(err).Error("could not close response body")
 	}
 }

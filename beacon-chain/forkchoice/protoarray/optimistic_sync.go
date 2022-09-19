@@ -3,7 +3,7 @@ package protoarray
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // IsOptimistic returns true if this node is optimistically synced
@@ -172,4 +172,11 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 		}
 	}
 	return invalidRoots, nil
+}
+
+// AllTipsAreInvalid returns true if no forkchoice tip is viable for head
+func (f *ForkChoice) AllTipsAreInvalid() bool {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.allTipsAreInvalid
 }

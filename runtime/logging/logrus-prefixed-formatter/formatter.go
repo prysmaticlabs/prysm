@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
@@ -166,7 +167,7 @@ func (f *TextFormatter) SetColorScheme(colorScheme *ColorScheme) {
 
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var b *bytes.Buffer
-	var keys []string = make([]string, 0, len(entry.Data))
+	keys := make([]string, 0, len(entry.Data))
 	for k := range entry.Data {
 		keys = append(keys, k)
 	}
@@ -294,14 +295,27 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	for _, k := range keys {
 		if k != "prefix" {
 			v := entry.Data[k]
-			format := " %s=%+v"
+
+			format := "%+v"
 			if k == logrus.ErrorKey {
-				format = " %s=%v" // To avoid printing stack traces for errors
+				format = "%v" // To avoid printing stack traces for errors
 			}
-			_, err = fmt.Fprintf(b, format, levelColor(k), v)
+
+			// Sanitize field values to remove new lines and other control characters.
+			s := sanitize(fmt.Sprintf(format, v))
+			_, err = fmt.Fprintf(b, " %s=%s", levelColor(k), s)
 		}
 	}
 	return
+}
+
+func sanitize(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func (f *TextFormatter) needsQuoting(text string) bool {
@@ -321,7 +335,7 @@ func (f *TextFormatter) needsQuoting(text string) bool {
 
 func extractPrefix(msg string) (string, string) {
 	prefix := ""
-	regex := regexp.MustCompile("^\\[(.*?)\\]")
+	regex := regexp.MustCompile(`^\\[(.*?)\\]`)
 	if regex.MatchString(msg) {
 		match := regex.FindString(msg)
 		prefix, msg = match[1:len(match)-1], strings.TrimSpace(msg[len(match):])
@@ -366,12 +380,12 @@ func (f *TextFormatter) appendValue(b *bytes.Buffer, value interface{}) (err err
 // This is to not silently overwrite `time`, `msg` and `level` fields when
 // dumping it. If this code wasn't there doing:
 //
-//  logrus.WithField("level", 1).Info("hello")
+//	logrus.WithField("level", 1).Info("hello")
 //
 // would just silently drop the user provided level. Instead with this code
 // it'll be logged as:
 //
-//  {"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
+//	{"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
 func prefixFieldClashes(data logrus.Fields) {
 	if t, ok := data["time"]; ok {
 		data["fields.time"] = t

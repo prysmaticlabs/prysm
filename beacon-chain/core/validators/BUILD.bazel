@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["validator.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/validators",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
@@ -29,7 +29,7 @@ go_test(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

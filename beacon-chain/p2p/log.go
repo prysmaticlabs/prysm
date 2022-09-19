@@ -29,9 +29,9 @@ func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
 
 func logExternalIPAddr(id peer.ID, addr string, port uint) {
 	if addr != "" {
-		multiAddr, err := multiAddressBuilder(addr, port)
+		multiAddr, err := MultiAddressBuilder(addr, port)
 		if err != nil {
-			log.Errorf("Could not create multiaddress: %v", err)
+			log.WithError(err).Error("Could not create multiaddress")
 			return
 		}
 		log.WithField(

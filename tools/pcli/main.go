@@ -10,13 +10,13 @@ import (
 
 	"github.com/kr/pretty"
 	fssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -161,7 +161,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := v1.InitializeFromProto(preState)
+				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -177,7 +177,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+				wsb, err := blocks.NewSignedBeaconBlock(block)
 				if err != nil {
 					log.Fatal(err)
 				}

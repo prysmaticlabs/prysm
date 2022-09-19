@@ -8,24 +8,25 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
-	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
-	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	slashingsmock "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits/mock"
-	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
+	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits/mock"
+	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -444,6 +445,80 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 }
 
+func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+
+	slashing := &ethpbv1.AttesterSlashing{
+		Attestation_1: &ethpbv1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1.AttestationData{
+				Slot:            params.BeaconConfig().SlotsPerEpoch,
+				Index:           1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+		Attestation_2: &ethpbv1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1.AttestationData{
+				Slot:            params.BeaconConfig().SlotsPerEpoch,
+				Index:           1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpbv1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+
+	for _, att := range []*ethpbv1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+		sb, err := signing.ComputeDomainAndSign(newBs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitAttesterSlashing(ctx, slashing)
+	require.NoError(t, err)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+}
+
 func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
 	bs, err := util.NewBeaconState()
@@ -551,6 +626,68 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 }
 
+func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+
+	slashing := &ethpbv1.ProposerSlashing{
+		SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+			Message: &ethpbv1.BeaconBlockHeader{
+				Slot:          params.BeaconConfig().SlotsPerEpoch,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+		SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+			Message: &ethpbv1.BeaconBlockHeader{
+				Slot:          params.BeaconConfig().SlotsPerEpoch,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+
+	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
+		sb, err := signing.ComputeDomainAndSign(
+			newBs,
+			slots.ToEpoch(h.Message.Slot),
+			h.Message,
+			params.BeaconConfig().DomainBeaconProposer,
+			keys[0],
+		)
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		h.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	_, err = s.SubmitProposerSlashing(ctx, slashing)
+	require.NoError(t, err)
+}
+
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 	ctx := context.Background()
 	bs, err := util.NewBeaconState()
@@ -628,6 +765,47 @@ func TestSubmitVoluntaryExit_Ok(t *testing.T) {
 	require.Equal(t, 1, len(pendingExits))
 	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitVoluntaryExit_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = params.BeaconConfig().ShardCommitteePeriod + 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+	// Satisfy activity time required before exiting.
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))))
+
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
+			Epoch:          params.BeaconConfig().ShardCommitteePeriod + 1,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)+1))
+	require.NoError(t, err)
+
+	sb, err := signing.ComputeDomainAndSign(newBs, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	exit.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.NoError(t, err)
 }
 
 func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {

@@ -4,9 +4,10 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
@@ -105,6 +106,17 @@ func TestSSZBytes_HashTreeRoot(t *testing.T) {
 			require.DeepEqual(t, tt.root, htr[:])
 		})
 	}
+}
+
+func TestGoodbyeCodes(t *testing.T) {
+	assert.Equal(t, types.SSZUint64(1), GoodbyeCodeClientShutdown)
+	assert.Equal(t, types.SSZUint64(2), GoodbyeCodeWrongNetwork)
+	assert.Equal(t, types.SSZUint64(3), GoodbyeCodeGenericError)
+	assert.Equal(t, types.SSZUint64(128), GoodbyeCodeUnableToVerifyNetwork)
+	assert.Equal(t, types.SSZUint64(129), GoodbyeCodeTooManyPeers)
+	assert.Equal(t, types.SSZUint64(250), GoodbyeCodeBadScore)
+	assert.Equal(t, types.SSZUint64(251), GoodbyeCodeBanned)
+
 }
 
 func hexDecodeOrDie(t *testing.T, str string) []byte {
