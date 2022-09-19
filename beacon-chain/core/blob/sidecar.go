@@ -203,6 +203,8 @@ func blsModInv(out *big.Int, x *big.Int) {
 // Evaluate a polynomial (in evaluation form) at an arbitrary point `x`
 // Uses the barycentric formula:
 // 	 f(x) = (1 - x**WIDTH) / WIDTH  *  sum_(i=0)^WIDTH  (f(DOMAIN[i]) * DOMAIN[i]) / (x - DOMAIN[i])
+// TODO: Rather than duplicate this function in Geth and Prysm, it should be moved to
+// a lower-level library like go-kzg.
 func EvaluatePolyInEvaluationForm(yFr *bls.Fr, poly []bls.Fr, x *bls.Fr) {
 	if len(poly) != params.FieldElementsPerBlob {
 		panic("invalid polynomial length")
