@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
