@@ -27,7 +27,7 @@ func init() {
 	// publicly exposed there.
 	blsModulus.SetString("52435875175126190479447740508185965837690552500527637822603658699938581184513", 10)
 
-	// Initialize rootsOfUnity which are used by evaluatePolynomialInEvaluationForm
+	// Initialize rootsOfUnity which are used by EvaluatePolyInEvaluationForm
 	var one big.Int
 	one.SetInt64(1)
 	var length big.Int
@@ -105,10 +105,10 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 		return err
 	}
 
-	y := evaluatePolynomialInEvaluationForm(aggregatedPoly, &x)
+	var y bls.Fr
+	EvaluatePolyInEvaluationForm(&y, aggregatedPoly, &x)
 
-	var yFr bls.Fr
-	b, err := verifyKZGProof(aggregatedPolyCommitment, &x, bigToFr(&yFr, y), sidecar.AggregatedProof)
+	b, err := verifyKZGProof(aggregatedPolyCommitment, &x, &y, sidecar.AggregatedProof)
 	if err != nil {
 		return err
 	}
@@ -194,29 +194,60 @@ func vectorLinComb(blobs []*v1.Blob, scalars []bls.Fr) ([]bls.Fr, error) {
 	return r, nil
 }
 
-// evaluatePolynomialInEvaluationForm implement the function evaluate_polynomial_in_evaluation_form
-// from the EIP-4844 spec
-func evaluatePolynomialInEvaluationForm(poly []bls.Fr, x *bls.Fr) *big.Int {
-	var tmp, tmpSub, r bls.Fr
-	for i := 0; i < params.FieldElementsPerBlob; i++ {
-		bls.SubModFr(&tmpSub, x, &rootsOfUnity[i])
-		bls.MulModFr(&tmp, &poly[i], &rootsOfUnity[i])
-		bls.DivModFr(&tmp, &tmp, &tmpSub)
-		bls.AddModFr(&r, &r, &tmp)
+func blsModInv(out *big.Int, x *big.Int) {
+	if len(x.Bits()) != 0 { // if non-zero
+		out.ModInverse(x, &blsModulus)
 	}
-	// seems PowModInv() isn't implemented in go-kzg except for the pure bignum impl so we have
-	// to convert to bigint here for the final computation. TODO: add this to go-kzg
-	var yChallenge, width, inv, t, xc big.Int
-	width.SetInt64(params.FieldElementsPerBlob)
-	inv.ModInverse(&width, &blsModulus)
-	frToBig(&xc, x)
-	frToBig(&yChallenge, &r)
-	t.Exp(&xc, &width, &blsModulus).
-		Sub(&t, big.NewInt(1)).
-		Mul(&t, &inv)
-	yChallenge.Mul(&yChallenge, &t).
-		Mod(&yChallenge, &blsModulus)
-	return &yChallenge
+}
+
+// Evaluate a polynomial (in evaluation form) at an arbitrary point `x`
+// Uses the barycentric formula:
+// 	 f(x) = (1 - x**WIDTH) / WIDTH  *  sum_(i=0)^WIDTH  (f(DOMAIN[i]) * DOMAIN[i]) / (x - DOMAIN[i])
+// TODO: Rather than duplicate this function in Geth and Prysm, it should be moved to
+// a lower-level library like go-kzg.
+func EvaluatePolyInEvaluationForm(yFr *bls.Fr, poly []bls.Fr, x *bls.Fr) {
+	if len(poly) != params.FieldElementsPerBlob {
+		panic("invalid polynomial length")
+	}
+
+	width := big.NewInt(int64(params.FieldElementsPerBlob))
+	var inverseWidth big.Int
+	blsModInv(&inverseWidth, width)
+
+	// Precomputing the mod inverses as a batch is alot faster
+	invDenom := make([]bls.Fr, params.FieldElementsPerBlob)
+	for i := range invDenom {
+		bls.SubModFr(&invDenom[i], x, &rootsOfUnity[i])
+	}
+	bls.BatchInvModFr(invDenom)
+
+	var y bls.Fr
+	for i := 0; i < params.FieldElementsPerBlob; i++ {
+		var num bls.Fr
+		bls.MulModFr(&num, &poly[i], &rootsOfUnity[i])
+
+		var denom bls.Fr
+		bls.SubModFr(&denom, x, &rootsOfUnity[i])
+
+		var div bls.Fr
+		bls.MulModFr(&div, &num, &invDenom[i])
+
+		var tmp bls.Fr
+		bls.AddModFr(&tmp, &y, &div)
+		bls.CopyFr(&y, &tmp)
+	}
+
+	xB := new(big.Int)
+	frToBig(xB, x)
+	powB := new(big.Int).Exp(xB, width, &blsModulus)
+	powB.Sub(powB, big.NewInt(1))
+
+	// TODO: add ExpModFr to go-kzg
+	var yB big.Int
+	frToBig(&yB, &y)
+	yB.Mul(&yB, new(big.Int).Mul(powB, &inverseWidth))
+	yB.Mod(&yB, &blsModulus)
+	bls.SetFr(yFr, yB.String())
 }
 
 // verifyKZGProof implements verify_kzg_proof from the EIP-4844 spec
