@@ -271,3 +271,9 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/gr
 
 // For eip-4844 types
 replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20220719053341-c76d2bd57d77
+
+// For BatchInvModFr
+replace github.com/protolambda/go-kzg => github.com/Inphi/go-kzg v0.0.0-20220819034031-381084440411
+
+// For Inphi/go-kzg's bls12381.RedInverseBatchFr
+replace github.com/kilic/bls12-381 => github.com/Inphi/bls12-381 v0.0.0-20220819032644-3ae7bcd28efc
