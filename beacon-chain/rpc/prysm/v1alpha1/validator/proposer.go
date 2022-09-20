@@ -163,7 +163,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if sidecar != nil {
 		sidecarData = sidecar.Message
 		if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
-			log.Errorf("could not broadcast blobs sidecar: %v", err)
+			log.WithError(err).Error("could not broadcast blobs sidecar")
 		}
 	}
 

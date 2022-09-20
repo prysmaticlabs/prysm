@@ -2038,8 +2038,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_kilic_bls12_381",
         importpath = "github.com/kilic/bls12-381",
-        sum = "h1:ac3KEjgHrX671Q7gW6aGmiQcDrYzmwrdq76HElwyewA=",
-        version = "v0.1.1-0.20210208205449-6045b0235e36",
+        replace = "github.com/Inphi/bls12-381",
+        sum = "h1:dO3UA5UAc0KSHVgWNJTtG3PQwmFqlL6lJatg/9tvc38=",
+        version = "v0.0.0-20220819032644-3ae7bcd28efc",
     )
 
     go_repository(
@@ -3173,8 +3174,9 @@ def prysm_deps():
     go_repository(
         name = "com_github_protolambda_go_kzg",
         importpath = "github.com/protolambda/go-kzg",
-        sum = "h1:enXc1M83hek0GrCqqGDWxFbVge1W/7gofPCjOADEb0I=",
-        version = "v0.0.0-20220318042159-d646366d060f",
+        replace = "github.com/Inphi/go-kzg",
+        sum = "h1:UPONzX5HWFya8T/r8WYlbiyl1/sTwiPLsVh8NjJY7to=",
+        version = "v0.0.0-20220819034031-381084440411",
     )
     go_repository(
         name = "com_github_protolambda_ztyp",
@@ -4505,8 +4507,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:0A+M6Uqn+Eje4kHMK80dtF3JCXC4ykBgQG4Fe06QRhQ=",
-        version = "v0.0.0-20220715151400-c0bba94af5f8",
+        sum = "h1:Sx/u41w+OwrInGdEckYmEuU5gHoGSL4QbDz3S9s6j4U=",
+        version = "v0.0.0-20220818161305-2296e01440c6",
     )
     go_repository(
         name = "org_golang_x_term",
