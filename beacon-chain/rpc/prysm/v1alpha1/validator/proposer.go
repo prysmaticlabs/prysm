@@ -81,7 +81,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk, nil)
+	return vs.proposeGenericBeaconBlock(ctx, blk, req.Sidecar)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
