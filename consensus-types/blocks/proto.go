@@ -73,6 +73,19 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Block:     block,
 			Signature: b.signature[:],
 		}, nil
+	case version.EIP4844:
+		var block *eth.BeaconBlockWithBlobKZGs
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlockWithBlobKZGs)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+		}
+		return &eth.SignedBeaconBlockWithBlobKZGs{
+			Block:     block,
+			Signature: b.signature[:],
+		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
@@ -155,6 +168,22 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			StateRoot:     b.stateRoot[:],
 			Body:          body,
 		}, nil
+	case version.EIP4844:
+		var body *eth.BeaconBlockBodyWithBlobKZGs
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyWithBlobKZGs)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+		}
+		return &eth.BeaconBlockWithBlobKZGs{
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot[:],
+			StateRoot:     b.stateRoot[:],
+			Body:          body,
+		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block version")
 	}
@@ -216,6 +245,20 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
 			ExecutionPayload:  b.executionPayload,
+		}, nil
+	case version.EIP4844:
+		return &eth.BeaconBlockBodyWithBlobKZGs{
+			RandaoReveal:      b.randaoReveal[:],
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti[:],
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
+			SyncAggregate:     b.syncAggregate,
+			ExecutionPayload:  b.executionPayload,
+			BlobKzgs:          b.blobKzgs,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")

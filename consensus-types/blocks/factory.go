@@ -77,6 +77,10 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return initBlindedBlockFromProtoBellatrix(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
 		return initBlindedBlockFromProtoBellatrix(b)
+	case *eth.GenericBeaconBlock_Eip4844:
+		return initBlockFromProtoEip4844(b.Eip4844)
+	case *eth.BeaconBlockWithBlobKZGs:
+		return initBlockFromProtoEip4844(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -135,6 +139,12 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
+	case version.EIP4844:
+		pb, ok := pb.(*eth.BeaconBlockWithBlobKZGs)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGs{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
