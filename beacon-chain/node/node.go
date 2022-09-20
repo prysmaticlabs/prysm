@@ -1030,8 +1030,11 @@ func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte)
 	if err != nil {
 		return err
 	}
-	if sidecar.BeaconBlockSlot != b.Block().Slot() {
+	if sidecar == nil {
 		return errors.New("blobs sidecar is unavailable")
+	}
+	if sidecar.BeaconBlockSlot != b.Block().Slot() {
+		return errors.New("blobs sidecar is unavailable: slot mismatch")
 	}
 	return blob.ValidateBlobsSidecar(b.Block().Slot(), root, kzgs, sidecar)
 }
