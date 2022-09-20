@@ -2,7 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 )
 
 // BeaconEndpointFactory creates endpoints used for running beacon chain API calls through the API Middleware.
@@ -50,6 +50,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v2/debug/beacon/heads",
+		"/eth/v1/debug/beacon/forkchoice",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
@@ -68,6 +69,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/contribution_and_proofs",
 		"/eth/v1/validator/prepare_beacon_proposer",
+		"/eth/v1/validator/register_validator",
 	}
 }
 
@@ -184,6 +186,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
 	case "/eth/v2/debug/beacon/heads":
 		endpoint.GetResponse = &v2ForkChoiceHeadsResponseJson{}
+	case "/eth/v1/debug/beacon/forkchoice":
+		endpoint.GetResponse = &forkchoiceResponse{}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &forkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
@@ -267,6 +271,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &feeRecipientsRequestJSON{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
+		}
+	case "/eth/v1/validator/register_validator":
+		endpoint.PostRequest = &signedValidatorRegistrationsRequestJson{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapSignedValidatorRegistrationsArray,
 		}
 	default:
 		return nil, errors.New("invalid path")

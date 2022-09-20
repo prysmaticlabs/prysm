@@ -6,15 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using
@@ -39,7 +40,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	if vs.MockEth1Votes {
 		return vs.mockETH1DataVote(ctx, slot)
 	}
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
@@ -78,7 +79,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	startTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
@@ -105,6 +106,9 @@ func (vs *Server) canonicalEth1Data(
 	} else {
 		canonicalEth1Data = beaconState.Eth1Data()
 		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
+	}
+	if features.Get().DisableStakinContractCheck && eth1BlockHash == [32]byte{} {
+		return canonicalEth1Data, new(big.Int).SetInt64(0), nil
 	}
 	_, canonicalEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {

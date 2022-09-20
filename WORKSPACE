@@ -15,9 +15,9 @@ http_archive(
 
 http_archive(
     name = "com_grail_bazel_toolchain",
-    sha256 = "040b9d00b8a03e8a28e38159ad0f2d0e0de625d93f453a9f226971a8c47e757b",
-    strip_prefix = "bazel-toolchain-5f82830f9d6a1941c3eb29683c1864ccf2862454",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/5f82830f9d6a1941c3eb29683c1864ccf2862454.tar.gz"],
+    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
+    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
+    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
 )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
@@ -28,7 +28,7 @@ load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
 
 llvm_toolchain(
     name = "llvm_toolchain",
-    llvm_version = "10.0.0",
+    llvm_version = "13.0.1",
 )
 
 load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
@@ -88,10 +88,10 @@ http_archive(
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
+    sha256 = "16e9fca53ed6bd4ff4ad76facc9b7b651a89db1689a2877d6fd7b82aa824e366",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
     ],
 )
 
@@ -176,7 +176,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.18.1",
+    go_version = "1.18.5",
     nogo = "@//:nogo",
 )
 
@@ -215,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.2.0-rc.1"
+consensus_spec_version = "v1.2.0-rc.3"
 
 bls_test_version = "v0.1.1"
 
@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9c93f87378aaa6d6fe1c67b396eac2aacc9594af2a83f028cb99c95dea5b81df",
+    sha256 = "18ca21497f41042cdbe60e2333b100d218b2994fb514964b9deb23daf615a12f",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
+    sha256 = "47b8f6fabe39b4a69f13054ba74e26ab51581ddbd359c18cf0f03317474e299c",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -263,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "022dcc0d6de7dd27b337a0d1b945077eaf5ee47000700395a693fc25e12f96df",
+    sha256 = "a061efc05429b169393c32dc2633a948269461b0fe681f11d41e170a880dcc71",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -278,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0a9c110305cbd6ebbe0d942f0f33e6ce22dd484ce4ceed277bf185a091941cde",
+    sha256 = "753d51c6a6cc6df101c897e4bea77f73b271f50aeda74440f412514d4bd88a86",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -309,9 +309,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
-    strip_prefix = "eth2-networks-f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935",
-    url = "https://github.com/eth-clients/eth2-networks/archive/f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935.tar.gz",
+    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
+    strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
+    url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
 )
 
 http_archive(
@@ -342,9 +342,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "98013b40922e54a64996da49b939e0a88fe2456f68eedc5aee4ceba0f8623f71",
+    sha256 = "e0c0b5dc609b3a221e74c720f483c595441f2ad5e38bb8aa3522636039945a6f",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.0/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.1/prysm-web-ui.tar.gz",
     ],
 )
 
@@ -387,7 +387,224 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_cloudflare_cloudflare_go",
+    importpath = "github.com/cloudflare/cloudflare-go",
+    sum = "h1:gFqGlGl/5f9UGXAaKapCGUfaTCgRKKnzu2VvzMZlOFA=",
+    version = "v0.14.0",
+)
+
+go_repository(
+    name = "com_github_confluentinc_confluent_kafka_go",
+    importpath = "github.com/confluentinc/confluent-kafka-go",
+    sum = "h1:13EK9RTujF7lVkvHQ5Hbu6bM+Yfrq8L0MkJNnjHSd4Q=",
+    version = "v1.4.2",
+)
+
+go_repository(
+    name = "com_github_dnaeon_go_vcr",
+    importpath = "github.com/dnaeon/go-vcr",
+    sum = "h1:zHCHvJYTMh1N7xnV7zf1m1GPBF9Ad0Jk/whtQ1663qI=",
+    version = "v1.2.0",
+)
+
+go_repository(
+    name = "com_github_form3tech_oss_jwt_go",
+    importpath = "github.com/form3tech-oss/jwt-go",
+    sum = "h1:xdtqez379uWVJ9P3qQMX8W+F/nqsTdUvyMZB36tnacA=",
+    version = "v3.2.1+incompatible",
+)
+
+go_repository(
+    name = "com_github_go_check_check",
+    importpath = "github.com/go-check/check",
+    sum = "h1:0gkP6mzaMqkmpcJYCFOLkIBwI7xFExG03bbkOkCvUPI=",
+    version = "v0.0.0-20180628173108-788fd7840127",
+)
+
+go_repository(
+    name = "com_github_iancoleman_strcase",
+    importpath = "github.com/iancoleman/strcase",
+    sum = "h1:dJBk1m2/qjL1twPLf68JND55vvivMupZ4wIzE8CTdBw=",
+    version = "v0.1.3",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_ipfs_addr",
+    importpath = "github.com/ipfs/go-ipfs-addr",
+    sum = "h1:DpDFybnho9v3/a1dzJ5KnWdThWD1HrFLpQ+tWIyBaFI=",
+    version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_jackpal_gateway",
+    importpath = "github.com/jackpal/gateway",
+    sum = "h1:qzXWUJfuMdlLMtt0a3Dgt+xkWQiA5itDEITVJtuSwMc=",
+    version = "v1.0.5",
+)
+
+go_repository(
+    name = "com_github_kubuxu_go_os_helper",
+    importpath = "github.com/Kubuxu/go-os-helper",
+    sum = "h1:EJiD2VUQyh5A9hWJLmc6iWg6yIcJ7jpBcwC8GMGXfDk=",
+    version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_addr_util",
+    importpath = "github.com/libp2p/go-addr-util",
+    sum = "h1:7cWK5cdA5x72jX0g8iLrQWm5TRJZ6CzGdPEhWj7plWU=",
+    version = "v0.0.2",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_autonat",
+    importpath = "github.com/libp2p/go-libp2p-autonat",
+    sum = "h1:3y8XQbpr+ssX8QfZUHekjHCYK64sj6/4hnf/awD4+Ug=",
+    version = "v0.4.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_crypto",
+    importpath = "github.com/libp2p/go-libp2p-crypto",
+    sum = "h1:k9MFy+o2zGDNGsaoZl0MA3iZ75qXxr9OOoAZF+sD5OQ=",
+    version = "v0.1.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_discovery",
+    importpath = "github.com/libp2p/go-libp2p-discovery",
+    sum = "h1:Qfl+e5+lfDgwdrXdu4YNCWyEo3fWuP+WgN9mN0iWviQ=",
+    version = "v0.5.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_loggables",
+    importpath = "github.com/libp2p/go-libp2p-loggables",
+    sum = "h1:h3w8QFfCt2UJl/0/NW4K829HX/0S4KD31PQ7m8UXXO8=",
+    version = "v0.1.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_nat",
+    importpath = "github.com/libp2p/go-libp2p-nat",
+    sum = "h1:wMWis3kYynCbHoyKLPBEMu4YRLltbm8Mk08HGSfvTkU=",
+    version = "v0.0.6",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_netutil",
+    importpath = "github.com/libp2p/go-libp2p-netutil",
+    sum = "h1:zscYDNVEcGxyUpMd0JReUZTrpMfia8PmLKcKF72EAMQ=",
+    version = "v0.1.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_noise",
+    importpath = "github.com/libp2p/go-libp2p-noise",
+    sum = "h1:IH9GRihQJTx56obm+GnpdPX4KeVIlvpXrP6xnJ0wxWk=",
+    version = "v0.1.2",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_peer",
+    importpath = "github.com/libp2p/go-libp2p-peer",
+    sum = "h1:EQ8kMjaCUwt/Y5uLgjT8iY2qg0mGUT0N1zUjer50DsY=",
+    version = "v0.2.0",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_secio",
+    importpath = "github.com/libp2p/go-libp2p-secio",
+    sum = "h1:rLLPvShPQAcY6eNurKNZq3eZjPWfU9kXF2eI9jIYdrg=",
+    version = "v0.2.2",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_stream_muxer",
+    importpath = "github.com/libp2p/go-stream-muxer",
+    sum = "h1:Ce6e2Pyu+b5MC1k3eeFtAax0pW4gc6MosYSLV05UeLw=",
+    version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_ws_transport",
+    importpath = "github.com/libp2p/go-ws-transport",
+    sum = "h1:ZX5rWB8nhRRJVaPO6tmkGI/Xx8XNboYX20PW5hXIscw=",
+    version = "v0.3.1",
+)
+
+go_repository(
+    name = "com_github_libp2p_go_yamux",
+    importpath = "github.com/libp2p/go-yamux",
+    sum = "h1:P1Fe9vF4th5JOxxgQvfbOHkrGqIZniTLf+ddhZp8YTI=",
+    version = "v1.4.1",
+)
+
+go_repository(
+    name = "com_github_modocache_gover",
+    importpath = "github.com/modocache/gover",
+    sum = "h1:8Q0qkMVC/MmWkpIdlvZgcv2o2jrlF6zqVOh7W5YHdMA=",
+    version = "v0.0.0-20171022184752-b58185e213c5",
+)
+
+go_repository(
+    name = "com_github_nbutton23_zxcvbn_go",
+    importpath = "github.com/nbutton23/zxcvbn-go",
+    sum = "h1:AREM5mwr4u1ORQBMvzfzBgpsctsbQikCVpvC+tX285E=",
+    version = "v0.0.0-20180912185939-ae427f1e4c1d",
+)
+
+go_repository(
+    name = "com_github_prestonvanloon_go_recaptcha",
+    importpath = "github.com/prestonvanloon/go-recaptcha",
+    sum = "h1:/JK1WfWJGBNDKY70uiB53iKKbFqxBx2CuYgj9hK2O70=",
+    version = "v0.0.0-20190217191114-0834cef6e8bd",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_eth2_types",
+    importpath = "github.com/prysmaticlabs/eth2-types",
+    sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
+    version = "v0.0.0-20210303084904-c9735a06829d",
+)
+
+go_repository(
+    name = "com_github_prysmaticlabs_prysm",
+    importpath = "github.com/prysmaticlabs/prysm",
+    sum = "h1:vgtnaMaTpKHPRcFNbndLH+qf5NWNMykTmnCHFDvH/4o=",
+    version = "v1.4.4",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_go_keyspace",
+    importpath = "github.com/whyrusleeping/go-keyspace",
+    sum = "h1:EKhdznlJHPMoKr0XTrX+IlJs1LH3lyx2nfr1dOlZ79k=",
+    version = "v0.0.0-20160322163242-5b898ac5add1",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_go_logging",
+    importpath = "github.com/whyrusleeping/go-logging",
+    sum = "h1:fwpzlmT0kRC/Fmd0MdmGgJG/CXIZ6gFq46FQZjprUcc=",
+    version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_whyrusleeping_mafmt",
+    importpath = "github.com/whyrusleeping/mafmt",
+    sum = "h1:TCghSl5kkwEE0j+sU/gudyhVMRlpBin8fMBBHg59EbA=",
+    version = "v1.2.8",
+)
+
+go_repository(
+    name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
+    importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
+    sum = "h1:JabkIV98VYFqYKHHzXtgGMFuRgFBNTNzBytbGByzrJI=",
+    version = "v1.4.2",
+)
 
 gazelle_dependencies()
 

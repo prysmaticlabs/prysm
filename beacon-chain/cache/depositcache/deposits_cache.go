@@ -14,11 +14,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -185,7 +185,21 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.Depos
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	return dc.deposits
+	// Make a shallow copy of the deposits and return that. This way, the
+	// caller can safely iterate over the returned list of deposits without
+	// the possibility of new deposits showing up. If we were to return the
+	// list without a copy, when a new deposit is added to the cache, it
+	// would also be present in the returned value. This could result in a
+	// race condition if the list is being iterated over.
+	//
+	// It's not necessary to make a deep copy of this list because the
+	// deposits in the cache should never be modified. It is still possible
+	// for the caller to modify one of the underlying deposits and modify
+	// the cache, but that's not a race condition. Also, a deep copy would
+	// take too long and use too much memory.
+	deposits := make([]*ethpb.DepositContainer, len(dc.deposits))
+	copy(deposits, dc.deposits)
+	return deposits
 }
 
 // AllDeposits returns a list of historical deposits until the given block number

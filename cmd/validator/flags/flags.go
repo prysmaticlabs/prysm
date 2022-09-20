@@ -3,12 +3,13 @@
 package flags
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -316,13 +317,6 @@ var (
 		Name:  "graffiti-file",
 		Usage: "The path to a YAML file with graffiti values",
 	}
-	// EnableDutyCountDown enables more verbose logging for counting down to duty.
-	EnableDutyCountDown = &cli.BoolFlag{
-		Name:  "enable-duty-count-down",
-		Usage: "Enables more verbose logging for counting down to duty",
-		Value: false,
-	}
-
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
 		Name:  "proposer-settings-file",
@@ -339,7 +333,7 @@ var (
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
+		Usage: "Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block." +
 			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
@@ -347,16 +341,17 @@ var (
 
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableBuilderFlag = &cli.BoolFlag{
-		Name:  "enable-builder",
-		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
-		Value: false,
+		Name:    "enable-builder",
+		Usage:   "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Value:   false,
+		Aliases: []string{"enable-validator-registration"},
 	}
 
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
-	BuilderGasLimitFlag = &cli.IntFlag{
+	BuilderGasLimitFlag = &cli.StringFlag{
 		Name:  "suggested-gas-limit",
 		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
-		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
+		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

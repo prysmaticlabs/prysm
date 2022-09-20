@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // Beaconfuzz discovered an issue where a proposer slashing could be produced which would pass
@@ -22,7 +22,7 @@ func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
 	err = rawState.UnmarshalSSZ(file)
 	require.NoError(t, err)
 
-	st, err := v1.InitializeFromProtoUnsafe(rawState)
+	st, err := state_native.InitializeFromProtoUnsafePhase0(rawState)
 	require.NoError(t, err)
 
 	file, err = os.ReadFile("testdata/beaconfuzz_91_proposer_slashing.ssz")

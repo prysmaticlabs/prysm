@@ -4,16 +4,16 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 )
 
 // Specifies the fixed size context length.
 const forkDigestLength = 4
 
 // writes peer's current context for the expected payload to the stream.
-func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ChainInfoFetcher) error {
+func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain.ForkFetcher) error {
 	// The rpc context for our v2 methods is the fork-digest of
 	// the relevant payload. We write the associated fork-digest(context)
 	// into the stream for the payload.
@@ -34,7 +34,7 @@ func writeContextToStream(objCtx []byte, stream network.Stream, chain blockchain
 }
 
 // reads any attached context-bytes to the payload.
-func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
+func readContextFromStream(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, error) {
 	rpcCtx, err := rpcContext(stream, chain)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func readContextFromStream(stream network.Stream, chain blockchain.ChainInfoFetc
 }
 
 // retrieve expected context depending on rpc topic schema version.
-func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byte, error) {
+func rpcContext(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, error) {
 	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return nil, err

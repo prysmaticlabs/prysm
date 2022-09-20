@@ -1,7 +1,6 @@
 package initialsync
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -10,12 +9,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -132,7 +130,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, data.sidecars, s.cfg.Chain.ReceiveBlockBatch); err != nil {
-		log.WithError(err).Warn("Batch is not processed")
+		log.WithError(err).Warn("Skip processing batched blocks")
 	}
 }
 
@@ -249,8 +247,7 @@ func (s *Service) processBlock(
 	}
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
-	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot, sidecar)
@@ -269,7 +266,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	headSlot := s.cfg.Chain.HeadSlot()
 	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
-			return errors.New("no good blocks in batch")
+			return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, firstBlock.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
@@ -279,7 +276,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
+	parentRoot := firstBlock.Block().ParentRoot()
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
@@ -287,7 +284,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	blockRoots[0] = blkRoot
 	for i := 1; i < len(blks); i++ {
 		b := blks[i]
-		if !bytes.Equal(b.Block().ParentRoot(), blockRoots[i-1][:]) {
+		if b.Block().ParentRoot() != blockRoots[i-1] {
 			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
 				blockRoots[i-1][:], b.Block().ParentRoot())
 		}

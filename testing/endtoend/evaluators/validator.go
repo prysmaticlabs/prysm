@@ -5,23 +5,27 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	ethtypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var expectedParticipation = 0.99
+
+var expectedMulticlientParticipation = 0.98
 
 var expectedSyncParticipation = 0.99
 
@@ -114,6 +118,9 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
+	if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
+		expected = float32(expectedMulticlientParticipation)
+	}
 	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
 		// Reduce Participation requirement to 95% to account for longer EE calls for
 		// the merge block. Target and head will likely be missed for a few validators at
@@ -121,7 +128,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		expected = 0.95
 	}
 	if partRate < expected {
-		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.StateRequestV2{StateId: []byte("head")})
+		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.BeaconStateRequestV2{StateId: []byte("head")})
 		if err != nil {
 			return errors.Wrap(err, "failed to get beacon state")
 		}
@@ -261,10 +268,13 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 		return nil, errors.New("block doesn't support sync committees")
 	}
 	if container.GetAltairBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(container.GetAltairBlock())
+		return blocks.NewSignedBeaconBlock(container.GetAltairBlock())
 	}
 	if container.GetBellatrixBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(container.GetBellatrixBlock())
+		return blocks.NewSignedBeaconBlock(container.GetBellatrixBlock())
+	}
+	if container.GetBlindedBellatrixBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedBellatrixBlock())
 	}
 	return nil, errors.New("no supported block type in container")
 }

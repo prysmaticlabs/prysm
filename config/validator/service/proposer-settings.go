@@ -1,9 +1,11 @@
 package validator_service_config
 
 import (
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
@@ -25,8 +27,39 @@ type ProposerOptionPayload struct {
 // GasLimit is a number set to help the network decide on the maximum gas in each block.
 type BuilderConfig struct {
 	Enabled  bool     `json:"enabled" yaml:"enabled"`
-	GasLimit uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+	GasLimit Uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
 	Relays   []string `json:"relays" yaml:"relays"`
+}
+
+type Uint64 uint64
+
+func (u *Uint64) UnmarshalJSON(bs []byte) error {
+	str := string(bs) // Parse plain numbers directly.
+	if bs[0] == '"' && bs[len(bs)-1] == '"' {
+		// Unwrap the quotes from string numbers.
+		str = string(bs[1 : len(bs)-1])
+	}
+	x, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return err
+	}
+	*u = Uint64(x)
+	return nil
+}
+
+func (u *Uint64) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var str string
+	err := unmarshal(&str)
+	if err != nil {
+		return err
+	}
+	x, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return err
+	}
+	*u = Uint64(x)
+
+	return nil
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.

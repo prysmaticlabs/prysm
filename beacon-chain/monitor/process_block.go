@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -88,11 +88,12 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 		aggPerf.totalProposedCount++
 		s.aggregatedPerformance[blk.ProposerIndex()] = aggPerf
 
+		parentRoot := blk.ParentRoot()
 		log.WithFields(logrus.Fields{
 			"ProposerIndex": blk.ProposerIndex(),
 			"Slot":          blk.Slot(),
 			"Version":       blk.Version(),
-			"ParentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(blk.ParentRoot())),
+			"ParentRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(parentRoot[:])),
 			"BlockRoot":     fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 			"NewBalance":    balance,
 			"BalanceChange": balanceChg,
@@ -171,7 +172,7 @@ func (s *Service) logAggregatedPerformance() {
 			"AverageInclusionDistance": fmt.Sprintf("%.1f", percentDistance),
 			"TotalProposedBlocks":      p.totalProposedCount,
 			"TotalAggregations":        p.totalAggregations,
-			"TotalSyncContributions":   p.totalSyncComitteeContributions,
+			"TotalSyncContributions":   p.totalSyncCommitteeContributions,
 		}).Info("Aggregated performance since launch")
 	}
 }

@@ -5,11 +5,11 @@ import (
 	"math"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time"
 )
 
 var _ Scorer = (*PeerStatusScorer)(nil)

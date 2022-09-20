@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = ["params.go"],
-    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/params",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//io/file:go_default_library",

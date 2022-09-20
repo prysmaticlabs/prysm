@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "slice.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/container/slice",
+    importpath = "github.com/prysmaticlabs/prysm/v3/container/slice",
     visibility = ["//visibility:public"],
     deps = ["//consensus-types/primitives:go_default_library"],
 )
@@ -18,5 +18,6 @@ go_test(
     deps = [
         ":go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

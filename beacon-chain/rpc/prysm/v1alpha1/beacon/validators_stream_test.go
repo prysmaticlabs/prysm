@@ -4,12 +4,12 @@ import (
 	"sync"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestInfostream_EpochToTimestamp(t *testing.T) {
@@ -51,7 +51,7 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 
 func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name       string
 		reqPubKeys [][]byte
@@ -89,7 +89,7 @@ func TestInfostream_HandleSetValidatorKeys(t *testing.T) {
 
 func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte
@@ -137,7 +137,7 @@ func TestInfostream_HandleAddValidatorKeys(t *testing.T) {
 
 func TestInfostream_HandleRemoveValidatorKeys(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	tests := []struct {
 		name           string
 		initialPubKeys [][]byte

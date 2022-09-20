@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -77,11 +77,11 @@ func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.BeaconBlock {
 	var wb interfaces.SignedBeaconBlock
 	switch bb := b.Block.(type) {
 	case *v1alpha1.BeaconBlockContainer_Phase0Block:
-		wb, err = wrapper.WrappedSignedBeaconBlock(bb.Phase0Block)
+		wb, err = blocks.NewSignedBeaconBlock(bb.Phase0Block)
 	case *v1alpha1.BeaconBlockContainer_AltairBlock:
-		wb, err = wrapper.WrappedSignedBeaconBlock(bb.AltairBlock)
+		wb, err = blocks.NewSignedBeaconBlock(bb.AltairBlock)
 	case *v1alpha1.BeaconBlockContainer_BellatrixBlock:
-		wb, err = wrapper.WrappedSignedBeaconBlock(bb.BellatrixBlock)
+		wb, err = blocks.NewSignedBeaconBlock(bb.BellatrixBlock)
 	}
 	if err != nil {
 		panic("no block")

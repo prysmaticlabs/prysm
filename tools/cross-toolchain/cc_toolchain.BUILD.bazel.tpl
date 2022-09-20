@@ -7,7 +7,8 @@ load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 cc_toolchain_suite(
     name = "multiarch_toolchain",
     toolchains = {
-        "k8|osxcross": ":cc-clang-osx",
+        "k8|osxcross": ":cc-clang-osx-amd64",
+        "aarch64|osxcross": ":cc-clang-osx-arm64",
         "k8|clang": "cc-clang-amd64",
         "aarch64|clang": ":cc-clang-arm64",
         "k8": "cc-clang-amd64",
@@ -89,8 +90,16 @@ arm64_cc_toolchain_config(
 )
 
 osx_cc_toolchain_config(
-    name = "local-osxcross",
+    name = "local-osxcross-amd64",
     target = "darwin_x86_64",
+    target_cpu = "x86_64",
+    tags = ["manual"],
+)
+
+osx_cc_toolchain_config(
+    name = "local-osxcross-arm64",
+    target = "darwin_aarch64",
+    target_cpu = "aarch64",
     tags = ["manual"],
 )
 
@@ -129,7 +138,7 @@ cc_toolchain(
 )
 
 cc_toolchain(
-    name = "cc-clang-osx",
+    name = "cc-clang-osx-amd64",
     all_files = ":empty",
     compiler_files = ":empty",
     dwp_files = ":empty",
@@ -137,7 +146,20 @@ cc_toolchain(
     objcopy_files = ":empty",
     strip_files = ":empty",
     supports_param_files = 1,
-    toolchain_config = ":local-osxcross",
+    toolchain_config = ":local-osxcross-amd64",
+    tags = ["manual"],
+)
+
+cc_toolchain(
+    name = "cc-clang-osx-arm64",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 1,
+    toolchain_config = ":local-osxcross-arm64",
     tags = ["manual"],
 )
 
@@ -164,8 +186,8 @@ toolchain(
     toolchain = select({
         ":linux_arm64": ":cc-clang-arm64",
         ":linux_amd64": ":cc-clang-amd64",
-        ":osx_amd64": ":cc-clang-osx",
-        ":osx_arm64": ":cc-clang-osx",
+        ":osx_amd64": ":cc-clang-osx-amd64",
+        ":osx_arm64": ":cc-clang-osx-arm64",
         ":windows_amd64": ":cc-mingw-amd64",
     }),
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",

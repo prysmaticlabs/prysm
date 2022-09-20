@@ -11,7 +11,7 @@ go_library(
         "process_sync_committee.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/monitor",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//async/event:go_default_library",
@@ -56,8 +56,8 @@ go_test(
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",

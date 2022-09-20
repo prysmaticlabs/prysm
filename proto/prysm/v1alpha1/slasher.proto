@@ -21,7 +21,7 @@ import "proto/prysm/v1alpha1/beacon_block.proto";
 import "google/api/annotations.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "SlasherProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -77,40 +77,8 @@ message HighestAttestation {
   uint64 validator_index = 1;
   uint64 highest_source_epoch = 2
       [ (ethereum.eth.ext.cast_type) =
-            "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch" ];
+            "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch" ];
   uint64 highest_target_epoch = 3
       [ (ethereum.eth.ext.cast_type) =
-            "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch" ];
-}
-
-// ProposalHistory defines the structure for recording a validator's historical
-// proposals. Using a bitlist to represent the epochs and an uint64 to mark the
-// latest marked epoch of the bitlist, we can easily store which epochs a
-// validator has proposed a block for while pruning the older data.
-message ProposalHistory {
-  bytes epoch_bits = 1 [
-    (ethereum.eth.ext.cast_type) =
-        "github.com/prysmaticlabs/go-bitfield.Bitlist",
-    deprecated = true
-  ];
-  uint64 latest_epoch_written = 2 [
-    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch",
-    deprecated = true
-  ];
-}
-
-message Slashable { bool slashable = 1 [ deprecated = true ]; }
-
-// AttestationHistory defines the structure for recording a validator's
-// historical attestation. Using a map[uint64]uint64 to map its target epoch to
-// its source epoch, in order to detect if a vote being created is not a double
-// vote and surrounded by, or surrounding any other votes. Using an uint64 to
-// mark the latest written epoch, we can safely perform a rolling prune whenever
-// the history is updated.
-message AttestationHistory {
-  map<uint64, uint64> target_to_source = 1 [ deprecated = true ];
-  uint64 latest_epoch_written = 2 [
-    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch",
-    deprecated = true
-  ];
+            "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch" ];
 }

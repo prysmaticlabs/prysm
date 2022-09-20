@@ -6,19 +6,18 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/forks/eip4844"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -62,7 +61,8 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
 	interop.WriteStateToDisk(st)
 
-	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, signed.Block().ParentRoot(), signed.Block().Slot())
+	parentRoot := signed.Block().ParentRoot()
+	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process slots")
 	}
@@ -78,7 +78,8 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	if err != nil {
 		return nil, nil, err
 	}
-	if !bytes.Equal(postStateRoot[:], signed.Block().StateRoot()) {
+	stateRoot := signed.Block().StateRoot()
+	if !bytes.Equal(postStateRoot[:], stateRoot[:]) {
 		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block().StateRoot())
 	}
@@ -130,7 +131,8 @@ func CalculateStateRoot(
 
 	// Execute per slots transition.
 	var err error
-	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, signed.Block().ParentRoot(), signed.Block().Slot())
+	parentRoot := signed.Block().ParentRoot()
+	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, parentRoot[:], signed.Block().Slot())
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slots")
 	}
@@ -163,7 +165,7 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, nil, err
 	}
 
@@ -183,12 +185,14 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	bSet, err := b.BlockSignatureBatch(st, blk.ProposerIndex(), signed.Signature(), blk.HashTreeRoot)
+	sig := signed.Signature()
+	bSet, err := b.BlockSignatureBatch(st, blk.ProposerIndex(), sig[:], blk.HashTreeRoot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	rSet, err := b.RandaoSignatureBatch(ctx, st, signed.Block().Body().RandaoReveal())
+	randaoReveal := signed.Block().Body().RandaoReveal()
+	rSet, err := b.RandaoSignatureBatch(ctx, st, randaoReveal[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
@@ -232,7 +236,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signedBeaconBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(signedBeaconBlock); err != nil {
 		return nil, err
 	}
 
@@ -247,7 +251,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.BellatrixBlind, version.EIP4844:
+	case version.Altair, version.Bellatrix, version.EIP4844:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -306,7 +310,7 @@ func ProcessBlockForStateRoot(
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 
@@ -316,7 +320,8 @@ func ProcessBlockForStateRoot(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
 	}
-	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
+	parentRoot := blk.ParentRoot()
+	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), parentRoot[:], bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block header")
@@ -341,7 +346,8 @@ func ProcessBlockForStateRoot(
 		}
 	}
 
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block().Body().RandaoReveal())
+	randaoReveal := signed.Block().Body().RandaoReveal()
+	state, err = b.ProcessRandaoNoVerify(state, randaoReveal[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not verify and process randao")
@@ -372,7 +378,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "process_sync_aggregate failed")
 	}
 
-	if blocks.IsPreEIP4844Version(signed.Block().Version()) {
+	if b.IsPreEIP4844Version(signed.Block().Version()) {
 		return state, nil
 	}
 

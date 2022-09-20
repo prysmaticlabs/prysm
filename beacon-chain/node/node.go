@@ -18,52 +18,53 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
-	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
-	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
-	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	regularsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/checkpoint"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/genesis"
-	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/backup"
-	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/runtime/debug"
-	"github.com/prysmaticlabs/prysm/runtime/prereqs"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	apigateway "github.com/prysmaticlabs/prysm/v3/api/gateway"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blob"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/slasherkv"
+	interopcoldstart "github.com/prysmaticlabs/prysm/v3/beacon-chain/deterministic-genesis"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node/registration"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	regularsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/genesis"
+	initialsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v3/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -79,9 +80,9 @@ const blobsPruneInterval = time.Minute * 15
 // for the beacon node. We keep this as a separate struct to not pollute the actual BeaconNode
 // struct, as it is merely used to pass down configuration options into the appropriate services.
 type serviceFlagOpts struct {
-	blockchainFlagOpts []blockchain.Option
-	powchainFlagOpts   []powchain.Option
-	builderOpts        []builder.Option
+	blockchainFlagOpts     []blockchain.Option
+	executionChainFlagOpts []execution.Option
+	builderOpts            []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -105,16 +106,15 @@ type BeaconNode struct {
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
-	forkChoiceStore         forkchoice.ForkChoicer
 	stateGen                *stategen.State
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
 	finalizedStateAtStartUp state.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
-	blockchainFlagOpts      []blockchain.Option
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer
+	forkChoicer             forkchoice.ForkChoicer
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -137,7 +137,8 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureHistoricalSlasher(cliCtx); err != nil {
 		return nil, err
 	}
-	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
+	err := configureBuilderCircuitBreaker(cliCtx)
+	if err != nil {
 		return nil, err
 	}
 	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
@@ -186,13 +187,19 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
-	depositAddress, err := powchain.DepositContractAddress()
+	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
 	}
 	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
+	}
+
+	if features.Get().DisableForkchoiceDoublyLinkedTree {
+		beacon.forkChoicer = protoarray.New(NewDBDataAvailability(beacon.db))
+	} else {
+		beacon.forkChoicer = doublylinkedtree.New(NewDBDataAvailability(beacon.db))
 	}
 
 	log.Debugln("Starting Slashing DB")
@@ -230,11 +237,8 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Starting Fork Choice")
-	beacon.startForkChoice()
-
 	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(); err != nil {
+	if err := beacon.registerBlockchainService(beacon.forkChoicer); err != nil {
 		return nil, err
 	}
 
@@ -349,19 +353,11 @@ func (b *BeaconNode) Close() {
 	log.Info("Stopping beacon node")
 	b.services.StopAll()
 	if err := b.db.Close(); err != nil {
-		log.Errorf("Failed to close database: %v", err)
+		log.WithError(err).Error("Failed to close database")
 	}
 	b.collector.unregister()
 	b.cancel()
 	close(b.stop)
-}
-
-func (b *BeaconNode) startForkChoice() {
-	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		b.forkChoiceStore = doublylinkedtree.New(blockchain.NewDBDataAvailability(b.db))
-	} else {
-		b.forkChoiceStore = protoarray.New(blockchain.NewDBDataAvailability(b.db))
-	}
 }
 
 func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
@@ -372,9 +368,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath, &kv.Config{
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-	})
+	d, err := db.NewDB(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -396,9 +390,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath, &kv.Config{
-			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-		})
+		d, err = db.NewDB(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -470,9 +462,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-	})
+	d, err := slasherkv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -494,9 +484,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = slasherkv.NewKVStore(b.ctx, dbPath, &slasherkv.Config{
-			InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
-		})
+		d, err = slasherkv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -562,7 +550,6 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		DisableDiscv5:     cliCtx.Bool(flags.DisableDiscv5.Name),
 		StateNotifier:     b,
 		DB:                b.db,
 	})
@@ -598,8 +585,8 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService() error {
-	var web3Service *powchain.Service
+func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error {
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -612,6 +599,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	// skipcq: CRT-D0001
 	opts := append(
 		b.serviceFlagOpts.blockchainFlagOpts,
+		blockchain.WithForkChoiceStore(fc),
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
@@ -621,13 +609,13 @@ func (b *BeaconNode) registerBlockchainService() error {
 		blockchain.WithSlashingPool(b.slashingsPool),
 		blockchain.WithP2PBroadcaster(b.fetchP2P()),
 		blockchain.WithStateNotifier(b),
-		blockchain.WithForkChoiceStore(b.forkChoiceStore),
 		blockchain.WithAttestationService(attService),
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 	)
+
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -637,29 +625,29 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Service{})
+		return b.services.RegisterService(&execution.Service{})
 	}
-	bs, err := powchain.NewPowchainCollector(b.ctx)
+	bs, err := execution.NewPowchainCollector(b.ctx)
 	if err != nil {
 		return err
 	}
-	depositContractAddr, err := powchain.DepositContractAddress()
+	depositContractAddr, err := execution.DepositContractAddress()
 	if err != nil {
 		return err
 	}
 
 	// skipcq: CRT-D0001
 	opts := append(
-		b.serviceFlagOpts.powchainFlagOpts,
-		powchain.WithDepositContractAddress(common.HexToAddress(depositContractAddr)),
-		powchain.WithDatabase(b.db),
-		powchain.WithDepositCache(b.depositCache),
-		powchain.WithStateNotifier(b),
-		powchain.WithStateGen(b.stateGen),
-		powchain.WithBeaconNodeStatsUpdater(bs),
-		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		b.serviceFlagOpts.executionChainFlagOpts,
+		execution.WithDepositContractAddress(common.HexToAddress(depositContractAddr)),
+		execution.WithDatabase(b.db),
+		execution.WithDepositCache(b.depositCache),
+		execution.WithStateNotifier(b),
+		execution.WithStateGen(b.stateGen),
+		execution.WithBeaconNodeStatsUpdater(bs),
+		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
 	)
-	web3Service, err := powchain.NewService(b.ctx, opts...)
+	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -668,7 +656,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 }
 
 func (b *BeaconNode) registerSyncService() error {
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -757,7 +745,7 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -777,7 +765,7 @@ func (b *BeaconNode) registerRPCService() error {
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
-	var chainStartFetcher powchain.ChainStartFetcher
+	var chainStartFetcher execution.ChainStartFetcher
 	if genesisValidators > 0 || genesisStatePath != "" {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
@@ -835,8 +823,8 @@ func (b *BeaconNode) registerRPCService() error {
 		SlashingsPool:                 b.slashingsPool,
 		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
-		POWChainService:               web3Service,
-		POWChainInfoFetcher:           web3Service,
+		ExecutionChainService:         web3Service,
+		ExecutionChainInfoFetcher:     web3Service,
 		ChainStartFetcher:             chainStartFetcher,
 		MockEth1Votes:                 mockEth1DataVotes,
 		SyncService:                   syncService,
@@ -855,7 +843,7 @@ func (b *BeaconNode) registerRPCService() error {
 	return b.services.RegisterService(rpcService)
 }
 
-func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
+func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	var additionalHandlers []prometheus.Handler
 	var p *p2p.Service
 	if err := b.services.FetchService(&p); err != nil {
@@ -866,16 +854,6 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
-	}
-
-	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
-		additionalHandlers = append(
-			additionalHandlers,
-			prometheus.Handler{
-				Path:    "/db/backup",
-				Handler: backup.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
-			},
-		)
 	}
 
 	service := prometheus.NewService(
@@ -1020,4 +998,43 @@ func (b *BeaconNode) pruneBlobs() {
 			log.WithError(err).Error("Unable to prune blobs sidecars in db")
 		}
 	})
+}
+
+type dbDataAvailability struct {
+	db db.ReadOnlyDatabase
+}
+
+func NewDBDataAvailability(db db.ReadOnlyDatabase) forkchoice.DataAvailability {
+	return &dbDataAvailability{db}
+}
+
+func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte) error {
+	b, err := d.db.Block(ctx, root)
+	if err != nil {
+		return err
+	}
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
+		return err
+	}
+	if !blob.BlockContainsKZGs(b.Block()) {
+		// no sidecar referenced. We have all the data we need
+		return nil
+	}
+
+	kzgs, err := b.Block().Body().BlobKzgs()
+	if err != nil {
+		// shouldn't happen if blob contains kzgs
+		return err
+	}
+	sidecar, err := d.db.BlobsSidecar(ctx, root)
+	if err != nil {
+		return err
+	}
+	if sidecar == nil {
+		return errors.New("blobs sidecar is unavailable")
+	}
+	if sidecar.BeaconBlockSlot != b.Block().Slot() {
+		return errors.New("blobs sidecar is unavailable: slot mismatch")
+	}
+	return blob.ValidateBlobsSidecar(b.Block().Slot(), root, kzgs, sidecar)
 }

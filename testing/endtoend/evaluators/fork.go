@@ -2,16 +2,19 @@ package evaluators
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
-	wrapperv2 "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
+
+var streamDeadline = 1 * time.Minute
 
 // AltairForkTransition ensures that the Altair hard fork has occurred successfully.
 var AltairForkTransition = types.Evaluator{
@@ -30,7 +33,7 @@ var BellatrixForkTransition = types.Evaluator{
 func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
@@ -56,11 +59,11 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetPhase0Block() != nil {
 		return errors.New("phase 0 block returned after altair fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetAltairBlock())
+	blk, err := blocks.NewSignedBeaconBlock(res.GetAltairBlock())
 	if err != nil {
 		return err
 	}
-	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {
@@ -72,7 +75,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
@@ -101,11 +104,11 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetAltairBlock() != nil {
 		return errors.New("altair block returned after bellatrix fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetBellatrixBlock())
+	blk, err := blocks.NewSignedBeaconBlock(res.GetBellatrixBlock())
 	if err != nil {
 		return err
 	}
-	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {

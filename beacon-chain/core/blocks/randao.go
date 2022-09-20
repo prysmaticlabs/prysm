@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // ProcessRandao checks the block proposer's
@@ -31,7 +31,7 @@ func ProcessRandao(
 	beaconState state.BeaconState,
 	b interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
@@ -39,11 +39,13 @@ func ProcessRandao(
 	if err != nil {
 		return nil, err
 	}
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal(), domain); err != nil {
+
+	randaoReveal := body.RandaoReveal()
+	if err := verifySignature(buf, proposerPub, randaoReveal[:], domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body.RandaoReveal())
+	beaconState, err = ProcessRandaoNoVerify(beaconState, randaoReveal[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process randao")
 	}
@@ -73,7 +75,7 @@ func ProcessRandaoNoVerify(
 	}
 	blockRandaoReveal := hash.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
-		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
+		return nil, errors.New("blockRandaoReveal length doesn't match latestMixSlice length")
 	}
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x

@@ -2,10 +2,11 @@ package mock
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,7 +22,7 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (SignedBeaconBlock) Signature() []byte {
+func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
 
@@ -29,11 +30,11 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) Proto() proto.Message {
+func (SignedBeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -77,6 +78,10 @@ func (SignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) IsBlinded() bool {
+	return false
+}
+
 func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
@@ -86,17 +91,17 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 }
 
 type BeaconBlock struct {
-	Htr             [32]byte
+	Htr             [field_params.RootLength]byte
 	HtrErr          error
 	BeaconBlockBody interfaces.BeaconBlockBody
 	BlockSlot       types.Slot
 }
 
-func (BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	panic("implement me")
 }
 
-func (m BeaconBlock) HashTreeRoot() ([32]byte, error) {
+func (m BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	return m.Htr, m.HtrErr
 }
 
@@ -108,11 +113,11 @@ func (BeaconBlock) ProposerIndex() types.ValidatorIndex {
 	panic("implement me")
 }
 
-func (BeaconBlock) ParentRoot() []byte {
+func (BeaconBlock) ParentRoot() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
-func (BeaconBlock) StateRoot() []byte {
+func (BeaconBlock) StateRoot() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
@@ -128,7 +133,7 @@ func (BeaconBlock) IsBlinded() bool {
 	return false
 }
 
-func (BeaconBlock) Proto() proto.Message {
+func (BeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -158,7 +163,7 @@ func (BeaconBlock) Version() int {
 
 type BeaconBlockBody struct{}
 
-func (BeaconBlockBody) RandaoReveal() []byte {
+func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
 
@@ -166,7 +171,7 @@ func (BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Graffiti() []byte {
+func (BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
@@ -198,11 +203,11 @@ func (BeaconBlockBody) IsNil() bool {
 	return false
 }
 
-func (BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
+func (BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Proto() proto.Message {
+func (BeaconBlockBody) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 

@@ -2,15 +2,16 @@ package testing
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // NewSignedBeaconBlockFromGeneric creates a signed beacon block
 // from a protobuf generic signed beacon block.
-func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (*blocks.SignedBeaconBlock, error) {
+func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if gb == nil {
-		return nil, blocks.ErrNilObjectWrapped
+		return nil, blocks.ErrNilObject
 	}
 	switch bb := gb.Block.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:

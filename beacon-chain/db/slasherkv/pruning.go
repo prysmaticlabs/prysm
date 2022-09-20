@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	bolt "go.etcd.io/bbolt"
 )
 

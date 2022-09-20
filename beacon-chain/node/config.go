@@ -6,12 +6,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -54,10 +54,17 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 	return nil
 }
 
-func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
-	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
+func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
+		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -100,7 +107,7 @@ func configureEth1Config(cliCtx *cli.Context) error {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+	if len(cliCtx.StringSlice(cmd.BootstrapNode.Name)) > 0 {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)

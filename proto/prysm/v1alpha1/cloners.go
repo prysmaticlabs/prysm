@@ -1,8 +1,8 @@
 package eth
 
 import (
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // CopyETH1Data copies the provided eth1data object.
@@ -511,4 +511,54 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
 		ExecutionPayloadHeader: CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
 	}
+}
+
+// CopySignedBeaconBlockWithBlobKZGs copies the provided SignedBeaconWithBlobKZGs.
+func CopySignedBeaconBlockWithBlobKZGs(sigBlock *SignedBeaconBlockWithBlobKZGs) *SignedBeaconBlockWithBlobKZGs {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBeaconBlockWithBlobKZGs{
+		Block:     CopyBeaconBlockWithBlobKZGs(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBeaconBlockWithBlobKZGs copies the provided BeaconBlockWithBlobKZGs.
+func CopyBeaconBlockWithBlobKZGs(block *BeaconBlockWithBlobKZGs) *BeaconBlockWithBlobKZGs {
+	if block == nil {
+		return nil
+	}
+	return &BeaconBlockWithBlobKZGs{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyWithBlobKZGs(block.Body),
+	}
+}
+
+// CopyBeaconBlockBodyWithBlobKZGs copies the provided BeaconBlockBodyWithBlobKZGs.
+func CopyBeaconBlockBodyWithBlobKZGs(body *BeaconBlockBodyWithBlobKZGs) *BeaconBlockBodyWithBlobKZGs {
+	if body == nil {
+		return nil
+	}
+	return &BeaconBlockBodyWithBlobKZGs{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayload:  CopyExecutionPayload(body.ExecutionPayload),
+		BlobKzgs:          CopyBlobKZGs(body.BlobKzgs),
+	}
+}
+
+// CopyBlobKZGs copies the provided blob kzgs object.
+func CopyBlobKZGs(b [][]byte) [][]byte {
+	return bytesutil.SafeCopy2dBytes(b)
 }

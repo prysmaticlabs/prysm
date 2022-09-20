@@ -9,17 +9,17 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -277,16 +277,16 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 }
 
 // SaveBlocks via bulk updates to the db.
-func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
 	// to minimize the time we hold the DB lock.
-	blockRoots := make([][]byte, len(blocks))
-	encodedBlocks := make([][]byte, len(blocks))
-	indicesForBlocks := make([]map[string][]byte, len(blocks))
-	for i, blk := range blocks {
+	blockRoots := make([][]byte, len(blks))
+	encodedBlocks := make([][]byte, len(blks))
+	indicesForBlocks := make([]map[string][]byte, len(blks))
+	for i, blk := range blks {
 		blockRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -302,7 +302,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for i, blk := range blocks {
+		for i, blk := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
 				continue
 			}
@@ -312,7 +312,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if features.Get().EnableOnlyBlindedBeaconBlocks {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
-					if !errors.Is(err, wrapper.ErrUnsupportedVersion) {
+					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
 						return err
 					}
 				} else {
@@ -726,10 +726,10 @@ func createBlockIndicesFromBlock(ctx context.Context, block interfaces.BeaconBlo
 	indices := [][]byte{
 		bytesutil.SlotToBytesBigEndian(block.Slot()),
 	}
-	if block.ParentRoot() != nil && len(block.ParentRoot()) > 0 {
-		buckets = append(buckets, blockParentRootIndicesBucket)
-		indices = append(indices, block.ParentRoot())
-	}
+	buckets = append(buckets, blockParentRootIndicesBucket)
+	parentRoot := block.ParentRoot()
+	indices = append(indices, parentRoot[:])
+
 	for i := 0; i < len(buckets); i++ {
 		indicesByBucket[string(buckets[i])] = indices[i]
 	}
@@ -805,7 +805,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 			return nil, errors.Wrap(err, "could not unmarshal Phase0 block")
 		}
 	}
-	return wrapper.WrappedSignedBeaconBlock(rawBlock)
+	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
 // marshal versioned beacon block from struct type down to bytes.
@@ -816,7 +816,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	if features.Get().EnableOnlyBlindedBeaconBlocks {
 		blindedBlock, err := blk.ToBlinded()
 		switch {
-		case errors.Is(err, wrapper.ErrUnsupportedVersion):
+		case errors.Is(err, blocks.ErrUnsupportedVersion):
 			encodedBlock, err = blk.MarshalSSZ()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not marshal non-blinded block")
@@ -839,9 +839,10 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	switch blockToSave.Version() {
 	case version.EIP4844:
 		return snappy.Encode(nil, append(eip4844Key, encodedBlock...)), nil
-	case version.BellatrixBlind:
-		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
+		if blockToSave.IsBlinded() {
+			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+		}
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil

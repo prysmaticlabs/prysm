@@ -1,7 +1,7 @@
 package protoarray
 
 import (
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // Slot of the fork choice node.
@@ -42,4 +42,9 @@ func (n *Node) BestChild() uint64 {
 // BestDescendant of the fork choice node.
 func (n *Node) BestDescendant() uint64 {
 	return n.bestDescendant
+}
+
+// VotedFraction is not implemented for protoarray
+func (*ForkChoice) VotedFraction(_ [32]byte) (uint64, error) {
+	return 0, nil
 }

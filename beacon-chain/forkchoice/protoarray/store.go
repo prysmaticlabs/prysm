@@ -7,19 +7,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pmath "github.com/prysmaticlabs/prysm/math"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -44,6 +45,7 @@ func New(da forkchoice.DataAvailability) *ForkChoice {
 		canonicalNodes:                make(map[[32]byte]bool),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
+		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
 	}
 
 	b := make([]uint64, 0)
@@ -82,7 +84,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -155,7 +157,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().EnablePullTips {
+	if !features.Get().DisablePullTips {
 		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
@@ -187,11 +189,15 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
+			// release the checkpoints lock here because
+			// AncestorRoot takes a lock on nodes and that can lead
+			// to double locks
+			f.store.checkpointsLock.Unlock()
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
-				f.store.checkpointsLock.Unlock()
 				return err
 			}
+			f.store.checkpointsLock.Lock()
 			if root == currentRoot {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -275,48 +281,52 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return f.store.nodes[i].root, nil
 }
 
-// CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+// CommonAncestor returns the common ancestor root and slot between the two block roots r1 and r2.
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
 
-	// Do nothing if the two input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
+	}
+
+	// Do nothing if the two input roots are the same.
+	if r1 == r2 {
+		n1 := f.store.nodes[i1]
+		return r1, n1.slot, nil
 	}
 
 	i2, ok := f.store.nodesIndices[r2]
 	if !ok || i2 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if i1 > i2 {
 			n1 := f.store.nodes[i1]
 			i1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i1 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 := f.store.nodes[i2]
 			i2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i2 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if i1 == i2 {
 			n1 := f.store.nodes[i1]
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }
@@ -368,10 +378,10 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	defer span.End()
 
 	s.checkpointsLock.RLock()
-	defer s.checkpointsLock.RUnlock()
 
 	// Justified index has to be valid in node indices map, and can not be out of bound.
 	if s.justifiedCheckpoint == nil {
+		s.checkpointsLock.RUnlock()
 		return [32]byte{}, errInvalidNilCheckpoint
 	}
 
@@ -383,9 +393,11 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedIndex = uint64(0)
 		} else {
+			s.checkpointsLock.RUnlock()
 			return [32]byte{}, errUnknownJustifiedRoot
 		}
 	}
+	s.checkpointsLock.RUnlock()
 	if justifiedIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errInvalidJustifiedIndex
 	}
@@ -402,9 +414,15 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	bestNode := s.nodes[bestDescendantIndex]
 
 	if !s.viableForHead(bestNode) {
+		s.allTipsAreInvalid = true
+		s.checkpointsLock.RLock()
+		jEpoch := s.justifiedCheckpoint.Epoch
+		fEpoch := s.finalizedCheckpoint.Epoch
+		s.checkpointsLock.RUnlock()
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestNode.justifiedEpoch, s.justifiedCheckpoint.Epoch)
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, fEpoch, bestNode.justifiedEpoch, jEpoch)
 	}
+	s.allTipsAreInvalid = false
 
 	// Update metrics and tracked head Root
 	if bestNode.root != s.lastHeadRoot {
@@ -421,7 +439,8 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	return bestNode.root, nil
 }
 
-// updateCanonicalNodes updates the canonical nodes mapping given the input block root.
+// updateCanonicalNodes updates the canonical nodes mapping given the input
+// block root. This function assumes the caller holds a lock in Store.nodesLock
 func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateCanonicalNodes")
 	defer span.End()
@@ -477,6 +496,10 @@ func (s *Store) insert(ctx context.Context,
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Return if the block has been inserted into Store before.
 	if idx, ok := s.nodesIndices[root]; ok {
 		return s.nodes[idx], nil
@@ -514,8 +537,8 @@ func (s *Store) insert(ctx context.Context,
 	}
 	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 	currentSlot := slots.CurrentSlot(s.genesisTime)
-	boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-	if currentSlot == slot && secondsIntoSlot < boostTreshold {
+	boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	if currentSlot == slot && secondsIntoSlot < boostThreshold {
 		s.proposerBoostLock.Lock()
 		s.proposerBoostRoot = root
 		s.proposerBoostLock.Unlock()
@@ -532,18 +555,28 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
 
+	// Only update received block slot if it's within epoch from current time.
+	if slot+params.BeaconConfig().SlotsPerEpoch > slots.CurrentSlot(s.genesisTime) {
+		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
+	}
+	// Update highest slot tracking.
+	highestSlot := s.nodes[s.highestReceivedIndex].slot
+	if slot > highestSlot {
+		s.highestReceivedIndex = uint64(len(s.nodes) - 1)
+	}
 	return n, nil
 }
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
-// the best child is then updated along with the best descendant.
+// the best child is then updated along with the best descendant. This function
+// assumes the caller holds a lock in Store.nodesLock
 func (s *Store) applyWeightChanges(
 	ctx context.Context, newBalances []uint64, delta []int,
 	dataAvailability forkchoice.DataAvailability,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
 	// The length of the nodes can not be different than length of the delta.
@@ -557,6 +590,9 @@ func (s *Store) applyWeightChanges(
 	// Iterate backwards through all index to node in store.
 	var err error
 	for i := len(s.nodes) - 1; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		n := s.nodes[i]
 
 		// There is no need to adjust the balances or manage parent of the zero hash, it
@@ -781,6 +817,9 @@ func (s *Store) prune(ctx context.Context) error {
 	canonicalNodesMap[finalizedIndex] = uint64(0)
 
 	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node := copyNode(s.nodes[idx])
 		parentIdx, ok := canonicalNodesMap[node.parent]
 		if ok {
@@ -853,7 +892,17 @@ func (s *Store) viableForHead(node *Node) bool {
 	// It's also viable if we are in genesis epoch.
 	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
 	finalized := s.finalizedCheckpoint.Epoch == node.finalizedEpoch || s.finalizedCheckpoint.Epoch == 0
-
+	if features.Get().EnableDefensivePull {
+		currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
+		if !justified && s.justifiedCheckpoint.Epoch+1 == currentEpoch {
+			if node.unrealizedJustifiedEpoch+1 >= currentEpoch {
+				justified = true
+			}
+			if node.unrealizedFinalizedEpoch >= s.finalizedCheckpoint.Epoch {
+				finalized = true
+			}
+		}
+	}
 	return justified && finalized
 }
 
@@ -878,46 +927,12 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 	return headsRoots, headsSlots
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodes))
-	var parentRoot [32]byte
-	for i, node := range f.store.nodes {
-		root := node.Root()
-		parentIdx := node.parent
-		if parentIdx == NonExistentNode {
-			parentRoot = params.BeaconConfig().ZeroHash
-		} else {
-			parent := f.store.nodes[parentIdx]
-			parentRoot = parent.Root()
-		}
-		bestDescendantIdx := node.BestDescendant()
-		var bestDescendantRoot [32]byte
-		if bestDescendantIdx == NonExistentNode {
-			bestDescendantRoot = params.BeaconConfig().ZeroHash
-		} else {
-			bestDescendantNode := f.store.nodes[bestDescendantIdx]
-			bestDescendantRoot = bestDescendantNode.Root()
-		}
-
-		ret[i] = &ethpb.ForkChoiceNode{
-			Slot:           node.Slot(),
-			Root:           root[:],
-			Parent:         parentRoot[:],
-			JustifiedEpoch: node.JustifiedEpoch(),
-			FinalizedEpoch: node.FinalizedEpoch(),
-			Weight:         node.Weight(),
-			BestDescendant: bestDescendantRoot[:],
-		}
-	}
-	return ret
-}
-
 // InsertSlashedIndex adds the given slashed validator index to the
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
 func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	// return early if the index was already included:
@@ -927,9 +942,6 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
-	f.votesLock.RLock()
-	defer f.votesLock.RUnlock()
-
 	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
 	}
@@ -998,8 +1010,8 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 	}
 	for i := len(chain) - 1; i > 0; i-- {
 		b := chain[i].Block
-		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
-		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		r := chain[i-1].Block.ParentRoot()
+		parentRoot := b.ParentRoot()
 		payloadHash, err := blocks.GetBlockPayloadHash(b)
 		if err != nil {
 			return err
@@ -1057,4 +1069,58 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	}
 	node := f.store.nodes[idx]
 	return node.payloadHash
+}
+
+// ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
+func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	count := uint64(0)
+	lowerBound := slots.CurrentSlot(f.store.genesisTime)
+	var err error
+	if lowerBound > fieldparams.SlotsPerEpoch {
+		lowerBound, err = lowerBound.SafeSub(fieldparams.SlotsPerEpoch)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	for _, s := range f.store.receivedBlocksLastEpoch {
+		if s != 0 && lowerBound <= s {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, error) {
+	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return 0
+	}
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].slot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return [32]byte{}
+	}
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].root
 }

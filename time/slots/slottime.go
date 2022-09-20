@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/math"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -33,7 +33,7 @@ func SinceGenesis(genesis time.Time) types.Slot {
 	return types.Slot(uint64(prysmTime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot)
 }
 
-// EpochsSinceGenesis returns the number of slots since
+// EpochsSinceGenesis returns the number of epochs since
 // the provided genesis time.
 func EpochsSinceGenesis(genesis time.Time) types.Epoch {
 	return types.Epoch(SinceGenesis(genesis) / params.BeaconConfig().SlotsPerEpoch)

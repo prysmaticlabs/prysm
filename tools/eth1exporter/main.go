@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
+	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"
 	"github.com/sirupsen/logrus"
 )
 
@@ -121,7 +121,7 @@ func ToEther(o *big.Int) *big.Float {
 
 // MetricsHTTP - HTTP response handler for /metrics.
 func MetricsHTTP(w http.ResponseWriter, _ *http.Request) {
-	var allOut []string
+	allOut := make([]string, 0, len(allWatching))
 	total := big.NewFloat(0)
 	for _, v := range allWatching {
 		if v.Balance == "" {

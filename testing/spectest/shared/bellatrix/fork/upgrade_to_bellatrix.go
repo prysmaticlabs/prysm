@@ -5,14 +5,13 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -35,11 +34,11 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := v2.InitializeFromProto(preStateBase)
+			preState, err := state_native.InitializeFromProtoAltair(preStateBase)
 			require.NoError(t, err)
 			postState, err := execution.UpgradeToBellatrix(preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconStateBellatrix(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
