@@ -126,7 +126,6 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 
 				if err := s.UpdateHead(s.ctx); err != nil {
 					log.WithError(err).Error("Could not process attestations and update head")
-					return
 				}
 			}
 		}
