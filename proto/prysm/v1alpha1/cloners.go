@@ -513,7 +513,7 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 	}
 }
 
-// CopySignedBeaconBlockWithBlobKZGs copies the provided SignedBeaconBlockBellatrix.
+// CopySignedBeaconBlockWithBlobKZGs copies the provided SignedBeaconWithBlobKZGs.
 func CopySignedBeaconBlockWithBlobKZGs(sigBlock *SignedBeaconBlockWithBlobKZGs) *SignedBeaconBlockWithBlobKZGs {
 	if sigBlock == nil {
 		return nil
@@ -524,7 +524,7 @@ func CopySignedBeaconBlockWithBlobKZGs(sigBlock *SignedBeaconBlockWithBlobKZGs) 
 	}
 }
 
-// CopyBeaconBlockWithBlobKZGs copies the provided BeaconBlockBellatrix.
+// CopyBeaconBlockWithBlobKZGs copies the provided BeaconBlockWithBlobKZGs.
 func CopyBeaconBlockWithBlobKZGs(block *BeaconBlockWithBlobKZGs) *BeaconBlockWithBlobKZGs {
 	if block == nil {
 		return nil
@@ -538,7 +538,7 @@ func CopyBeaconBlockWithBlobKZGs(block *BeaconBlockWithBlobKZGs) *BeaconBlockWit
 	}
 }
 
-// CopyBeaconBlockBodyWithBlobKZGs copies the provided BeaconBlockBodyBellatrix.
+// CopyBeaconBlockBodyWithBlobKZGs copies the provided BeaconBlockBodyWithBlobKZGs.
 func CopyBeaconBlockBodyWithBlobKZGs(body *BeaconBlockBodyWithBlobKZGs) *BeaconBlockBodyWithBlobKZGs {
 	if body == nil {
 		return nil
