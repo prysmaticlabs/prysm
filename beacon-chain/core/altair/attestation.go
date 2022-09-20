@@ -66,6 +66,9 @@ func ProcessAttestationNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
+	if len(participatedFlags) == 0 {
+		return nil, errors.New("att has no participation flags set")
+	}
 	committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
