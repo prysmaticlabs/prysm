@@ -203,7 +203,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	randaoReveal := b.Body().RandaoReveal()
 	graffiti := b.Body().Graffiti()
 	sig := blk.Signature()
-
 	bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
 		Block: &eth.BeaconBlockBellatrix{
 			Slot:          b.Slot(),
@@ -225,6 +224,5 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		},
 		Signature: sig[:],
 	}
-
 	return NewSignedBeaconBlock(bellatrixFullBlock)
 }

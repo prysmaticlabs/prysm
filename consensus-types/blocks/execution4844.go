@@ -21,7 +21,7 @@ type executionPayload4844 struct {
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload4844(p *enginev1.ExecutionPayload4844) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayload4844(p *enginev1.ExecutionPayload4844) (interfaces.ExecutionData4844, error) {
 	w := executionPayload4844{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -137,6 +137,11 @@ func (e executionPayload4844) BlockHash() []byte {
 // Transactions --
 func (e executionPayload4844) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
+}
+
+// ExcessBlobs --
+func (e executionPayload4844) ExcessBlobs() uint64 {
+	return e.p.ExcessBlobs
 }
 
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure

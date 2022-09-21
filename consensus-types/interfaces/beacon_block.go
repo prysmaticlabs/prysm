@@ -67,6 +67,7 @@ type BeaconBlockBody interface {
 	Proto() (proto.Message, error)
 	BlobKzgs() ([][]byte, error)
 	Execution() (ExecutionData, error)
+	Execution4844() (ExecutionData4844, error)
 }
 
 // ExecutionData represents execution layer information that is contained

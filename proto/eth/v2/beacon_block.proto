@@ -345,7 +345,7 @@ message BeaconBlockBodyEip4844 {
   v1.SyncAggregate sync_aggregate = 9;
 
   // Execution payload: the embedded execution payload of the block
-  ethereum.engine.v1.ExecutionPayload execution_payload = 10;
+  ethereum.engine.v1.ExecutionPayload4844 execution_payload = 10;
 
   // Blob KZGs: blob KZGs submitted in the block [New in EIP-4844]
   repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16777216"];
@@ -384,7 +384,7 @@ message BlindedBeaconBlockBodyEip4844 {
   v1.SyncAggregate sync_aggregate = 9;
 
   // Execution payload header: the embedded execution payload of the block
-  ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
+  ethereum.engine.v1.ExecutionPayloadHeader4844 execution_payload_header = 10;
 
   // Blob KZGs: blob KZGs submitted in the block [New in EIP-4844]
   repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16777216"];
