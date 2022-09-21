@@ -343,6 +343,19 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
 	}
+
+	if block.IsBlinded() {
+		b, err := block.PbBlindedBellatrixBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blind block: %v", err)
+		}
+		bb, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not migrate block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitBlindedBellatrixBlock(ctx, bb, b.Signature)
+	}
+
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
