@@ -5,15 +5,19 @@ go_library(
     srcs = ["math_helper.go"],
     importpath = "github.com/prysmaticlabs/prysm/v3/math",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_thomaso_mirodin_intmath//u64:go_default_library"],
+    deps = [
+        "//cache/lru:go_default_library",
+        "@com_github_thomaso_mirodin_intmath//u64:go_default_library",
+    ],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["math_helper_test.go"],
-    deps = [
-        ":go_default_library",
-        "//testing/require:go_default_library",
+    srcs = [
+        "math_helper_test.go",
+        "test_helper_test.go",
     ],
+    embed = [":go_default_library"],
+    deps = ["//testing/require:go_default_library"],
 )

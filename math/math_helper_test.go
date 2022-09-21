@@ -78,6 +78,10 @@ func TestIntegerSquareRoot(t *testing.T) {
 			number: 4503599761588224,
 			root:   67108864,
 		},
+		{
+			number: 13803562000000000,
+			root:   117488561,
+		},
 	}
 
 	for _, testVals := range tt {
@@ -154,6 +158,7 @@ func TestMath_Mod(t *testing.T) {
 }
 
 func BenchmarkIntegerSquareRootBelow52Bits(b *testing.B) {
+	math.DisableCaches()
 	val := uint64(1 << 33)
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, uint64(92681), math.IntegerSquareRoot(val))
@@ -161,6 +166,7 @@ func BenchmarkIntegerSquareRootBelow52Bits(b *testing.B) {
 }
 
 func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
+	math.DisableCaches()
 	val := uint64(1 << 62)
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
@@ -168,10 +174,27 @@ func BenchmarkIntegerSquareRootAbove52Bits(b *testing.B) {
 }
 
 func BenchmarkIntegerSquareRoot_WithDatatable(b *testing.B) {
+	math.DisableCaches()
 	val := uint64(1024)
 	for i := 0; i < b.N; i++ {
 		require.Equal(b, uint64(32), math.IntegerSquareRoot(val))
 	}
+}
+
+func BenchmarkIntegerSquareRoot_Cache(b *testing.B) {
+	val := uint64(1 << 62)
+	b.Run("on", func(b *testing.B) {
+		math.EnableCaches()
+		for i := 0; i < b.N; i++ {
+			require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
+		}
+	})
+	b.Run("off", func(b *testing.B) {
+		math.DisableCaches()
+		for i := 0; i < b.N; i++ {
+			require.Equal(b, uint64(1<<31), math.IntegerSquareRoot(val))
+		}
+	})
 }
 
 func TestCeilDiv8(t *testing.T) {
