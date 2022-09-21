@@ -92,3 +92,28 @@ type ExecutionData interface {
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
 }
+
+// ExecutionData represents execution layer information that is contained
+// within post-Bellatrix beacon block bodies.
+type ExecutionData4844 interface {
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	IsNil() bool
+	Proto() proto.Message
+	ParentHash() []byte
+	FeeRecipient() []byte
+	StateRoot() []byte
+	ReceiptsRoot() []byte
+	LogsBloom() []byte
+	PrevRandao() []byte
+	BlockNumber() uint64
+	GasLimit() uint64
+	GasUsed() uint64
+	Timestamp() uint64
+	ExtraData() []byte
+	BaseFeePerGas() []byte
+	BlockHash() []byte
+	Transactions() ([][]byte, error)
+	ExcessBlobs() uint64 // New in EIP-4844.
+}

@@ -99,6 +99,8 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return initBlockBodyFromProtoBellatrix(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
 		return initBlindedBlockBodyFromProtoBellatrix(b)
+	case *eth.BeaconBlockBodyWithBlobKZGs:
+		return initBlockBodyFromProtoEip4844(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -201,6 +203,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	randaoReveal := b.Body().RandaoReveal()
 	graffiti := b.Body().Graffiti()
 	sig := blk.Signature()
+
 	bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
 		Block: &eth.BeaconBlockBellatrix{
 			Slot:          b.Slot(),
@@ -222,5 +225,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		},
 		Signature: sig[:],
 	}
+
 	return NewSignedBeaconBlock(bellatrixFullBlock)
 }

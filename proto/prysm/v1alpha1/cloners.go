@@ -446,6 +446,30 @@ func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.Executio
 	}
 }
 
+func CopyExecutionPayload4844(payload *enginev1.ExecutionPayload4844) *enginev1.ExecutionPayload4844 {
+	if payload == nil {
+		return nil
+	}
+
+	return &enginev1.ExecutionPayload4844{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   payload.BlockNumber,
+		GasLimit:      payload.GasLimit,
+		GasUsed:       payload.GasUsed,
+		Timestamp:     payload.Timestamp,
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
+		ExcessBlobs:   payload.ExcessBlobs,
+	}
+}
+
 // CopyExecutionPayloadHeader copies the provided execution payload object.
 func CopyExecutionPayloadHeader(payload *enginev1.ExecutionPayloadHeader) *enginev1.ExecutionPayloadHeader {
 	if payload == nil {
@@ -553,7 +577,7 @@ func CopyBeaconBlockBodyWithBlobKZGs(body *BeaconBlockBodyWithBlobKZGs) *BeaconB
 		Deposits:          CopyDeposits(body.Deposits),
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:  CopyExecutionPayload(body.ExecutionPayload),
+		ExecutionPayload:  CopyExecutionPayload4844(body.ExecutionPayload),
 		BlobKzgs:          CopyBlobKZGs(body.BlobKzgs),
 	}
 }

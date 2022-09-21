@@ -257,7 +257,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
-			ExecutionPayload:  b.executionPayload,
+			ExecutionPayload:  b.executionPayload4844,
 			BlobKzgs:          b.blobKzgs,
 		}, nil
 	default:
@@ -541,19 +541,20 @@ func initBlockBodyFromProtoEip4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*Beacon
 	}
 
 	b := &BeaconBlockBody{
-		version:           version.EIP4844,
-		isBlinded:         false,
-		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:          pb.Eth1Data,
-		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings: pb.ProposerSlashings,
-		attesterSlashings: pb.AttesterSlashings,
-		attestations:      pb.Attestations,
-		deposits:          pb.Deposits,
-		voluntaryExits:    pb.VoluntaryExits,
-		syncAggregate:     pb.SyncAggregate,
-		executionPayload:  pb.ExecutionPayload,
-		blobKzgs:          pb.BlobKzgs,
+		version:              version.EIP4844,
+		isBlinded:            false,
+		randaoReveal:         bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:             pb.Eth1Data,
+		graffiti:             bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:    pb.ProposerSlashings,
+		attesterSlashings:    pb.AttesterSlashings,
+		attestations:         pb.Attestations,
+		deposits:             pb.Deposits,
+		voluntaryExits:       pb.VoluntaryExits,
+		syncAggregate:        pb.SyncAggregate,
+		// executionPayload:  pb.ExecutionPayload,
+		executionPayload4844: pb.ExecutionPayload,
+		blobKzgs:             pb.BlobKzgs,
 	}
 	return b, nil
 }
