@@ -126,6 +126,7 @@ type executionPayloadJSON struct {
 	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
+	ExcessBlobs   *hexutil.Uint64 `json:"excessBlobs"`
 }
 
 // MarshalJSON --
@@ -162,6 +163,44 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
+	})
+}
+
+func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
+	logsBloom := hexutil.Bytes(e.LogsBloom)
+	excessBlobs := hexutil.Uint64(e.ExcessBlobs)
+	return json.Marshal(executionPayloadJSON{
+		ParentHash:    &pHash,
+		FeeRecipient:  &recipient,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
+		LogsBloom:     &logsBloom,
+		PrevRandao:    &prevRan,
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
+		ExtraData:     e.ExtraData,
+		BaseFeePerGas: baseFeeHex,
+		BlockHash:     &bHash,
+		Transactions:  transactions,
+		ExcessBlobs:   &excessBlobs,
 	})
 }
 
@@ -231,6 +270,83 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	e.BlockHash = dec.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.Transactions))
+	for i, tx := range dec.Transactions {
+		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	return nil
+}
+
+// TODO: Refactor this to not duplicate the entirety of ExecutionPayload's UnmarshalJSON
+func (e *ExecutionPayload4844) UnmarshalJSON(enc []byte) error {
+	dec := executionPayloadJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+
+	if dec.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
+	}
+	if dec.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
+	}
+	if dec.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
+	}
+	if dec.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+
+	if dec.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
+	}
+	if dec.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
+	}
+	if dec.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
+	}
+	if dec.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
+	}
+	if dec.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if dec.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if dec.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if dec.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if dec.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
+	}
+	if dec.ExcessBlobs == nil {
+		return errors.New("missing required field 'excessBlobs' for ExecutionPayload")
+	}
+	*e = ExecutionPayload4844{}
+	e.ParentHash = dec.ParentHash.Bytes()
+	e.FeeRecipient = dec.FeeRecipient.Bytes()
+	e.StateRoot = dec.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
+	e.LogsBloom = *dec.LogsBloom
+	e.PrevRandao = dec.PrevRandao.Bytes()
+	e.BlockNumber = uint64(*dec.BlockNumber)
+	e.GasLimit = uint64(*dec.GasLimit)
+	e.GasUsed = uint64(*dec.GasUsed)
+	e.Timestamp = uint64(*dec.Timestamp)
+	e.ExtraData = dec.ExtraData
+	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
+	if err != nil {
+		return err
+	}
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
+	e.BlockHash = dec.BlockHash.Bytes()
+	transactions := make([][]byte, len(dec.Transactions))
+	e.ExcessBlobs = uint64(*dec.ExcessBlobs)
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
 	}
