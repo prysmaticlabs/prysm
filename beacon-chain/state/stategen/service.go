@@ -7,17 +7,21 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
 
 var defaultHotStateDBInterval types.Slot = 128
+
+var populatePubkeyCacheOnce sync.Once
 
 // StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -120,6 +124,25 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	}()
 
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+
+	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
+	// This process takes about 30 seconds on mainnet with 450,000 validators.
+	populatePubkeyCacheOnce.Do(func() {
+		log.Debug("Populating pubkey cache")
+		start := time.Now()
+		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			pub := val.PublicKey()
+			_, err := bls.PublicKeyFromBytes(pub[:])
+			return err
+
+		}); err != nil {
+			log.WithError(err).Error("Failed to populate pubkey cache")
+		}
+		log.WithField("duration", time.Since(start)).Debug("Done populating pubkey cache")
+	})
 
 	return fState, nil
 }
