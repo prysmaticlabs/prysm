@@ -422,7 +422,7 @@ func V1Alpha1BeaconBlockEip4844ToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlock
 			SyncCommitteeBits:      bytesutil.SafeCopyBytes(v1alpha1Block.Body.SyncAggregate.SyncCommitteeBits),
 			SyncCommitteeSignature: bytesutil.SafeCopyBytes(v1alpha1Block.Body.SyncAggregate.SyncCommitteeSignature),
 		},
-		ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+		ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
 			ParentHash:       bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.ParentHash),
 			FeeRecipient:     bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.FeeRecipient),
 			StateRoot:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.StateRoot),
