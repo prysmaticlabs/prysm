@@ -18,14 +18,15 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
 	}
-	bellatrixBlk := generic.GetBellatrix()
+
+	block := generic.GetEip4844()
 
 	blobsBundle, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, payloadID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}
 	// sanity check the blobs bundle
-	if bytes.Compare(blobsBundle.BlockHash, bellatrixBlk.Body.ExecutionPayload.BlockHash) != 0 {
+	if bytes.Compare(blobsBundle.BlockHash, block.Body.ExecutionPayload.BlockHash) != 0 {
 		return nil, nil, errors.New("invalid blobs bundle received")
 	}
 	if len(blobsBundle.Blobs) != len(blobsBundle.Kzgs) {
@@ -41,21 +42,21 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	}
 
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
-		Slot:          bellatrixBlk.Slot,
-		ProposerIndex: bellatrixBlk.ProposerIndex,
-		ParentRoot:    bellatrixBlk.ParentRoot,
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    block.ParentRoot,
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
 		Body: &ethpb.BeaconBlockBodyWithBlobKZGs{
-			RandaoReveal:      bellatrixBlk.Body.RandaoReveal,
-			Eth1Data:          bellatrixBlk.Body.Eth1Data,
-			Graffiti:          bellatrixBlk.Body.Graffiti,
-			ProposerSlashings: bellatrixBlk.Body.ProposerSlashings,
-			AttesterSlashings: bellatrixBlk.Body.AttesterSlashings,
-			Attestations:      bellatrixBlk.Body.Attestations,
-			Deposits:          bellatrixBlk.Body.Deposits,
-			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
-			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
-			ExecutionPayload:  bellatrixBlk.Body.ExecutionPayload,
+			RandaoReveal:      block.Body.RandaoReveal,
+			Eth1Data:          block.Body.Eth1Data,
+			Graffiti:          block.Body.Graffiti,
+			ProposerSlashings: block.Body.ProposerSlashings,
+			AttesterSlashings: block.Body.AttesterSlashings,
+			Attestations:      block.Body.Attestations,
+			Deposits:          block.Body.Deposits,
+			VoluntaryExits:    block.Body.VoluntaryExits,
+			SyncAggregate:     block.Body.SyncAggregate,
+			ExecutionPayload:  block.Body.ExecutionPayload,
 			BlobKzgs:          kzgs,
 		},
 	}
