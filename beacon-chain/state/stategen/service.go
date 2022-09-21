@@ -127,7 +127,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 
 	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
 	// This process takes about 30 seconds on mainnet with 450,000 validators.
-	populatePubkeyCacheOnce.Do(func() {
+	go populatePubkeyCacheOnce.Do(func() {
 		log.Debug("Populating pubkey cache")
 		start := time.Now()
 		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
