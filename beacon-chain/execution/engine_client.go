@@ -85,7 +85,8 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	defer func() {
 		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
-	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
+
+	d := time.Now().Add(time.Duration(params.BeaconConfig().ExecutionEngineTimeoutValue) * time.Second)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
@@ -123,7 +124,7 @@ func (s *Service) ForkchoiceUpdated(
 		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
+	d := time.Now().Add(time.Duration(params.BeaconConfig().ExecutionEngineTimeoutValue) * time.Second)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &ForkchoiceUpdatedResponse{}
