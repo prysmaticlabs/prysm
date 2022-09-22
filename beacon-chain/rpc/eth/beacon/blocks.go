@@ -347,7 +347,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	if block.IsBlinded() {
 		b, err := block.PbBlindedBellatrixBlock()
 		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blind block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 		}
 		bb, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.Block)
 		if err != nil {
