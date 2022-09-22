@@ -60,6 +60,7 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
+	HasProposerSettings() bool
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 }

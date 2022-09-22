@@ -238,6 +238,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) PrepareBeaconProposer(arg0,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareBeaconProposer", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).PrepareBeaconProposer), varargs...)
 }
 
+// GetFeeRecipientByPubKey mocks base method.
+func (m *MockBeaconNodeValidatorClient) GetFeeRecipientByPubKey(arg0 context.Context, arg1 *eth.FeeRecipientByPubKeyRequest, arg2 ...grpc.CallOption) (*eth.FeeRecipientByPubKeyResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetFeeRecipientByPublicKey", varargs...)
+	ret0, _ := ret[0].(*eth.FeeRecipientByPubKeyResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFeeRecipientByPubKey indicates an expected call of GetFeeRecipientByPubKey.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) GetFeeRecipientByPubKey(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPublicKey", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).GetFeeRecipientByPubKey), varargs...)
+}
+
 // ProposeAttestation mocks base method.
 func (m *MockBeaconNodeValidatorClient) ProposeAttestation(arg0 context.Context, arg1 *eth.Attestation, arg2 ...grpc.CallOption) (*eth.AttestResponse, error) {
 	m.ctrl.T.Helper()
