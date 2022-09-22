@@ -902,7 +902,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 		},
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not propose blind block: %v", err)
+		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
 	}
 	return nil
 }
