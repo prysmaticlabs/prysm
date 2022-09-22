@@ -74,6 +74,7 @@ type EngineCaller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	GetPayload4844(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload4844, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -166,6 +167,24 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.ExecutionPayload{}
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
+}
+
+// GetPayload calls the engine_getPayloadV1 method via JSON-RPC, but expects it
+// to return a payload including the 4844 field ExcessBlobs
+func (s *Service) GetPayload4844(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload4844, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
+	defer span.End()
+	start := time.Now()
+	defer func() {
+		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
+	result := &pb.ExecutionPayload4844{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -19,19 +20,22 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
 	}
 
-	block := generic.GetEip4844()
+	block := generic.GetBellatrix()
 
 	blobsBundle, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, payloadID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}
+
 	// sanity check the blobs bundle
-	if bytes.Compare(blobsBundle.BlockHash, block.Body.ExecutionPayload.BlockHash) != 0 {
+	if !bytes.Equal(blobsBundle.BlockHash, block.Body.ExecutionPayload.BlockHash) {
 		return nil, nil, errors.New("invalid blobs bundle received")
 	}
+
 	if len(blobsBundle.Blobs) != len(blobsBundle.Kzgs) {
 		return nil, nil, errors.New("mismatched blobs and kzgs length")
 	}
+
 	var (
 		kzgs  [][]byte
 		blobs []*enginev1.Blob
@@ -39,6 +43,16 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	if len(blobsBundle.Kzgs) != 0 {
 		kzgs = blobsBundle.Kzgs
 		blobs = blobsBundle.Blobs
+	}
+
+	payload, _, err := vs.getExecutionPayload4844(
+		ctx,
+		req.Slot,
+		block.ProposerIndex,
+		bytesutil.ToBytes32(block.ParentRoot),
+	)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
@@ -56,10 +70,11 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 			Deposits:          block.Body.Deposits,
 			VoluntaryExits:    block.Body.VoluntaryExits,
 			SyncAggregate:     block.Body.SyncAggregate,
-			ExecutionPayload:  block.Body.ExecutionPayload,
+			ExecutionPayload:  payload,
 			BlobKzgs:          kzgs,
 		},
 	}
+
 	// Compute state root with the newly constructed block.
 	wsb, err := consensusblocks.NewSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockWithBlobKZGs{
