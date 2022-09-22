@@ -168,6 +168,14 @@ service BeaconNodeValidator {
         };
     }
 
+    // GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+    rpc GetFeeRecipientByPubKey(FeeRecipientByPubKeyRequest) returns (FeeRecipientByPubKeyResponse){
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/fee_recipient_by_pub_key"
+            body: "*"
+        };
+    }
+
     // Retrieves the latest valid attestation data to be attested on the beacon chain.
     //
     // The server returns the latest valid data which represents the correct vote
@@ -764,4 +772,12 @@ message PrepareBeaconProposerRequest {
         uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
     }
     repeated FeeRecipientContainer recipients = 1;
+}
+
+message FeeRecipientByPubKeyRequest {
+    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+}
+
+message FeeRecipientByPubKeyResponse {
+    bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
@@ -2452,4 +2453,44 @@ func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 
 	return earliestValidTime, latestValidTime
+}
+
+func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	numDeposits := uint64(64)
+	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	proposerServer := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{Root: bsRoot[:], State: beaconState},
+	}
+	pubkey, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+	require.NoError(t, err)
+	resp, err := proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: pubkey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), hexutil.Encode(resp.FeeRecipient))
+	params.BeaconConfig().DefaultFeeRecipient = common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
+	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
+	index, err := proposerServer.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+	err = proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{index.Index}, []common.Address{common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8")})
+	require.NoError(t, err)
+	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
 }
