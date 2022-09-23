@@ -179,6 +179,11 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 }
 
 // PushProposerSettings for mocking
+func (MockValidator) HasProposerSettings() bool {
+	panic("implement me")
+}
+
+// PushProposerSettings for mocking
 func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
 }
