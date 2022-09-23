@@ -327,6 +327,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
+	fmt.Println("Checking if execution is enabled for this block")
 	enabled, err := b.IsExecutionEnabled(state, blk.Body())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check if execution is enabled")

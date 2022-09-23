@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -111,6 +112,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
+
+  // TODO: 4844. All this stuff needs to be different for 4844 blocks.
+	// if (b.Version() >= version.EIP4844) {
+
+	// }
+	fmt.Println("onBlock: processing block with version: ", b.Version(), version.EIP4844, b.Version() >= version.EIP4844)
+
 
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
 	if err != nil {
@@ -278,11 +286,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return nil
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, nativetypes.ExecutionPayloadHeader, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
-	var preStateHeader *enginev1.ExecutionPayloadHeader
+	var preStateHeader nativetypes.ExecutionPayloadHeader
 	var err error
 	preStateVersion := st.Version()
 	switch preStateVersion {
@@ -340,7 +348,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	type versionAndHeader struct {
 		version int
-		header  *enginev1.ExecutionPayloadHeader
+		header  nativetypes.ExecutionPayloadHeader
 	}
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
@@ -487,6 +495,9 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
+
+		fmt.Println("End of Epoch reached, running transitions (ProcessSlots)")
+
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
@@ -626,7 +637,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader *enginev1.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader nativetypes.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
 	// Skip validation if block is older than Bellatrix.
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return nil
@@ -653,11 +664,23 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	wh, err := consensusblocks.WrappedExecutionPayloadHeader(stateHeader)
-	if err != nil {
-		return err
+	var wrappedHeader interfaces.ExecutionData
+	var wrappingError error
+
+	switch concreteHeader := stateHeader.(type) {
+	case *enginev1.ExecutionPayloadHeader:
+		wrappedHeader, wrappingError = consensusblocks.WrappedExecutionPayloadHeader(concreteHeader)
+	case *enginev1.ExecutionPayloadHeader4844:
+		wrappedHeader, wrappingError = consensusblocks.WrappedExecutionPayloadHeader4844(concreteHeader)
 	}
-	empty, err := consensusblocks.IsEmptyExecutionData(wh)
+	if wrappingError != nil {
+		return wrappingError
+	}
+	if wrappedHeader.IsNil() {
+		return errors.New("Unknown execution payload header type")
+	}
+
+	empty, err := consensusblocks.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
 		return err
 	}

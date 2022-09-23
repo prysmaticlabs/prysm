@@ -27,8 +27,18 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}
 
+	payload, _, err := vs.getExecutionPayload4844(
+		ctx,
+		req.Slot,
+		block.ProposerIndex,
+		bytesutil.ToBytes32(block.ParentRoot),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// sanity check the blobs bundle
-	if !bytes.Equal(blobsBundle.BlockHash, block.Body.ExecutionPayload.BlockHash) {
+	if !bytes.Equal(blobsBundle.BlockHash, payload.BlockHash) {
 		return nil, nil, errors.New("invalid blobs bundle received")
 	}
 
@@ -45,15 +55,6 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		blobs = blobsBundle.Blobs
 	}
 
-	payload, _, err := vs.getExecutionPayload4844(
-		ctx,
-		req.Slot,
-		block.ProposerIndex,
-		bytesutil.ToBytes32(block.ParentRoot),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
 		Slot:          block.Slot,

@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -36,6 +37,7 @@ type SlashingReceiver interface {
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, verifiedSidecar *ethpb.BlobsSidecar) error {
+	fmt.Println("Received a block")
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()

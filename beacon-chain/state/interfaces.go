@@ -7,10 +7,10 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -62,7 +62,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
+	LatestExecutionPayloadHeader() (nativetypes.ExecutionPayloadHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.

@@ -21,10 +21,10 @@ type executionPayload struct {
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (executionPayload, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return w, ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -139,6 +139,11 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// ExcessBlobs --
+func (executionPayload) ExcessBlobs() (uint64, error) {
+	return 0, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -147,8 +152,8 @@ type executionPayloadHeader struct {
 }
 
 // WrappedExecutionPayloadHeader is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeader{p: p}
+func WrappedExecutionPayloadHeader(header *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeader{p: header}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -161,7 +166,7 @@ func (e executionPayloadHeader) IsNil() bool {
 }
 
 // MarshalSSZ --
-func (e executionPayloadHeader) MarshalSSZ() ([]byte, error) {
+func (e executionPayloadHeader)  MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
 }
 
@@ -265,6 +270,11 @@ func (executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// ExcessBlobs --
+func (executionPayloadHeader) ExcessBlobs() (uint64, error) {
+	return 0, ErrUnsupportedGetter
+}
+
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -275,6 +285,7 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 	if err != nil {
 		return nil, err
 	}
+
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient()),
@@ -320,18 +331,16 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	if !bytes.Equal(data.BlockHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-
 	txs, err := data.Transactions()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
-		return false, err
+	        return false, err
 	default:
-		if len(txs) != 0 {
-			return false, nil
-		}
+	        if len(txs) != 0 {
+	                return false, nil
+	        }
 	}
-
 	if len(data.ExtraData()) != 0 {
 		return false, nil
 	}

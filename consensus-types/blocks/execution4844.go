@@ -21,10 +21,10 @@ type executionPayload4844 struct {
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload4844(p *enginev1.ExecutionPayload4844) (interfaces.ExecutionData4844, error) {
+func WrappedExecutionPayload4844(p *enginev1.ExecutionPayload4844) (executionPayload4844, error) {
 	w := executionPayload4844{p: p}
 	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
+		return w, ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -140,8 +140,8 @@ func (e executionPayload4844) Transactions() ([][]byte, error) {
 }
 
 // ExcessBlobs --
-func (e executionPayload4844) ExcessBlobs() uint64 {
-	return e.p.ExcessBlobs
+func (e executionPayload4844) ExcessBlobs() (uint64, error) {
+	return e.p.ExcessBlobs, nil
 }
 
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
@@ -270,8 +270,13 @@ func (executionPayloadHeader4844) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// ExcessBlobs --
+func (e executionPayloadHeader4844) ExcessBlobs() (uint64, error) {
+	return e.p.ExcessBlobs, nil
+}
+
 // PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader4844(payload interfaces.ExecutionData4844) (*enginev1.ExecutionPayloadHeader4844, error) {
+func PayloadToHeader4844(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader4844, error) {
 	txs, err := payload.Transactions()
 	if err != nil {
 		return nil, err
@@ -300,7 +305,7 @@ func PayloadToHeader4844(payload interfaces.ExecutionData4844) (*enginev1.Execut
 
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
-func IsEmptyExecutionData4844(data interfaces.ExecutionData4844) (bool, error) {
+func IsEmptyExecutionData4844(data interfaces.ExecutionData) (bool, error) {
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
@@ -350,6 +355,10 @@ func IsEmptyExecutionData4844(data interfaces.ExecutionData4844) (bool, error) {
 		return false, nil
 	}
 	if data.Timestamp() != 0 {
+		return false, nil
+	}
+	excessBlobs, _ := data.ExcessBlobs()
+	if excessBlobs != 0 {
 		return false, nil
 	}
 	return true, nil

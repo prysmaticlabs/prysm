@@ -493,6 +493,30 @@ func CopyExecutionPayloadHeader(payload *enginev1.ExecutionPayloadHeader) *engin
 	}
 }
 
+// CopyExecutionPayloadHeader copies the provided execution payload object.
+func CopyExecutionPayloadHeader4844(payload *enginev1.ExecutionPayloadHeader4844) *enginev1.ExecutionPayloadHeader4844 {
+	if payload == nil {
+		return nil
+	}
+	return &enginev1.ExecutionPayloadHeader4844{
+		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:      payload.BlockNumber,
+		GasLimit:         payload.GasLimit,
+		GasUsed:          payload.GasUsed,
+		Timestamp:        payload.Timestamp,
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		ExcessBlobs:      payload.ExcessBlobs,
+	}
+}
+
 // CopySignedBlindedBeaconBlockBellatrix copies the provided SignedBlindedBeaconBlockBellatrix.
 func CopySignedBlindedBeaconBlockBellatrix(sigBlock *SignedBlindedBeaconBlockBellatrix) *SignedBlindedBeaconBlockBellatrix {
 	if sigBlock == nil {

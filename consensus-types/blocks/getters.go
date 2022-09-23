@@ -686,17 +686,6 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 			return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
 		}
 		return WrappedExecutionPayload(b.executionPayload)
-	// case version.EIP4844:
-	// return WrappedExecutionPayload4844(b.executionPayload4844)
-	// We never call Execution() for 4844 blocks. Use Execution4844 instead.
-	default:
-		return nil, errIncorrectBlockVersion
-	}
-}
-
-// Execution returns the execution payload of the block body.
-func (b *BeaconBlockBody) Execution4844() (interfaces.ExecutionData4844, error) {
-	switch b.version {
 	case version.EIP4844:
 		return WrappedExecutionPayload4844(b.executionPayload4844)
 	default:

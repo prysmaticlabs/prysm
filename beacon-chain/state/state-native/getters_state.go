@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -95,7 +96,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader.(*enginev1.ExecutionPayloadHeader),
 		}
 	default:
 		return nil
@@ -191,7 +192,35 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().(*enginev1.ExecutionPayloadHeader),
+		}
+	case version.EIP4844:
+		return &ethpb.BeaconState4844{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.forkVal(),
+			LatestBlockHeader:            b.latestBlockHeaderVal(),
+			BlockRoots:                   b.blockRoots.Slice(),
+			StateRoots:                   b.stateRoots.Slice(),
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1DataVal(),
+			Eth1DataVotes:                b.eth1DataVotesVal(),
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   b.validatorsVal(),
+			Balances:                     b.balancesVal(),
+			RandaoMixes:                  b.randaoMixes.Slice(),
+			Slashings:                    b.slashingsVal(),
+			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
+			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
+			JustificationBits:            b.justificationBitsVal(),
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
+			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
+			InactivityScores:             b.inactivityScoresVal(),
+			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
+			NextSyncCommittee:            b.nextSyncCommitteeVal(),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().(*enginev1.ExecutionPayloadHeader4844),
 		}
 	default:
 		return nil

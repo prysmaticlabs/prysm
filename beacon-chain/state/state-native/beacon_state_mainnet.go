@@ -11,7 +11,6 @@ import (
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -45,7 +44,7 @@ type BeaconState struct {
 	inactivityScores             []uint64                         `ssz-gen:"true" ssz-max:"1099511627776"`
 	currentSyncCommittee         *ethpb.SyncCommittee             `ssz-gen:"true"`
 	nextSyncCommittee            *ethpb.SyncCommittee             `ssz-gen:"true"`
-	latestExecutionPayloadHeader *enginev1.ExecutionPayloadHeader `ssz-gen:"true"`
+	latestExecutionPayloadHeader nativetypes.ExecutionPayloadHeader `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
 	dirtyFields           map[nativetypes.FieldIndex]bool

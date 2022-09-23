@@ -2,6 +2,7 @@
 package params
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -225,6 +226,7 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	// Set EIP4844 fork data.
 	fvs[bytesutil.ToBytes4(b.Eip4844ForkVersion)] = b.Eip4844ForkEpoch
+	fmt.Println("SET EIP-4844 FORK EPOCH TO ", b.Eip4844ForkEpoch)
 	return fvs
 }
 

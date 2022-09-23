@@ -102,7 +102,7 @@ func (vs *Server) getExecutionPayload4844(ctx context.Context, slot types.Slot, 
 		if err != nil {
 			return nil, enginev1.PayloadIDBytes{}, err
 		}
-		parentHash = header.BlockHash
+		parentHash = header.GetBlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
 			return emptyPayload4844(), enginev1.PayloadIDBytes{}, nil
@@ -232,7 +232,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if err != nil {
 			return nil, enginev1.PayloadIDBytes{}, err
 		}
-		parentHash = header.BlockHash
+		parentHash = header.GetBlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
 			return emptyPayload(), enginev1.PayloadIDBytes{}, nil
