@@ -60,7 +60,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			log.WithError(err).WithFields(logrus.Fields{
 				"slot":           req.Slot,
 				"validatorIndex": altairBlk.ProposerIndex,
-			}).Error("Could not determine validator has registered. Defaulting to local execution client)
+			}).Error("Could not determine validator has registered. Defaulting to local execution client")
 		}
 	}
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
