@@ -42,7 +42,7 @@ const blockBuilderTimeout = 1 * time.Second
 func (vs *Server) buildBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildBellatrixBeaconBlock")
 	defer span.End()
-	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
+	altairBlk, err := vs.BuildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, enginev1.PayloadIDBytes{}, err
 	}

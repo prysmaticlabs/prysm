@@ -255,7 +255,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block interfaces.SignedBeaconBlock, sidecar *eth.BlobsSidecar) error {
-				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
+				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
 				root, err := block.Block().HashTreeRoot()

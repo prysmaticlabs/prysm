@@ -84,7 +84,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 		}
 		return &eth.SignedBeaconBlockWithBlobKZGs{
 			Block:     block,
-			Signature: b.signature,
+			Signature: b.signature[:],
 		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
@@ -180,8 +180,8 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 		return &eth.BeaconBlockWithBlobKZGs{
 			Slot:          b.slot,
 			ProposerIndex: b.proposerIndex,
-			ParentRoot:    b.parentRoot,
-			StateRoot:     b.stateRoot,
+			ParentRoot:    b.parentRoot[:],
+			StateRoot:     b.stateRoot[:],
 			Body:          body,
 		}, nil
 	default:
@@ -248,9 +248,9 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.EIP4844:
 		return &eth.BeaconBlockBodyWithBlobKZGs{
-			RandaoReveal:      b.randaoReveal,
+			RandaoReveal:      b.randaoReveal[:],
 			Eth1Data:          b.eth1Data,
-			Graffiti:          b.graffiti,
+			Graffiti:          b.graffiti[:],
 			ProposerSlashings: b.proposerSlashings,
 			AttesterSlashings: b.attesterSlashings,
 			Attestations:      b.attestations,
@@ -345,7 +345,7 @@ func initSignedBlockFromProtoEIP4844(pb *eth.SignedBeaconBlockWithBlobKZGs) (*Si
 	b := &SignedBeaconBlock{
 		version:   version.EIP4844,
 		block:     block,
-		signature: pb.Signature,
+		signature: bytesutil.ToBytes96(pb.Signature),
 	}
 	return b, nil
 }
@@ -443,8 +443,8 @@ func initBlockFromProtoEIP4844(pb *eth.BeaconBlockWithBlobKZGs) (*BeaconBlock, e
 		version:       version.EIP4844,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
-		parentRoot:    pb.ParentRoot,
-		stateRoot:     pb.StateRoot,
+		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
+		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
 		body:          body,
 	}
 	return b, nil
@@ -542,9 +542,9 @@ func initBlockBodyFromProtoEIP4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*Beacon
 
 	b := &BeaconBlockBody{
 		version:           version.EIP4844,
-		randaoReveal:      pb.RandaoReveal,
+		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
-		graffiti:          pb.Graffiti,
+		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
 		proposerSlashings: pb.ProposerSlashings,
 		attesterSlashings: pb.AttesterSlashings,
 		attestations:      pb.Attestations,

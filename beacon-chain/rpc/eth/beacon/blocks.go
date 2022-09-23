@@ -550,11 +550,12 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
+		sig := blk.Signature()
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_EIP4844,
 			Data: &ethpbv2.SignedBeaconBlockContainer{
 				Message:   &ethpbv2.SignedBeaconBlockContainer_Eip4844Block{Eip4844Block: v2Blk},
-				Signature: blk.Signature(),
+				Signature: sig[:],
 			},
 			ExecutionOptimistic: isOptimistic,
 		}, nil
@@ -682,9 +683,10 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 		}
+		sig := blk.Signature()
 		data := &ethpbv2.SignedBeaconBlockEip4844{
 			Message:   v2Blk,
-			Signature: blk.Signature(),
+			Signature: sig[:],
 		}
 		sszData, err := data.MarshalSSZ()
 		if err != nil {
