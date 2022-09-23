@@ -100,7 +100,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockHeader")
+		return nil, err
 	}
 	v1alpha1Header, err := blk.Header()
 	if err != nil {
@@ -371,7 +371,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlock")
+		return nil, err
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -394,7 +394,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockSSZ")
+		return nil, err
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -416,7 +416,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockV2")
+		return nil, err
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -541,7 +541,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockSSZV2")
+		return nil, err
 	}
 
 	_, err = blk.PbPhase0Block()
