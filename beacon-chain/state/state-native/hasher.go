@@ -31,7 +31,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateFieldCount)
 	case version.Altair:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
-	case version.Bellatrix:
+	case version.Bellatrix, version.EIP4844:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	}
 

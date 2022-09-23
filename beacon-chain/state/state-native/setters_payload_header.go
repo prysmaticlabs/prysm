@@ -17,22 +17,22 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
-	if (b.version == version.Bellatrix) {
-		header, ok := val.Proto().(*enginev1.ExecutionPayloadHeader)
-		if !ok {
-			return errors.New("value must be an execution payload header")
-		}
-		b.latestExecutionPayloadHeader = header
+
+	proto := val.Proto()
+	headerOld, okOld := proto.(*enginev1.ExecutionPayloadHeader)
+	headerNew, okNew := proto.(*enginev1.ExecutionPayloadHeader4844)
+
+	if okNew {
+		b.latestExecutionPayloadHeader = headerNew
 		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
-	}
-	if (b.version == version.EIP4844) {
-		header, ok := val.Proto().(*enginev1.ExecutionPayloadHeader4844)
-		if !ok {
-			return errors.New("value must be an execution payload header")
-		}
-		b.latestExecutionPayloadHeader = header
-		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
+		return nil
 	}
 
-	return nil
+	if okOld {
+		b.latestExecutionPayloadHeader = headerOld
+		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
+		return nil
+	}
+
+	return errors.New("value must be an execution payload header")
 }

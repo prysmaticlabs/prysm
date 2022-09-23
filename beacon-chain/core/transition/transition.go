@@ -287,8 +287,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 		}
 
 		if time.CanUpgradeToEip4844(state.Slot()) {
-			fmt.Println("!!! UPGRADING TO EIP-4844 AT SLOT", state.Slot())
-			// debug.PrintStack()
 			state, err = execution.UpgradeToEip4844(ctx, state)
 			if err != nil {
 				tracing.AnnotateError(span, err)

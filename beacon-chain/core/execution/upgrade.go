@@ -2,7 +2,6 @@ package execution
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -89,16 +88,6 @@ func UpgradeToBellatrix(state state.BeaconState) (state.BeaconState, error) {
 
 // UpgradeToEip4844 updates inputs a generic state to return the version Eip4844 state.
 func UpgradeToEip4844(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	fmt.Println("Upgrading to EIP-4844 fork version: ", params.BeaconConfig().Eip4844ForkVersion)
-	fmt.Println("Previous version was: ", state.Fork().CurrentVersion)
-	// if err := state.SetFork(&ethpb.Fork{
-	// 	PreviousVersion: state.Fork().CurrentVersion,
-	// 	CurrentVersion:  params.BeaconConfig().Eip4844ForkVersion,
-	// 	Epoch:           time.CurrentEpoch(state),
-	// }); err != nil {
-	// 	return nil, err
-	// }
-	// return state, nil
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()

@@ -95,13 +95,23 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
-	if !ok {
+
+	proto := payload.Proto()
+	payloadOld, okOld := proto.(*pb.ExecutionPayload)
+	payloadNew, okNew := proto.(*pb.ExecutionPayload4844)
+
+	if (okNew) {
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadNew)
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+	} else if (okOld) {
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadOld)
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+	} else {
 		return nil, errors.New("execution data must be an execution payload")
-	}
-	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
-	if err != nil {
-		return nil, handleRPCError(err)
 	}
 
 	switch result.Status {

@@ -158,7 +158,6 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
-		fmt.Println("Here for some reason, I have no clue")
 		bs, err = transition.ProcessSlots(ctx, bs, startSlot)
 		if err != nil {
 			tracing.AnnotateError(span, err)

@@ -546,9 +546,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 10)
-	case version.Altair:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
-	case version.Bellatrix:
+	case version.Altair, version.Bellatrix, version.EIP4844:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
 	}
 

@@ -113,13 +113,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
 	preStateJustifiedEpoch := preState.CurrentJustifiedCheckpoint().Epoch
 
-  // TODO: 4844. All this stuff needs to be different for 4844 blocks.
-	// if (b.Version() >= version.EIP4844) {
-
-	// }
-	fmt.Println("onBlock: processing block with version: ", b.Version(), version.EIP4844, b.Version() >= version.EIP4844)
-
-
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
 	if err != nil {
 		return err
@@ -495,9 +488,6 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
-
-		fmt.Println("End of Epoch reached, running transitions (ProcessSlots)")
-
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
