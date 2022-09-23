@@ -187,8 +187,10 @@ func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 }
 
 func TestExecutionHeaderResponseToProto(t *testing.T) {
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
-	v := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
+	v, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	hr := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleHeaderResponse), hr))
 	p, err := hr.ToProto()
@@ -373,7 +375,8 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txList := [][]byte{tx}
 
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	expected := &v1.ExecutionPayload{
 		ParentHash:    parentHash,
 		FeeRecipient:  feeRecipient,
@@ -581,7 +584,8 @@ func TestProposerSlashings(t *testing.T) {
 }
 
 func pbExecutionPayloadHeader(t *testing.T) *v1.ExecutionPayloadHeader {
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	return &v1.ExecutionPayloadHeader{
 		ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
@@ -661,6 +665,49 @@ func TestMathBigUnmarshal(t *testing.T) {
 	require.NoError(t, u256.UnmarshalText([]byte("452312848583266388373324160190187140051835877600158453279131187530910662656")))
 }
 
+func TestIsValidUint256(t *testing.T) {
+	value, ok := new(big.Int), false
+
+	// negative uint256.max - 1
+	_, ok = value.SetString("-10000000000000000000000000000000000000000000000000000000000000000", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 257, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+
+	// negative uint256.max
+	_, ok = value.SetString("-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 256, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+
+	// negative number
+	_, ok = value.SetString("-1", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, false, isValidUint256(value))
+
+	// uint256.min
+	_, ok = value.SetString("0", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, true, isValidUint256(value))
+
+	// positive number
+	_, ok = value.SetString("1", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, true, isValidUint256(value))
+
+	// uint256.max
+	_, ok = value.SetString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 256, value.BitLen())
+	require.Equal(t, true, isValidUint256(value))
+
+	// uint256.max + 1
+	_, ok = value.SetString("10000000000000000000000000000000000000000000000000000000000000000", 16)
+	require.Equal(t, true, ok)
+	require.Equal(t, 257, value.BitLen())
+	require.Equal(t, false, isValidUint256(value))
+}
+
 func TestUint256Unmarshal(t *testing.T) {
 	base10 := "452312848583266388373324160190187140051835877600158453279131187530910662656"
 	bi := new(big.Int)
@@ -675,6 +722,36 @@ func TestUint256Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 	expected := `{"big_number":"452312848583266388373324160190187140051835877600158453279131187530910662656"}`
 	require.Equal(t, expected, string(m))
+}
+
+func TestUint256UnmarshalNegative(t *testing.T) {
+	m := "-1"
+	var value Uint256
+	err := value.UnmarshalText([]byte(m))
+	require.ErrorContains(t, "unable to decode into Uint256", err)
+}
+
+func TestUint256UnmarshalMin(t *testing.T) {
+	m := "0"
+	var value Uint256
+	err := value.UnmarshalText([]byte(m))
+	require.NoError(t, err)
+}
+
+func TestUint256UnmarshalMax(t *testing.T) {
+	// 2**256-1 (uint256.max)
+	m := "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+	var value Uint256
+	err := value.UnmarshalText([]byte(m))
+	require.NoError(t, err)
+}
+
+func TestUint256UnmarshalTooBig(t *testing.T) {
+	// 2**256 (one more than uint256.max)
+	m := "115792089237316195423570985008687907853269984665640564039457584007913129639936"
+	var value Uint256
+	err := value.UnmarshalText([]byte(m))
+	require.ErrorContains(t, "unable to decode into Uint256", err)
 }
 
 func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
@@ -708,10 +785,12 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 
 func TestRoundTripUint256(t *testing.T) {
 	vs := "4523128485832663883733241601901871400518358776001584532791311875309106626"
-	u := stringToUint256(vs)
+	u, err := stringToUint256(vs)
+	require.NoError(t, err)
 	sb := u.SSZBytes()
 	require.Equal(t, 32, len(sb))
-	uu := sszBytesToUint256(sb)
+	uu, err := sszBytesToUint256(sb)
+	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(u.SSZBytes(), uu.SSZBytes()))
 	require.Equal(t, vs, uu.String())
 }

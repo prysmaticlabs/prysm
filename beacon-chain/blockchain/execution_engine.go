@@ -83,18 +83,14 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
-			err := s.optimisticCandidateBlock(ctx, headBlk)
-			if err != nil {
-				log.WithError(err).Error("Optimistic block failed to be candidate")
-			}
 			return payloadID, nil
 		case execution.ErrInvalidPayloadStatus:
-			newPayloadInvalidNodeCount.Inc()
+			forkchoiceUpdatedInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
 				lastValidHash = defaultLatestValidHash
 			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				log.WithError(err).Error("Could not set head root to invalid")
 				return nil, nil
@@ -107,9 +103,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
 				log.WithFields(logrus.Fields{
-					"slot":         headBlk.Slot(),
-					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-					"invalidCount": len(invalidRoots),
+					"slot":                 headBlk.Slot(),
+					"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidChildrenCount": len(invalidRoots),
 				}).Warn("Pruned invalid blocks, could not update head root")
 				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
@@ -137,10 +133,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			}
 
 			log.WithFields(logrus.Fields{
-				"slot":         headBlk.Slot(),
-				"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-				"invalidCount": len(invalidRoots),
-				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
+				"slot":                 headBlk.Slot(),
+				"blockRoot":            fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+				"invalidChildrenCount": len(invalidRoots),
+				"newHeadRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
 			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 
@@ -222,14 +218,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		}).Info("Called new payload with optimistic block")
-		return false, s.optimisticCandidateBlock(ctx, blk.Block())
+		return false, nil
 	case execution.ErrInvalidPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		root, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return false, err
 		}
-		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(blk.Block().ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, blk.Block().ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 		if err != nil {
 			return false, err
 		}
@@ -237,9 +233,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			return false, err
 		}
 		log.WithFields(logrus.Fields{
-			"slot":         blk.Block().Slot(),
-			"blockRoot":    fmt.Sprintf("%#x", root),
-			"invalidCount": len(invalidRoots),
+			"slot":                 blk.Block().Slot(),
+			"blockRoot":            fmt.Sprintf("%#x", root),
+			"invalidChildrenCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
 		return false, invalidBlock{
 			invalidAncestorRoots: invalidRoots,
@@ -251,37 +247,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
-}
-
-// optimisticCandidateBlock returns an error if this block can't be optimistically synced.
-// It replaces boolean in spec code with `errNotOptimisticCandidate`.
-//
-// Spec pseudocode definition:
-// def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
-//    if is_execution_block(opt_store.blocks[block.parent_root]):
-//        return True
-//
-//    if block.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY <= current_slot:
-//        return True
-//
-//    return False
-func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.BeaconBlock) error {
-	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
-		return nil
-	}
-	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
-	if err != nil {
-		return err
-	}
-	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
-	if err != nil {
-		return err
-	}
-	if parentIsExecutionBlock {
-		return nil
-	}
-
-	return errNotOptimisticCandidate
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.

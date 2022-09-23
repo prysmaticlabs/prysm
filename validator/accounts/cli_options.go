@@ -27,6 +27,14 @@ func WithKeymanager(km keymanager.IKeymanager) Option {
 	}
 }
 
+// WithKeymanagerType provides a keymanager to the accounts cli manager.
+func WithKeymanagerType(k keymanager.Kind) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keymanagerKind = k
+		return nil
+	}
+}
+
 // WithKeymanagerOpts provides a keymanager configuration to the accounts cli manager.
 func WithKeymanagerOpts(kmo *remote.KeymanagerOpts) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -115,6 +123,14 @@ func WithImportPrivateKeys(importPrivateKeys bool) Option {
 	}
 }
 
+// WithSkipMnemonicConfirm indicates whether to skip the mnemonic confirmation.
+func WithSkipMnemonicConfirm(s bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.skipMnemonicConfirm = s
+		return nil
+	}
+}
+
 // WithPrivateKeyFile specifies the private key path.
 func WithPrivateKeyFile(privateKeyFile string) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -175,6 +191,46 @@ func WithRawPubKeys(rawPubKeys [][]byte) Option {
 func WithFormattedPubKeys(formattedPubKeys []string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.formattedPubKeys = formattedPubKeys
+		return nil
+	}
+}
+
+// WithWalletDir specifies the password for backups.
+func WithWalletDir(walletDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletDir = walletDir
+		return nil
+	}
+}
+
+// WithWalletPassword specifies the password for backups.
+func WithWalletPassword(walletPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletPassword = walletPassword
+		return nil
+	}
+}
+
+// WithMnemonic specifies the password for backups.
+func WithMnemonic(mnemonic string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic = mnemonic
+		return nil
+	}
+}
+
+// WithMnemonic25thWord specifies the password for backups.
+func WithMnemonic25thWord(mnemonic25thWord string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic25thWord = mnemonic25thWord
+		return nil
+	}
+}
+
+// WithMnemonic25thWord specifies the password for backups.
+func WithNumAccounts(numAccounts int) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.numAccounts = numAccounts
 		return nil
 	}
 }

@@ -51,13 +51,15 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	beaconState, err = ProcessBlockHeaderNoVerify(ctx, beaconState, block.Block().Slot(), block.Block().ProposerIndex(), block.Block().ParentRoot(), bodyRoot[:])
+	parentRoot := block.Block().ParentRoot()
+	beaconState, err = ProcessBlockHeaderNoVerify(ctx, beaconState, block.Block().Slot(), block.Block().ProposerIndex(), parentRoot[:], bodyRoot[:])
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify proposer signature.
-	if err := VerifyBlockSignature(beaconState, block.Block().ProposerIndex(), block.Signature(), block.Block().HashTreeRoot); err != nil {
+	sig := block.Signature()
+	if err := VerifyBlockSignature(beaconState, block.Block().ProposerIndex(), sig[:], block.Block().HashTreeRoot); err != nil {
 		return nil, err
 	}
 

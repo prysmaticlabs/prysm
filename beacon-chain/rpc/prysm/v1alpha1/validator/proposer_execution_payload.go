@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -41,12 +42,40 @@ var (
 // The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte) (*enginev1.ExecutionPayload, enginev1.PayloadIDBytes, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
+	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
+	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
+	switch err == nil {
+	case true:
+		feeRecipient = recipient
+	case errors.As(err, kv.ErrNotFoundFeeRecipient):
+		// If fee recipient is not found in DB and not set from beacon node CLI,
+		// use the burn address.
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
+			logrus.WithFields(logrus.Fields{
+				"validatorIndex": vIdx,
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
+			}).Warn("Fee recipient is currently using the burn address, " +
+				"you will not be rewarded transaction fees on this setting. " +
+				"Please set a different eth address as the fee recipient. " +
+				"Please refer to our documentation for instructions")
+		}
+	default:
+		return nil, enginev1.PayloadIDBytes{}, errors.Wrap(err, "could not get fee recipient in db")
+	}
+
 	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
 		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
-		return payload, payloadId, err
+		switch {
+		case err == nil:
+			warnIfFeeRecipientDiffers(payload, feeRecipient)
+			return payload, payloadId, err
+		case errors.Is(err, context.DeadlineExceeded):
+		default:
+			return nil, enginev1.PayloadIDBytes{}, errors.Wrap(err, "could not get cached payload from execution client")
+		}
 	}
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
@@ -120,26 +149,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		FinalizedBlockHash: finalizedBlockHash,
 	}
 
-	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	switch err == nil {
-	case true:
-		feeRecipient = recipient
-	case errors.As(err, kv.ErrNotFoundFeeRecipient):
-		// If fee recipient is not found in DB and not set from beacon node CLI,
-		// use the burn address.
-		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
-			logrus.WithFields(logrus.Fields{
-				"validatorIndex": vIdx,
-				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
-			}).Warn("Fee recipient is currently using the burn address, " +
-				"you will not be rewarded transaction fees on this setting. " +
-				"Please set a different eth address as the fee recipient. " +
-				"Please refer to our documentation for instructions")
-		}
-	default:
-		return nil, enginev1.PayloadIDBytes{}, errors.Wrap(err, "could not get fee recipient in db")
-	}
 	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
@@ -156,6 +165,13 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if err != nil {
 		return nil, enginev1.PayloadIDBytes{}, err
 	}
+	warnIfFeeRecipientDiffers(payload, feeRecipient)
+	return payload, enginev1.PayloadIDBytes{}, nil
+}
+
+// warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
+// match the requested one.
+func warnIfFeeRecipientDiffers(payload *enginev1.ExecutionPayload, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
 	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
@@ -164,7 +180,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
-	return payload, *payloadID, nil
 }
 
 // This returns the valid terminal block hash with an existence bool value.

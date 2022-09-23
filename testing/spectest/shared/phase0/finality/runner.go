@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -41,7 +41,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := v1.InitializeFromProto(beaconStateBase)
+			beaconState, err := state_native.InitializeFromProtoPhase0(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -64,7 +64,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = processedState.(*v1.BeaconState)
+				beaconState, ok = processedState.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -74,7 +74,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconState{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			pbState, err := v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)

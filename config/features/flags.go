@@ -87,19 +87,24 @@ var (
 			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
 			" vulnerable if it is being run in unsafe configurations.",
 	}
+	disableStakinContractCheck = &cli.BoolFlag{
+		Name:  "disable-staking-contract-check",
+		Usage: "Disables checking of staking contract deposits when proposing blocks, useful for devnets",
+	}
 	enableHistoricalSpaceRepresentation = &cli.BoolFlag{
 		Name: "enable-historical-state-representation",
 		Usage: "Enables the beacon chain to save historical states in a space efficient manner." +
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableNativeState = &cli.BoolFlag{
-		Name:  "disable-native-state",
-		Usage: "Disables representing the beacon state as a pure Go struct.",
-	}
 	disablePullTips = &cli.BoolFlag{
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
+	}
+	disableDefensivePull = &cli.BoolFlag{
+		Name:   "disable-back-pull",
+		Usage:  "Experimental disable of past boundary checks, useful for debugging, may cause bad votes.",
+		Hidden: true,
 	}
 	disableVecHTR = &cli.BoolFlag{
 		Name:  "disable-vectorized-htr",
@@ -116,6 +121,12 @@ var (
 	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
 		Name:  "enable-only-blinded-beacon-blocks",
 		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
+	}
+	enableStartupOptimistic = &cli.BoolFlag{
+		Name:   "startup-optimistic",
+		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
+		Value:  false,
+		Hidden: true,
 	}
 )
 
@@ -156,12 +167,13 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableNativeState,
 	disablePullTips,
 	disableVecHTR,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
+	enableStartupOptimistic,
+	disableDefensivePull,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

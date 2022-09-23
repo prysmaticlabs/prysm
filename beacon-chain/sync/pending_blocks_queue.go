@@ -149,7 +149,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			inPendingQueue := s.seenPendingBlocks[b.Block().ParentRoot()]
 			s.pendingQueueLock.RUnlock()
 
 			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
@@ -160,16 +160,18 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, b.Block().ParentRoot())
+			hasPeer = len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
+			parentRoot := b.Block().ParentRoot()
 			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
-					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
+					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(parentRoot[:])),
 				}).Debug("Requesting parent block")
-				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block().ParentRoot()))
+				parentRoots = append(parentRoots, b.Block().ParentRoot())
 
 				span.End()
 				continue
@@ -299,7 +301,7 @@ func (s *Service) checkIfBlockIsBad(
 	b interfaces.SignedBeaconBlock,
 	blkRoot [32]byte,
 ) (keepProcessing bool, err error) {
-	parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
+	parentIsBad := s.hasBadBlock(b.Block().ParentRoot())
 	blockIsBad := s.hasBadBlock(blkRoot)
 	// Check if parent is a bad block.
 	if parentIsBad || blockIsBad {
@@ -467,7 +469,7 @@ func (s *Service) validatePendingSlots() error {
 		for _, b := range blks {
 			epoch := slots.ToEpoch(slot)
 			// remove all descendant blocks of old blocks
-			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
+			if oldBlockRoots[b.Block().ParentRoot()] {
 				root, err := b.Block().HashTreeRoot()
 				if err != nil {
 					return err

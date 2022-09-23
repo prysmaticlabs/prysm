@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -45,22 +47,24 @@ func (vs *Server) buildBellatrixBeaconBlock(ctx context.Context, req *ethpb.Bloc
 		return nil, enginev1.PayloadIDBytes{}, err
 	}
 
-	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
-	if registered && err == nil {
-		builderReady, b, err := vs.getAndBuildBlindBlock(ctx, altairBlk)
-		if err != nil {
-			// In the event of an error, the node should fall back to default execution engine for building block.
-			log.WithError(err).Error("Failed to build a block from external builder, falling " +
-				"back to local execution client")
-			builderGetPayloadMissCount.Inc()
-		} else if builderReady {
-			return b.GetBellatrix(), enginev1.PayloadIDBytes{}, nil
+	if !req.SkipMevBoost {
+		registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
+		if registered && err == nil {
+			builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
+			if err != nil {
+				// In the event of an error, the node should fall back to default execution engine for building block.
+				log.WithError(err).Error("Failed to build a block from external builder, falling " +
+					"back to local execution client")
+				builderGetPayloadMissCount.Inc()
+			} else if builderReady {
+				return b.GetBellatrix(), enginev1.PayloadIDBytes{}, nil
+			}
+		} else if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot":           req.Slot,
+				"validatorIndex": altairBlk.ProposerIndex,
+			}).Error("Could not determine validator has registered. Defaulting to local execution client")
 		}
-	} else if err != nil {
-		log.WithFields(logrus.Fields{
-			"slot":           req.Slot,
-			"validatorIndex": altairBlk.ProposerIndex,
-		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
 
 	payload, payloadID, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
@@ -120,6 +124,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
+
 	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
@@ -132,6 +137,24 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if bid == nil || bid.Message == nil {
+		return nil, errors.New("builder returned nil bid")
+	}
+
+	v := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bid.Message.Value))
+	if v.String() == "0" {
+		return nil, errors.New("builder returned header with 0 bid amount")
+	}
+
+	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	if err != nil {
+		return nil, err
+	}
+
+	if bytesutil.ToBytes32(bid.Message.Header.TransactionsRoot) == emptyRoot {
+		return nil, errors.New("builder returned header with an empty tx root")
+	}
+
 	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
 		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
 	}
@@ -149,7 +172,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	}
 
 	log.WithFields(logrus.Fields{
-		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
+		"value":         v.String(),
 		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
 		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
 	}).Info("Received header with bid")
@@ -226,16 +249,21 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}
+	parentRoot := b.Block().ParentRoot()
+	stateRoot := b.Block().StateRoot()
+	randaoReveal := b.Block().Body().RandaoReveal()
+	graffiti := b.Block().Body().Graffiti()
+	sig := b.Signature()
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
 			Slot:          b.Block().Slot(),
 			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    b.Block().ParentRoot(),
-			StateRoot:     b.Block().StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Block().Body().RandaoReveal(),
+				RandaoReveal:           randaoReveal[:],
 				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               b.Block().Body().Graffiti(),
+				Graffiti:               graffiti[:],
 				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
 				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
 				Attestations:           b.Block().Body().Attestations(),
@@ -245,7 +273,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				ExecutionPayloadHeader: header,
 			},
 		},
-		Signature: b.Signature(),
+		Signature: sig[:],
 	}
 
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
@@ -369,10 +397,10 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 	return false, nil
 }
 
-// Get and build blind block from builder network. Returns a boolean status, built block and error.
+// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) getAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
+func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil

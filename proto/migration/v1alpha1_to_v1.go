@@ -16,15 +16,18 @@ func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpbv1.Sig
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
+	parentRoot := block.Block().ParentRoot()
+	stateRoot := block.Block().StateRoot()
+	sig := block.Signature()
 	return &ethpbv1.SignedBeaconBlockHeader{
 		Message: &ethpbv1.BeaconBlockHeader{
 			Slot:          block.Block().Slot(),
 			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    block.Block().ParentRoot(),
-			StateRoot:     block.Block().StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			BodyRoot:      bodyRoot[:],
 		},
-		Signature: block.Signature(),
+		Signature: sig[:],
 	}, nil
 }
 

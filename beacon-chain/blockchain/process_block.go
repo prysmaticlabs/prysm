@@ -99,6 +99,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{error: err}
 	}
+	startTime := time.Now()
 	b := signed.Block()
 
 	preState, err := s.getBlockPreState(ctx, b)
@@ -116,10 +117,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		return err
 	}
+	stateTransitionStartTime := time.Now()
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return invalidBlock{error: err}
 	}
+	stateTransitionProcessingTime.Observe(float64(time.Since(stateTransitionStartTime).Milliseconds()))
+
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
 		return err
@@ -193,10 +197,14 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
+
+	start := time.Now()
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
 	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
 		return err
 	}
@@ -251,12 +259,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		go func() {
 			// Send an event regarding the new finalized checkpoint over a common event feed.
+			stateRoot := signed.Block().StateRoot()
 			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 				Type: statefeed.FinalizedCheckpoint,
 				Data: &ethpbv1.EventFinalizedCheckpoint{
 					Epoch:               postState.FinalizedCheckpoint().Epoch,
 					Block:               postState.FinalizedCheckpoint().Root,
-					State:               signed.Block().StateRoot(),
+					State:               stateRoot[:],
 					ExecutionOptimistic: isOptimistic,
 				},
 			})
@@ -273,7 +282,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	}
 	defer reportAttestationInclusion(b)
-	return s.handleEpochBoundary(ctx, postState)
+	if err := s.handleEpochBoundary(ctx, postState); err != nil {
+		return err
+	}
+	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	return nil
 }
 
 func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPayloadHeader, error) {
@@ -315,7 +328,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
 		return err
 	}
-	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, b.ParentRoot())
 	if err != nil {
 		return err
 	}
@@ -529,7 +542,7 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
-	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
+	if !s.cfg.ForkChoiceStore.HasNode(blk.ParentRoot()) {
 		fCheckpoint := st.FinalizedCheckpoint()
 		jCheckpoint := st.CurrentJustifiedCheckpoint()
 		if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {

@@ -25,10 +25,11 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 }
 
 // AccountsCLIManager defines a struct capable of performing various validator
-// wallet account operations via the command line.
+// wallet & account operations via the command line.
 type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
+	keymanagerKind       keymanager.Kind
 	keymanagerOpts       *remote.KeymanagerOpts
 	showDepositData      bool
 	showPrivateKeys      bool
@@ -36,6 +37,7 @@ type AccountsCLIManager struct {
 	deletePublicKeys     bool
 	importPrivateKeys    bool
 	readPasswordFile     bool
+	skipMnemonicConfirm  bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
@@ -48,6 +50,11 @@ type AccountsCLIManager struct {
 	filteredPubKeys      []bls.PublicKey
 	rawPubKeys           [][]byte
 	formattedPubKeys     []string
+	walletDir            string
+	walletPassword       string
+	mnemonic             string
+	numAccounts          int
+	mnemonic25thWord     string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

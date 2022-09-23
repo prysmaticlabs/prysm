@@ -55,6 +55,14 @@ var (
 		Name: "validator_entry_cache_delete_total",
 		Help: "The total number of cache deletes on the validator entry cache.",
 	})
+	stateReadingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "db_beacon_state_reading_milliseconds",
+		Help: "Milliseconds it takes to read a beacon state from the DB",
+	})
+	stateSavingTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "db_beacon_state_saving_milliseconds",
+		Help: "Milliseconds it takes to save a beacon state to the DB",
+	})
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which

@@ -564,6 +564,16 @@ func TestAssert_ErrorContains(t *testing.T) {
 			},
 			expectedErr: "",
 		},
+		{
+			name: "expected error with params",
+			args: args{
+				tb:   &assertions.TBMock{},
+				want: "",
+				err:  errors.New("failed"),
+				msgs: []interface{}{"Something wrong (for slot %d)", 12},
+			},
+			expectedErr: "Want string can't be empty",
+		},
 	}
 	for _, tt := range tests {
 		verify := func() {

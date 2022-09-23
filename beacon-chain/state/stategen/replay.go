@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -124,7 +123,7 @@ func (s *State) loadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 			return nil, ctx.Err()
 		}
 		b := filteredBlocks[len(filteredBlocks)-1]
-		if bytesutil.ToBytes32(b.Block().ParentRoot()) != blockRoots[i] {
+		if b.Block().ParentRoot() != blockRoots[i] {
 			continue
 		}
 		filteredBlocks = append(filteredBlocks, blocks[i])

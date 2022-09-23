@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -91,7 +93,26 @@ func (vs *Server) PrepareBeaconProposer(
 	defer span.End()
 	var feeRecipients []common.Address
 	var validatorIndices []types.ValidatorIndex
-	for _, recipientContainer := range request.Recipients {
+
+	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
+	for _, r := range request.Recipients {
+		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
+		switch {
+		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+			newRecipients = append(newRecipients, r)
+		case err != nil:
+			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
+		default:
+		}
+		if common.BytesToAddress(r.FeeRecipient) != f {
+			newRecipients = append(newRecipients, r)
+		}
+	}
+	if len(newRecipients) == 0 {
+		return &emptypb.Empty{}, nil
+	}
+
+	for _, recipientContainer := range newRecipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
@@ -106,6 +127,42 @@ func (vs *Server) PrepareBeaconProposer(
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
+}
+
+// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
+	defer span.End()
+	if request == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request was empty")
+	}
+
+	resp, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: request.PublicKey})
+	if err != nil {
+		if strings.Contains(err.Error(), "Could not find validator index") {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving validator index")
+			return nil, err
+		}
+
+	}
+	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFoundFeeRecipient) {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+	return &ethpb.FeeRecipientByPubKeyResponse{
+		FeeRecipient: address.Bytes(),
+	}, nil
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, sidecar *ethpb.SignedBlobsSidecar) (*ethpb.ProposeResponse, error) {
@@ -163,7 +220,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(block.Block().ParentRoot()))
+	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}

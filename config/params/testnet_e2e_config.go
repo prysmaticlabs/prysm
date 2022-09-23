@@ -2,7 +2,7 @@ package params
 
 const (
 	altairE2EForkEpoch    = 6
-	bellatrixE2EForkEpoch = 8 //nolint:deadcode
+	bellatrixE2EForkEpoch = 8
 	eip4844E2EForkEpoch   = 10
 )
 

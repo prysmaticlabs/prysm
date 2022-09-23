@@ -17,6 +17,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -295,50 +296,52 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	return f.store.nodes[i].root, nil
 }
 
-// CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+// CommonAncestor returns the common ancestor root and slot between the two block roots r1 and r2.
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
 
-	// Do nothing if the two input roots are the same.
-	if r1 == r2 {
-		return r1, nil
-	}
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
+	}
+
+	// Do nothing if the two input roots are the same.
+	if r1 == r2 {
+		n1 := f.store.nodes[i1]
+		return r1, n1.slot, nil
 	}
 
 	i2, ok := f.store.nodesIndices[r2]
 	if !ok || i2 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+			return [32]byte{}, 0, ctx.Err()
 		}
 		if i1 > i2 {
 			n1 := f.store.nodes[i1]
 			i1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i1 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
 			n2 := f.store.nodes[i2]
 			i2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			if i2 >= uint64(len(f.store.nodes)) {
-				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
 		if i1 == i2 {
 			n1 := f.store.nodes[i1]
-			return n1.root, nil
+			return n1.root, n1.slot, nil
 		}
 	}
 }
@@ -571,8 +574,9 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if slot > s.highestReceivedSlot {
-		s.highestReceivedSlot = slot
+	highestSlot := s.nodes[s.highestReceivedIndex].slot
+	if slot > highestSlot {
+		s.highestReceivedIndex = uint64(len(s.nodes) - 1)
 	}
 	return n, nil
 }
@@ -902,6 +906,17 @@ func (s *Store) viableForHead(node *Node) bool {
 	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
 	finalized := s.finalizedCheckpoint.Epoch == node.finalizedEpoch || s.finalizedCheckpoint.Epoch == 0
 
+	if features.Get().EnableDefensivePull {
+		currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
+		if !justified && s.justifiedCheckpoint.Epoch+1 == currentEpoch {
+			if node.unrealizedJustifiedEpoch+1 >= currentEpoch {
+				justified = true
+			}
+			if node.unrealizedFinalizedEpoch >= s.finalizedCheckpoint.Epoch {
+				finalized = true
+			}
+		}
+	}
 	return justified && finalized && node.validData
 }
 
@@ -1009,8 +1024,8 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 	}
 	for i := len(chain) - 1; i > 0; i-- {
 		b := chain[i].Block
-		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
-		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		r := chain[i-1].Block.ParentRoot()
+		parentRoot := b.ParentRoot()
 		payloadHash, err := blocks.GetBlockPayloadHash(b)
 		if err != nil {
 			return err
@@ -1070,13 +1085,6 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
-// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedSlot
-}
-
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
 func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	f.store.nodesLock.RLock()
@@ -1097,4 +1105,36 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 		}
 	}
 	return count, nil
+}
+
+func (*ForkChoice) ForkChoiceDump(_ context.Context) (*v1.ForkChoiceResponse, error) {
+	return nil, errors.New("ForkChoiceDump is not supported by protoarray")
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return 0
+	}
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].slot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if len(f.store.nodes) == 0 {
+		return [32]byte{}
+	}
+	idx := uint64(len(f.store.nodes) - 1)
+	if f.store.highestReceivedIndex < idx {
+		idx = f.store.highestReceivedIndex
+	}
+	return f.store.nodes[idx].root
 }

@@ -24,8 +24,6 @@ var (
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
-	errNilBeaconBlock       = errors.New("beacon block can't be nil")
-	errNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -200,16 +198,21 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get sync aggregate from block body")
 	}
+	parentRoot := b.ParentRoot()
+	stateRoot := b.StateRoot()
+	randaoReveal := b.Body().RandaoReveal()
+	graffiti := b.Body().Graffiti()
+	sig := blk.Signature()
 	bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
 		Block: &eth.BeaconBlockBellatrix{
 			Slot:          b.Slot(),
 			ProposerIndex: b.ProposerIndex(),
-			ParentRoot:    b.ParentRoot(),
-			StateRoot:     b.StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			Body: &eth.BeaconBlockBodyBellatrix{
-				RandaoReveal:      b.Body().RandaoReveal(),
+				RandaoReveal:      randaoReveal[:],
 				Eth1Data:          b.Body().Eth1Data(),
-				Graffiti:          b.Body().Graffiti(),
+				Graffiti:          graffiti[:],
 				ProposerSlashings: b.Body().ProposerSlashings(),
 				AttesterSlashings: b.Body().AttesterSlashings(),
 				Attestations:      b.Body().Attestations(),
@@ -219,7 +222,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 				ExecutionPayload:  payload,
 			},
 		},
-		Signature: blk.Signature(),
+		Signature: sig[:],
 	}
 	return NewSignedBeaconBlock(bellatrixFullBlock)
 }

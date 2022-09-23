@@ -30,8 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
@@ -66,10 +64,6 @@ var (
 	logThreshold = 8
 	// period to log chainstart related information
 	logPeriod = 1 * time.Minute
-	// threshold of how old we will accept an eth1 node's head to be.
-	eth1Threshold = 20 * time.Minute
-	// error when eth1 node is too far behind.
-	errFarBehind = errors.Errorf("eth1 head is more than %s behind from current wall clock time", eth1Threshold.String())
 )
 
 // ChainStartFetcher retrieves information pertaining to the chain start event
@@ -128,6 +122,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
+	headers                 []string
 	finalizedStateAtStartup state.BeaconState
 }
 
@@ -265,11 +260,7 @@ func (s *Service) Stop() error {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	if features.Get().EnableNativeState {
-		s.preGenesisState = &native.BeaconState{}
-	} else {
-		s.preGenesisState = &v1.BeaconState{}
-	}
+	s.preGenesisState = &native.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -314,11 +305,6 @@ func (s *Service) updateBeaconNodeStats() {
 		bs.SyncEth1Connected = true
 	}
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
-}
-
-func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
-	s.cfg.currHttpEndpoint = endpoint
-	s.updateBeaconNodeStats()
 }
 
 func (s *Service) updateConnectedETH1(state bool) {
@@ -549,7 +535,7 @@ func (s *Service) initPOWService() {
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
-					log.WithError(err).Warn("Unable to cache headers for execution client votes")
+					log.WithError(err).Debug("Unable to cache headers for execution client votes")
 				} else {
 					errorLogger(err, "Unable to cache headers for execution client votes")
 				}
@@ -606,11 +592,6 @@ func (s *Service) run(done <-chan struct{}) {
 			if err != nil {
 				s.pollConnectionStatus(s.ctx)
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
-				continue
-			}
-			if eth1HeadIsBehind(head.Time) {
-				s.pollConnectionStatus(s.ctx)
-				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
 				continue
 			}
 			s.processBlockHeader(head)
@@ -744,7 +725,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = v1.InitializeFromProto(eth1DataInDB.BeaconState)
+		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
@@ -797,13 +778,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		var pbState *ethpb.BeaconState
-		var err error
-		if features.Get().EnableNativeState {
-			pbState, err = native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-		} else {
-			pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
-		}
+		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
 		if err != nil {
 			return err
 		}
@@ -837,12 +812,4 @@ func dedupEndpoints(endpoints []string) []string {
 		selectionMap[point] = true
 	}
 	return newEndpoints
-}
-
-// Checks if the provided timestamp is beyond the prescribed bound from
-// the current wall clock time.
-func eth1HeadIsBehind(timestamp uint64) bool {
-	timeout := prysmTime.Now().Add(-eth1Threshold)
-	// check that web3 client is syncing
-	return time.Unix(int64(timestamp), 0).Before(timeout) // lint:ignore uintcast -- timestamp will not exceed int64 in your lifetime.
 }

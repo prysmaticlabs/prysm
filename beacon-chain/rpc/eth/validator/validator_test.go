@@ -13,11 +13,13 @@ import (
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
@@ -32,6 +34,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -44,6 +47,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -931,6 +935,9 @@ func TestProduceBlockV2(t *testing.T) {
 			StateGen:               stategen.New(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -994,12 +1001,15 @@ func TestProduceBlockV2(t *testing.T) {
 		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
-
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -1420,6 +1430,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			StateGen:               stategen.New(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -1485,6 +1498,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
 		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -1841,7 +1858,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
 	})
 
-	t.Run("Bellatrix", func(t *testing.T) {
+	t.Run("Can get blind block from builder service", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
@@ -1849,6 +1866,8 @@ func TestProduceBlindedBlock(t *testing.T) {
 		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		bc.BellatrixForkEpoch = types.Epoch(1)
+		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch + 1
+		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().SyncCommitteeSize)
@@ -1869,14 +1888,56 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlock{
-					TotalDifficulty: "0x1",
-				},
+		fb := util.HydrateSignedBeaconBlockBellatrix(&ethpbalpha.SignedBeaconBlockBellatrix{})
+		fb.Block.Body.ExecutionPayload.GasLimit = 123
+		wfb, err := blocks.NewSignedBeaconBlock(fb)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wfb), "Could not save block")
+		r, err := wfb.Block().HashTreeRoot()
+		require.NoError(t, err)
+
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		ti := time.Unix(0, 0)
+		ts, err := slots.ToTime(uint64(ti.Unix()), 33)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
+		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+		bid := &ethpbalpha.BuilderBid{
+			Header: &enginev1.ExecutionPayloadHeader{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       random,
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+				BlockNumber:      1,
+				Timestamp:        uint64(ts.Unix()),
 			},
-			TimeFetcher:            &mockChain.ChainService{},
-			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			Pubkey: sk.PublicKey().Marshal(),
+			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+		}
+		d := params.BeaconConfig().DomainApplicationBuilder
+		domain, err := signing.ComputeDomain(d, nil, nil)
+		require.NoError(t, err)
+		sr, err := signing.ComputeSigningRoot(bid, domain)
+		require.NoError(t, err)
+		sBid := &ethpbalpha.SignedBuilderBid{
+			Message:   bid,
+			Signature: sk.Sign(sr[:]).Marshal(),
+		}
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			BeaconDB:    db,
+			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New()},
+			TimeFetcher: &mockChain.ChainService{
+				Genesis: ti,
+			},
+			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:], Block: wfb},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
@@ -1891,6 +1952,15 @@ func TestProduceBlindedBlock(t *testing.T) {
 			StateGen:               stategen.New(db),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				Bid:           sBid,
+			},
+			FinalizationFetcher: &mockChain.ChainService{
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+					Root: r[:],
+				},
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1948,8 +2018,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
 
 		v1Server := &Server{
-			V1Alpha1Server: v1Alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:        v1Alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           &mockChain.ChainService{},
+			OptimisticModeFetcher: &mockChain.ChainService{},
 		}
 		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
 		require.NoError(t, err)
@@ -2445,6 +2517,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
+		v1Server.V1Alpha1Server.BeaconDB = db
 		resp, err := v1Server.ProduceBlindedBlockSSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -3619,6 +3692,89 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
 		})
+	}
+}
+func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	v1Server := &v1alpha1validator.Server{
+		BeaconDB: db,
+	}
+	proposerServer := &Server{V1Alpha1Server: v1Server}
+
+	// New validator
+	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req := &ethpbv1.PrepareBeaconProposerRequest{
+		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+		},
+	}
+	_, err := proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validator
+	hook.Reset()
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validator with different fee recipient
+	hook.Reset()
+	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req = &ethpbv1.PrepareBeaconProposerRequest{
+		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+		},
+	}
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// More than one validator
+	hook.Reset()
+	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	req = &ethpbv1.PrepareBeaconProposerRequest{
+		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: f, ValidatorIndex: 1},
+			{FeeRecipient: f, ValidatorIndex: 2},
+		},
+	}
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+
+	// Same validators
+	hook.Reset()
+	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+}
+
+func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
+	db := dbutil.SetupDB(b)
+	ctx := context.Background()
+	v1Server := &v1alpha1validator.Server{
+		BeaconDB: db,
+	}
+	proposerServer := &Server{V1Alpha1Server: v1Server}
+
+	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	recipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
+	for i := 0; i < 10000; i++ {
+		recipients = append(recipients, &ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: types.ValidatorIndex(i)})
+	}
+
+	req := &ethpbv1.PrepareBeaconProposerRequest{
+		Recipients: recipients,
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := proposerServer.PrepareBeaconProposer(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

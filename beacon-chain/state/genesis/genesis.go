@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -36,5 +36,5 @@ func load(b []byte) (state.BeaconState, error) {
 	if err := st.UnmarshalSSZ(b); err != nil {
 		return nil, err
 	}
-	return v1.InitializeFromProtoUnsafe(st)
+	return state_native.InitializeFromProtoUnsafePhase0(st)
 }

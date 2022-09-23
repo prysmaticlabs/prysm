@@ -1,7 +1,6 @@
 package initialsync
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -13,8 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -133,7 +131,7 @@ func (s *Service) processFetchedData(
 
 	// Use Batch Block Verify to process and verify batches directly.
 	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, data.sidecars, s.cfg.Chain.ReceiveBlockBatch); err != nil {
-		log.WithError(err).Warn("Batch is not processed")
+		log.WithError(err).Warn("Skip processing batched blocks")
 	}
 }
 
@@ -146,7 +144,7 @@ func (s *Service) processFetchedDataRegSync(
 	invalidBlocks := 0
 	blksWithoutParentCount := 0
 	for _, blk := range data.blocks {
-		var sidecar *ethpb.BlobsSidecar
+		var sidecar *eth.BlobsSidecar
 		for _, s := range data.sidecars {
 			if s.BeaconBlockSlot == blk.Block().Slot() {
 				sidecar = s
@@ -154,7 +152,7 @@ func (s *Service) processFetchedDataRegSync(
 			}
 		}
 		if sidecar != nil && blk.Version() == version.EIP4844 {
-			if err := blk.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sidecar}); err != nil {
+			if err := blk.SetSideCar(&eth.SignedBlobsSidecar{Message: sidecar}); err != nil {
 				log.WithError(err).Error("Could not set sidecar")
 				return
 			}
@@ -256,8 +254,7 @@ func (s *Service) processBlock(
 	}
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
-	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 
@@ -265,7 +262,7 @@ func (s *Service) processBlock(
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.SignedBeaconBlock, sidecars []*ethpb.BlobsSidecar, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.SignedBeaconBlock, sidecars []*eth.BlobsSidecar, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -277,7 +274,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	headSlot := s.cfg.Chain.HeadSlot()
 	for headSlot >= firstBlock.Block().Slot() && s.isProcessedBlock(ctx, firstBlock, blkRoot) {
 		if len(blks) == 1 {
-			return errors.New("no good blocks in batch")
+			return fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, firstBlock.Block().Slot(), blkRoot, errBlockAlreadyProcessed)
 		}
 		blks = blks[1:]
 		firstBlock = blks[0]
@@ -287,7 +284,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
-	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
+	parentRoot := firstBlock.Block().ParentRoot()
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
@@ -295,7 +292,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	blockRoots[0] = blkRoot
 	for i := 1; i < len(blks); i++ {
 		b := blks[i]
-		if !bytes.Equal(b.Block().ParentRoot(), blockRoots[i-1][:]) {
+		if b.Block().ParentRoot() != blockRoots[i-1] {
 			return fmt.Errorf("expected linear block list with parent root of %#x but received %#x",
 				blockRoots[i-1][:], b.Block().ParentRoot())
 		}
@@ -307,7 +304,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 
 		for _, sc := range sidecars {
 			if sc.BeaconBlockSlot == b.Block().Slot() {
-				if err := b.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sc}); err != nil {
+				if err := b.SetSideCar(&eth.SignedBlobsSidecar{Message: sc}); err != nil {
 					return err
 				}
 				blks[i] = b

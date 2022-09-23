@@ -32,7 +32,6 @@ import (
 )
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
-	params.BeaconConfig().SafeSlotsToImportOptimistically = 0
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
@@ -862,155 +861,6 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.Equal(t, true, validated)
 }
 
-func Test_IsOptimisticCandidateBlock(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	params.BeaconConfig().SafeSlotsToImportOptimistically = 128
-	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
-
-	parentBlk := util.NewBeaconBlockBellatrix()
-	wrappedParentBlock, err := consensusblocks.NewSignedBeaconBlock(parentBlk)
-	require.NoError(t, err)
-	parentRoot, err := wrappedParentBlock.Block().HashTreeRoot()
-	require.NoError(t, err)
-
-	tests := []struct {
-		name      string
-		blk       interfaces.BeaconBlock
-		justified interfaces.SignedBeaconBlock
-		err       error
-	}{
-		{
-			name: "deep block",
-			blk: func(tt *testing.T) interfaces.BeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 1
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 32
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			err: nil,
-		},
-		{
-			name: "shallow block, Altair justified chkpt",
-			blk: func(tt *testing.T) interfaces.BeaconBlock {
-				blk := util.NewBeaconBlockAltair()
-				blk.Block.Slot = 200
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
-				blk := util.NewBeaconBlockAltair()
-				blk.Block.Slot = 32
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			err: errNotOptimisticCandidate,
-		},
-		{
-			name: "shallow block, Bellatrix justified chkpt without execution",
-			blk: func(tt *testing.T) interfaces.BeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 200
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
-				blk := util.NewBeaconBlockBellatrix()
-				blk.Block.Slot = 32
-				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
-				require.NoError(tt, err)
-				return wr
-			}(t),
-			err: errNotOptimisticCandidate,
-		},
-	}
-	for _, tt := range tests {
-		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
-		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
-
-		err = service.optimisticCandidateBlock(ctx, tt.blk)
-		if tt.err != nil {
-			require.Equal(t, tt.err.Error(), err.Error())
-		} else {
-			require.NoError(t, err)
-		}
-	}
-}
-
-func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
-
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-	}
-
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	params.BeaconConfig().SafeSlotsToImportOptimistically = 128
-	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
-	payload := &v1.ExecutionPayload{
-		ParentHash:    make([]byte, 32),
-		FeeRecipient:  make([]byte, 20),
-		StateRoot:     make([]byte, 32),
-		ReceiptsRoot:  make([]byte, 32),
-		LogsBloom:     make([]byte, 256),
-		PrevRandao:    make([]byte, 32),
-		BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
-		BlockHash:     make([]byte, 32),
-		BlockNumber:   100,
-	}
-	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payload}
-	b := &ethpb.BeaconBlockBellatrix{Body: body, Slot: 200}
-	rawSigned := &ethpb.SignedBeaconBlockBellatrix{Block: b}
-	blk := util.HydrateSignedBeaconBlockBellatrix(rawSigned)
-	wr := util.SaveBlock(t, ctx, service.cfg.BeaconDB, blk)
-	blkRoot, err := wr.Block().HashTreeRoot()
-	require.NoError(t, err)
-
-	childBlock := util.NewBeaconBlockBellatrix()
-	childBlock.Block.ParentRoot = blkRoot[:]
-	// shallow block
-	childBlock.Block.Slot = 201
-	wrappedChild := util.SaveBlock(t, ctx, service.cfg.BeaconDB, childBlock)
-	err = service.optimisticCandidateBlock(ctx, wrappedChild.Block())
-	require.NoError(t, err)
-}
-
 func Test_GetPayloadAttribute(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -1155,6 +1005,18 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.Equal(t, false, optimistic)
 	require.DeepEqual(t, validCheckpoint.Root, cp.Root)
 	require.Equal(t, validCheckpoint.Epoch, cp.Epoch)
+
+	// Checkpoint with a lower epoch
+	oldCp, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	invalidCp := &ethpb.Checkpoint{
+		Epoch: oldCp.Epoch - 1,
+	}
+	// Nothing should happen as we no-op on an invalid checkpoint.
+	require.NoError(t, service.updateFinalized(ctx, invalidCp))
+	got, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, oldCp, got)
 }
 
 func TestService_removeInvalidBlockAndState(t *testing.T) {

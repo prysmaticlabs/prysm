@@ -3,7 +3,7 @@ package execution
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -81,7 +81,7 @@ func UpgradeToBellatrix(state state.BeaconState) (state.BeaconState, error) {
 		},
 	}
 
-	return v3.InitializeFromProtoUnsafe(s)
+	return state_native.InitializeFromProtoUnsafeBellatrix(s)
 }
 
 // UpgradeToEip4844 updates inputs a generic state to return the version Eip4844 state.

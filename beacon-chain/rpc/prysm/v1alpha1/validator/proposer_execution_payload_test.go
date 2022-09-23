@@ -88,7 +88,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			validatorIndx: 1,
 		},
 		{
-			name:          "transition completed, happy case, payload ID cached)",
+			name:          "transition completed, happy case, (payload ID cached)",
 			st:            transitionSt,
 			validatorIndx: 100,
 		},
@@ -132,6 +132,36 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	b1pb := util.NewBeaconBlock()
+	b1r, err := b1pb.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
+	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b1r[:],
+	}))
+
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
+
+	cfg := params.BeaconConfig().Copy()
+	cfg.TerminalBlockHash = common.Hash{'a'}
+	cfg.TerminalBlockHashActivationEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	vs := &Server{
+		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded},
+		HeadFetcher:            &chainMock.ChainService{State: nonTransitionSt},
+		BeaconDB:               beaconDB,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+	}
+	vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nonTransitionSt.Slot(), 100, [8]byte{100}, [32]byte{'a'})
+
+	_, err = vs.getExecutionPayload(context.Background(), nonTransitionSt.Slot(), 100, [32]byte{'a'})
+	require.NoError(t, err)
 }
 
 func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {

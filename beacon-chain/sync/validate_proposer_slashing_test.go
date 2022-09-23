@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -45,7 +45,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, state.Be
 	}
 
 	currentSlot := types.Slot(0)
-	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,
@@ -208,34 +208,4 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Did not fail validation")
-}
-
-func TestValidateProposerSlashing_Optimistic(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidProposerSlashing(t)
-
-	r := &Service{
-		cfg: &config{
-			p2p:         p,
-			chain:       &mock.ChainService{State: s, Optimistic: true},
-			initialSync: &mockSync.Sync{IsSyncing: false},
-		},
-	}
-
-	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, slashing)
-	require.NoError(t, err)
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-	res, err := r.validateProposerSlashing(ctx, "", m)
-	assert.NoError(t, err)
-	valid := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, valid, "Did not ignore the message")
 }

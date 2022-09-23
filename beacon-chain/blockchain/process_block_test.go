@@ -22,13 +22,13 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -1124,20 +1124,6 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	}
 }
 
-func TestHandleEpochBoundary_BadMetrics(t *testing.T) {
-	ctx := context.Background()
-	opts := testServiceOptsNoDB()
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(1))
-	service.head = &head{state: (*v1.BeaconState)(nil)}
-
-	require.ErrorContains(t, "failed to initialize precompute: nil inner state", service.handleEpochBoundary(ctx, s))
-}
-
 func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsNoDB()
@@ -1170,6 +1156,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
+	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
 
 	testState := gs.Copy()
 	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
@@ -1755,7 +1742,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	logHook := logTest.NewGlobal()
 	for i := 0; i < 10; i++ {
 		fc := &ethpb.Checkpoint{}
-		st, blkRoot, err := prepareForkchoiceState(ctx, 0, bytesutil.ToBytes32(wsb1.Block().ParentRoot()), [32]byte{}, [32]byte{}, fc, fc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, 0, wsb1.Block().ParentRoot(), [32]byte{}, [32]byte{}, fc, fc)
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		var wg sync.WaitGroup
@@ -1818,7 +1805,6 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -1978,7 +1964,6 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2138,7 +2123,6 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2298,7 +2282,6 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2459,7 +2442,6 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2669,7 +2651,6 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2866,18 +2847,40 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.Equal(t, false, optimistic)
 }
 
+type newForkChoicer func() forkchoice.ForkChoicer
+
+func TestStore_NoViableHead_Reboot(t *testing.T) {
+	cases := []struct {
+		new  newForkChoicer
+		name string
+	}{
+		{
+			new:  func() forkchoice.ForkChoicer { return doublylinkedtree.New() },
+			name: "doublylinkedtree",
+		},
+		{
+			new:  func() forkchoice.ForkChoicer { return protoarray.New() },
+			name: "protoarray",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			noViableHead_Reboot(t, c.new)
+		})
+	}
+}
+
 // See the description in #10777 and #10782 for the full setup
 // We sync optimistically a chain of blocks. Block 12 is the first block in Epoch
 // 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
 // INVALID from NewPayload, with LVH block 12. No head is viable. We check that
 // the node can reboot from this state
-func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
+func noViableHead_Reboot(t *testing.T, newfc newForkChoicer) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -2890,7 +2893,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(newfc()),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -2998,18 +3001,18 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = newfc()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is optimistic now.
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, optimistic)
+	require.Equal(t, false, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3029,7 +3032,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
 	// Check that the head is still INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3057,7 +3060,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Head should still be INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3102,7 +3105,6 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 2
-	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
@@ -3223,17 +3225,17 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.NoError(t, err) // HeadBlock returns no error when headroot == nil
 	require.Equal(t, blk, nil)
 
+	service.cfg.ForkChoiceStore = protoarray.New()
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is optimistic now
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, optimistic)
+	require.Equal(t, false, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3253,7 +3255,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
 	// Check that the head is still INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3280,7 +3282,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// Head should still be INVALID and the node is optimistic
-	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.ForkChoicer().CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3386,6 +3388,6 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot int64, delay int64) {
-	offset := int64(slot*int64(params.BeaconConfig().SecondsPerSlot) - delay)
+	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) - delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
 }

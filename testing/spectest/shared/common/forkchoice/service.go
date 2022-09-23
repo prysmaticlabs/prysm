@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -25,7 +25,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-func startChainService(t testing.TB, st state.BeaconState, block interfaces.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
+func startChainService(t testing.TB,
+	st state.BeaconState,
+	block interfaces.SignedBeaconBlock,
+	engineMock *engineMock,
+) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -53,7 +57,7 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
-		blockchain.WithForkChoiceStore(protoarray.New()),
+		blockchain.WithForkChoiceStore(doublylinkedtree.New()),
 		blockchain.WithStateGen(stategen.New(db)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
@@ -67,7 +71,9 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 }
 
 type engineMock struct {
-	powBlocks map[[32]byte]*ethpb.PowBlock
+	powBlocks       map[[32]byte]*ethpb.PowBlock
+	latestValidHash []byte
+	payloadStatus   error
 }
 
 func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {
@@ -77,7 +83,7 @@ func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb
 	return nil, nil, nil
 }
 func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
-	return nil, nil
+	return m.latestValidHash, m.payloadStatus
 }
 
 func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {

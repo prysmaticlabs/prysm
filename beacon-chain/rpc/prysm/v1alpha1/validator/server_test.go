@@ -12,11 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -48,8 +46,20 @@ func TestValidatorIndex_OK(t *testing.T) {
 	assert.NoError(t, err, "Could not get validator index")
 }
 
+func TestValidatorIndex_StateEmpty(t *testing.T) {
+	Server := &Server{
+		HeadFetcher: &mockChain.ChainService{},
+	}
+	pubKey := pubKey(1)
+	req := &ethpb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	_, err := Server.ValidatorIndex(context.Background(), req)
+	assert.ErrorContains(t, "head state is empty", err)
+}
+
 func TestWaitForActivation_ContextClosed(t *testing.T) {
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
 	})
@@ -90,98 +100,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	exitRoutine <- true
 }
 
-func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	// This test breaks if it doesn't use mainnet config
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
-	ctx := context.Background()
-
-	priv1, err := bls.RandKey()
-	require.NoError(t, err)
-	priv2, err := bls.RandKey()
-	require.NoError(t, err)
-
-	pubKey1 := priv1.PublicKey().Marshal()
-	pubKey2 := priv2.PublicKey().Marshal()
-
-	beaconState := &ethpb.BeaconState{
-		Slot: 4000,
-		Validators: []*ethpb.Validator{
-			{
-				ActivationEpoch:       0,
-				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-				PublicKey:             pubKey1,
-				WithdrawalCredentials: make([]byte, 32),
-			},
-		},
-	}
-	block := util.NewBeaconBlock()
-	genesisRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	depData := &ethpb.Deposit_Data{
-		PublicKey:             pubKey1,
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 32),
-		Signature:             make([]byte, 96),
-	}
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
-	require.NoError(t, err)
-	signingRoot, err := signing.ComputeSigningRoot(depData, domain)
-	require.NoError(t, err)
-	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()
-
-	deposit := &ethpb.Deposit{
-		Data: depData,
-	}
-	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	require.NoError(t, err, "Could not setup deposit trie")
-	depositCache, err := depositcache.New()
-	require.NoError(t, err)
-
-	root, err := depositTrie.HashTreeRoot()
-	require.NoError(t, err)
-	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, root))
-	s, err := v1.InitializeFromProtoUnsafe(beaconState)
-	require.NoError(t, err)
-	vs := &Server{
-		Ctx:               context.Background(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		BlockFetcher:      &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
-	}
-	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: [][]byte{pubKey1, pubKey2},
-	}
-	ctrl := gomock.NewController(t)
-
-	defer ctrl.Finish()
-	mockChainStream := mock.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
-	mockChainStream.EXPECT().Context().Return(context.Background())
-	mockChainStream.EXPECT().Send(
-		&ethpb.ValidatorActivationResponse{
-			Statuses: []*ethpb.ValidatorActivationResponse_Status{
-				{
-					PublicKey: pubKey1,
-					Status: &ethpb.ValidatorStatusResponse{
-						Status: ethpb.ValidatorStatus_ACTIVE,
-					},
-					Index: 0,
-				},
-				{
-					PublicKey: pubKey2,
-					Status: &ethpb.ValidatorStatusResponse{
-						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
-					},
-					Index: nonExistentIndex,
-				},
-			},
-		},
-	).Return(nil)
-
-	require.NoError(t, vs.WaitForActivation(req, mockChainStream), "Could not setup wait for activation stream")
-}
-
 func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	priv1, err := bls.RandKey()
 	require.NoError(t, err)
@@ -219,7 +137,7 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	s, err := v1.InitializeFromProtoUnsafe(beaconState)
+	s, err := state_native.InitializeFromProtoUnsafePhase0(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:               context.Background(),
