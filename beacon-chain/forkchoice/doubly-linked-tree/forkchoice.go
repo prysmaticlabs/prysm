@@ -32,7 +32,6 @@ func New() *ForkChoice {
 		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
 		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
-		proposerBoostRoot:             [32]byte{},
 		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
@@ -71,10 +70,6 @@ func (f *ForkChoice) Head(
 
 	if err := f.updateBalances(justifiedStateBalances); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
-	}
-
-	if err := f.store.applyProposerBoostScore(justifiedStateBalances); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not apply proposer boost score")
 	}
 
 	if err := f.store.treeRootNode.applyWeightChanges(ctx); err != nil {
@@ -347,17 +342,12 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				if currentNode.balance < oldBalance {
-					f.store.proposerBoostLock.RLock()
 					log.WithFields(logrus.Fields{
-						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
-						"oldBalance":                 oldBalance,
-						"nodeBalance":                currentNode.balance,
-						"nodeWeight":                 currentNode.weight,
-						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
-						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
-						"previousProposerBoostScore": f.store.previousProposerBoostScore,
+						"nodeRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+						"oldBalance":  oldBalance,
+						"nodeBalance": currentNode.balance,
+						"nodeWeight":  currentNode.weight,
 					}).Warning("node with invalid balance, setting it to zero")
-					f.store.proposerBoostLock.RUnlock()
 					currentNode.balance = 0
 				} else {
 					currentNode.balance -= oldBalance
@@ -376,11 +366,6 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 // roots and the slots of the leaf nodes.
 func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 	return f.store.tips()
-}
-
-// ProposerBoost returns the proposerBoost of the store
-func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
-	return f.store.proposerBoost()
 }
 
 // SetOptimisticToValid sets the node with the given root as a fully validated node
@@ -656,8 +641,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 		UnrealizedJustifiedCheckpoint: ujc,
 		FinalizedCheckpoint:           fc,
 		UnrealizedFinalizedCheckpoint: ufc,
-		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
-		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
 		HeadRoot:                      headRoot[:],
 		ForkchoiceNodes:               nodes,
 	}

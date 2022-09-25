@@ -24,9 +24,6 @@ type Store struct {
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized finalized checkpoint in store.
 	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.
 	finalizedCheckpoint           *forkchoicetypes.Checkpoint            // latest finalized epoch in store.
-	proposerBoostRoot             [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
-	previousProposerBoostRoot     [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
-	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
 	treeRootNode                  *Node                                  // the root node of the store tree.
 	headNode                      *Node                                  // last head Node
 	nodeByRoot                    map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
@@ -34,7 +31,6 @@ type Store struct {
 	slashedIndices                map[types.ValidatorIndex]bool          // the list of equivocating validator indices
 	originRoot                    [fieldparams.RootLength]byte           // The genesis block root
 	nodesLock                     sync.RWMutex
-	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
 	highestReceivedNode           *Node                                 // The highest slot node.
