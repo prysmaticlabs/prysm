@@ -54,6 +54,12 @@ message SignedAggregateAttestationAndProof {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message AggregatorEquivocation {
+    SignedAggregateAttestationAndProof signed_aggregate_1 = 1;
+    SignedAggregateAttestationAndProof signed_aggregate_2 = 2;
+}
+
+
 message AttestationData {
     // Attestation data includes information on Casper the Friendly Finality Gadget's votes
     // See: https://arxiv.org/pdf/1710.09437.pdf
