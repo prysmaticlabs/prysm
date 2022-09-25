@@ -148,11 +148,11 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 1")
 
-	// Moved 2 votes to block 5:
+	// Moved 2 latest messages to block 5:
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(5), 4)
 
 	// Inset blocks 7 and 8
-	// 6 should still be the head, even though 5 has all the votes.
+	// 6 should still be the head, even though 5 has all the current latest messages.
 	//            0
 	//           / \
 	//          2  1
@@ -224,7 +224,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 3")
 
-	// Move two votes for 10, verify it's head
+	// Move two latest messages for 10, verify it's head
 
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(10), 5)
 	r, err = f.Head(context.Background(), balances)

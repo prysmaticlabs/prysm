@@ -39,8 +39,8 @@ func New() *ForkChoice {
 	}
 
 	b := make([]uint64, 0)
-	v := make([]Vote, 0)
-	return &ForkChoice{store: s, balances: b, votes: v}
+	v := make([]LatestMessage, 0)
+	return &ForkChoice{store: s, balances: b, currentLatestMsgs: v}
 }
 
 // NodeCount returns the current number of nodes in the Store.
@@ -86,7 +86,7 @@ func (f *ForkChoice) Head(
 }
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
-// and update their votes accordingly.
+// and update their latest message accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
@@ -95,18 +95,18 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 
 	for _, index := range validatorIndices {
 		// Validator indices will grow the vote cache.
-		for index >= uint64(len(f.votes)) {
-			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
+		for index >= uint64(len(f.currentLatestMsgs)) {
+			f.currentLatestMsgs = append(f.currentLatestMsgs, LatestMessage{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
 		// Newly allocated vote if the root fields are untouched.
-		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash &&
-			f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
+		newVote := f.currentLatestMsgs[index].nextRoot == params.BeaconConfig().ZeroHash &&
+			f.currentLatestMsgs[index].currentRoot == params.BeaconConfig().ZeroHash
 
-		// Vote gets updated if it's newly allocated or high target epoch.
-		if newVote || targetEpoch > f.votes[index].nextEpoch {
-			f.votes[index].nextEpoch = targetEpoch
-			f.votes[index].nextRoot = blockRoot
+		// LatestMessage gets updated if it's newly allocated or high target epoch.
+		if newVote || targetEpoch > f.currentLatestMsgs[index].nextEpoch {
+			f.currentLatestMsgs[index].nextEpoch = targetEpoch
+			f.currentLatestMsgs[index].nextRoot = blockRoot
 		}
 	}
 
@@ -297,16 +297,16 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes. This function requires a lock in Store.nodesLock
+// validators' latest messages. This function requires a lock in Store.nodesLock
 // and votesLock
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
-	for index, vote := range f.votes {
+	for index, vote := range f.currentLatestMsgs {
 		// Skip if validator has been slashed
 		if f.store.slashedIndices[types.ValidatorIndex(index)] {
 			continue
 		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
-		// votes are zero hash aka genesis block), there's nothing to compute.
+		// current latest messages are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
 			continue
 		}
@@ -356,7 +356,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 		}
 
 		// Rotate the validator vote.
-		f.votes[index].currentRoot = vote.nextRoot
+		f.currentLatestMsgs[index].currentRoot = vote.nextRoot
 	}
 	f.balances = newBalances
 	return nil
@@ -433,11 +433,11 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 		return
 	}
 
-	if index >= types.ValidatorIndex(len(f.votes)) {
+	if index >= types.ValidatorIndex(len(f.currentLatestMsgs)) {
 		return
 	}
 
-	node, ok := f.store.nodeByRoot[f.votes[index].currentRoot]
+	node, ok := f.store.nodeByRoot[f.currentLatestMsgs[index].currentRoot]
 	if !ok || node == nil {
 		return
 	}

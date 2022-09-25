@@ -74,7 +74,7 @@ func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
-	f.votes = []Vote{
+	f.currentLatestMsgs = []LatestMessage{
 		{indexToHash(1), indexToHash(1), 0},
 		{indexToHash(2), indexToHash(2), 0},
 		{indexToHash(3), indexToHash(3), 0},
@@ -107,7 +107,7 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	s.nodeByRoot[indexToHash(3)].balance = 100
 
 	f.balances = []uint64{100, 100, 100}
-	f.votes = []Vote{
+	f.currentLatestMsgs = []LatestMessage{
 		{indexToHash(1), indexToHash(1), 0},
 		{indexToHash(2), indexToHash(2), 0},
 		{indexToHash(3), indexToHash(3), 0},
@@ -137,7 +137,7 @@ func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 	s.nodeByRoot[indexToHash(3)].balance = 100
 
 	f.balances = []uint64{125, 125, 125}
-	f.votes = []Vote{
+	f.currentLatestMsgs = []LatestMessage{
 		{indexToHash(1), indexToHash(1), 0},
 		{indexToHash(2), indexToHash(2), 0},
 		{indexToHash(3), indexToHash(3), 0},
@@ -339,7 +339,7 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 
 	// Process index where index == vote length. Should not panic.
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
-	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.currentLatestMsgs)))
 	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
 

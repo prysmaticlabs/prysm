@@ -8,12 +8,15 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
-// ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
+// ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest messages and balances.
 type ForkChoice struct {
-	store     *Store
-	votes     []Vote // tracks individual validator's last vote.
-	votesLock sync.RWMutex
-	balances  []uint64 // tracks individual validator's last justified balances.
+	store                  *Store
+	currentLatestMsgs      []LatestMessage // tracks individual validator's last vote.
+	prevLatestMsgs         []LatestMessage
+	currentEpochAggregates [][][32]byte
+	prevEpochAggregates    [][][32]byte
+	votesLock              sync.RWMutex
+	balances               []uint64 // tracks individual validator's last justified balances.
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
@@ -58,8 +61,8 @@ type Node struct {
 	timestamp                uint64                       // The timestamp when the node was inserted.
 }
 
-// Vote defines an individual validator's vote.
-type Vote struct {
+// LatestMessage defines an individual validator's vote.
+type LatestMessage struct {
 	currentRoot    [fieldparams.RootLength]byte // current voting root.
 	nextRoot       [fieldparams.RootLength]byte // next voting root.
 	nextEpoch      types.Epoch                  // epoch of next voting period.

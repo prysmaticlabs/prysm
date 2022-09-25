@@ -20,7 +20,7 @@ func driftGenesisTime(f *ForkChoice, slot types.Slot, delay uint64) {
 // Simple, ex-ante attack mitigation using proposer boost.
 // In a nutshell, an adversarial block proposer in slot n+1 keeps its proposal hidden.
 // The honest block proposer in slot n+2 will then propose an honest block. The
-// adversary can now use its committee members’ votes from both slots n+1 and n+2.
+// adversary can now use its committee members’ current latest messages from both slots n+1 and n+2.
 // and release their withheld block of slot n+2 in an attempt to win fork choice.
 // If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
@@ -293,7 +293,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
 		// An attestation is received for B that has more voting power than C with the proposer boost,
-		// allowing B to then become the head if their attestation has enough adversarial votes.
+		// allowing B to then become the head if their attestation has enough adversarial latest messages.
 		votes := []uint64{1, 2}
 		f.ProcessAttestation(ctx, votes, maliciouslyWithheldBlock, fEpoch)
 
