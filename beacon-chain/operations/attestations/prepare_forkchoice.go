@@ -42,11 +42,8 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "Operations.attestations.batchForkChoiceAtts")
 	defer span.End()
 
-	if err := s.cfg.Pool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		return err
-	}
-	atts := append(s.cfg.Pool.AggregatedAttestations(), s.cfg.Pool.BlockAttestations()...)
-	atts = append(atts, s.cfg.Pool.ForkchoiceAttestations()...)
+	// View-merge: Only consider attestations from block.
+	atts := s.cfg.Pool.BlockAttestations()
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
 
