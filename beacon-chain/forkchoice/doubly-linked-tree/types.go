@@ -6,6 +6,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest messages and balances.
@@ -13,8 +14,8 @@ type ForkChoice struct {
 	store                  *Store
 	currentLatestMsgs      []LatestMessage // tracks individual validator's last vote.
 	prevLatestMsgs         []LatestMessage
-	currentEpochAggregates [][][32]byte
-	prevEpochAggregates    [][][32]byte
+	currentEpochAggregates [][]eth.Attestation
+	prevEpochAggregates    [][]eth.Attestation
 	votesLock              sync.RWMutex
 	balances               []uint64 // tracks individual validator's last justified balances.
 }

@@ -647,3 +647,46 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 	return resp, nil
 
 }
+
+// IsSlashed returns true if the input validator has been slashed
+func (f *ForkChoice) IsSlashed(v types.ValidatorIndex) bool {
+	slashed, ok := f.store.slashedIndices[v]
+	if !ok {
+		return false // Unknown validator can't be slashed.
+	}
+	return slashed
+}
+
+func (f *ForkChoice) HasCurrentAggregate(*ethpb.AggregateAttestationAndProof) bool {
+	return false
+}
+
+func (f *ForkChoice) HasPreviousAggregate(*ethpb.AggregateAttestationAndProof) bool {
+	return false
+}
+
+func (f *ForkChoice) InsertCurrentAggregate(*ethpb.AggregateAttestationAndProof) error {
+	return nil
+}
+
+func (f *ForkChoice) InsertPrevAggregate(*ethpb.AggregateAttestationAndProof) error {
+	return nil
+}
+
+func (f *ForkChoice) MinusCurrentReferenceCount(types.ValidatorIndex) {}
+func (f *ForkChoice) MinusPrevReferenceCount(types.ValidatorIndex)    {}
+func (f *ForkChoice) CurrentLatestMessage(types.ValidatorIndex) ([32]byte, types.Epoch, error) {
+	return [32]byte{}, 0, nil
+}
+
+func (f *ForkChoice) PrevLatestMessage(types.ValidatorIndex) ([32]byte, types.Epoch, error) {
+	return [32]byte{}, 0, nil
+}
+
+func (f *ForkChoice) CurrentAttsByAggregator(types.ValidatorIndex) []*ethpb.AggregateAttestationAndProof {
+	return nil
+}
+
+func (f *ForkChoice) PrevAttsByAggregator(types.ValidatorIndex) []*ethpb.AggregateAttestationAndProof {
+	return nil
+}

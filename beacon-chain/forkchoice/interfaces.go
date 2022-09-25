@@ -8,6 +8,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
@@ -38,6 +39,13 @@ type BlockProcessor interface {
 type AttestationProcessor interface {
 	ProcessAttestation(context.Context, []uint64, [32]byte, types.Epoch)
 	InsertSlashedIndex(context.Context, types.ValidatorIndex)
+	IsSlashed(types.ValidatorIndex) bool
+	HasCurrentAggregate(*eth.AggregateAttestationAndProof) bool
+	HasPreviousAggregate(*eth.AggregateAttestationAndProof) bool
+	InsertCurrentAggregate(*eth.AggregateAttestationAndProof) error
+	InsertPrevAggregate(*eth.AggregateAttestationAndProof) error
+	MinusCurrentReferenceCount(index types.ValidatorIndex)
+	MinusPrevReferenceCount(index types.ValidatorIndex)
 }
 
 // Getter returns fork choice related information.
@@ -59,6 +67,10 @@ type Getter interface {
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceResponse, error)
 	VotedFraction(root [32]byte) (uint64, error)
+	CurrentLatestMessage(types.ValidatorIndex) ([32]byte, types.Epoch, error)
+	PrevLatestMessage(types.ValidatorIndex) ([32]byte, types.Epoch, error)
+	CurrentAttsByAggregator(types.ValidatorIndex) []*eth.AggregateAttestationAndProof
+	PrevAttsByAggregator(types.ValidatorIndex) []*eth.AggregateAttestationAndProof
 }
 
 // Setter allows to set forkchoice information
