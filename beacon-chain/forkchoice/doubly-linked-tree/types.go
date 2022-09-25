@@ -60,7 +60,8 @@ type Node struct {
 
 // Vote defines an individual validator's vote.
 type Vote struct {
-	currentRoot [fieldparams.RootLength]byte // current voting root.
-	nextRoot    [fieldparams.RootLength]byte // next voting root.
-	nextEpoch   types.Epoch                  // epoch of next voting period.
+	currentRoot    [fieldparams.RootLength]byte // current voting root.
+	nextRoot       [fieldparams.RootLength]byte // next voting root.
+	nextEpoch      types.Epoch                  // epoch of next voting period.
+	referenceCount uint64                       // reference count attestations in current view, to attest based on the "merge view".
 }
