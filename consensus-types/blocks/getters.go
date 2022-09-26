@@ -726,3 +726,4 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}
 }
+

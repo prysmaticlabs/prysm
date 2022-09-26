@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -39,17 +38,9 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 		return false, err
 	}
 
-	var wrappedHeader interfaces.ExecutionData
-	var wrappingError error
-
-	switch concreteHeader := h.(type) {
-	case *enginev1.ExecutionPayloadHeader:
-		wrappedHeader, wrappingError = blocks.WrappedExecutionPayloadHeader(concreteHeader)
-	case *enginev1.ExecutionPayloadHeader4844:
-		wrappedHeader, wrappingError = blocks.WrappedExecutionPayloadHeader4844(concreteHeader)
-	}
-	if wrappingError != nil {
-		return false, wrappingError
+	wrappedHeader, err := blocks.ExtractExecutionDataFromHeader(h)
+	if err != nil {
+		return false, err
 	}
 	if wrappedHeader.IsNil() {
 		return false, errors.New("Unknown execution payload header type")
@@ -109,15 +100,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
 func IsExecutionEnabledUsingHeader(header interfaces.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	var wrappedHeader interfaces.ExecutionData
-	var err error
-
-	switch concreteHeader := header.(type) {
-	case *enginev1.ExecutionPayloadHeader:
-		wrappedHeader, err = blocks.WrappedExecutionPayloadHeader(concreteHeader)
-	case *enginev1.ExecutionPayloadHeader4844:
-		wrappedHeader, err = blocks.WrappedExecutionPayloadHeader4844(concreteHeader)
-	}
+	wrappedHeader, err := blocks.ExtractExecutionDataFromHeader(header)
 	if err != nil {
 		return false, err
 	}

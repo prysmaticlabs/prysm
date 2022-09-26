@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -653,17 +652,9 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	var wrappedHeader interfaces.ExecutionData
-	var wrappingError error
-
-	switch concreteHeader := stateHeader.(type) {
-	case *enginev1.ExecutionPayloadHeader:
-		wrappedHeader, wrappingError = consensusblocks.WrappedExecutionPayloadHeader(concreteHeader)
-	case *enginev1.ExecutionPayloadHeader4844:
-		wrappedHeader, wrappingError = consensusblocks.WrappedExecutionPayloadHeader4844(concreteHeader)
-	}
-	if wrappingError != nil {
-		return wrappingError
+	wrappedHeader, err := consensusblocks.ExtractExecutionDataFromHeader(stateHeader)
+	if err != nil {
+		return err
 	}
 	if wrappedHeader.IsNil() {
 		return errors.New("Unknown execution payload header type")
