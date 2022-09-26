@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
@@ -25,8 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -246,7 +247,7 @@ func TestProposer_PendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
@@ -378,7 +379,7 @@ func TestProposer_PendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		votes = append(votes, vote)
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositRoot:  make([]byte, 32),
@@ -597,7 +598,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -695,7 +696,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -793,7 +794,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -909,7 +910,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		},
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot:  make([]byte, 32),
@@ -1131,7 +1132,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1167,7 +1168,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1203,7 +1204,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(51, earliestValidTime+1, []byte("first")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1240,7 +1241,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(51, earliestValidTime+1, []byte("first")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1277,7 +1278,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(100, latestValidTime, []byte("latest")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1314,7 +1315,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("unknown"), DepositCount: 1},
@@ -1348,7 +1349,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(49, earliestValidTime-1, []byte("before_range")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 		})
 		require.NoError(t, err)
@@ -1380,7 +1381,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(101, latestValidTime+1, []byte("after_range"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1414,7 +1415,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot:          slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{}})
 		require.NoError(t, err)
@@ -1444,7 +1445,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(50, earliestValidTime, []byte("earliest")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 		})
 		require.NoError(t, err)
@@ -1478,7 +1479,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("first"), DepositCount: 1},
@@ -1514,7 +1515,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			InsertBlock(52, earliestValidTime+2, []byte("second")).
 			InsertBlock(100, latestValidTime, []byte("latest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("no_new_deposits"), DepositCount: 0},
@@ -1547,7 +1548,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		t.Skip()
 		p := mockExecution.New().InsertBlock(50, earliestValidTime, []byte("earliest"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1581,7 +1582,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 			// because of earliest block increment in the algorithm.
 			InsertBlock(50, earliestValidTime+1, []byte("first"))
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("before_range"), DepositCount: 1},
@@ -1620,7 +1621,7 @@ func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
 		depositCache, err := depositcache.New()
 		require.NoError(t, err)
 
-		beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Slot: slot,
 			Eth1DataVotes: []*ethpb.Eth1Data{
 				{BlockHash: []byte("earliest"), DepositCount: 1},
@@ -1761,7 +1762,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t
 		GenesisEth1Block: height,
 	}
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:   bytesutil.PadTo([]byte("0x0"), 32),
 			DepositRoot: make([]byte, 32),
@@ -2452,4 +2453,44 @@ func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 
 	return earliestValidTime, latestValidTime
+}
+
+func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	numDeposits := uint64(64)
+	beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+	bsRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	proposerServer := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{Root: bsRoot[:], State: beaconState},
+	}
+	pubkey, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+	require.NoError(t, err)
+	resp, err := proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: pubkey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), hexutil.Encode(resp.FeeRecipient))
+	params.BeaconConfig().DefaultFeeRecipient = common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
+	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
+	index, err := proposerServer.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+	err = proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{index.Index}, []common.Address{common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8")})
+	require.NoError(t, err)
+	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &ethpb.FeeRecipientByPubKeyRequest{
+		PublicKey: beaconState.Validators()[0].PublicKey,
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
 }

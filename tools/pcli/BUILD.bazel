@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state/state-native:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//encoding/ssz/equality:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

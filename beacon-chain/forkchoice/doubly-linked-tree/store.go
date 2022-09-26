@@ -23,25 +23,23 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			s.previousProposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
-			return nil
+		} else {
+			previousNode.balance -= s.previousProposerBoostScore
 		}
-		previousNode.balance -= s.previousProposerBoostScore
 	}
 
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			s.proposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
-			return nil
+		} else {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				return err
+			}
+			currentNode.balance += proposerScore
 		}
-		proposerScore, err = computeProposerBoostScore(newBalances)
-		if err != nil {
-			return err
-		}
-		currentNode.balance += proposerScore
 	}
 	s.previousProposerBoostRoot = s.proposerBoostRoot
 	s.previousProposerBoostScore = proposerScore
@@ -263,6 +261,9 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return 0
+	}
 	return f.store.highestReceivedNode.slot
 }
 
@@ -270,6 +271,9 @@ func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return [32]byte{}
+	}
 	return f.store.highestReceivedNode.root
 }
 

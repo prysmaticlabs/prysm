@@ -12,8 +12,8 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -202,7 +202,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &ethpb.BeaconState{Slot: 100}
-	state, err := v1.InitializeFromProto(s)
+	state, err := state_native.InitializeFromProtoPhase0(s)
 	require.NoError(t, err)
 	ctx := context.Background()
 	chainService := &mock.ChainService{

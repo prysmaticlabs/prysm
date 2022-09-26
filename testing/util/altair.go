@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -214,7 +214,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	return stateAltair.InitializeFromProto(st)
+	return state_native.InitializeFromProtoAltair(st)
 }
 
 func emptyGenesisState() (state.BeaconState, error) {
@@ -241,7 +241,7 @@ func emptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return stateAltair.InitializeFromProto(st)
+	return state_native.InitializeFromProtoAltair(st)
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.

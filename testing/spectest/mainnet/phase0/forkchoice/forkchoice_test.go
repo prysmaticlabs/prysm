@@ -16,13 +16,3 @@ func TestMainnet_Altair_Forkchoice(t *testing.T) {
 	defer resetCfg()
 	forkchoice.Run(t, "mainnet", version.Phase0)
 }
-
-func TestMainnet_Altair_Forkchoice_DoublyLinkTree(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableDefensivePull:               false,
-		DisablePullTips:                   true,
-		DisableForkchoiceDoublyLinkedTree: false,
-	})
-	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Phase0)
-}

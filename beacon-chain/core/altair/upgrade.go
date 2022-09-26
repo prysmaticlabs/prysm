@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	statealtair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -95,7 +95,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		InactivityScores:            make([]uint64, numValidators),
 	}
 
-	newState, err := statealtair.InitializeFromProtoUnsafe(s)
+	newState, err := state_native.InitializeFromProtoUnsafeAltair(s)
 	if err != nil {
 		return nil, err
 	}

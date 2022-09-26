@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -140,7 +140,7 @@ func Test_ValidatorStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
 			require.NoError(t, err)
 			got, err := ValidatorStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)
@@ -278,7 +278,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			readOnlyVal, err := v1.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
+			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(tt.args.validator))
 			require.NoError(t, err)
 			got, err := ValidatorSubStatus(readOnlyVal, tt.args.epoch)
 			require.NoError(t, err)

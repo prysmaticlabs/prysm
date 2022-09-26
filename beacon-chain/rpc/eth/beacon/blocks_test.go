@@ -7,10 +7,13 @@ import (
 	"testing"
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -770,13 +773,21 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockReceiver:     c,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
 		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-			HeadFetcher:      c,
+			BeaconDB:                beaconDB,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			HeadFetcher:             c,
+			V1Alpha1ValidatorServer: alphaServer,
 		}
 		req := util.NewBlindedBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
@@ -890,12 +901,20 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
 
 		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockReceiver:     c,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
 		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
+			BeaconDB:                beaconDB,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			V1Alpha1ValidatorServer: alphaServer,
 		}
 
 		blk := util.NewBeaconBlockBellatrix()

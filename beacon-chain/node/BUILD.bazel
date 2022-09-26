@@ -28,7 +28,6 @@ go_library(
         "//beacon-chain/execution:go_default_library",
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/gateway:go_default_library",
         "//beacon-chain/monitor:go_default_library",
         "//beacon-chain/node/registration:go_default_library",

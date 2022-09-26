@@ -10,9 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -467,7 +464,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v3.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafeBellatrix(protoState)
 	case hasAltairKey(enc):
 		// Marshal state bytes to altair beacon state.
 		protoState := &ethpb.BeaconStateAltair{}
@@ -481,7 +478,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v2.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafeAltair(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
 		protoState := &ethpb.BeaconState{}
@@ -495,7 +492,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v1.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafePhase0(protoState)
 	}
 }
 
