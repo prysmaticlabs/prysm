@@ -45,6 +45,7 @@ type State struct {
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 	backfillStatus          *backfill.Status
+	migrationLock           *sync.Mutex
 }
 
 // This tracks the config in the event of long non-finality,
@@ -86,6 +87,7 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
+		migrationLock: new(sync.Mutex),
 	}
 	for _, o := range opts {
 		o(s)
