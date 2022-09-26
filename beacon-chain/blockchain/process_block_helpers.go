@@ -162,7 +162,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil && err != doublylinkedtree.ErrNilNode {
+	if err != nil && !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return err
 	}
 	if !optimistic {
