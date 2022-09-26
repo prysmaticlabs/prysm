@@ -18,6 +18,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
+// These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
 var placeholderFields = []string{"UPDATE_TIMEOUT", "EIP4844_FORK_EPOCH", "EIP4844_FORK_VERSION"}
 
 func TestLoadConfigFile(t *testing.T) {
