@@ -280,7 +280,11 @@ func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfac
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
 
-	txs, err := payload.Transactions()
+	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	txs, err := wrappedPayload.GetTransactions()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get transactions from payload")
 	}
@@ -337,7 +341,11 @@ func ProcessBlockForStateRoot(
 			return nil, err
 		}
 		if blk.IsBlinded() {
-			state, err = b.ProcessPayloadHeader(state, executionData)
+			header, err := blocks.PayloadToHeader(executionData)
+			if err != nil {
+				return nil, err
+			}
+			state, err = b.ProcessPayloadHeader(state, header)
 		} else {
 			state, err = b.ProcessPayload(state, executionData)
 		}

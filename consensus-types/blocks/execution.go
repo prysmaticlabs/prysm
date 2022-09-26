@@ -11,22 +11,67 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // executionPayload is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayload struct {
-	p *enginev1.ExecutionPayload
+	p interfaces.ExecutionData
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayload(p interfaces.ExecutionData) (interfaces.WrappedExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
 	return w, nil
+}
+
+// Only EIP-4844 blocks contain ExcessBlobs
+func (e executionPayload) GetExcessBlobs() (uint64, error) {
+	switch payload := e.p.(type) {
+	case *enginev1.ExecutionPayload4844:
+		return payload.GetExcessBlobs(), nil
+	}
+	return 0, ErrUnsupportedGetter
+}
+
+// Transactions -- not present on Headers
+func (e executionPayload) GetTransactions() ([][]byte, error) {
+	switch payload := e.p.(type) {
+	case *enginev1.ExecutionPayload:
+		return payload.GetTransactions(), nil
+	case *enginev1.ExecutionPayload4844:
+		return payload.GetTransactions(), nil
+	}
+
+	// Headers don't have Transactions
+	return nil, ErrUnsupportedGetter
+}
+
+// TransactionsRoot --
+func (e executionPayload) GetTransactionsRoot() ([]byte, error) {
+	txs, err := e.GetTransactions()
+	if err != nil {
+		return nil, err
+	}
+
+	txRoot, err := ssz.TransactionsRoot(txs)
+	if err != nil {
+		return nil, err
+	}
+	return txRoot[:], nil
+}
+
+func (e executionPayload) Proto() proto.Message {
+	return e.p
+}
+
+func (e executionPayload) ProtoReflect() protoreflect.Message {
+	return e.p.ProtoReflect()
 }
 
 // IsNil checks if the underlying data is nil.
@@ -64,273 +109,178 @@ func (e executionPayload) HashTreeRootWith(hh *fastssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
-// Proto --
-func (e executionPayload) Proto() proto.Message {
-	return e.p
-}
-
 // ParentHash --
-func (e executionPayload) ParentHash() []byte {
-	return e.p.ParentHash
+func (e executionPayload) GetParentHash() []byte {
+	return e.p.GetParentHash()
 }
 
 // FeeRecipient --
-func (e executionPayload) FeeRecipient() []byte {
-	return e.p.FeeRecipient
+func (e executionPayload) GetFeeRecipient() []byte {
+	return e.p.GetFeeRecipient()
 }
 
 // StateRoot --
-func (e executionPayload) StateRoot() []byte {
-	return e.p.StateRoot
+func (e executionPayload) GetStateRoot() []byte {
+	return e.p.GetStateRoot()
 }
 
 // ReceiptsRoot --
-func (e executionPayload) ReceiptsRoot() []byte {
-	return e.p.ReceiptsRoot
+func (e executionPayload) GetReceiptsRoot() []byte {
+	return e.p.GetReceiptsRoot()
 }
 
 // LogsBloom --
-func (e executionPayload) LogsBloom() []byte {
-	return e.p.LogsBloom
+func (e executionPayload) GetLogsBloom() []byte {
+	return e.p.GetLogsBloom()
 }
 
 // PrevRandao --
-func (e executionPayload) PrevRandao() []byte {
-	return e.p.PrevRandao
+func (e executionPayload) GetPrevRandao() []byte {
+	return e.p.GetPrevRandao()
 }
 
 // BlockNumber --
-func (e executionPayload) BlockNumber() uint64 {
-	return e.p.BlockNumber
+func (e executionPayload) GetBlockNumber() uint64 {
+	return e.p.GetBlockNumber()
 }
 
 // GasLimit --
-func (e executionPayload) GasLimit() uint64 {
-	return e.p.GasLimit
+func (e executionPayload) GetGasLimit() uint64 {
+	return e.p.GetGasLimit()
 }
 
 // GasUsed --
-func (e executionPayload) GasUsed() uint64 {
-	return e.p.GasUsed
+func (e executionPayload) GetGasUsed() uint64 {
+	return e.p.GetGasUsed()
 }
 
 // Timestamp --
-func (e executionPayload) Timestamp() uint64 {
-	return e.p.Timestamp
+func (e executionPayload) GetTimestamp() uint64 {
+	return e.p.GetTimestamp()
 }
 
 // ExtraData --
-func (e executionPayload) ExtraData() []byte {
-	return e.p.ExtraData
+func (e executionPayload) GetExtraData() []byte {
+	return e.p.GetExtraData()
 }
 
 // BaseFeePerGas --
-func (e executionPayload) BaseFeePerGas() []byte {
-	return e.p.BaseFeePerGas
+func (e executionPayload) GetBaseFeePerGas() []byte {
+	return e.p.GetBaseFeePerGas()
 }
 
 // BlockHash --
-func (e executionPayload) BlockHash() []byte {
-	return e.p.BlockHash
-}
-
-// Transactions --
-func (e executionPayload) Transactions() ([][]byte, error) {
-	return e.p.Transactions, nil
-}
-
-// ExcessBlobs --
-func (executionPayload) ExcessBlobs() (uint64, error) {
-	return 0, ErrUnsupportedGetter
-}
-
-// executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
-// This wrapper allows us to conform to a common interface so that beacon
-// blocks for future forks can also be applied across Prysm without issues.
-type executionPayloadHeader struct {
-	p *enginev1.ExecutionPayloadHeader
-}
-
-// WrappedExecutionPayloadHeader is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeader{p: p}
-	if w.IsNil() {
-		return nil, ErrNilObjectWrapped
-	}
-	return w, nil
-}
-
-// IsNil checks if the underlying data is nil.
-func (e executionPayloadHeader) IsNil() bool {
-	return e.p == nil
-}
-
-// MarshalSSZ --
-func (e executionPayloadHeader) MarshalSSZ() ([]byte, error) {
-	return e.p.MarshalSSZ()
-}
-
-// MarshalSSZTo --
-func (e executionPayloadHeader) MarshalSSZTo(dst []byte) ([]byte, error) {
-	return e.p.MarshalSSZTo(dst)
-}
-
-// SizeSSZ --
-func (e executionPayloadHeader) SizeSSZ() int {
-	return e.p.SizeSSZ()
-}
-
-// UnmarshalSSZ --
-func (e executionPayloadHeader) UnmarshalSSZ(buf []byte) error {
-	return e.p.UnmarshalSSZ(buf)
-}
-
-// HashTreeRoot --
-func (e executionPayloadHeader) HashTreeRoot() ([32]byte, error) {
-	return e.p.HashTreeRoot()
-}
-
-// HashTreeRootWith --
-func (e executionPayloadHeader) HashTreeRootWith(hh *fastssz.Hasher) error {
-	return e.p.HashTreeRootWith(hh)
-}
-
-// Proto --
-func (e executionPayloadHeader) Proto() proto.Message {
-	return e.p
-}
-
-// ParentHash --
-func (e executionPayloadHeader) ParentHash() []byte {
-	return e.p.ParentHash
-}
-
-// FeeRecipient --
-func (e executionPayloadHeader) FeeRecipient() []byte {
-	return e.p.FeeRecipient
-}
-
-// StateRoot --
-func (e executionPayloadHeader) StateRoot() []byte {
-	return e.p.StateRoot
-}
-
-// ReceiptsRoot --
-func (e executionPayloadHeader) ReceiptsRoot() []byte {
-	return e.p.ReceiptsRoot
-}
-
-// LogsBloom --
-func (e executionPayloadHeader) LogsBloom() []byte {
-	return e.p.LogsBloom
-}
-
-// PrevRandao --
-func (e executionPayloadHeader) PrevRandao() []byte {
-	return e.p.PrevRandao
-}
-
-// BlockNumber --
-func (e executionPayloadHeader) BlockNumber() uint64 {
-	return e.p.BlockNumber
-}
-
-// GasLimit --
-func (e executionPayloadHeader) GasLimit() uint64 {
-	return e.p.GasLimit
-}
-
-// GasUsed --
-func (e executionPayloadHeader) GasUsed() uint64 {
-	return e.p.GasUsed
-}
-
-// Timestamp --
-func (e executionPayloadHeader) Timestamp() uint64 {
-	return e.p.Timestamp
-}
-
-// ExtraData --
-func (e executionPayloadHeader) ExtraData() []byte {
-	return e.p.ExtraData
-}
-
-// BaseFeePerGas --
-func (e executionPayloadHeader) BaseFeePerGas() []byte {
-	return e.p.BaseFeePerGas
-}
-
-// BlockHash --
-func (e executionPayloadHeader) BlockHash() []byte {
-	return e.p.BlockHash
-}
-
-// Transactions --
-func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
-}
-
-// ExcessBlobs --
-func (executionPayloadHeader) ExcessBlobs() (uint64, error) {
-	return 0, ErrUnsupportedGetter
+func (e executionPayload) GetBlockHash() []byte {
+	return e.p.GetBlockHash()
 }
 
 // PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
-	txs, err := payload.Transactions()
-	if err != nil {
-		return nil, err
+func PayloadToHeader(data interfaces.ExecutionData) (interfaces.WrappedExecutionPayloadHeader, error) {
+	switch payload := data.(type) {
+	case *enginev1.ExecutionPayload:
+		txs := payload.GetTransactions()
+		txRoot, err := ssz.TransactionsRoot(txs)
+		if err != nil {
+			return nil, err
+		}
+		return WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.GetParentHash()),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.GetFeeRecipient()),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.GetStateRoot()),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.GetReceiptsRoot()),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.GetLogsBloom()),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.GetPrevRandao()),
+			BlockNumber:      payload.GetBlockNumber(),
+			GasLimit:         payload.GetGasLimit(),
+			GasUsed:          payload.GetGasUsed(),
+			Timestamp:        payload.GetTimestamp(),
+			ExtraData:        bytesutil.SafeCopyBytes(payload.GetExtraData()),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.GetBaseFeePerGas()),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.GetBlockHash()),
+			TransactionsRoot: txRoot[:],
+		})
+
+	case *enginev1.ExecutionPayload4844:
+		txs := payload.GetTransactions()
+		txRoot, err := ssz.TransactionsRoot(txs)
+		if err != nil {
+			return nil, err
+		}
+		return WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader4844{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.GetParentHash()),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.GetFeeRecipient()),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.GetStateRoot()),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.GetReceiptsRoot()),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.GetLogsBloom()),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.GetPrevRandao()),
+			BlockNumber:      payload.GetBlockNumber(),
+			GasLimit:         payload.GetGasLimit(),
+			GasUsed:          payload.GetGasUsed(),
+			Timestamp:        payload.GetTimestamp(),
+			ExtraData:        bytesutil.SafeCopyBytes(payload.GetExtraData()),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.GetBaseFeePerGas()),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.GetBlockHash()),
+			ExcessBlobs:      payload.GetExcessBlobs(),
+			TransactionsRoot: txRoot[:],
+		})
+
+	case *enginev1.ExecutionPayloadHeader:
+	case *enginev1.ExecutionPayloadHeader4844:
+		return WrappedExecutionPayloadHeader(payload)
 	}
-	txRoot, err := ssz.TransactionsRoot(txs)
-	if err != nil {
-		return nil, err
-	}
-	return &enginev1.ExecutionPayloadHeader{
-		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
-		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient()),
-		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot()),
-		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot()),
-		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom()),
-		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao()),
-		BlockNumber:      payload.BlockNumber(),
-		GasLimit:         payload.GasLimit(),
-		GasUsed:          payload.GasUsed(),
-		Timestamp:        payload.Timestamp(),
-		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData()),
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
-		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
-		TransactionsRoot: txRoot[:],
-	}, nil
+
+	return nil, errors.New("unknown execution payload")
 }
 
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
-	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetParentHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.FeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
+	if !bytes.Equal(data.GetFeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetStateRoot(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.LogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {
+	if !bytes.Equal(data.GetLogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.PrevRandao(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetPrevRandao(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.BaseFeePerGas(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetBaseFeePerGas(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.BlockHash(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.GetBlockHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
-	txs, err := data.Transactions()
+	if len(data.GetExtraData()) != 0 {
+		return false, nil
+	}
+	if data.GetBlockNumber() != 0 {
+		return false, nil
+	}
+	if data.GetGasLimit() != 0 {
+		return false, nil
+	}
+	if data.GetGasUsed() != 0 {
+		return false, nil
+	}
+	if data.GetTimestamp() != 0 {
+		return false, nil
+	}
+
+	payload, err := WrappedExecutionPayload(data)
+	if err != nil {
+		return false, err
+	}
+
+	txs, err := payload.GetTransactions()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
@@ -340,20 +290,6 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 			return false, nil
 		}
 	}
-	if len(data.ExtraData()) != 0 {
-		return false, nil
-	}
-	if data.BlockNumber() != 0 {
-		return false, nil
-	}
-	if data.GasLimit() != 0 {
-		return false, nil
-	}
-	if data.GasUsed() != 0 {
-		return false, nil
-	}
-	if data.Timestamp() != 0 {
-		return false, nil
-	}
+
 	return true, nil
 }

@@ -83,7 +83,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
-	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
+	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionPayloadHeader) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.

@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // SignedBeaconBlock is an interface describing the method set of
@@ -75,29 +76,7 @@ type ExecutionData interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
-	IsNil() bool
-	Proto() proto.Message
-	ParentHash() []byte
-	FeeRecipient() []byte
-	StateRoot() []byte
-	ReceiptsRoot() []byte
-	LogsBloom() []byte
-	PrevRandao() []byte
-	BlockNumber() uint64
-	GasLimit() uint64
-	GasUsed() uint64
-	Timestamp() uint64
-	ExtraData() []byte
-	BaseFeePerGas() []byte
-	BlockHash() []byte
-	Transactions() ([][]byte, error)
-	ExcessBlobs() (uint64, error)
-}
-
-type ExecutionPayloadHeader interface {
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
+	ProtoReflect() protoreflect.Message
 	GetParentHash() []byte
 	GetFeeRecipient() []byte
 	GetStateRoot() []byte
@@ -111,5 +90,45 @@ type ExecutionPayloadHeader interface {
 	GetExtraData() []byte
 	GetBaseFeePerGas() []byte
 	GetBlockHash() []byte
-	GetTransactionsRoot() []byte
+}
+
+type ExecutionPayloadHeader interface {
+	ExecutionData
+	GetTransactionsRoot() []byte // Only on header, not payload
+}
+
+type WrappedExecutionPayloadHeader interface {
+	IsNil() bool
+	Proto() proto.Message
+	ExecutionPayloadHeader
+	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
+}
+
+// Can be holding either the full ExecutionPayload or an ExecutionPayloadHeader
+// and either the legacy format or the 4844 format including ExcessBlobs.
+type WrappedExecutionData interface {
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	IsNil() bool
+	Proto() proto.Message
+	ProtoReflect() protoreflect.Message
+	GetParentHash() []byte
+	GetFeeRecipient() []byte
+	GetStateRoot() []byte
+	GetReceiptsRoot() []byte
+	GetLogsBloom() []byte
+	GetPrevRandao() []byte
+	GetBlockNumber() uint64
+	GetGasLimit() uint64
+	GetGasUsed() uint64
+	GetTimestamp() uint64
+	GetExtraData() []byte
+	GetBaseFeePerGas() []byte
+	GetBlockHash() []byte
+
+	// Optional, can error
+	GetTransactions() ([][]byte, error) // Only on payload, not header
+	GetTransactionsRoot() ([]byte, error) // Only on header, not payload
+	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
 }

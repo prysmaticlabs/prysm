@@ -96,7 +96,11 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	defer cancel()
 	result := &pb.PayloadStatus{}
 
-	proto := payload.Proto()
+	executionPayload, err := blocks.WrappedExecutionPayload(payload)
+	if err != nil {
+		return nil, errors.New("execution data must be an execution payload")
+	}
+	proto := executionPayload.Proto()
 	payloadOld, okOld := proto.(*pb.ExecutionPayload)
 	payloadNew, okNew := proto.(*pb.ExecutionPayload4844)
 
@@ -414,7 +418,11 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
-	header, err := blindedBlock.Block().Body().Execution()
+	executionPayload, err := blindedBlock.Block().Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	header, err := blocks.PayloadToHeader(executionPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -424,12 +432,12 @@ func (s *Service) ReconstructFullBellatrixBlock(
 
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
-	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(header.GetBlockHash(), params.BeaconConfig().ZeroHash[:]) {
 		payload := buildEmptyExecutionPayload()
 		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	}
 
-	executionBlockHash := common.BytesToHash(header.BlockHash())
+	executionBlockHash := common.BytesToHash(header.GetBlockHash())
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
@@ -467,7 +475,11 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if !b.Block().IsBlinded() {
 			return nil, errors.New("can only reconstruct block from blinded block format")
 		}
-		header, err := b.Block().Body().Execution()
+		executionPayload, err := b.Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		header, err := blocks.PayloadToHeader(executionPayload)
 		if err != nil {
 			return nil, err
 		}
@@ -476,10 +488,10 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		}
 		// Determine if the block is pre-merge or post-merge. Depending on the result,
 		// we will ask the execution engine for the full payload.
-		if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
+		if bytes.Equal(header.GetBlockHash(), params.BeaconConfig().ZeroHash[:]) {
 			zeroExecPayloads = append(zeroExecPayloads, i)
 		} else {
-			executionBlockHash := common.BytesToHash(header.BlockHash())
+			executionBlockHash := common.BytesToHash(header.GetBlockHash())
 			validExecPayloads = append(validExecPayloads, i)
 			executionHashes = append(executionHashes, executionBlockHash)
 		}
@@ -496,7 +508,11 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if b == nil {
 			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
 		}
-		header, err := blindedBlocks[realIdx].Block().Body().Execution()
+		executionPayload, err := blindedBlocks[realIdx].Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		header, err := blocks.PayloadToHeader(executionPayload)
 		if err != nil {
 			return nil, err
 		}
@@ -525,15 +541,15 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 }
 
 func fullPayloadFromExecutionBlock(
-	header interfaces.ExecutionData, block *pb.ExecutionBlock,
+	header interfaces.WrappedExecutionPayloadHeader, block *pb.ExecutionBlock,
 ) (*pb.ExecutionPayload, error) {
 	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
-	if !bytes.Equal(header.BlockHash(), block.Hash[:]) {
+	if !bytes.Equal(header.GetBlockHash(), block.Hash[:]) {
 		return nil, fmt.Errorf(
 			"block hash field in execution header %#x does not match execution block hash %#x",
-			header.BlockHash(),
+			header.GetBlockHash(),
 			block.Hash,
 		)
 	}
@@ -545,19 +561,21 @@ func fullPayloadFromExecutionBlock(
 		}
 		txs[i] = txBin
 	}
+
+	// TODO(EIP-4844): The type of payload changes here
 	return &pb.ExecutionPayload{
-		ParentHash:    header.ParentHash(),
-		FeeRecipient:  header.FeeRecipient(),
-		StateRoot:     header.StateRoot(),
-		ReceiptsRoot:  header.ReceiptsRoot(),
-		LogsBloom:     header.LogsBloom(),
-		PrevRandao:    header.PrevRandao(),
-		BlockNumber:   header.BlockNumber(),
-		GasLimit:      header.GasLimit(),
-		GasUsed:       header.GasUsed(),
-		Timestamp:     header.Timestamp(),
-		ExtraData:     header.ExtraData(),
-		BaseFeePerGas: header.BaseFeePerGas(),
+		ParentHash:    header.GetParentHash(),
+		FeeRecipient:  header.GetFeeRecipient(),
+		StateRoot:     header.GetStateRoot(),
+		ReceiptsRoot:  header.GetReceiptsRoot(),
+		LogsBloom:     header.GetLogsBloom(),
+		PrevRandao:    header.GetPrevRandao(),
+		BlockNumber:   header.GetBlockNumber(),
+		GasLimit:      header.GetGasLimit(),
+		GasUsed:       header.GetGasUsed(),
+		Timestamp:     header.GetTimestamp(),
+		ExtraData:     header.GetExtraData(),
+		BaseFeePerGas: header.GetBaseFeePerGas(),
 		BlockHash:     block.Hash[:],
 		Transactions:  txs,
 	}, nil

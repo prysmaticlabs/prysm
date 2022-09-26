@@ -6,6 +6,7 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -198,7 +199,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 					Deposits:               b.block.body.deposits,
 					VoluntaryExits:         b.block.body.voluntaryExits,
 					SyncAggregate:          b.block.body.syncAggregate,
-					ExecutionPayloadHeader: header,
+					ExecutionPayloadHeader: header.Proto().(*enginev1.ExecutionPayloadHeader),
 				},
 			},
 			Signature: b.signature[:],
@@ -681,13 +682,11 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, errNotSupported("Execution", b.version)
-	case version.Bellatrix:
+	case version.Bellatrix, version.EIP4844:
 		if b.isBlinded {
 			return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
 		}
 		return WrappedExecutionPayload(b.executionPayload)
-	case version.EIP4844:
-		return WrappedExecutionPayload4844(b.executionPayload4844)
 	default:
 		return nil, errIncorrectBlockVersion
 	}

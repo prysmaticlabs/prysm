@@ -61,7 +61,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
 	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
-		HeadBlockHash:      headPayload.BlockHash(),
+		HeadBlockHash:      headPayload.GetBlockHash(),
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
@@ -80,7 +80,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
-				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.GetBlockHash())),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
@@ -156,7 +156,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
-			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
+			"blockHash": fmt.Sprintf("%#x", headPayload.GetBlockHash()),
 			"slot":      headBlk.Slot(),
 		}).Error("Received nil payload ID on VALID engine response")
 	}
@@ -177,7 +177,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not get execution payload")
 	}
-	return bytesutil.ToBytes32(payload.BlockHash()), nil
+	return bytesutil.ToBytes32(payload.GetBlockHash()), nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
@@ -216,7 +216,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             blk.Block().Slot(),
-			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
+			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.GetBlockHash())),
 		}).Info("Called new payload with optimistic block")
 		return false, nil
 	case execution.ErrInvalidPayloadStatus:

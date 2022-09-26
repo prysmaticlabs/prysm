@@ -138,7 +138,7 @@ func (vs *Server) getExecutionPayload4844(ctx context.Context, slot types.Slot, 
 			if err != nil {
 				return nil, enginev1.PayloadIDBytes{}, err
 			}
-			finalizedBlockHash = finalizedPayload.BlockHash()
+			finalizedBlockHash = finalizedPayload.GetBlockHash()
 		}
 	}
 	f := &enginev1.ForkchoiceState{
@@ -268,7 +268,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 			if err != nil {
 				return nil, enginev1.PayloadIDBytes{}, err
 			}
-			finalizedBlockHash = finalizedPayload.BlockHash()
+			finalizedBlockHash = finalizedPayload.GetBlockHash()
 		}
 	}
 	f := &enginev1.ForkchoiceState{

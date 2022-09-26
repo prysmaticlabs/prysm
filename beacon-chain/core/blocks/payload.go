@@ -37,13 +37,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	wrappedHeader, err := blocks.ExtractExecutionDataFromHeader(h)
-	if err != nil {
-		return false, err
-	}
-
-	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)
+	isEmpty, err := blocks.IsEmptyExecutionData(h)
 	if err != nil {
 		return false, err
 	}
@@ -96,13 +90,8 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header interfaces.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	wrappedHeader, err := blocks.ExtractExecutionDataFromHeader(header)
-	if err != nil {
-		return false, err
-	}
-
-	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)
+func IsExecutionEnabledUsingHeader(header interfaces.ExecutionData, body interfaces.BeaconBlockBody) (bool, error) {
+	isEmpty, err := blocks.IsEmptyExecutionData(header)
 	if err != nil {
 		return false, err
 	}
@@ -142,7 +131,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(payload.ParentHash(), header.GetBlockHash()) {
+	if !bytes.Equal(payload.GetParentHash(), header.GetBlockHash()) {
 		return ErrInvalidPayloadBlockHash
 	}
 	return nil
@@ -162,14 +151,14 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 		return err
 	}
 
-	if !bytes.Equal(payload.PrevRandao(), random) {
+	if !bytes.Equal(payload.GetPrevRandao(), random) {
 		return ErrInvalidPayloadPrevRandao
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return err
 	}
-	if payload.Timestamp() != uint64(t.Unix()) {
+	if payload.GetTimestamp() != uint64(t.Unix()) {
 		return ErrInvalidPayloadTimeStamp
 	}
 	return nil
@@ -218,11 +207,7 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 	if err != nil {
 		return nil, err
 	}
-	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(header)
-	if err != nil {
-		return nil, err
-	}
-	if err := st.SetLatestExecutionPayloadHeader(wrappedHeader); err != nil {
+	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
 		return nil, err
 	}
 	return st, nil
@@ -243,7 +228,7 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interf
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.ParentHash(), h.GetBlockHash()) {
+	if !bytes.Equal(header.GetParentHash(), h.GetBlockHash()) {
 		return ErrInvalidPayloadBlockHash
 	}
 	return nil
@@ -256,7 +241,7 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.PrevRandao(), random) {
+	if !bytes.Equal(header.GetPrevRandao(), random) {
 		return ErrInvalidPayloadPrevRandao
 	}
 
@@ -265,14 +250,14 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 	if err != nil {
 		return err
 	}
-	if header.Timestamp() != uint64(t.Unix()) {
+	if header.GetTimestamp() != uint64(t.Unix()) {
 		return ErrInvalidPayloadTimeStamp
 	}
 	return nil
 }
 
 // ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
+func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionPayloadHeader) (state.BeaconState, error) {
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}
@@ -295,5 +280,5 @@ func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 	if err != nil {
 		return payloadHash, err
 	}
-	return bytesutil.ToBytes32(payload.BlockHash()), nil
+	return bytesutil.ToBytes32(payload.GetBlockHash()), nil
 }

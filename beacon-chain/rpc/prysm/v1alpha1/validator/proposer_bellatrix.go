@@ -123,7 +123,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.GetBlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +145,8 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
-	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	if !bytes.Equal(bid.Message.Header.ParentHash, h.GetBlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.GetBlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
@@ -235,7 +235,11 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
-	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+	executionPayload, err := consensusblocks.WrappedExecutionPayload(h)
+	if err != nil {
+		return nil, err
+	}
+	header, ok := executionPayload.Proto().(*enginev1.ExecutionPayloadHeader)
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}
@@ -311,9 +315,9 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
-		"gasUsed":      h.GasUsed,
+		"blockHash":    fmt.Sprintf("%#x", h.GetBlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.GetFeeRecipient()),
+		"gasUsed":      h.GetGasUsed(),
 		"slot":         b.Block().Slot(),
 		"txs":          len(payload.Transactions),
 	}).Info("Retrieved full payload from builder")
