@@ -2,33 +2,7 @@ package types
 
 import (
 	"github.com/pkg/errors"
-	fastssz "github.com/prysmaticlabs/fastssz"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-type ExecutionPayloadHeader interface {
-	GetParentHash() []byte
-	GetFeeRecipient() []byte
-	GetStateRoot() []byte
-	GetReceiptsRoot() []byte
-	GetLogsBloom() []byte
-	GetPrevRandao() []byte
-	GetBlockNumber() uint64
-	GetGasLimit() uint64
-	GetGasUsed() uint64
-	GetTimestamp() uint64
-	GetExtraData() []byte
-	GetBaseFeePerGas() []byte
-	GetBlockHash() []byte
-	GetTransactionsRoot() []byte
-	HashTreeRoot() ([32]byte, error)
-	MarshalSSZ() ([]byte, error)
-	MarshalSSZTo(dst []byte) ([]byte, error)
-	SizeSSZ() int
-	UnmarshalSSZ(buf []byte) error
-	HashTreeRootWith(hh *fastssz.Hasher) error
-	ProtoReflect() protoreflect.Message
-}
 
 // FieldIndex represents the relevant field position in the
 // state struct for a field.

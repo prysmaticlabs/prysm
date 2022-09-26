@@ -21,10 +21,10 @@ type executionPayload struct {
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (executionPayload, error) {
+func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
-		return w, ErrNilObjectWrapped
+		return nil, ErrNilObjectWrapped
 	}
 	return w, nil
 }
@@ -152,8 +152,8 @@ type executionPayloadHeader struct {
 }
 
 // WrappedExecutionPayloadHeader is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeader(header *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeader{p: header}
+func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeader{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -166,7 +166,7 @@ func (e executionPayloadHeader) IsNil() bool {
 }
 
 // MarshalSSZ --
-func (e executionPayloadHeader)  MarshalSSZ() ([]byte, error) {
+func (e executionPayloadHeader) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
 }
 
@@ -335,11 +335,11 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
-	        return false, err
+		return false, err
 	default:
-	        if len(txs) != 0 {
-	                return false, nil
-	        }
+		if len(txs) != 0 {
+						return false, nil
+		}
 	}
 	if len(data.ExtraData()) != 0 {
 		return false, nil

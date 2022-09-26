@@ -1,12 +1,14 @@
 package interfaces
 
 import (
+	fastssz "github.com/prysmaticlabs/fastssz"
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // SignedBeaconBlock is an interface describing the method set of
@@ -92,4 +94,31 @@ type ExecutionData interface {
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
 	ExcessBlobs() (uint64, error)
+}
+
+type ExecutionPayloadHeader interface {
+	// ssz.Marshaler
+	// ssz.Unmarshaler
+	// ssz.HashRoot
+	GetParentHash() []byte
+	GetFeeRecipient() []byte
+	GetStateRoot() []byte
+	GetReceiptsRoot() []byte
+	GetLogsBloom() []byte
+	GetPrevRandao() []byte
+	GetBlockNumber() uint64
+	GetGasLimit() uint64
+	GetGasUsed() uint64
+	GetTimestamp() uint64
+	GetExtraData() []byte
+	GetBaseFeePerGas() []byte
+	GetBlockHash() []byte
+	GetTransactionsRoot() []byte
+	HashTreeRoot() ([32]byte, error)
+	MarshalSSZ() ([]byte, error)
+	MarshalSSZTo(dst []byte) ([]byte, error)
+	SizeSSZ() int
+	UnmarshalSSZ(buf []byte) error
+	HashTreeRootWith(hh *fastssz.Hasher) error
+	ProtoReflect() protoreflect.Message
 }

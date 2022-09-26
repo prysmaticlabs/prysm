@@ -219,10 +219,6 @@ func (BeaconBlockBody) BlobKzgs() ([][]byte, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Execution4844() (interfaces.ExecutionData4844, error) {
-	panic("implement me")
-}
-
 var _ interfaces.SignedBeaconBlock = &SignedBeaconBlock{}
 var _ interfaces.BeaconBlock = &BeaconBlock{}
 var _ interfaces.BeaconBlockBody = &BeaconBlockBody{}

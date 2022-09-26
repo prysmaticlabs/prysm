@@ -645,12 +645,7 @@ func tDStringToUint256(td string) (*uint256.Int, error) {
 	return i, nil
 }
 
-// func buildEmptyExecutionPayload4844() *pb.ExecutionPayload4844 {}
-
 func buildEmptyExecutionPayload() *pb.ExecutionPayload {
-	// TODO EIP-4844: Does this have to change?
-	// Should we build an empty execution payload which includes ExcessBlobs?
-
 	return &pb.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),

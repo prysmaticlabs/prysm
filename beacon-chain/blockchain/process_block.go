@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -279,11 +278,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return nil
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, nativetypes.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionPayloadHeader, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
-	var preStateHeader nativetypes.ExecutionPayloadHeader
+	var preStateHeader interfaces.ExecutionPayloadHeader
 	var err error
 	preStateVersion := st.Version()
 	switch preStateVersion {
@@ -341,7 +340,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	type versionAndHeader struct {
 		version int
-		header  nativetypes.ExecutionPayloadHeader
+		header  interfaces.ExecutionPayloadHeader
 	}
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
@@ -627,7 +626,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader nativetypes.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader interfaces.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
 	// Skip validation if block is older than Bellatrix.
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return nil

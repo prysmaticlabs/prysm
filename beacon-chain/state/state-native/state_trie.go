@@ -318,8 +318,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
 
-	// latestExecutionPayloadHeader, ok := st.LatestExecutionPayloadHeader.(*enginev1.ExecutionPayloadHeader)
-
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
 		version:                      version.Bellatrix,

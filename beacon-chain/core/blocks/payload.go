@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -109,7 +108,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header nativetypes.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabledUsingHeader(header interfaces.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	var wrappedHeader interfaces.ExecutionData
 	var err error
 

@@ -552,7 +552,6 @@ func initBlockBodyFromProtoEip4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*Beacon
 		deposits:             pb.Deposits,
 		voluntaryExits:       pb.VoluntaryExits,
 		syncAggregate:        pb.SyncAggregate,
-		// executionPayload:  pb.ExecutionPayload,
 		executionPayload4844: pb.ExecutionPayload,
 		blobKzgs:             pb.BlobKzgs,
 	}

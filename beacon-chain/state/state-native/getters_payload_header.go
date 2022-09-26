@@ -1,14 +1,14 @@
 package state_native
 
 import (
-	types "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (types.ExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionPayloadHeader, error) {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
@@ -25,7 +25,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (types.ExecutionPayloadHead
 
 // latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderVal() types.ExecutionPayloadHeader {
+func (b *BeaconState) latestExecutionPayloadHeaderVal() interfaces.ExecutionPayloadHeader {
 
 	switch payloadHeader := b.latestExecutionPayloadHeader.(type) {
 	case *enginev1.ExecutionPayloadHeader:
