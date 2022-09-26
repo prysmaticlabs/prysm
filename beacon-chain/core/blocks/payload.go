@@ -42,9 +42,6 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if wrappedHeader.IsNil() {
-		return false, errors.New("Unknown execution payload header type")
-	}
 
 	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
@@ -103,9 +100,6 @@ func IsExecutionEnabledUsingHeader(header interfaces.ExecutionPayloadHeader, bod
 	wrappedHeader, err := blocks.ExtractExecutionDataFromHeader(header)
 	if err != nil {
 		return false, err
-	}
-	if wrappedHeader.IsNil() {
-		return false, errors.New("Unknown execution payload header type")
 	}
 
 	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)

@@ -656,9 +656,6 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return err
 	}
-	if wrappedHeader.IsNil() {
-		return errors.New("Unknown execution payload header type")
-	}
 
 	empty, err := consensusblocks.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
