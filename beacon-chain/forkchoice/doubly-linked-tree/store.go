@@ -261,6 +261,9 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return 0
+	}
 	return f.store.highestReceivedNode.slot
 }
 
@@ -268,6 +271,9 @@ func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return [32]byte{}
+	}
 	return f.store.highestReceivedNode.root
 }
 
