@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
@@ -158,17 +157,22 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
+		log.Warnf("In order to receive transaction fees from proposing blocks, " +
+			"you must provide flag --" + flags.SuggestedFeeRecipient.Name + " with a valid ethereum address when starting your beacon node. " +
+			"Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
 		return nil
 	}
 
 	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
-		return fmt.Errorf("%s is not a valid fee recipient address", ha)
+		log.Warnf("%s is not a valid fee recipient address, setting suggested-fee-recipient failed", ha)
+		return nil
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		return errors.Wrapf(err, "could not decode fee recipient %s", ha)
+		log.WithError(err).Error(fmt.Sprintf("Could not decode fee recipient %s, setting suggested-fee-recipient failed", ha))
+		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
 	if !mixedcaseAddress.ValidChecksum() {
@@ -178,6 +182,8 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
+	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
+		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
 }
 

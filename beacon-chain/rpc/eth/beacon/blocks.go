@@ -23,6 +23,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -99,7 +100,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockHeader")
+		return nil, err
 	}
 	v1alpha1Header, err := blk.Header()
 	if err != nil {
@@ -342,6 +343,19 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
 	}
+
+	if block.IsBlinded() {
+		b, err := block.PbBlindedBellatrixBlock()
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
+		}
+		bb, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.Block)
+		if err != nil {
+			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not migrate block: %v", err)
+		}
+		return &emptypb.Empty{}, bs.submitBlindedBellatrixBlock(ctx, bb, b.Signature)
+	}
+
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
@@ -357,7 +371,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlock")
+		return nil, err
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -380,7 +394,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockSSZ")
+		return nil, err
 	}
 	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 	if err != nil {
@@ -402,7 +416,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockV2")
+		return nil, err
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -527,7 +541,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetBlockSSZV2")
+		return nil, err
 	}
 
 	_, err = blk.PbPhase0Block()
@@ -875,24 +889,22 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 }
 
 func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
-	v1alpha1SignedBlk, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
+	b, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
 		Message:   blindedBellatrixBlk,
 		Signature: sig,
 	})
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
-	wrappedBellatrixSignedBlk, err := blocks.NewSignedBeaconBlock(v1alpha1SignedBlk)
+	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
+			BlindedBellatrix: b,
+		},
+	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
+		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
 	}
-
-	root, err := blindedBellatrixBlk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
-	}
-
-	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk)
+	return nil
 }
 
 func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {

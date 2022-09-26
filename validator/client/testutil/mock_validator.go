@@ -247,6 +247,11 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
+// HasProposerSettings for mocking
+func (*FakeValidator) HasProposerSettings() bool {
+	return true
+}
+
 // PushProposerSettings for mocking
 func (fv *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	if fv.ProposerSettingsErr != nil {

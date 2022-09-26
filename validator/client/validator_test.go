@@ -1807,26 +1807,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 		},
 		{
-			name: " Skip if no config",
-			validatorSetter: func(t *testing.T) *validator {
-
-				v := validator{
-					validatorClient:              client,
-					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-					useWeb:                       false,
-					interopKeysConfig: &local.InteropKeymanagerConfig{
-						NumValidatorKeys: 1,
-						Offset:           1,
-					},
-				}
-				err := v.WaitForKeymanagerInitialization(ctx)
-				require.NoError(t, err)
-				return &v
-			},
-		},
-		{
 			name: " proposer config not nil but fee recipient empty",
 			validatorSetter: func(t *testing.T) *validator {
 
@@ -1907,26 +1887,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
-				return &v
-			},
-		},
-		{
-			name: "Before Bellatrix returns nil",
-			validatorSetter: func(t *testing.T) *validator {
-				v := validator{
-					validatorClient:              client,
-					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-					useWeb:                       false,
-					interopKeysConfig: &local.InteropKeymanagerConfig{
-						NumValidatorKeys: 1,
-						Offset:           1,
-					},
-				}
-				err := v.WaitForKeymanagerInitialization(ctx)
-				require.NoError(t, err)
-				params.BeaconConfig().BellatrixForkEpoch = 123456789
 				return &v
 			},
 		},
