@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
@@ -1933,7 +1933,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New()},
+			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
 				Genesis: ti,
 			},

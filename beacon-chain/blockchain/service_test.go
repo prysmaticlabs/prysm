@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
@@ -409,25 +408,6 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	}
 }
 
-func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	s := &Service{
-		cfg: &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
-	}
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, s.insertBlockToForkchoiceStore(ctx, wsb.Block(), r, beaconState))
-
-	assert.Equal(t, false, s.hasBlock(ctx, [32]byte{}), "Should not have block")
-	assert.Equal(t, true, s.hasBlock(ctx, r), "Should have block")
-}
-
 func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -499,27 +479,6 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	}
 }
 
-func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(b)
-	s := &Service{
-		cfg: &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
-	}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
-	r, err := blk.Block.HashTreeRoot()
-	require.NoError(b, err)
-	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
-	require.NoError(b, err)
-	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
-	require.NoError(b, err)
-	require.NoError(b, s.insertBlockToForkchoiceStore(ctx, wsb.Block(), r, beaconState))
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		require.Equal(b, true, s.cfg.ForkChoiceStore.HasNode(r), "Block is not in fork choice store")
-	}
-}
 func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)

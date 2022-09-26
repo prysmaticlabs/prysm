@@ -8,7 +8,7 @@ import (
 
 	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -129,7 +129,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
+				WithForkChoiceStore(doublylinkedtree.New()),
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -168,7 +168,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -245,7 +245,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
+				WithForkChoiceStore(doublylinkedtree.New()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
 			}
