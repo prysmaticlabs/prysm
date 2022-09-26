@@ -285,7 +285,6 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 	if err != nil {
 		return nil, err
 	}
-
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient()),
@@ -338,7 +337,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		return false, err
 	default:
 		if len(txs) != 0 {
-						return false, nil
+			return false, nil
 		}
 	}
 	if len(data.ExtraData()) != 0 {

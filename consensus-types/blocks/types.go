@@ -52,7 +52,6 @@ type BeaconBlockBody struct {
 	executionPayload           *engine.ExecutionPayload
 	executionPayloadHeader     *engine.ExecutionPayloadHeader
 	executionPayload4844       *engine.ExecutionPayload4844
-	executionPayloadHeader4844 *engine.ExecutionPayloadHeader4844
 	blobKzgs                   [][]byte
 }
 
