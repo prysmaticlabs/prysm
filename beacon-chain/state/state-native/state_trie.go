@@ -411,7 +411,7 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
+	fieldCount := params.BeaconConfig().BeaconState4844FieldCount
 	b := &BeaconState{
 		version:                          version.EIP4844,
 		genesisTime:                      st.GenesisTime,
@@ -492,6 +492,8 @@ func (b *BeaconState) Copy() state.BeaconState {
 		fieldCount = params.BeaconConfig().BeaconStateAltairFieldCount
 	case version.Bellatrix:
 		fieldCount = params.BeaconConfig().BeaconStateBellatrixFieldCount
+	case version.EIP4844:
+		fieldCount = params.BeaconConfig().BeaconState4844FieldCount
 	}
 
 	dst := &BeaconState{
@@ -633,6 +635,8 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
 	case version.Bellatrix:
 		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	case version.EIP4844:
+		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconState4844FieldCount)
 	}
 
 	return nil

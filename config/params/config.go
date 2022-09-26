@@ -132,6 +132,7 @@ type BeaconChainConfig struct {
 	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in beacon state.
 	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
 	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Bellatrix.
+	BeaconState4844FieldCount      int           // BeaconState4844FieldCount defines how many fields are in beacon state post upgrade to 4844.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
