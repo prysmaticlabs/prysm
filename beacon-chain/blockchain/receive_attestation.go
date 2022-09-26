@@ -135,12 +135,6 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
 // It requires no external inputs.
 func (s *Service) UpdateHead(ctx context.Context) error {
-	// Continue when there's no fork choice attestation, there's nothing to process and update head.
-	// This covers the condition when the node is still initial syncing to the head of the chain.
-	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-		return nil
-	}
-
 	// Only one process can process attestations and update head at a time.
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
