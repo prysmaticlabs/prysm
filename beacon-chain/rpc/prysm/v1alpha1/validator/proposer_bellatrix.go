@@ -235,11 +235,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
-	executionPayload, err := consensusblocks.WrappedExecutionPayload(h)
-	if err != nil {
-		return nil, err
-	}
-	header, ok := executionPayload.Proto().(*enginev1.ExecutionPayloadHeader)
+	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}

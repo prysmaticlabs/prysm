@@ -304,13 +304,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		}
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
-
-	executionPayload, err := consensusblocks.WrappedExecutionPayload(payload)
-	if err != nil {
-		return err
-	}
-
-	txs, err := executionPayload.GetTransactions()
+	txs, err := payload.GetTransactions()
 	if err != nil {
 		return err
 	}
@@ -358,14 +352,10 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	executionPayload, err := consensusblocks.WrappedExecutionPayload(payload)
-	if err != nil {
-		return err
-	}
-	if executionPayload.IsNil() {
+	if payload.IsNil() {
 		return errors.New("execution payload is nil")
 	}
-	if executionPayload.GetTimestamp() != uint64(t.Unix()) {
+	if payload.GetTimestamp() != uint64(t.Unix()) {
 		return errors.New("incorrect timestamp")
 	}
 

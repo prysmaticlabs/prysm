@@ -51,13 +51,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			return err
 		}
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.GetBlockHash())))
-
-		wrappedPayload, err := consensusBlocks.WrappedExecutionPayload(p)
-		if err != nil {
-			return err
-		}
-
-		txs, err := wrappedPayload.GetTransactions()
+		txs, err := p.GetTransactions()
 		switch {
 		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
 		case err != nil:

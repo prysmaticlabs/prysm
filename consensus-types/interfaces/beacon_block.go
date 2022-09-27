@@ -71,7 +71,8 @@ type BeaconBlockBody interface {
 }
 
 // ExecutionData represents execution layer information that is contained
-// within post-Bellatrix beacon block bodies.
+// within post-Bellatrix beacon block bodies. ONLY the fields that are on EVERY
+// type of ExecutionPayload are here. Header and EIP-4844 fields can't be here.
 type ExecutionData interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
@@ -92,28 +93,34 @@ type ExecutionData interface {
 	GetBlockHash() []byte
 }
 
+type Wrapped interface {
+	IsNil() bool
+	Proto() proto.Message
+	ExcessBlobs
+}
+
+type ExcessBlobs interface {
+	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
+}
+
 type ExecutionPayloadHeader interface {
 	ExecutionData
-	GetTransactionsRoot() []byte // Only on header, not payload
+	GetTransactionsRoot() []byte
 }
 
 type WrappedExecutionPayloadHeader interface {
-	IsNil() bool
-	Proto() proto.Message
+	Wrapped
 	ExecutionPayloadHeader
-	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
 }
 
 // Can be holding either the full ExecutionPayload or an ExecutionPayloadHeader
 // and either the legacy format or the 4844 format including ExcessBlobs.
 type WrappedExecutionData interface {
+	Wrapped
 	ExecutionData
-	IsNil() bool
-	Proto() proto.Message
 	ToHeader() (WrappedExecutionPayloadHeader, error)
 
-	// Optional, can error
-	GetTransactions() ([][]byte, error) // Only on payload, not header
-	GetTransactionsRoot() ([]byte, error) // Only on header, not payload
-	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
+	// Optional, can error!
+	GetTransactions() ([][]byte, error) // Only on payload, absent on header
+	GetTransactionsRoot() ([]byte, error) // Present as a field on header, computed on payload
 }

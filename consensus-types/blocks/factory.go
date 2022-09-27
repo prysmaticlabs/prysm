@@ -169,11 +169,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, errors.Wrap(err, "could not get execution payload header")
 	default:
 	}
-	wrappedPayload, err := WrappedExecutionPayload(payload)
-	if err != nil {
-		return nil, err
-	}
-	empty, err := IsEmptyExecutionData(wrappedPayload)
+	empty, err := IsEmptyExecutionData(payloadHeader)
 	if err != nil {
 		return nil, err
 	}
