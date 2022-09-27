@@ -34,6 +34,7 @@ func WrappedExecutionPayload(p interfaces.CommonExecutionPayloadData) (interface
 func (e executionPayload) GetExcessBlobs() (uint64, error) {
 	switch payload := e.p.(type) {
 	case *enginev1.ExecutionPayload4844:
+	case *enginev1.ExecutionPayloadHeader4844:
 		return payload.GetExcessBlobs(), nil
 	}
 	return 0, ErrUnsupportedGetter
