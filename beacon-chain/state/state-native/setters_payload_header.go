@@ -1,7 +1,6 @@
 package state_native
 
 import (
-	"github.com/pkg/errors"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	_ "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -19,6 +18,5 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.WrappedExec
 
 	b.latestExecutionPayloadHeader = val
 	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
-
-	return errors.New("value must be an execution payload header")
+	return nil
 }

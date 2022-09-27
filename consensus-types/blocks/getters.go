@@ -178,7 +178,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	header, err := PayloadToHeader(payload)
+	header, err := payload.ToHeader()
 	if err != nil {
 		return nil, err
 	}

@@ -69,7 +69,7 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.WrappedExecutionData) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -84,7 +84,7 @@ type EngineCaller interface {
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.WrappedExecutionData) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -96,26 +96,10 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	defer cancel()
 	result := &pb.PayloadStatus{}
 
-	executionPayload, err := blocks.WrappedExecutionPayload(payload)
+	proto := payload.Proto()
+	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, proto)
 	if err != nil {
-		return nil, errors.New("execution data must be an execution payload")
-	}
-	proto := executionPayload.Proto()
-	payloadOld, okOld := proto.(*pb.ExecutionPayload)
-	payloadNew, okNew := proto.(*pb.ExecutionPayload4844)
-
-	if (okNew) {
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadNew)
-		if err != nil {
-			return nil, handleRPCError(err)
-		}
-	} else if (okOld) {
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadOld)
-		if err != nil {
-			return nil, handleRPCError(err)
-		}
-	} else {
-		return nil, errors.New("execution data must be an execution payload")
+		return nil, handleRPCError(err)
 	}
 
 	switch result.Status {
@@ -422,7 +406,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	header, err := blocks.PayloadToHeader(executionPayload)
+	header, err := executionPayload.ToHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +463,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		header, err := blocks.PayloadToHeader(executionPayload)
+		header, err := executionPayload.ToHeader()
 		if err != nil {
 			return nil, err
 		}
@@ -512,7 +496,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		header, err := blocks.PayloadToHeader(executionPayload)
+		header, err := executionPayload.ToHeader()
 		if err != nil {
 			return nil, err
 		}

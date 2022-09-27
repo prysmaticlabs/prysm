@@ -196,14 +196,14 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //        block_hash=payload.block_hash,
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
-func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
+func ProcessPayload(st state.BeaconState, payload interfaces.WrappedExecutionData) (state.BeaconState, error) {
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-	header, err := blocks.PayloadToHeader(payload)
+	header, err := payload.ToHeader()
 	if err != nil {
 		return nil, err
 	}

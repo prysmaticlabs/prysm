@@ -171,12 +171,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 			"blockNumber": p.GetBlockNumber(),
 		})
 		if !blk.IsBlinded() {
-			payload, err := blocks.WrappedExecutionPayload(p)
-			if err != nil {
-				log.WithError(err).Error("Failed to get execution payload")
-				return
-			}
-			txs, err := payload.GetTransactions()
+			txs, err := p.GetTransactions()
 			if err != nil {
 				log.WithError(err).Error("Failed to get execution payload transactions")
 				return

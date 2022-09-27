@@ -110,6 +110,7 @@ type WrappedExecutionData interface {
 	ExecutionData
 	IsNil() bool
 	Proto() proto.Message
+	ToHeader() (WrappedExecutionPayloadHeader, error)
 
 	// Optional, can error
 	GetTransactions() ([][]byte, error) // Only on payload, not header

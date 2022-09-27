@@ -181,9 +181,13 @@ func (e executionPayload) GetBlockHash() []byte {
 	return e.p.GetBlockHash()
 }
 
-// PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader(data interfaces.ExecutionData) (interfaces.WrappedExecutionPayloadHeader, error) {
-	switch payload := data.(type) {
+func (e executionPayload) ToHeader() (interfaces.WrappedExecutionPayloadHeader, error) {
+	switch payload := e.p.(type) {
+	case executionPayloadHeader:
+		// Already wrapped
+		return payload, nil
+	case executionPayload:
+		return payload.ToHeader()
 	case *enginev1.ExecutionPayload:
 		txs := payload.GetTransactions()
 		txRoot, err := ssz.TransactionsRoot(txs)

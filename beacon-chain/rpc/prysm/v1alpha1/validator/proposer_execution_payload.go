@@ -289,6 +289,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, enginev1.PayloadIDBytes{}, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
+
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
 		return nil, enginev1.PayloadIDBytes{}, err
