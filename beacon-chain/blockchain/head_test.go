@@ -479,7 +479,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 
