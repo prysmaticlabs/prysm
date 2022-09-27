@@ -44,6 +44,9 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	if err != nil {
 		return err
 	}
+	if payload.IsNil() {
+		return errors.New("nil execution payload")
+	}
 	if err := validateTerminalBlockHash(b.Block().Slot(), payload); err != nil {
 		return errors.Wrap(err, "could not validate terminal block hash")
 	}
