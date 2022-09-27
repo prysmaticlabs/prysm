@@ -166,20 +166,25 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 			return
 		}
 		log = log.WithFields(logrus.Fields{
-			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
-			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash())),
-			"blockNumber": p.BlockNumber,
+			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.GetBlockHash())),
+			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.GetParentHash())),
+			"blockNumber": p.GetBlockNumber(),
 		})
 		if !blk.IsBlinded() {
-			txs, err := p.Transactions()
+			payload, err := blocks.WrappedExecutionPayload(p)
+			if err != nil {
+				log.WithError(err).Error("Failed to get execution payload")
+				return
+			}
+			txs, err := payload.GetTransactions()
 			if err != nil {
 				log.WithError(err).Error("Failed to get execution payload transactions")
 				return
 			}
 			log = log.WithField("txCount", len(txs))
 		}
-		if p.GasLimit() != 0 {
-			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
+		if p.GetGasLimit() != 0 {
+			log = log.WithField("gasUtilized", float64(p.GetGasUsed())/float64(p.GetGasLimit()))
 		}
 	}
 

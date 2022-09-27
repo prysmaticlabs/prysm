@@ -67,7 +67,7 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() (proto.Message, error)
 	BlobKzgs() ([][]byte, error)
-	Execution() (ExecutionData, error)
+	Execution() (WrappedExecutionData, error)
 }
 
 // ExecutionData represents execution layer information that is contained
@@ -107,25 +107,9 @@ type WrappedExecutionPayloadHeader interface {
 // Can be holding either the full ExecutionPayload or an ExecutionPayloadHeader
 // and either the legacy format or the 4844 format including ExcessBlobs.
 type WrappedExecutionData interface {
-	ssz.Marshaler
-	ssz.Unmarshaler
-	ssz.HashRoot
+	ExecutionData
 	IsNil() bool
 	Proto() proto.Message
-	ProtoReflect() protoreflect.Message
-	GetParentHash() []byte
-	GetFeeRecipient() []byte
-	GetStateRoot() []byte
-	GetReceiptsRoot() []byte
-	GetLogsBloom() []byte
-	GetPrevRandao() []byte
-	GetBlockNumber() uint64
-	GetGasLimit() uint64
-	GetGasUsed() uint64
-	GetTimestamp() uint64
-	GetExtraData() []byte
-	GetBaseFeePerGas() []byte
-	GetBlockHash() []byte
 
 	// Optional, can error
 	GetTransactions() ([][]byte, error) // Only on payload, not header

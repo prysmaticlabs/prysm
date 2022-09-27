@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -317,6 +318,10 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
+	initialPayloadHeader, err := blocks.WrappedExecutionPayloadHeader(st.LatestExecutionPayloadHeader)
+	if err != nil {
+		return nil, errors.New("failed to create new latest execution payload header")
+	}
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
@@ -345,7 +350,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		inactivityScores:             st.InactivityScores,
 		currentSyncCommittee:         st.CurrentSyncCommittee,
 		nextSyncCommittee:            st.NextSyncCommittee,
-		latestExecutionPayloadHeader: st.LatestExecutionPayloadHeader,
+		latestExecutionPayloadHeader: initialPayloadHeader,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -410,6 +415,10 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
+	initialPayloadHeader, err := blocks.WrappedExecutionPayloadHeader(st.LatestExecutionPayloadHeader)
+	if err != nil {
+		return nil, errors.New("failed to create new latest execution payload header")
+	}
 
 	fieldCount := params.BeaconConfig().BeaconState4844FieldCount
 	b := &BeaconState{
@@ -438,7 +447,7 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 		inactivityScores:                 st.InactivityScores,
 		currentSyncCommittee:             st.CurrentSyncCommittee,
 		nextSyncCommittee:                st.NextSyncCommittee,
-		latestExecutionPayloadHeader: 		st.LatestExecutionPayloadHeader,
+		latestExecutionPayloadHeader:     initialPayloadHeader,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),

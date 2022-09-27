@@ -106,7 +106,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 //        assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
 //        assert block.body.execution_payload.parent_hash == TERMINAL_BLOCK_HASH
 //        return
-func validateTerminalBlockHash(blkSlot types.Slot, payload interfaces.ExecutionData) error {
+func validateTerminalBlockHash(blkSlot types.Slot, payload interfaces.WrappedExecutionData) error {
 	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) == [32]byte{} {
 		return nil
 	}

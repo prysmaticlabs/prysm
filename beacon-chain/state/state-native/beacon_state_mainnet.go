@@ -45,7 +45,7 @@ type BeaconState struct {
 	inactivityScores             []uint64                         `ssz-gen:"true" ssz-max:"1099511627776"`
 	currentSyncCommittee         *ethpb.SyncCommittee             `ssz-gen:"true"`
 	nextSyncCommittee            *ethpb.SyncCommittee             `ssz-gen:"true"`
-	latestExecutionPayloadHeader interfaces.ExecutionPayloadHeader `ssz-gen:"true"`
+	latestExecutionPayloadHeader interfaces.WrappedExecutionPayloadHeader `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
 	dirtyFields           map[nativetypes.FieldIndex]bool

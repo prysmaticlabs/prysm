@@ -96,7 +96,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader.(*enginev1.ExecutionPayloadHeader),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader),
 		}
 	default:
 		return nil
@@ -192,7 +192,7 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().(*enginev1.ExecutionPayloadHeader),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().Proto().(*enginev1.ExecutionPayloadHeader),
 		}
 	case version.EIP4844:
 		return &ethpb.BeaconState4844{
@@ -220,7 +220,7 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().(*enginev1.ExecutionPayloadHeader4844),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().Proto().(*enginev1.ExecutionPayloadHeader4844),
 		}
 	default:
 		return nil

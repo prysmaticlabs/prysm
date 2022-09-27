@@ -678,15 +678,20 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 }
 
 // Execution returns the execution payload of the block body.
-func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+func (b *BeaconBlockBody) Execution() (interfaces.WrappedExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, errNotSupported("Execution", b.version)
-	case version.Bellatrix, version.EIP4844:
+	case version.Bellatrix:
 		if b.isBlinded {
-			return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
+			return WrappedExecutionPayload(b.executionPayloadHeader)
 		}
 		return WrappedExecutionPayload(b.executionPayload)
+	case version.EIP4844:
+		if b.isBlinded {
+			return WrappedExecutionPayload(b.executionPayloadHeader4844)
+		}
+		return WrappedExecutionPayload(b.executionPayload4844)
 	default:
 		return nil, errIncorrectBlockVersion
 	}

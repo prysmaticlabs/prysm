@@ -3,15 +3,13 @@ package state_native
 import (
 	"github.com/pkg/errors"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	_ "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // SetLatestExecutionPayloadHeader for the beacon state.
-func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionPayloadHeader) error {
+func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.WrappedExecutionPayloadHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -19,26 +17,8 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionPa
 		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
 
-	header, err := blocks.WrappedExecutionPayloadHeader(val)
-	if err != nil {
-		return errors.New("failed to wrap execution payload header")
-	}
-
-	proto := header.Proto()
-	headerOld, okOld := proto.(*enginev1.ExecutionPayloadHeader)
-	headerNew, okNew := proto.(*enginev1.ExecutionPayloadHeader4844)
-
-	if okNew {
-		b.latestExecutionPayloadHeader = headerNew
-		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
-		return nil
-	}
-
-	if okOld {
-		b.latestExecutionPayloadHeader = headerOld
-		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
-		return nil
-	}
+	b.latestExecutionPayloadHeader = val
+	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
 
 	return errors.New("value must be an execution payload header")
 }

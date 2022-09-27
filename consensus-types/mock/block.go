@@ -211,7 +211,7 @@ func (BeaconBlockBody) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+func (BeaconBlockBody) Execution() (interfaces.WrappedExecutionData, error) {
 	panic("implement me")
 }
 

@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -8,7 +9,7 @@ import (
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.WrappedExecutionPayloadHeader, error) {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
@@ -25,13 +26,20 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionPayloa
 
 // latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderVal() interfaces.ExecutionPayloadHeader {
-
-	switch payloadHeader := b.latestExecutionPayloadHeader.(type) {
+func (b *BeaconState) latestExecutionPayloadHeaderVal() interfaces.WrappedExecutionPayloadHeader {
+	switch payloadHeader := b.latestExecutionPayloadHeader.Proto().(type) {
 	case *enginev1.ExecutionPayloadHeader:
-		return ethpb.CopyExecutionPayloadHeader(payloadHeader)
+		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(ethpb.CopyExecutionPayloadHeader(payloadHeader))
+		if err != nil {
+			return nil
+		}
+		return copiedHeader
 	case *enginev1.ExecutionPayloadHeader4844:
-		return ethpb.CopyExecutionPayloadHeader4844(payloadHeader)
+		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(ethpb.CopyExecutionPayloadHeader4844(payloadHeader))
+		if err != nil {
+			return nil
+		}
+		return copiedHeader
 	default:
 		return nil // TODO: Should panic or return an error or something
 	}
