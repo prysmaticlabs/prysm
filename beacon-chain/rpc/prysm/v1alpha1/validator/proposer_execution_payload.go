@@ -38,7 +38,7 @@ var (
 	})
 )
 
-// TODO: Extract a function to share -- don't duplicate the entirety of getExecutionPayload
+// TODO(EIP-4844): Extract a function to share -- don't duplicate the entirety of getExecutionPayload
 func (vs *Server) getExecutionPayload4844(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte) (*enginev1.ExecutionPayload4844, enginev1.PayloadIDBytes, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient

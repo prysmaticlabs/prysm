@@ -43,7 +43,6 @@ func (e executionPayload) GetExcessBlobs() (uint64, error) {
 func (e executionPayload) GetTransactions() ([][]byte, error) {
 	switch payload := e.p.(type) {
 	case *enginev1.ExecutionPayload:
-		return payload.GetTransactions(), nil
 	case *enginev1.ExecutionPayload4844:
 		return payload.GetTransactions(), nil
 	}
@@ -54,6 +53,14 @@ func (e executionPayload) GetTransactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayload) GetTransactionsRoot() ([]byte, error) {
+	// The headers already have it
+	switch payload := e.p.(type) {
+	case *enginev1.ExecutionPayloadHeader:
+	case *enginev1.ExecutionPayloadHeader4844:
+		return payload.GetTransactionsRoot(), nil
+	}
+
+	// Otherwise, we need to compute it from the transactions
 	txs, err := e.GetTransactions()
 	if err != nil {
 		return nil, err

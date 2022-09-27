@@ -13,6 +13,7 @@ import (
 	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 )
 
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
@@ -45,7 +46,7 @@ type BeaconState struct {
 	inactivityScores             []uint64                         `ssz-gen:"true" ssz-max:"1099511627776"`
 	currentSyncCommittee         *ethpb.SyncCommittee             `ssz-gen:"true"`
 	nextSyncCommittee            *ethpb.SyncCommittee             `ssz-gen:"true"`
-	latestExecutionPayloadHeader *enginev1.ExecutionPayloadHeader `ssz-gen:"true"`
+	latestExecutionPayloadHeader interfaces.WrappedExecutionPayloadHeader `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
 	dirtyFields           map[nativetypes.FieldIndex]bool

@@ -27,15 +27,27 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.WrappedExecutio
 // latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) latestExecutionPayloadHeaderVal() interfaces.WrappedExecutionPayloadHeader {
+	if b.latestExecutionPayloadHeader == nil {
+		return nil
+	}
+
 	switch payloadHeader := b.latestExecutionPayloadHeader.Proto().(type) {
 	case *enginev1.ExecutionPayloadHeader:
-		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(ethpb.CopyExecutionPayloadHeader(payloadHeader))
+		copy := ethpb.CopyExecutionPayloadHeader(payloadHeader)
+		if copy == nil {
+			return nil
+		}
+		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(copy)
 		if err != nil {
 			return nil
 		}
 		return copiedHeader
 	case *enginev1.ExecutionPayloadHeader4844:
-		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(ethpb.CopyExecutionPayloadHeader4844(payloadHeader))
+		copy := ethpb.CopyExecutionPayloadHeader4844(payloadHeader)
+		if copy == nil {
+			return nil
+		}
+		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(copy)
 		if err != nil {
 			return nil
 		}
