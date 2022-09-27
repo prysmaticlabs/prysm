@@ -678,7 +678,7 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 }
 
 // Execution returns the execution payload of the block body.
-func (b *BeaconBlockBody) Execution() (interfaces.WrappedExecutionData, error) {
+func (b *BeaconBlockBody) Execution() (interfaces.WrappedExecutionPayload, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, errNotSupported("Execution", b.version)

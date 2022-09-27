@@ -18,11 +18,11 @@ import (
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
 type executionPayload struct {
-	p interfaces.ExecutionData
+	p interfaces.CommonExecutionPayloadData
 }
 
 // WrappedExecutionPayload is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayload(p interfaces.ExecutionData) (interfaces.WrappedExecutionData, error) {
+func WrappedExecutionPayload(p interfaces.CommonExecutionPayloadData) (interfaces.WrappedExecutionPayload, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -245,7 +245,7 @@ func (e executionPayload) ToHeader() (interfaces.WrappedExecutionPayloadHeader, 
 
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
-func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
+func IsEmptyExecutionData(data interfaces.CommonExecutionPayloadData) (bool, error) {
 	if !bytes.Equal(data.GetParentHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}

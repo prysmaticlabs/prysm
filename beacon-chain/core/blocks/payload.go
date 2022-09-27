@@ -90,7 +90,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header interfaces.ExecutionData, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabledUsingHeader(header interfaces.CommonExecutionPayloadData, body interfaces.BeaconBlockBody) (bool, error) {
 	isEmpty, err := blocks.IsEmptyExecutionData(header)
 	if err != nil {
 		return false, err
@@ -118,7 +118,7 @@ func IsPreEIP4844Version(v int) bool {
 //    # Verify consistency of the parent hash with respect to the previous execution payload header
 //    if is_merge_complete(state):
 //        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
-func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.ExecutionData) error {
+func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.CommonExecutionPayloadData) error {
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 //    assert payload.random == get_randao_mix(state, get_current_epoch(state))
 //    # Verify timestamp
 //    assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
-func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) error {
+func ValidatePayload(st state.BeaconState, payload interfaces.CommonExecutionPayloadData) error {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //        block_hash=payload.block_hash,
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
-func ProcessPayload(st state.BeaconState, payload interfaces.WrappedExecutionData) (state.BeaconState, error) {
+func ProcessPayload(st state.BeaconState, payload interfaces.WrappedExecutionPayload) (state.BeaconState, error) {
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
