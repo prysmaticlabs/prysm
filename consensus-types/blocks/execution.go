@@ -34,6 +34,7 @@ func WrappedExecutionPayload(p interfaces.CommonExecutionPayloadData) (interface
 func (e executionPayload) GetExcessBlobs() (uint64, error) {
 	switch payload := e.p.(type) {
 	case *enginev1.ExecutionPayload4844:
+		return payload.GetExcessBlobs(), nil
 	case *enginev1.ExecutionPayloadHeader4844:
 		return payload.GetExcessBlobs(), nil
 	}
@@ -44,6 +45,7 @@ func (e executionPayload) GetExcessBlobs() (uint64, error) {
 func (e executionPayload) GetTransactions() ([][]byte, error) {
 	switch payload := e.p.(type) {
 	case *enginev1.ExecutionPayload:
+		return payload.GetTransactions(), nil
 	case *enginev1.ExecutionPayload4844:
 		return payload.GetTransactions(), nil
 	}
@@ -57,6 +59,7 @@ func (e executionPayload) GetTransactionsRoot() ([]byte, error) {
 	// The headers already have it
 	switch payload := e.p.(type) {
 	case *enginev1.ExecutionPayloadHeader:
+		return payload.GetTransactionsRoot(), nil
 	case *enginev1.ExecutionPayloadHeader4844:
 		return payload.GetTransactionsRoot(), nil
 	}
@@ -211,7 +214,6 @@ func (e executionPayload) ToHeader() (interfaces.WrappedExecutionPayloadHeader, 
 			BlockHash:        bytesutil.SafeCopyBytes(payload.GetBlockHash()),
 			TransactionsRoot: txRoot[:],
 		})
-
 	case *enginev1.ExecutionPayload4844:
 		txs := payload.GetTransactions()
 		txRoot, err := ssz.TransactionsRoot(txs)
@@ -235,8 +237,8 @@ func (e executionPayload) ToHeader() (interfaces.WrappedExecutionPayloadHeader, 
 			ExcessBlobs:      payload.GetExcessBlobs(),
 			TransactionsRoot: txRoot[:],
 		})
-
 	case *enginev1.ExecutionPayloadHeader:
+		return WrappedExecutionPayloadHeader(payload)
 	case *enginev1.ExecutionPayloadHeader4844:
 		return WrappedExecutionPayloadHeader(payload)
 	}
