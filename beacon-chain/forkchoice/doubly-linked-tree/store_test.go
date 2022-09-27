@@ -131,7 +131,7 @@ func TestStore_Insert(t *testing.T) {
 	nodeByPayload := map[[32]byte]*Node{indexToHash(0): treeRootNode}
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
-	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc, highestReceivedNode: &Node{}}
 	payloadHash := [32]byte{'a'}
 	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1)
 	require.NoError(t, err)
@@ -338,21 +338,24 @@ func TestStore_HasParent(t *testing.T) {
 	require.Equal(t, false, f.HasParent(indexToHash(4)))
 }
 
-func TestForkChoice_HighestReceivedBlockSlot(t *testing.T) {
+func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store
 	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(100), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(100), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(100), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'A'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), s.highestReceivedNode.slot)
 	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	require.Equal(t, [32]byte{'B'}, f.HighestReceivedBlockRoot())
 }
 
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {

@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 )
 
-// CreateWalletWithKeymanager specified by configuration options.
+// WalletCreate creates wallet specified by configuration options.
 func (acm *AccountsCLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error) {
 	w := wallet.New(&wallet.Config{
 		WalletDir:      acm.walletDir,
