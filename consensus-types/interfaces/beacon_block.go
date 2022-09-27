@@ -93,7 +93,7 @@ type CommonExecutionPayloadData interface {
 	GetBlockHash() []byte
 }
 
-type Wrapped interface {
+type FieldsExecutionPayloadGetsDueToBeingWrapped interface {
 	IsNil() bool
 	Proto() proto.Message
 	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
@@ -102,8 +102,8 @@ type Wrapped interface {
 // Can be holding either the full ExecutionPayload or an ExecutionPayloadHeader
 // and either the legacy format or the 4844 format including ExcessBlobs.
 type WrappedExecutionPayload interface {
-	Wrapped
 	CommonExecutionPayloadData
+	FieldsExecutionPayloadGetsDueToBeingWrapped
 	ToHeader() (WrappedExecutionPayloadHeader, error)
 
 	// Optional, can error!
@@ -117,6 +117,6 @@ type ExecutionPayloadHeader interface {
 }
 
 type WrappedExecutionPayloadHeader interface {
-	Wrapped
 	ExecutionPayloadHeader
+	FieldsExecutionPayloadGetsDueToBeingWrapped
 }

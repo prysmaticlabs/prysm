@@ -277,7 +277,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	return nil
 }
 
-// TODO: Refactor this to not duplicate the entirety of ExecutionPayload's UnmarshalJSON
+// TODO(EIP-4844): Refactor this to not duplicate the entirety of ExecutionPayload's UnmarshalJSON
 func (e *ExecutionPayload4844) UnmarshalJSON(enc []byte) error {
 	dec := executionPayloadJSON{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
