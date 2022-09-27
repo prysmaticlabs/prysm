@@ -117,7 +117,11 @@ func (s *Service) Status() error {
 		return nil
 	}
 
-	return s.c.Status(ctx)
+	if err := s.c.Status(ctx); err != nil {
+		log.WithError(err).Error("Error calling status endpoint, are mev-boost or relayers down?")
+	}
+
+	return nil
 }
 
 // RegisterValidator registers a validator with the builder relay network.
