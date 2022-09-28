@@ -52,13 +52,14 @@ func startChainService(t testing.TB,
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	fc := doublylinkedtree.New()
 	opts := append([]blockchain.Option{},
 		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
-		blockchain.WithForkChoiceStore(doublylinkedtree.New()),
-		blockchain.WithStateGen(stategen.New(db)),
+		blockchain.WithForkChoiceStore(fc),
+		blockchain.WithStateGen(stategen.New(db, fc)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
