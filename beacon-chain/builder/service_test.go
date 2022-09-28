@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"testing"
+	"time"
 
 	buildertesting "github.com/prysmaticlabs/prysm/v3/api/client/builder/testing"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
@@ -36,4 +37,13 @@ func Test_RegisterValidator(t *testing.T) {
 	var feeRecipient [20]byte
 	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], FeeRecipient: feeRecipient[:]}}}))
 	assert.Equal(t, true, builder.RegisteredVals[pubkey])
+}
+
+func TestService_PollRelayerStatus_ContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s, err := NewService(ctx)
+	require.NoError(t, err)
+	go s.pollRelayerStatus(ctx)
+	<-time.After(100 * time.Millisecond)
+	cancel()
 }
