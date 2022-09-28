@@ -14,25 +14,27 @@ import (
 var errNilState = errors.New("nil state")
 
 // UnrealizedCheckpoints returns the justification and finalization checkpoints of the
-// given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+// given state as if it was progressed with empty slots until the next epoch. It
+// also returns the total active balance during the epoch.
+func UnrealizedCheckpoints(st state.BeaconState) (uint64, *ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
-		return nil, nil, errNilState
+		return 0, nil, nil, errNilState
 	}
 
 	if slots.ToEpoch(st.Slot()) <= params.BeaconConfig().GenesisEpoch+1 {
 		jc := st.CurrentJustifiedCheckpoint()
 		fc := st.FinalizedCheckpoint()
-		return jc, fc, nil
+		return 0, jc, fc, nil
 	}
 
 	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
 	if err != nil {
-		return nil, nil, err
+		return 0, nil, nil, err
 	}
 
 	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	return computeCheckpoints(st, justification)
+	jc, fc, err := computeCheckpoints(st, justification)
+	return activeBalance, jc, fc, err
 }
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during

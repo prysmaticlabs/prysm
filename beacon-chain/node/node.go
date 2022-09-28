@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/gateway"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node/registration"
@@ -131,9 +130,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureHistoricalSlasher(cliCtx); err != nil {
 		return nil, err
 	}
-	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
-		return nil, err
-	}
 	err := configureBuilderCircuitBreaker(cliCtx)
 	if err != nil {
 		return nil, err
@@ -184,12 +180,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
-	if features.Get().DisableForkchoiceDoublyLinkedTree {
-		beacon.forkChoicer = protoarray.New()
-	} else {
-		beacon.forkChoicer = doublylinkedtree.New()
-	}
-
+	beacon.forkChoicer = doublylinkedtree.New()
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err

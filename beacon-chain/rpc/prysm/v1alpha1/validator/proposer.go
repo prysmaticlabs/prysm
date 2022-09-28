@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -116,6 +117,42 @@ func (vs *Server) PrepareBeaconProposer(
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
+}
+
+// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
+	defer span.End()
+	if request == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "request was empty")
+	}
+
+	resp, err := vs.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: request.PublicKey})
+	if err != nil {
+		if strings.Contains(err.Error(), "Could not find validator index") {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving validator index")
+			return nil, err
+		}
+
+	}
+	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFoundFeeRecipient) {
+			return &ethpb.FeeRecipientByPubKeyResponse{
+				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+			}, nil
+		} else {
+			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+	}
+	return &ethpb.FeeRecipientByPubKeyResponse{
+		FeeRecipient: address.Bytes(),
+	}, nil
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {

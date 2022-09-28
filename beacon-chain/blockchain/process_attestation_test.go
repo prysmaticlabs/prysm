@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -234,36 +233,6 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	}
 }
 
-func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	fcs := protoarray.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-	genesisState, pks := util.DeterministicGenesisState(t, 64)
-	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
-	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
-	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
-	copied := genesisState.Copy()
-	copied, err = transition.ProcessSlots(ctx, copied, 1)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	ojc := &ethpb.Checkpoint{Epoch: 1, Root: tRoot[:]}
-	ofc := &ethpb.Checkpoint{Epoch: 1, Root: tRoot[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, service.OnAttestation(ctx, att[0]))
-}
-
 func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -459,37 +428,6 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
 	assert.NoError(t, service.verifyBeaconBlock(ctx, d), "Did not receive the wanted error")
-}
-
-func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	fcs := protoarray.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	b32 := util.NewBeaconBlock()
-	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
-	r32, err := b32.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
-	b33 := util.NewBeaconBlock()
-	b33.Block.Slot = 33
-	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
-	r33, err := b33.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
-	require.ErrorContains(t, "Root and finalized store are not consistent", err)
 }
 
 func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing.T) {

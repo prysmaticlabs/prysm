@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -43,7 +43,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.CurrentEpoch(st), "ActiveCurrentEpoch(%d)", st.Slot())
 	}
@@ -59,7 +59,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.PrevEpoch(st), "ActivePrevEpoch(%d)", st.Slot())
 	}
@@ -77,7 +77,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.NextEpoch(st), "NextEpoch(%d)", st.Slot())
 	}
@@ -179,7 +179,7 @@ func TestCanProcessEpoch_TrueOnEpochsLastSlot(t *testing.T) {
 
 	for _, tt := range tests {
 		b := &eth.BeaconState{Slot: tt.slot}
-		s, err := v1.InitializeFromProto(b)
+		s, err := state_native.InitializeFromProtoPhase0(b)
 		require.NoError(t, err)
 		assert.Equal(t, tt.canProcessEpoch, time.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
 	}

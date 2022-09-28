@@ -93,10 +93,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableNativeState = &cli.BoolFlag{
-		Name:  "disable-native-state",
-		Usage: "Disables representing the beacon state as a pure Go struct.",
-	}
 	disablePullTips = &cli.BoolFlag{
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
@@ -165,7 +161,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableNativeState,
 	disablePullTips,
 	disableVecHTR,
 	disableForkChoiceDoublyLinkedTree,

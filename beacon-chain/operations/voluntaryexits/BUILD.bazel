@@ -26,7 +26,7 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/state/v1:go_default_library",
+        "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

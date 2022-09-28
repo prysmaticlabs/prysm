@@ -112,7 +112,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost: 40,
