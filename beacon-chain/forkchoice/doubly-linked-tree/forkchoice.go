@@ -90,6 +90,13 @@ func (f *ForkChoice) Head(
 	return f.store.head(ctx)
 }
 
+func (f *ForkChoice) ProposerHead(
+	ctx context.Context,
+	justifiedStateBalances []uint64,
+) ([32]byte, error) {
+	return f.Head(ctx, justifiedStateBalances)
+}
+
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {

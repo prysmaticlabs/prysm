@@ -114,18 +114,21 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			log.Warn("Genesis time received, now available to process attestations")
 		}
 
-		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		ticker := time.NewTicker(time.Second)
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
-			case <-st.C():
-				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
-					log.WithError(err).Error("Could not process new slot")
-				}
-
-				if err := s.UpdateHead(s.ctx); err != nil {
-					log.WithError(err).Error("Could not process attestations and update head")
+			case ti := <-ticker.C:
+				switch {
+				case newSlotTime(ti):
+					if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+						log.WithError(err).Error("Could not process new slot")
+					}
+				case newSlotTime(ti), processAttsTime(ti):
+					if err := s.UpdateHead(s.ctx); err != nil {
+						log.WithError(err).Error("Could not process attestations and update head")
+					}
 				}
 			}
 		}
@@ -135,12 +138,6 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
 // It requires no external inputs.
 func (s *Service) UpdateHead(ctx context.Context) error {
-	// Continue when there's no fork choice attestation, there's nothing to process and update head.
-	// This covers the condition when the node is still initial syncing to the head of the chain.
-	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-		return nil
-	}
-
 	// Only one process can process attestations and update head at a time.
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
@@ -161,14 +158,25 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
+	newProposerHeadRoot, err := s.cfg.ForkChoiceStore.ProposerHead(ctx, balances)
+	if err != nil {
+		log.WithError(err).Error("Could not get proposer head")
+	}
+
 	s.headLock.RLock()
 	if s.headRoot() != newHeadRoot {
 		log.WithFields(logrus.Fields{
-			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+			"oldHeadRoot":         fmt.Sprintf("%#x", s.headRoot()),
+			"newHeadRoot":         fmt.Sprintf("%#x", newHeadRoot),
+			"newProposerHeadRoot": fmt.Sprintf("%#x", newProposerHeadRoot),
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
+
+	if newProposerHeadRoot != newHeadRoot {
+		return nil
+	}
+
 	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
 		return err
 	}
@@ -250,6 +258,18 @@ func (s *Service) processAttestations(ctx context.Context) {
 			}).WithError(err).Warn("Could not process attestation for fork choice")
 		}
 	}
+}
+
+// Returns true if time `t` at `ProcessAttsSecsInSlot` during the slot.
+func processAttsTime(t time.Time) bool {
+	s := params.BeaconConfig().SecondsPerSlot
+	return uint64(t.Second())%s == params.BeaconConfig().ProcessAttsSecsInSlot
+}
+
+// Returns true if time `t` at second 0  during the slot.
+func newSlotTime(t time.Time) bool {
+	s := params.BeaconConfig().SecondsPerSlot
+	return uint64(t.Second())%s == 0
 }
 
 // receiveAttestationNoPubsub is a function that defines the operations that are performed on

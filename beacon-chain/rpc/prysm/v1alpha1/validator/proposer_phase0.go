@@ -87,19 +87,17 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
-	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	parentRoot, err := vs.ForkChoicer.ProposerHead(ctx, []uint64{})
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve head root: %v", err)
 	}
-
-	// TODO: we must consider the edge case where the late block root didnt have 10% at Y but it has 10% now
 
 	head, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get head state %v", err)
 	}
 
-	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 	}
@@ -159,7 +157,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	}
 
 	return &blockData{
-		ParentRoot:        parentRoot,
+		ParentRoot:        parentRoot[:],
 		Graffiti:          graffiti,
 		ProposerIdx:       idx,
 		Eth1Data:          eth1Data,
