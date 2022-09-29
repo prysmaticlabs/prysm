@@ -52,7 +52,7 @@ func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (s
 }
 
 // BalancesByRoot --
-func (m *MockStateManager) BalancesByRoot(_ context.Context, blockRoot [32]byte) ([]uint64, error) {
+func (_ *MockStateManager) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
 	return []uint64{}, nil
 }
 
