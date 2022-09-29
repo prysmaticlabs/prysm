@@ -157,7 +157,7 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	start = time.Now()
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
-		log.WithError(err).Warn("Resolving fork due to new attestation")
+		log.WithError(err).Error("Could not compute head from new attestations")
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
