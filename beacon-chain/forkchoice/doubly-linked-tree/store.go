@@ -99,14 +99,23 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 
 	secondsIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 	earlyCall := secondsIntoSlot >= params.BeaconConfig().ProcessAttestationsThreshold
+	currentlyOrphaning := s.proposerHeadNode != s.headNode
 	noBlock := s.highestReceivedNode.slot+1 < currentSlot || (earlyCall && s.highestReceivedNode.slot < currentSlot)
 	earlyBlock := s.highestReceivedNode.secondsSinceSlotStart(s.genesisTime) <= params.BeaconConfig().OrphanLateBlockFirstThreshold && s.highestReceivedNode.slot == currentSlot
 	if noBlock || earlyBlock {
+		if currentlyOrphaning {
+			currentlyOrphaning = false
+			orphanBetMisses.Inc()
+		}
 		s.proposerHeadNode = bestDescendant
 	} else if s.committeeBalance > 0 {
 		liveChain := s.proposerHeadNode.balance*100/s.committeeBalance > liveFraction
 		votedFraction := s.highestReceivedNode.balance * 100 / s.committeeBalance
 		if !liveChain || votedFraction > params.BeaconConfig().OrphanLateBlockBalanceFraction {
+			if currentlyOrphaning {
+				currentlyOrphaning = false
+				orphanBetMisses.Inc()
+			}
 			s.proposerHeadNode = bestDescendant
 		}
 	}
@@ -116,11 +125,13 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		headChangesCount.Inc()
 		headSlotNumber.Set(float64(bestDescendant.slot))
 		if bestDescendant.parent != s.headNode {
+			if currentlyOrphaning {
+				orphanBetMisses.Inc()
+			}
 			s.proposerHeadNode = bestDescendant
 		}
 		s.headNode = bestDescendant
 	}
-
 	return bestDescendant.root, nil
 }
 
