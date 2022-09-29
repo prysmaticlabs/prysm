@@ -9,13 +9,15 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
+type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
+
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
 	store          *Store
 	votes          []Vote // tracks individual validator's last vote.
 	votesLock      sync.RWMutex
-	balances       []uint64                                          // tracks individual validator's last justified balances.
-	balancesByRoot func(context.Context, [32]byte) ([]uint64, error) // handler to obtain balances for the state with a given root
+	balances       []uint64         // tracks individual validator's last justified balances.
+	balancesByRoot BalancesByRooter // handler to obtain balances for the state with a given root
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
