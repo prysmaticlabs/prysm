@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/utils"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
@@ -12,7 +11,7 @@ import (
 )
 
 func accountsList(c *cli.Context) error {
-	w, km, err := utils.walletWithKeymanager(c)
+	w, km, err := walletWithKeymanager(c)
 	if err != nil {
 		return err
 	}
