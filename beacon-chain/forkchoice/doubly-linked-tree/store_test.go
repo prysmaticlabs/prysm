@@ -989,7 +989,7 @@ func TestStore_Orphan_LateBlock(t *testing.T) {
 		require.Equal(t, headRoot, f.store.proposerHeadNode.root)
 		require.Equal(t, expectedBalance, f.store.headNode.balance)
 	})
-	t.Run(" unlively chain, late block", func(tt *testing.T) {
+	t.Run("unlively chain, late block", func(tt *testing.T) {
 		f := setup(0, 0)
 		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
 		balances := make([]uint64, 300)
