@@ -141,11 +141,6 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
-// Withdrawals --
-func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, ErrUnsupportedGetter
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -269,11 +264,6 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedGetter
-}
-
-// Withdrawals --
-func (e executionPayloadHeader) Withdrawals() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -429,11 +419,6 @@ func (e executionPayloadCapella) BlockHash() []byte {
 // Transactions --
 func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
-}
-
-// Withdrawals --
-func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return e.p.Withdrawals, nil
 }
 
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure

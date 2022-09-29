@@ -6,6 +6,7 @@ import (
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -54,5 +55,32 @@ func (b *BeaconState) AppendWithdrawal(val *enginev1.Withdrawal) error {
 	b.withdrawalQueue = append(q, val)
 	b.markFieldAsDirty(nativetypes.WithdrawalQueue)
 	b.addDirtyIndices(nativetypes.WithdrawalQueue, []uint64{uint64(len(b.withdrawalQueue) - 1)})
+	return nil
+}
+
+// SetNextWithdrawalIndex sets the index that will be assigned to the next withdrawal.
+func (b *BeaconState) SetNextWithdrawalIndex(i uint64) error {
+	if b.version < version.Capella {
+		return errNotSupported("SetNextWithdrawalIndex", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	b.nextWithdrawalIndex = i
+	return nil
+}
+
+// SetNextPartialWithdrawalValidatorIndex sets the index of the validator which is
+// next in line for a partial withdrawal.
+func (b *BeaconState) SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error {
+	if b.version < version.Capella {
+		return errNotSupported("SetNextPartialWithdrawalValidatorIndex", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	b.nextPartialWithdrawalValidatorIndex = i
 	return nil
 }

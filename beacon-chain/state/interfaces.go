@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -84,6 +85,10 @@ type WriteOnlyBeaconState interface {
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
+	SetWithdrawalQueue(val []*enginev1.Withdrawal) error
+	AppendWithdrawal(val *enginev1.Withdrawal) error
+	SetNextWithdrawalIndex(i uint64) error
+	SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
