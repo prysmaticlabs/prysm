@@ -939,7 +939,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
-		durationTillDuty := (time.Until(startTime) + time.Second).Round(time.Second)
+		durationTillDuty := (time.Until(startTime) + time.Second).Truncate(time.Second) // Round up to next second.
 
 		if len(attesterKeys[i]) > 0 {
 			attestationLog := log.WithFields(logrus.Fields{
