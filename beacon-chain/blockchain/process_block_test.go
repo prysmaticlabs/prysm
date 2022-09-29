@@ -1157,7 +1157,11 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			ver, header, err := getStateVersionAndPayload(tt.st)
 			require.NoError(t, err)
 			require.Equal(t, tt.version, ver)
-			require.DeepEqual(t, tt.header, header)
+			if header != nil {
+				protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				require.DeepEqual(t, tt.header, protoHeader)
+			}
 		})
 	}
 }
@@ -1273,14 +1277,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 				require.NoError(t, err)
 				return h
 			}(),
-		},
-		{
-			name:         "state is Bellatrix, non empty payload, nil header",
-			stateVersion: 2,
-			payload: &enginev1.ExecutionPayload{
-				ParentHash: aHash[:],
-			},
-			errString: "attempted to wrap nil object",
 		},
 	}
 	for _, tt := range tests {
