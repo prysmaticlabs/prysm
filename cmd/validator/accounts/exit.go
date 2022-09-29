@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func accountsExit(c *cli.Context, r io.Reader) error {
+func AccountsExit(c *cli.Context, r io.Reader) error {
 	w, km, err := walletWithKeymanager(c)
 	if err != nil {
 		return err
