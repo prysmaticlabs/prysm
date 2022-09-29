@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
@@ -469,7 +470,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	headBlock := util.NewBeaconBlock()
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
+	stateGen := stategen.New(beaconDB, doublylinkedtree.New())
 
 	emptyState, err := util.NewBeaconState()
 	require.NoError(t, err)

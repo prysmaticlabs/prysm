@@ -182,6 +182,7 @@ go_test(
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/execution:go_default_library",
         "//beacon-chain/execution/testing:go_default_library",
+        "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/p2p:go_default_library",
