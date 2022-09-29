@@ -81,5 +81,5 @@ type Setter interface {
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
 	NewSlot(context.Context, types.Slot) error
-	SetBalancesByRoot(BalancesByRooter) ([]uint64, error)
+	SetBalancesByRooter(BalancesByRooter) ([]uint64, error)
 }
