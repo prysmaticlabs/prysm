@@ -666,6 +666,6 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 }
 
 // SetBalancesByRoot sets the balanceByRoot handler in forkchoice
-func (f *ForkChoice) SetBalancesByRoot(handler func(context.Context, [32]byte) ([]uint64, error)) {
+func (f *ForkChoice) SetBalancesByRoot(handler forkchoice.BalancesByRooter) {
 	f.balancesByRoot = handler
 }

@@ -74,7 +74,7 @@ func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint6
 	epoch := time.CurrentEpoch(st)
 
 	balances := make([]uint64, st.NumValidators())
-	var balanceAccumulator = func(idx int, val state.ReadOnlyValidator) error {
+	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
 		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
 			balances[idx] = val.EffectiveBalance()
 		} else {
@@ -82,7 +82,7 @@ func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint6
 		}
 		return nil
 	}
-	if err := st.ReadFromEveryValidator(balanceAccumulator); err != nil {
+	if err := st.ReadFromEveryValidator(balanceAccretor); err != nil {
 		return nil, err
 	}
 	return balances, nil
