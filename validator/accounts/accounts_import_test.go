@@ -8,16 +8,15 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
 )
 
 func TestImportAccounts_NoPassword(t *testing.T) {
@@ -34,13 +33,14 @@ func TestImportAccounts_NoPassword(t *testing.T) {
 		walletPasswordFile:  passwordFilePath,
 		accountPasswordFile: passwordFilePath,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Local),
+		WithWalletPassword(password),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
@@ -141,13 +141,14 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		privateKeyFile:     privKeyFileName,
 	})
 	walletPass := "Passwordz0320$"
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: walletPass,
-		},
-	})
+	opts := []Option{
+		WithWalletDir(walletDir),
+		WithKeymanagerType(keymanager.Local),
+		WithWalletPassword(walletPass),
+	}
+	acc, err := NewCLIManager(opts...)
+	require.NoError(t, err)
+	w, err := acc.WalletCreate(cliCtx.Context)
 	require.NoError(t, err)
 	km, err := local.NewKeymanager(
 		cliCtx.Context,

@@ -10,22 +10,21 @@ package service
 
 import (
 	"context"
-	"io"
-	"net/http"
-
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v2"
+	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"io"
+	"net/http"
 )
 
 // Suppress "imported and not used" errors
@@ -35,7 +34,7 @@ var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
-var _ = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(0)
+var _ = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(0)
 var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
@@ -692,7 +691,7 @@ func local_request_BeaconChain_GetBlockHeader_0(ctx context.Context, marshaler r
 }
 
 func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockContainerV2
+	var protoReq eth.SignedBeaconBlockContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -709,7 +708,7 @@ func request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Ma
 }
 
 func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockContainerV2
+	var protoReq eth.SignedBeaconBlockContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

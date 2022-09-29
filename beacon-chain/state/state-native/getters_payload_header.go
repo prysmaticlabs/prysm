@@ -1,11 +1,11 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
@@ -22,9 +22,9 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 	defer b.lock.RUnlock()
 
 	if b.version == version.Bellatrix {
-		return wrapper.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeaderVal())
+		return blocks.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeaderVal())
 	}
-	return wrapper.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
 }
 
 // latestExecutionPayloadHeaderVal of the beacon state.

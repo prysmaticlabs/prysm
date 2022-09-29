@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // Helper function to simulate the block being on time or delayed for proposer
@@ -430,7 +430,7 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		f := setup(0, 0)
 		slot := types.Slot(1)
 		currentSlot := types.Slot(1)
-		driftGenesisTime(f, currentSlot, uint64(params.BeaconConfig().SecondsPerSlot-1))
+		driftGenesisTime(f, currentSlot, params.BeaconConfig().SecondsPerSlot-1)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)
 		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -480,7 +480,7 @@ func TestForkChoice_computeProposerBoostScore(t *testing.T) {
 }
 
 // Regression test (11053)
-func TestForkChoice_missingPreviousProposerBoost(t *testing.T) {
+func TestForkChoice_missingProposerBoostRoots(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 	balances := make([]uint64, 64) // 64 active validators.
@@ -493,6 +493,18 @@ func TestForkChoice_missingPreviousProposerBoost(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, st, root))
 
 	f.store.previousProposerBoostRoot = [32]byte{'p'}
-	_, err = f.Head(ctx, balances)
+	headRoot, err := f.Head(ctx, balances)
 	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	require.Equal(t, [32]byte{'r'}, f.store.proposerBoostRoot)
+
+	f.store.proposerBoostRoot = [32]byte{'p'}
+	driftGenesisTime(f, 3, 0)
+	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'a'}, [32]byte{'r'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	headRoot, err = f.Head(ctx, balances)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	require.Equal(t, [32]byte{'p'}, f.store.proposerBoostRoot)
 }

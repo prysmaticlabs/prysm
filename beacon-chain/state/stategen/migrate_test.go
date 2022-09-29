@@ -4,20 +4,21 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	service := New(beaconDB)
+	service := New(beaconDB, doublylinkedtree.New())
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
@@ -36,7 +37,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	stateSlot := types.Slot(1)
@@ -66,7 +67,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, pks := util.DeterministicGenesisState(t, 32)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -116,7 +117,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	service := New(beaconDB)
+	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	stateSlot := types.Slot(1)

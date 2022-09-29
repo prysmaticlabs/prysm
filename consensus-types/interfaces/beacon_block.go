@@ -2,9 +2,10 @@ package interfaces
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -12,10 +13,10 @@ import (
 // a signed beacon block.
 type SignedBeaconBlock interface {
 	Block() BeaconBlock
-	Signature() []byte
+	Signature() [field_params.BLSSignatureLength]byte
 	IsNil() bool
-	Copy() SignedBeaconBlock
-	Proto() proto.Message
+	Copy() (SignedBeaconBlock, error)
+	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
@@ -25,6 +26,7 @@ type SignedBeaconBlock interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
+	IsBlinded() bool
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -33,26 +35,26 @@ type SignedBeaconBlock interface {
 type BeaconBlock interface {
 	Slot() types.Slot
 	ProposerIndex() types.ValidatorIndex
-	ParentRoot() []byte
-	StateRoot() []byte
+	ParentRoot() [field_params.RootLength]byte
+	StateRoot() [field_params.RootLength]byte
 	Body() BeaconBlockBody
 	IsNil() bool
 	IsBlinded() bool
-	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	HashTreeRoot() ([field_params.RootLength]byte, error)
+	Proto() (proto.Message, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	AsSignRequestObject() validatorpb.SignRequestObject
+	AsSignRequestObject() (validatorpb.SignRequestObject, error)
 }
 
 // BeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
 type BeaconBlockBody interface {
-	RandaoReveal() []byte
+	RandaoReveal() [field_params.BLSSignatureLength]byte
 	Eth1Data() *ethpb.Eth1Data
-	Graffiti() []byte
+	Graffiti() [field_params.RootLength]byte
 	ProposerSlashings() []*ethpb.ProposerSlashing
 	AttesterSlashings() []*ethpb.AttesterSlashing
 	Attestations() []*ethpb.Attestation
@@ -60,8 +62,8 @@ type BeaconBlockBody interface {
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
 	SyncAggregate() (*ethpb.SyncAggregate, error)
 	IsNil() bool
-	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	HashTreeRoot() ([field_params.RootLength]byte, error)
+	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
 }
 

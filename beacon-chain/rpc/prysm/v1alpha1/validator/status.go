@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,13 +30,14 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
-//  DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
-//  PENDING - validator is in Ethereum's activation queue.
-//  ACTIVE - validator is active.
-//  EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
-//  EXITED - validator is no longer validating.
-//  SLASHING - validator has been kicked out due to meeting a slashing condition.
-//  UNKNOWN_STATUS - validator does not have a known status in the network.
+//
+//	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
+//	PENDING - validator is in Ethereum's activation queue.
+//	ACTIVE - validator is active.
+//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITED - validator is no longer validating.
+//	SLASHING - validator has been kicked out due to meeting a slashing condition.
+//	UNKNOWN_STATUS - validator does not have a known status in the network.
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *ethpb.ValidatorStatusRequest,
@@ -300,7 +301,7 @@ func (vs *Server) validatorStatus(
 	// Unknown status means the validator has not been put into the state yet.
 	case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
-		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}
@@ -361,15 +362,6 @@ func (vs *Server) validatorStatus(
 	default:
 		return resp, idx
 	}
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	// replay to first slot of following epoch
-	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

@@ -12,7 +12,7 @@ go_library(
         "headers.go",
         ":site_data",  # keep
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/web",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/web",
     visibility = [
         "//api/gateway:__pkg__",
         "//validator:__subpackages__",

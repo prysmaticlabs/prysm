@@ -5,12 +5,12 @@ import (
 	"context"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -183,11 +183,6 @@ func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Sl
 // LogAttestationsSubmitted for mocking.
 func (_ *FakeValidator) LogAttestationsSubmitted() {}
 
-// LogNextDutyTimeLeft for mocking.
-func (_ *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
-	return nil
-}
-
 // UpdateDomainDataCaches for mocking.
 func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
 
@@ -250,6 +245,11 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 
 // SubmitSignedContributionAndProof for mocking
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+}
+
+// HasProposerSettings for mocking
+func (*FakeValidator) HasProposerSettings() bool {
+	return true
 }
 
 // PushProposerSettings for mocking

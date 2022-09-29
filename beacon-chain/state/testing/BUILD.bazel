@@ -10,7 +10,7 @@ go_library(
         "getters_validator.go",
         "setters_participation.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/testing",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/testing",
     visibility = ["//beacon-chain/state:__subpackages__"],
     deps = [
         "//beacon-chain/state:go_default_library",

@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"k8s.io/client-go/tools/cache"
 )
 

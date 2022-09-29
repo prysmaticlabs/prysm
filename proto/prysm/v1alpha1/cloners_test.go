@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestCopyETH1Data(t *testing.T) {
@@ -709,16 +709,6 @@ func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellat
 		VoluntaryExits:         genSignedVoluntaryExits(12),
 		SyncAggregate:          genSyncAggregate(),
 		ExecutionPayloadHeader: genPayloadHeader(),
-	}
-}
-
-func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBellatrix{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(32),
-		StateRoot:     bytes(32),
-		Body:          genBlindedBeaconBlockBodyBellatrix(),
 	}
 }
 

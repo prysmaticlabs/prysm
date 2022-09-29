@@ -3,11 +3,11 @@ package state_native
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestWithdrawalQueue(t *testing.T) {
@@ -30,7 +30,7 @@ func TestWithdrawalQueue(t *testing.T) {
 		assert.DeepEqual(t, ws, q)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.BellatrixBlind}
+		s := BeaconState{version: version.Bellatrix}
 		_, err := s.WithdrawalQueue()
 		assert.ErrorContains(t, "WithdrawalQueue is not supported", err)
 	})
@@ -44,7 +44,7 @@ func TestNextWithdrawalIndex(t *testing.T) {
 		assert.Equal(t, uint64(123), i)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.BellatrixBlind}
+		s := BeaconState{version: version.Bellatrix}
 		_, err := s.NextWithdrawalIndex()
 		assert.ErrorContains(t, "NextWithdrawalIndex is not supported", err)
 	})
@@ -58,7 +58,7 @@ func TestNextPartialWithdrawalValidatorIndex(t *testing.T) {
 		assert.Equal(t, types.ValidatorIndex(123), i)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.BellatrixBlind}
+		s := BeaconState{version: version.Bellatrix}
 		_, err := s.NextPartialWithdrawalValidatorIndex()
 		assert.ErrorContains(t, "NextPartialWithdrawalValidatorIndex is not supported", err)
 	})

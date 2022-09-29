@@ -5,14 +5,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestInitializeFromProto_Phase0(t *testing.T) {
@@ -205,7 +205,7 @@ func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	}
 }
 
-func TestInitializeFromProtoUnsafe_Altair(t *testing.T) {
+func TestInitializeFromProtoUnsafe_Altair(_ *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateAltair
@@ -228,7 +228,7 @@ func TestInitializeFromProtoUnsafe_Altair(t *testing.T) {
 	_ = initTests
 }
 
-func TestInitializeFromProtoUnsafe_Bellatrix(t *testing.T) {
+func TestInitializeFromProtoUnsafe_Bellatrix(_ *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateBellatrix

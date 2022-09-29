@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/math"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 )
 
@@ -142,7 +142,12 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 				}
 			}
 
-			valActivated := v.checkAndLogValidatorStatus(statuses)
+			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
+			if err != nil {
+				return errors.Wrap(err, "could not get active validator count")
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {
@@ -189,7 +194,12 @@ func (v *validator) handleWithoutRemoteKeyManager(ctx context.Context, accountsC
 				}
 			}
 
-			valActivated := v.checkAndLogValidatorStatus(statuses)
+			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
+			if err != nil {
+				return errors.Wrap(err, "could not get active validator count")
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {

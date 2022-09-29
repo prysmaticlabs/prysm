@@ -30,7 +30,7 @@ proto_library(
 go_proto_library(
     name = "go_proto",
     compilers = ["@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/eth/service",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -74,7 +74,7 @@ go_proto_library(
         "allow_delete_body_gateway_compiler",
     ],
     embed = [":go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/eth/service",
     protos = [":proto"],
     visibility = ["//proto:__subpackages__"],
     deps = [
@@ -92,6 +92,6 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     embed = [":go_grpc_gateway_library"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/eth/service",
     visibility = ["//visibility:public"],
 )

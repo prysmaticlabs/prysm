@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -172,12 +171,12 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.Si
 		if err != nil && !errors.Is(err, db.ErrNotFoundState) {
 			return nil, nil, errors.Wrap(err, fmt.Sprintf("error querying database for state w/ block root = %#x", root))
 		}
-		parent, err := c.h.Block(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+		parent, err := c.h.Block(ctx, b.ParentRoot())
 		if err != nil {
 			msg := fmt.Sprintf("db error when retrieving parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(err, msg)
 		}
-		if wrapper.BeaconBlockIsNil(parent) != nil {
+		if blocks.BeaconBlockIsNil(parent) != nil {
 			msg := fmt.Sprintf("unable to retrieve parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(db.ErrNotFound, msg)
 		}

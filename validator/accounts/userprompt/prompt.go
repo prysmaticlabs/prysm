@@ -8,10 +8,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
 

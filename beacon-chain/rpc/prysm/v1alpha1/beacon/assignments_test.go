@@ -7,19 +7,20 @@ import (
 	"strconv"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -60,7 +61,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	wanted := &ethpb.ValidatorAssignments{
@@ -122,7 +123,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
@@ -198,7 +199,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
@@ -265,7 +266,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
@@ -336,7 +337,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 			},
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db),
+		StateGen:           stategen.New(db, doublylinkedtree.New()),
 	}
 
 	addDefaultReplayerBuilder(bs, db)

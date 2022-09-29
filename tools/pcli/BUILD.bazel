@@ -7,12 +7,12 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/pcli",
+    importpath = "github.com/prysmaticlabs/prysm/v3/tools/pcli",
     visibility = ["//visibility:private"],
     deps = [
         "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
+        "//beacon-chain/state/state-native:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//encoding/ssz/equality:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/logging/logrus-prefixed-formatter:go_default_library",

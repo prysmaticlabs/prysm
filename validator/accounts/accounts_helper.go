@@ -10,17 +10,17 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
 	"github.com/urfave/cli/v2"
 )
 
-// selectAccounts Ask user to select accounts via an interactive userprompt.
+// selectAccounts Ask user to select accounts via an interactive user prompt.
 func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLength]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {

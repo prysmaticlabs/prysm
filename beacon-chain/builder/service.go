@@ -2,21 +2,23 @@ package builder
 
 import (
 	"context"
-	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/client/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// ErrNoBuilder is used when builder endpoint is not configured.
+var ErrNoBuilder = errors.New("builder endpoint not configured")
 
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
@@ -28,15 +30,15 @@ type BlockBuilder interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	builderEndpoint network.Endpoint
-	beaconDB        db.HeadAccessDatabase
-	headFetcher     blockchain.HeadFetcher
+	builderClient builder.BuilderClient
+	beaconDB      db.HeadAccessDatabase
+	headFetcher   blockchain.HeadFetcher
 }
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
 	cfg    *config
-	c      *builder.Client
+	c      builder.BuilderClient
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -54,19 +56,17 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 	}
-	if s.cfg.builderEndpoint.Url != "" {
-		c, err := builder.NewClient(s.cfg.builderEndpoint.Url)
-		if err != nil {
-			return nil, err
-		}
-		s.c = c
+	if s.cfg.builderClient != nil && !reflect.ValueOf(s.cfg.builderClient).IsNil() {
+		s.c = s.cfg.builderClient
 
 		// Is the builder up?
 		if err := s.c.Status(ctx); err != nil {
-			return nil, fmt.Errorf("could not connect to builder: %v", err)
+			log.WithError(err).Error("Failed to check builder status")
+		} else {
+			log.WithField("endpoint", s.c.NodeURL()).Info("Builder has been configured")
+			log.Warn("Outsourcing block construction to external builders adds non-trivial delay to block propagation time.  " +
+				"Builder-constructed blocks or fallback blocks may get orphaned. Use at your own risk!")
 		}
-
-		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
 	}
 	return s, nil
 }
@@ -153,7 +153,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
 }
 
-// Configured returns true if the user has input a builder URL.
+// Configured returns true if the user has configured a builder client.
 func (s *Service) Configured() bool {
-	return s.cfg.builderEndpoint.Url != ""
+	return s.c != nil && !reflect.ValueOf(s.c).IsNil()
 }

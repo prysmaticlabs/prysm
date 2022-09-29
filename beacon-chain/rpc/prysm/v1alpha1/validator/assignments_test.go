@@ -7,27 +7,27 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 // pubKey is a helper to generate a well-formed public key.
@@ -103,7 +103,7 @@ func TestGetDuties_OK(t *testing.T) {
 
 func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -113,13 +113,13 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	bs, err := util.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not setup genesis bs")
 	h := &ethpb.BeaconBlockHeader{
 		StateRoot:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 		ParentRoot: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		BodyRoot:   bytesutil.PadTo([]byte{'c'}, fieldparams.RootLength),
 	}
 	require.NoError(t, bs.SetLatestBlockHeader(h))
-	require.NoError(t, err, "Could not setup genesis bs")
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -147,7 +147,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -205,7 +205,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	cfg.BellatrixForkEpoch = types.Epoch(1)
 	params.OverrideBeaconConfig(cfg)
@@ -253,7 +253,7 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -311,7 +311,7 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 
 func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig().Copy()
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = types.Epoch(0)
 	params.OverrideBeaconConfig(cfg)
 
@@ -345,7 +345,7 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		DepositFetcher:         depositCache,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -353,14 +353,12 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 
 	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
 	req := &ethpb.DutiesRequest{
-		PublicKeys: [][]byte{deposits[0].Data.PublicKey, unknownPubkey},
+		PublicKeys: [][]byte{unknownPubkey},
 	}
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err)
-	assert.Equal(t, true, res.CurrentEpochDuties[0].IsSyncCommittee)
-	assert.Equal(t, true, res.NextEpochDuties[0].IsSyncCommittee)
-	assert.Equal(t, false, res.CurrentEpochDuties[1].IsSyncCommittee)
-	assert.Equal(t, false, res.NextEpochDuties[1].IsSyncCommittee)
+	assert.Equal(t, false, res.CurrentEpochDuties[0].IsSyncCommittee)
+	assert.Equal(t, false, res.NextEpochDuties[0].IsSyncCommittee)
 }
 
 func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {

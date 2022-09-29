@@ -3,11 +3,11 @@ package state_native
 import (
 	"fmt"
 
-	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // SetWithdrawalQueue for the beacon state. Updates the entire list

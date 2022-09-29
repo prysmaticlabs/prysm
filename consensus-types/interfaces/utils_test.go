@@ -3,13 +3,13 @@ package interfaces_test
 import (
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -81,7 +81,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	wb, err := wrapper.WrappedBeaconBlock(blk)
+	wb, err := blocks.NewBeaconBlock(blk)
 	require.NoError(t, err)
 	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(wb)
 	require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	},
 		Signature: blk.Signature,
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	bh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)

@@ -3,18 +3,19 @@ package beacon
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -164,6 +165,10 @@ func (bs *Server) SubmitAttesterSlashing(ctx context.Context, req *ethpbv1.Attes
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, req.Attestation_1.Data.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
+	}
 
 	alphaSlashing := migration.V1AttSlashingToV1Alpha1(req)
 	err = blocks.VerifyAttesterSlashing(ctx, headState, alphaSlashing)
@@ -215,6 +220,10 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, req.SignedHeader_1.Message.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 	}
 
 	alphaSlashing := migration.V1ProposerSlashingToV1Alpha1(req)
@@ -268,6 +277,14 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	s, err := slots.EpochStart(req.Message.Epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get epoch from message: %v", err)
+	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, s)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
 	}
 
 	validator, err := headState.ValidatorAtIndexReadOnly(req.Message.ValidatorIndex)

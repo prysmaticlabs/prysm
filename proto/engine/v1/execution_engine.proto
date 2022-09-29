@@ -18,7 +18,7 @@ package ethereum.engine.v1;
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Engine.V1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/engine/v1;enginev1";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/engine/v1;enginev1";
 option java_multiple_files = true;
 option java_outer_classname = "ExecutionEngineProto";
 option java_package = "org.ethereum.engine.v1";

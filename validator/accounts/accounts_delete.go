@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 )
 
 // Delete the accounts that the user requests to be deleted from the wallet.
@@ -63,7 +63,7 @@ func (acm *AccountsCLIManager) Delete(ctx context.Context) error {
 	return nil
 }
 
-// DeleteAccount permforms the deletion on the Keymanager.
+// DeleteAccount performs the deletion on the Keymanager.
 func DeleteAccount(ctx context.Context, cfg *DeleteConfig) error {
 	if len(cfg.DeletePublicKeys) == 1 {
 		log.Info("Deleting account...")

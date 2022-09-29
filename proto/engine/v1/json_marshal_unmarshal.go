@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -275,7 +275,7 @@ func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
 	var latestHash *common.Hash
 	if p.LatestValidHash != nil {
 		hash := common.Hash(bytesutil.ToBytes32(p.LatestValidHash))
-		latestHash = (*common.Hash)(&hash)
+		latestHash = &hash
 	}
 	return json.Marshal(payloadStatusJSON{
 		LatestValidHash: latestHash,
@@ -324,7 +324,7 @@ func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(transitionConfigurationJSON{
 		TerminalTotalDifficulty: hexNum,
-		TerminalBlockHash:       common.Hash(*(*[32]byte)(t.TerminalBlockHash)),
+		TerminalBlockHash:       *(*[32]byte)(t.TerminalBlockHash),
 		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
 	})
 }

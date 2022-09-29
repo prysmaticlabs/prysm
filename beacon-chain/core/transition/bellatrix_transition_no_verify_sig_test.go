@@ -6,23 +6,23 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
@@ -92,18 +92,18 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := util.BlockSignatureBellatrix(c, block.Block, privKeys)
+	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -180,19 +180,19 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := util.BlockSignatureBellatrix(c, block.Block, privKeys)
+	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)

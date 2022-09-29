@@ -2,13 +2,13 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -72,6 +72,19 @@ func V1Alpha1BeaconBlockBellatrixToV2(v1alpha1Block *ethpbalpha.BeaconBlockBella
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v2Block := &ethpbv2.BeaconBlockBellatrix{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
+// V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
+func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BlindedBeaconBlockBellatrix{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -251,7 +264,7 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 }
 
 // BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconStateV2, error) {
+func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconState, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()
@@ -305,7 +318,7 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
-	result := &ethpbv2.BeaconStateV2{
+	result := &ethpbv2.BeaconState{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorsRoot()),
 		Slot:                  altairState.Slot(),

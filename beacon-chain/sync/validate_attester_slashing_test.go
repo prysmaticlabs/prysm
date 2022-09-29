@@ -10,19 +10,19 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
@@ -292,35 +292,4 @@ func TestSeenAttesterSlashingIndices(t *testing.T) {
 		r.setAttesterSlashingIndicesSeen(tc.saveIndices1, tc.saveIndices2)
 		assert.Equal(t, tc.seen, r.hasSeenAttesterSlashingIndices(tc.checkIndices1, tc.checkIndices2))
 	}
-}
-
-func TestValidateAttesterSlashing_Optimistic(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidAttesterSlashing(t)
-
-	r := &Service{
-		cfg: &config{
-			p2p:         p,
-			chain:       &mock.ChainService{State: s, Optimistic: true},
-			initialSync: &mockSync.Sync{IsSyncing: false},
-		},
-	}
-
-	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, slashing)
-	require.NoError(t, err)
-
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
-	msg := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
-	assert.NoError(t, err)
-	valid := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, valid, "Should have ignore this message")
 }

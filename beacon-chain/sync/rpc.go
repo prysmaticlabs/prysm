@@ -9,12 +9,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -138,13 +138,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Check before hand that peer is valid.
 		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
-				log.Debugf("Could not disconnect from peer: %v", err)
+				log.WithError(err).Debug("Could not disconnect from peer")
 			}
 			return
 		}
 		// Validate request according to peer limits.
 		if err := s.rateLimiter.validateRawRpcRequest(stream); err != nil {
-			log.Debugf("Could not validate rpc request from peer: %v", err)
+			log.WithError(err).Debug("Could not validate rpc request from peer")
 			return
 		}
 		s.rateLimiter.addRawStream(stream)

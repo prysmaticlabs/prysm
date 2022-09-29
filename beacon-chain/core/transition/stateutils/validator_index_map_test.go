@@ -3,14 +3,14 @@ package stateutils_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/stateutils"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestValidatorIndexMap_OK(t *testing.T) {
@@ -24,7 +24,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 			},
 		},
 	}
-	state, err := v1.InitializeFromProto(base)
+	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	tests := []struct {

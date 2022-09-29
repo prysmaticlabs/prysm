@@ -25,7 +25,7 @@ import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v1/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/v1";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconChainProto";
 option java_package = "org.ethereum.eth.v1";
@@ -113,7 +113,7 @@ message ValidatorBalancesResponse {
 
 message ValidatorBalance {
     // The index of the validator the retrieved balance is for.
-    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
     // The balance of the requested validator.
     uint64 balance = 2;
@@ -139,13 +139,13 @@ message StateCommitteesRequest {
     bytes state_id = 1;
 
     // The epoch to retrieve the committees of.
-    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 
     // Committee index requested.
-    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 
     // Committee slot requested.
-    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 }
 
 message StateCommitteesResponse {
@@ -172,7 +172,7 @@ message BlockRootResponse {
 
 message BlockHeadersRequest {
     // Beacon chain slot of the requested block.
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
     // 32 byte merkle tree root of the ssz encoded parent block.
     optional bytes parent_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -231,8 +231,8 @@ message BeaconBlockContainer {
 // Beacon Pool related API service.
 
 message AttestationsPoolRequest {
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
-    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"];
 }
 
 message SubmitAttestationsRequest {
@@ -289,4 +289,53 @@ message WeakSubjectivityResponse {
 message WeakSubjectivityData {
     ethereum.eth.v1.Checkpoint ws_checkpoint = 1;
     bytes state_root = 2;
+}
+
+message ForkChoiceResponse {
+    // Latest justified checkpoint in forkchoice store.
+    Checkpoint justified_checkpoint = 1;
+    // Latest finalized checkpoint in forkchoice store.
+    Checkpoint finalized_checkpoint = 2;
+    // Best justified checkpoint in forkchoice store.
+    Checkpoint best_justified_checkpoint = 3;
+    // Unrealized justified checkpoint in forkchoice store.
+    Checkpoint unrealized_justified_checkpoint = 4;
+    // Unrealized finalized checkpoint in forkchoice store.
+    Checkpoint unrealized_finalized_checkpoint = 5;
+    // Proposer Boost Root in forkchoice store.
+    bytes proposer_boost_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Previous proposer Boost Root in forkchoice store.
+    bytes previous_proposer_boost_root = 7 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Head root in forkchoice store.
+    bytes head_root = 8 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // The list of the forkchoice nodes in store.
+    repeated ForkChoiceNode forkchoice_nodes = 9;
+}
+
+message ForkChoiceNode {
+    // Slot of the forkchoice node.
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+    // Root of the forkchoice node.
+    bytes root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Parent root of the forkchoice node.
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Justified epoch of the current forkchoice node.
+    uint64 justified_epoch = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+    // finalized epoch of the current forkchoice node.
+    uint64 finalized_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+    // Unrealized justified epoch of the current forkchoice node.
+    uint64 unrealized_justified_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+    // Unrealized finalized epoch of the current forkchoice node.
+    uint64 unrealized_finalized_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+    // Current balance of the current forkchoice node.
+    uint64 balance = 8;
+    // Current weight of the current forkchoice node.
+    uint64 weight = 9;
+    // Optimistic status of the current forkchoice node.
+    bool execution_optimistic = 10;
+    // Execution payload block hash of the current forkchoice node.
+    bytes execution_payload = 11 [(ethereum.eth.ext.ssz_size) = "32"];
+    // Timestamp when the node was inserted
+    uint64 timestamp = 12;
 }

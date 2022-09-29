@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	slashtest "github.com/prysmaticlabs/prysm/validator/testing"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
+	history "github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	slashtest "github.com/prysmaticlabs/prysm/v3/validator/testing"
 )
 
 func TestImportExport_RoundTrip(t *testing.T) {

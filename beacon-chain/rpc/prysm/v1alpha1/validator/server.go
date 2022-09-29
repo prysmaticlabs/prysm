@@ -8,28 +8,28 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -49,10 +49,10 @@ type Server struct {
 	GenesisFetcher         blockchain.GenesisFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	BlockFetcher           powchain.POWBlockFetcher
+	BlockFetcher           execution.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
-	ChainStartFetcher      powchain.ChainStartFetcher
-	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	ChainStartFetcher      execution.ChainStartFetcher
+	Eth1InfoFetcher        execution.ChainInfoFetcher
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
@@ -64,13 +64,13 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
-	Eth1BlockFetcher       powchain.POWBlockFetcher
+	Eth1BlockFetcher       execution.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
-	ExecutionEngineCaller  powchain.EngineCaller
+	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
 }
 
@@ -123,9 +123,12 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine head state: %v", err)
 	}
+	if st == nil || st.IsNil() {
+		return nil, status.Errorf(codes.Internal, "head state is empty")
+	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
-		return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", req.PublicKey)
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil

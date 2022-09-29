@@ -8,14 +8,14 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -125,7 +125,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		}
 	default:
 		if len(stateId) == 32 {
-			s, err = p.stateByHex(ctx, stateId)
+			s, err = p.stateByRoot(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
@@ -160,7 +160,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 		root, err = p.justifiedStateRoot(ctx)
 	default:
 		if len(stateId) == 32 {
-			root, err = p.stateRootByHex(ctx, stateId)
+			root, err = p.stateRootByRoot(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
@@ -175,13 +175,13 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 	return root, err
 }
 
-func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.BeaconState, error) {
+func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateId) {
+		if bytes.Equal(root, stateRoot) {
 			blockRoot := headState.BlockRoots()[i]
 			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
 		}
@@ -220,10 +220,11 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
-	if err = wrapper.BeaconBlockIsNil(b); err != nil {
+	if err = blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
@@ -231,10 +232,11 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) {
@@ -246,10 +248,11 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
 func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) {
@@ -261,22 +264,23 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
-	return b.Block().StateRoot(), nil
+	stateRoot := b.Block().StateRoot()
+	return stateRoot[:], nil
 }
 
-func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
-	var stateRoot [32]byte
-	copy(stateRoot[:], stateId)
+func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
+	var r [32]byte
+	copy(r[:], stateRoot)
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for _, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot[:]) {
-			return stateRoot[:], nil
+		if bytes.Equal(root, r[:]) {
+			return r[:], nil
 		}
 	}
 
@@ -302,5 +306,6 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if blks[0] == nil || blks[0].Block() == nil {
 		return nil, errors.New("nil block")
 	}
-	return blks[0].Block().StateRoot(), nil
+	stateRoot := blks[0].Block().StateRoot()
+	return stateRoot[:], nil
 }

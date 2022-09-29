@@ -7,37 +7,50 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
-	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
+	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
+	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
+
+// MultiAddressBuilder takes in an ip address string and port to produce a go multiaddr format.
+func MultiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
+	parsedIP := net.ParseIP(ipAddr)
+	if parsedIP.To4() == nil && parsedIP.To16() == nil {
+		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
+	}
+	if parsedIP.To4() != nil {
+		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
+	}
+	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
+}
 
 // buildOptions for the libp2p host.
 func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Option {
 	cfg := s.cfg
-	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
+	listen, err := MultiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
-		log.Fatalf("Failed to p2p listen: %v", err)
+		log.WithError(err).Fatal("Failed to p2p listen")
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
 			log.Fatalf("Invalid local ip provided: %s", cfg.LocalIP)
 		}
-		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
+		listen, err = MultiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
-			log.Fatalf("Failed to p2p listen: %v", err)
+			log.WithError(err).Fatal("Failed to p2p listen")
 		}
 	}
 	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
 	if err != nil {
-		log.Fatalf("Failed to retrieve private key: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve private key")
 	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
-		log.Fatalf("Failed to retrieve peer id: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve peer id")
 	}
 	log.Infof("Running node with peer id of %s ", id.String())
 
@@ -47,6 +60,8 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
+		libp2p.DefaultMuxers,
 	}
 
 	options = append(options, libp2p.Security(noise.ID, noise.New))
@@ -62,7 +77,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	}
 	if cfg.HostAddress != "" {
 		options = append(options, libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
-			external, err := multiAddressBuilder(cfg.HostAddress, cfg.TCPPort)
+			external, err := MultiAddressBuilder(cfg.HostAddress, cfg.TCPPort)
 			if err != nil {
 				log.WithError(err).Error("Unable to create external multiaddress")
 			} else {
@@ -85,17 +100,6 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	// Disable Ping Service.
 	options = append(options, libp2p.Ping(false))
 	return options
-}
-
-func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
-	parsedIP := net.ParseIP(ipAddr)
-	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
-	}
-	if parsedIP.To4() != nil {
-		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
-	}
-	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }
 
 func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (ma.Multiaddr, error) {

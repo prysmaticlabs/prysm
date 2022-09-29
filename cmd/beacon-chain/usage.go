@@ -5,12 +5,12 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
 	"github.com/urfave/cli/v2"
 )
 
@@ -62,7 +62,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
 			cmd.BackupWebhookOutputDir,
-			cmd.EnableBackupWebhookFlag,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
@@ -74,7 +73,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.AcceptTosFlag,
 			cmd.RestoreSourceFileFlag,
 			cmd.RestoreTargetDirFlag,
-			cmd.BoltMMapInitialSizeFlag,
 			cmd.ValidatorMonitorIndicesFlag,
 			cmd.ApiTimeoutFlag,
 		},
@@ -108,14 +106,12 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayHost,
 			flags.GRPCGatewayPort,
 			flags.GPRCGatewayCorsDomain,
+			flags.ExecutionEngineEndpoint,
+			flags.ExecutionEngineHeaders,
 			flags.HTTPWeb3ProviderFlag,
 			flags.ExecutionJWTSecretFlag,
-			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
-			flags.HeadSync,
-			flags.DisableSync,
 			flags.SlotsPerArchivedPoint,
-			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
 			flags.BlockBatchLimitBurstFactor,
 			flags.EnableDebugRPCEndpoints,
@@ -127,6 +123,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Eth1HeaderReqLimit,
 			flags.MinPeersPerSubnet,
 			flags.MevRelayEndpoint,
+			flags.MaxBuilderEpochMissedSlots,
+			flags.MaxBuilderConsecutiveMissedSlots,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,

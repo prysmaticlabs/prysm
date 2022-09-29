@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	iface2 "github.com/prysmaticlabs/prysm/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -150,10 +150,6 @@ func (_ MockValidator) LogAttestationsSubmitted() {
 	panic("implement me")
 }
 
-func (_ MockValidator) LogNextDutyTimeLeft(_ types.Slot) error {
-	panic("implement me")
-}
-
 func (_ MockValidator) UpdateDomainDataCaches(_ context.Context, _ types.Slot) {
 	panic("implement me")
 }
@@ -179,6 +175,11 @@ func (_ MockValidator) HandleKeyReload(_ context.Context, _ [][48]byte) (bool, e
 }
 
 func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
+	panic("implement me")
+}
+
+// PushProposerSettings for mocking
+func (MockValidator) HasProposerSettings() bool {
 	panic("implement me")
 }
 

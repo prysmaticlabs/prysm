@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -122,12 +122,10 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-st.C():
 				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
-					return
 				}
 
 				if err := s.UpdateHead(s.ctx); err != nil {
 					log.WithError(err).Error("Could not process attestations and update head")
-					return
 				}
 			}
 		}
@@ -147,17 +145,22 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
 
+	start := time.Now()
 	s.processAttestations(ctx)
+	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	justified := s.ForkChoicer().JustifiedCheckpoint()
 	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}
+	start = time.Now()
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
+	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
 	s.headLock.RLock()
 	if s.headRoot() != newHeadRoot {
 		log.WithFields(logrus.Fields{

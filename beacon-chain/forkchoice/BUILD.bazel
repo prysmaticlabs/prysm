@@ -7,9 +7,10 @@ go_library(
         "error.go",
         "interfaces.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
         "//testing/spectest:__subpackages__",
     ],
     deps = [
@@ -17,7 +18,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/eth/v1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )

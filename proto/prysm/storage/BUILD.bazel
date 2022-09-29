@@ -17,7 +17,7 @@ proto_library(
 
 go_proto_library(
     name = "go_proto",
-    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/storage",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/prysm/storage",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -28,6 +28,6 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     embed = [":go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/storage",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/prysm/storage",
     visibility = ["//visibility:public"],
 )

@@ -9,13 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	mathutil "github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	"go.opencensus.io/trace"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount

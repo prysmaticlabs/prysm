@@ -3,8 +3,9 @@ package kv
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -42,7 +43,10 @@ func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *eth
 		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 		if !(hasStateInDB || hasStateSummary) {
-			return errMissingStateForCheckpoint
+			log.Warnf("Recovering state summary for last validated root: %#x", bytesutil.Trunc(checkpoint.Root))
+			if err := recoverStateSummary(ctx, tx, checkpoint.Root); err != nil {
+				return errors.Wrapf(errMissingStateForCheckpoint, "could not save finalized checkpoint, last validated root: %#x", bytesutil.Trunc(checkpoint.Root))
+			}
 		}
 		return bucket.Put(lastValidatedCheckpointKey, enc)
 	})

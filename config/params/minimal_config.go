@@ -3,7 +3,7 @@ package params
 import (
 	"math"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -98,6 +98,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
 	minimalConfig.DepositNetworkID = 5 // Network ID of eth1 goerli.
 	minimalConfig.DepositContractAddress = "0x1234567890123456789012345678901234567890"
+	// 2**256-2**10 for fake minimal network
+	minimalConfig.TerminalTotalDifficulty = "115792089237316195423570985008687907853269984665640564039457584007913129638912"
 
 	minimalConfig.ConfigName = MinimalName
 	minimalConfig.PresetBase = "minimal"

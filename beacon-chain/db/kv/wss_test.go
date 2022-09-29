@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestSaveOrigin(t *testing.T) {
@@ -35,7 +35,7 @@ func TestSaveOrigin(t *testing.T) {
 	csb, err := cst.MarshalSSZ()
 	require.NoError(t, err)
 	cb := util.NewBeaconBlock()
-	scb, err := wrapper.WrappedSignedBeaconBlock(cb)
+	scb, err := blocks.NewSignedBeaconBlock(cb)
 	require.NoError(t, err)
 	cbb, err := scb.MarshalSSZ()
 	require.NoError(t, err)

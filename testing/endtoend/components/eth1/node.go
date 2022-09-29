@@ -12,9 +12,9 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,8 +56,8 @@ func (node *Node) Start(ctx context.Context) error {
 		ctx,
 		binaryPath,
 		"init",
-		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json",
-		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+		fmt.Sprintf("--datadir=%s", eth1Path),
+		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json") // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
@@ -90,12 +90,8 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
+		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
-	}
-	// If we are testing sync, geth needs to be run via full sync as snap sync does not
-	// work in our setup.
-	if node.index == e2e.TestParams.BeaconNodeCount+e2e.TestParams.LighthouseBeaconNodeCount {
-		args = append(args, []string{"--syncmode=full"}...)
 	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log"))

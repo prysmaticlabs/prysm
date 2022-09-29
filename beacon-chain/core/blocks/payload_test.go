@@ -3,20 +3,19 @@ package blocks_test
 import (
 	"testing"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func Test_IsMergeComplete(t *testing.T) {
@@ -229,7 +228,7 @@ func Test_IsExecutionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			wrappedBlock, err := wrapper.WrappedBeaconBlock(blk.Block)
+			wrappedBlock, err := consensusblocks.NewBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 			require.NoError(t, err)
@@ -318,7 +317,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
@@ -398,7 +397,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
@@ -458,14 +457,14 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				p.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
 				return h
 			}(),
-			err: errors.New("incorrect block hash"),
+			err: blocks.ErrInvalidPayloadBlockHash,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
 			if err != nil {
@@ -515,7 +514,7 @@ func Test_ValidatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			err = blocks.ValidatePayload(st, wrappedPayload)
 			if err != nil {
@@ -565,14 +564,14 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			st, err := blocks.ProcessPayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := wrapper.PayloadToHeader(wrappedPayload)
+				want, err := consensusblocks.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
 				h, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -706,7 +705,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
+	wrappedHeader, err := consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
 	require.NoError(t, err)
 	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
@@ -762,9 +761,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
+	wrappedPayload, err := consensusblocks.WrappedExecutionPayload(p)
 	require.NoError(t, err)
-	h, err := wrapper.PayloadToHeader(wrappedPayload)
+	h, err := consensusblocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -815,7 +814,7 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 }
 
 func emptyPayloadHeader() (interfaces.ExecutionData, error) {
-	return wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+	return consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),

@@ -15,10 +15,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/io/file"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -58,7 +58,7 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 	if err := saveAuthToken(walletDirPath, jwtKey, token); err != nil {
 		return err
 	}
-	logValidatorWebAuth(validatorWebAddr, token)
+	logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 	return nil
 }
 
@@ -128,7 +128,7 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 				continue
 			}
 			validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-			logValidatorWebAuth(validatorWebAddr, token)
+			logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		case err := <-watcher.Errors:
 			log.WithError(err).Errorf("Could not watch for file changes for: %s", authTokenPath)
 		case <-ctx.Done():
@@ -137,7 +137,7 @@ func (s *Server) refreshAuthTokenFromFileChanges(ctx context.Context, authTokenP
 	}
 }
 
-func logValidatorWebAuth(validatorWebAddr, token string) {
+func logValidatorWebAuth(validatorWebAddr, token string, tokenPath string) {
 	webAuthURLTemplate := "http://%s/initialize?token=%s"
 	webAuthURL := fmt.Sprintf(
 		webAuthURLTemplate,
@@ -149,6 +149,7 @@ func logValidatorWebAuth(validatorWebAddr, token string) {
 			"the Prysm web interface",
 	)
 	log.Info(webAuthURL)
+	log.Infof("Validator CLient JWT for RPC and REST authentication set at:%s", tokenPath)
 }
 
 func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
@@ -190,7 +191,7 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 
 // Creates a JWT token string using the JWT key.
 func createTokenString(jwtKey []byte) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {

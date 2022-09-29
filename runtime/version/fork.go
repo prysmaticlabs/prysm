@@ -4,7 +4,6 @@ const (
 	Phase0 = iota
 	Altair
 	Bellatrix
-	BellatrixBlind
 	Capella
 )
 
@@ -16,8 +15,6 @@ func String(version int) string {
 		return "altair"
 	case Bellatrix:
 		return "bellatrix"
-	case BellatrixBlind:
-		return "bellatrix-blind"
 	case Capella:
 		return "capella"
 	default:

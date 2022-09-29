@@ -1,10 +1,11 @@
 package cache
 
 import (
+	"bytes"
 	"sync"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 const vIdLength = 8
@@ -14,22 +15,22 @@ const vpIdsLength = vIdLength + pIdLength
 // ProposerPayloadIDsCache is a cache of proposer payload IDs.
 // The key is the slot. The value is the concatenation of the proposer and payload IDs. 8 bytes each.
 type ProposerPayloadIDsCache struct {
-	slotToProposerAndPayloadIDs map[types.Slot][vpIdsLength]byte
+	slotToProposerAndPayloadIDs map[[40]byte][vpIdsLength]byte
 	sync.RWMutex
 }
 
 // NewProposerPayloadIDsCache creates a new proposer payload IDs cache.
 func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 	return &ProposerPayloadIDsCache{
-		slotToProposerAndPayloadIDs: make(map[types.Slot][vpIdsLength]byte),
+		slotToProposerAndPayloadIDs: make(map[[40]byte][vpIdsLength]byte),
 	}
 }
 
 // GetProposerPayloadIDs returns the proposer and  payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.ValidatorIndex, [8]byte, bool) {
+func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot, r [32]byte) (types.ValidatorIndex, [8]byte, bool) {
 	f.RLock()
 	defer f.RUnlock()
-	ids, ok := f.slotToProposerAndPayloadIDs[slot]
+	ids, ok := f.slotToProposerAndPayloadIDs[idKey(slot, r)]
 	if !ok {
 		return 0, [8]byte{}, false
 	}
@@ -43,20 +44,22 @@ func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot) (types.
 }
 
 // SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId [8]byte) {
+func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId [8]byte, r [32]byte) {
 	f.Lock()
 	defer f.Unlock()
 	var vIdBytes [vIdLength]byte
 	copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(uint64(vId)))
 
-	var bytes [vpIdsLength]byte
-	copy(bytes[:], append(vIdBytes[:], pId[:]...))
+	var bs [vpIdsLength]byte
+	copy(bs[:], append(vIdBytes[:], pId[:]...))
 
-	_, ok := f.slotToProposerAndPayloadIDs[slot]
-	// Ok to overwrite if the slot is already set but the payload ID is not set.
-	// This combats the re-org case where payload assignment could change the epoch of.
-	if !ok || (ok && pId != [pIdLength]byte{}) {
-		f.slotToProposerAndPayloadIDs[slot] = bytes
+	k := idKey(slot, r)
+	ids, ok := f.slotToProposerAndPayloadIDs[k]
+	// Ok to overwrite if the slot is already set but the cached payload ID is not set.
+	// This combats the re-org case where payload assignment could change at the start of the epoch.
+	byte8 := [vIdLength]byte{}
+	if !ok || (ok && bytes.Equal(ids[vIdLength:], byte8[:])) {
+		f.slotToProposerAndPayloadIDs[k] = bs
 	}
 }
 
@@ -65,9 +68,16 @@ func (f *ProposerPayloadIDsCache) PrunePayloadIDs(slot types.Slot) {
 	f.Lock()
 	defer f.Unlock()
 
-	for s := range f.slotToProposerAndPayloadIDs {
+	for k := range f.slotToProposerAndPayloadIDs {
+		s := types.Slot(bytesutil.BytesToUint64BigEndian(k[:8]))
 		if slot > s {
-			delete(f.slotToProposerAndPayloadIDs, s)
+			delete(f.slotToProposerAndPayloadIDs, k)
 		}
 	}
+}
+
+func idKey(slot types.Slot, r [32]byte) [40]byte {
+	var k [40]byte
+	copy(k[:], append(bytesutil.Uint64ToBytesBigEndian(uint64(slot)), r[:]...))
+	return k
 }

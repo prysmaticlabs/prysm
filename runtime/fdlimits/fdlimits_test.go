@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	gethLimit "github.com/ethereum/go-ethereum/common/fdlimit"
-	"github.com/prysmaticlabs/prysm/runtime/fdlimits"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/runtime/fdlimits"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestSetMaxFdLimits(t *testing.T) {

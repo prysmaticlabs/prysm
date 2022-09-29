@@ -3,12 +3,12 @@ package state_native
 import (
 	"testing"
 
-	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSetWithdrawalQueue(t *testing.T) {
@@ -49,7 +49,7 @@ func TestSetWithdrawalQueue(t *testing.T) {
 		assert.DeepEqual(t, newQ, s.withdrawalQueue)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.BellatrixBlind}
+		s := BeaconState{version: version.Bellatrix}
 		err := s.SetWithdrawalQueue([]*enginev1.Withdrawal{})
 		assert.ErrorContains(t, "SetWithdrawalQueue is not supported", err)
 	})
@@ -87,7 +87,7 @@ func TestAppendWithdrawal(t *testing.T) {
 		assert.DeepEqual(t, expectedQ, s.withdrawalQueue)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.BellatrixBlind}
+		s := BeaconState{version: version.Bellatrix}
 		err := s.AppendWithdrawal(&enginev1.Withdrawal{})
 		assert.ErrorContains(t, "AppendWithdrawal is not supported", err)
 	})

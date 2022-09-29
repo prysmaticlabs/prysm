@@ -14,28 +14,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/file"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/service"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
-	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components/eth1"
+	ev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -574,18 +574,18 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grp
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
 func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
+	type ForkchoiceUpdatedResponse struct {
+		Status    *enginev1.PayloadStatus  `json:"payloadStatus"`
+		PayloadId *enginev1.PayloadIDBytes `json:"payloadId"`
+	}
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
-		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.PauseAtIndex(0))
-		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.PauseAtIndex(0))
 		return true
 	case 10:
 		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
-		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.ResumeAtIndex(0))
-		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.ResumeAtIndex(0))
 		return true
 	case 14:
 		// Set it for prysm beacon node.
@@ -610,6 +610,18 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 		}, func() bool {
 			return true
 		})
+
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_forkchoiceUpdatedV1", func() interface{} {
+			return &ForkchoiceUpdatedResponse{
+				Status: &enginev1.PayloadStatus{
+					Status:          enginev1.PayloadStatus_SYNCING,
+					LatestValidHash: nil,
+				},
+				PayloadId: nil,
+			}
+		}, func() bool {
+			return true
+		})
 		return true
 	case 15:
 		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
@@ -629,6 +641,7 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 		engineProxy, ok = component.(e2etypes.EngineProxy)
 		require.Equal(r.t, true, ok)
 		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.RemoveRequestInterceptor("engine_forkchoiceUpdatedV1")
 		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
 
 		return true

@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/network/authorization"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -30,16 +32,10 @@ const (
 
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
+var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
-
-// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
-func WithTimeout(timeout time.Duration) ClientOpt {
-	return func(c *Client) {
-		c.hc.Timeout = timeout
-	}
-}
 
 type observer interface {
 	observe(r *http.Request) error
@@ -83,6 +79,15 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 
 var _ observer = &requestLogger{}
 
+// BuilderClient provides a collection of helper methods for calling Builder API endpoints.
+type BuilderClient interface {
+	NodeURL() string
+	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error)
+	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
+	SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
+	Status(ctx context.Context) error
+}
+
 // Client provides a collection of helper methods for calling Builder API endpoints.
 type Client struct {
 	hc      *http.Client
@@ -94,7 +99,8 @@ type Client struct {
 // `host` is the base host + port used to construct request urls. This value can be
 // a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
-	u, err := urlForHost(host)
+	endpoint := covertEndPoint(host)
+	u, err := urlForHost(endpoint.Url)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +254,11 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlinded
 	if err != nil {
 		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
+	defer cancel()
 	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+
 	if err != nil {
 		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
 	}
@@ -269,6 +279,7 @@ func (c *Client) Status(ctx context.Context) error {
 
 func non200Err(response *http.Response) error {
 	bodyBytes, err := io.ReadAll(response.Body)
+	var errMessage ErrorMessage
 	var body string
 	if err != nil {
 		body = "(Unable to read response body.)"
@@ -277,9 +288,38 @@ func non200Err(response *http.Response) error {
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
+	case 204:
+		log.WithError(ErrNoContent).Debug(msg)
+		return ErrNoContent
+	case 400:
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
+		log.WithError(ErrBadRequest).Debug(msg)
+		return errors.Wrap(ErrBadRequest, errMessage.Message)
 	case 404:
-		return errors.Wrap(ErrNotFound, msg)
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
+		log.WithError(ErrNotFound).Debug(msg)
+		return errors.Wrap(ErrNotFound, errMessage.Message)
+	case 500:
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
+		log.WithError(ErrNotOK).Debug(msg)
+		return errors.Wrap(ErrNotOK, errMessage.Message)
 	default:
-		return errors.Wrap(ErrNotOK, msg)
+		log.WithError(ErrNotOK).Debug(msg)
+		return errors.Wrap(ErrNotOK, fmt.Sprintf("unsupported error code: %d", response.StatusCode))
 	}
+}
+
+func covertEndPoint(ep string) network.Endpoint {
+	return network.Endpoint{
+		Url: ep,
+		Auth: network.AuthorizationData{ // Auth is not used for builder.
+			Method: authorization.None,
+			Value:  "",
+		}}
 }

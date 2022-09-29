@@ -6,21 +6,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestStore_Backup(t *testing.T) {
-	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{})
+	db, err := NewKVStore(context.Background(), t.TempDir())
 	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+	wsb, err := blocks.NewSignedBeaconBlock(head)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
@@ -44,7 +44,7 @@ func TestStore_Backup(t *testing.T) {
 	// our NewKVStore function expects when opening a database.
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
-	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
+	backedDB, err := NewKVStore(ctx, backupsPath)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
@@ -53,7 +53,7 @@ func TestStore_Backup(t *testing.T) {
 }
 
 func TestStore_BackupMultipleBuckets(t *testing.T) {
-	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{})
+	db, err := NewKVStore(context.Background(), t.TempDir())
 	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
@@ -62,7 +62,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := util.NewBeaconBlock()
 		head.Block.Slot = i
-		wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+		wsb, err := blocks.NewSignedBeaconBlock(head)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		root, err := head.Block.HashTreeRoot()
@@ -88,7 +88,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	// our NewKVStore function expects when opening a database.
 	require.NoError(t, os.Rename(oldFilePath, newFilePath))
 
-	backedDB, err := NewKVStore(ctx, backupsPath, &Config{})
+	backedDB, err := NewKVStore(ctx, backupsPath)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, backedDB.Close(), "Failed to close database")

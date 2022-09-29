@@ -6,17 +6,16 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -90,7 +89,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := v1.InitializeFromProto(beaconStateBase)
+			beaconState, err := state_native.InitializeFromProtoPhase0(beaconStateBase)
 			require.NoError(t, err)
 
 			bc := params.BeaconConfig().Copy()
@@ -100,19 +99,19 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wsb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = st.(*v1.BeaconState)
+				beaconState, ok = st.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 			for _, b := range postforkBlocks {
-				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wsb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = st.(*stateAltair.BeaconState)
+				beaconState, ok = st.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -123,7 +122,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

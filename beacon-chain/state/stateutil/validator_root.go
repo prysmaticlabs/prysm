@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ValidatorRootWithHasher describes a method from which the hash tree root
@@ -68,11 +68,7 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
-	maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-	elemSize := uint64(8)
-	balLimit := (maxBalCap*elemSize + 31) / 32
-
-	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), balLimit)
+	balancesRootsRoot, err := ssz.BitwiseMerkleize(hasher, balancesChunks, uint64(len(balancesChunks)), ValidatorLimitForBalancesChunks())
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
 	}
@@ -80,6 +76,13 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	balancesLengthRoot := make([]byte, 32)
 	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
 	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
+}
+
+// ValidatorLimitForBalancesChunks returns the limit of validators after going through the chunking process.
+func ValidatorLimitForBalancesChunks() uint64 {
+	maxValidatorLimit := uint64(fieldparams.ValidatorRegistryLimit)
+	bytesInUint64 := uint64(8)
+	return (maxValidatorLimit*bytesInUint64 + 31) / 32 // round to nearest chunk
 }
 
 // PackUint64IntoChunks packs a list of uint64 values into 32 byte roots.

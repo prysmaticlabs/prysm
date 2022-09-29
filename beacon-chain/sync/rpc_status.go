@@ -11,17 +11,17 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ func (s *Service) maintainPeerStatuses() {
 				if s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.cfg.p2p.Disconnect(id); err != nil {
-						log.Debugf("Error when disconnecting with peer: %v", err)
+						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
@@ -100,7 +100,7 @@ func (s *Service) resyncIfBehind() {
 				numberOfTimesResyncedCounter.Inc()
 				s.clearPendingSlots()
 				if err := s.cfg.initialSync.Resync(); err != nil {
-					log.Errorf("Could not resync chain: %v", err)
+					log.WithError(err).Errorf("Could not resync chain")
 				}
 			}
 		}

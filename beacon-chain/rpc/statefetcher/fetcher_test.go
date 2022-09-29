@@ -7,21 +7,21 @@ import (
 	"testing"
 	"time"
 
-	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	chainMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestGetState(t *testing.T) {
@@ -202,7 +202,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("head", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.StateRoot = stateRoot[:]
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
@@ -241,7 +241,8 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, err)
 		genesisBlock, err := db.GenesisBlock(ctx)
 		require.NoError(t, err)
-		assert.DeepEqual(t, genesisBlock.Block().StateRoot(), s)
+		sr := genesisBlock.Block().StateRoot()
+		assert.DeepEqual(t, sr[:], s)
 	})
 
 	t.Run("finalized", func(t *testing.T) {

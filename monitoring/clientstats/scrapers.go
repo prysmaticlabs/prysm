@@ -11,7 +11,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -233,28 +233,6 @@ func populateBeaconNodeStats(pf metricMap) BeaconNodeStats {
 		bs.SyncEth1Connected = false
 		if int64(m.Gauge.GetValue()) == 1 {
 			bs.SyncEth1Connected = true
-		}
-	}
-
-	f, err = pf.getFamily("powchain_sync_eth1_fallback_configured")
-	if err != nil {
-		log.WithError(err).Debug("Failed to get powchain_sync_eth1_fallback_configured")
-	} else {
-		m = f.Metric[0]
-		bs.SyncEth1FallbackConfigured = false
-		if int64(m.Gauge.GetValue()) == 1 {
-			bs.SyncEth1FallbackConfigured = true
-		}
-	}
-
-	f, err = pf.getFamily("powchain_sync_eth1_fallback_connected")
-	if err != nil {
-		log.WithError(err).Debug("Failed to get powchain_sync_eth1_fallback_connected")
-	} else {
-		m = f.Metric[0]
-		bs.SyncEth1FallbackConnected = false
-		if int64(m.Gauge.GetValue()) == 1 {
-			bs.SyncEth1FallbackConnected = true
 		}
 	}
 

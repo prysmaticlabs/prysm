@@ -9,15 +9,15 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	dbtest "github.com/prysmaticlabs/prysm/validator/db/testing"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
-	valtest "github.com/prysmaticlabs/prysm/validator/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
+	valtest "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -281,7 +281,7 @@ func Test_validateMetadataGenesisValidatorsRoot(t *testing.T) {
 			require.NoError(t, validatorDB.SaveGenesisValidatorsRoot(ctx, tt.dbGenesisValidatorsRoot))
 			err := validateMetadata(ctx, validatorDB, tt.interchangeJSON)
 			if tt.wantErr {
-				require.ErrorContains(t, "genesis validators root doesnt match the one that is stored", err)
+				require.ErrorContains(t, "genesis validators root doesn't match the one that is stored", err)
 			} else {
 				require.NoError(t, err)
 			}

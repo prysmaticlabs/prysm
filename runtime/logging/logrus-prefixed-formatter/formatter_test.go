@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	. "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	. "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,4 +70,16 @@ func TestFormatter_SuppressErrorStackTraces(t *testing.T) {
 
 	log.WithError(errors.Wrap(errFn(), "outer")).Error("test")
 	require.Equal(t, true, regexp.MustCompile(`test error=outer: inner\n\s*$`).MatchString(output.GetValue()), fmt.Sprintf("wrong log output: %s", output.GetValue()))
+}
+
+func TestFormatter_EscapesControlCharacters(t *testing.T) {
+	formatter := new(TextFormatter)
+	formatter.ForceFormatting = true
+	log := logrus.New()
+	log.Formatter = formatter
+	output := new(LogOutput)
+	log.Out = output
+
+	log.WithField("test", "foo\nbar").Error("testing things")
+	require.Equal(t, "[0000] ERROR testing things test=foobar"+"\n", output.GetValue())
 }

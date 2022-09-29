@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestMockHistoryStates(t *testing.T) {
@@ -64,7 +64,7 @@ func TestMockHistoryParentRoot(t *testing.T) {
 	endBlock, err := hist.Block(ctx, endRoot)
 	require.NoError(t, err)
 	// middle should be the parent of end, compare the middle root to endBlock's parent root
-	require.Equal(t, hist.slotMap[middle], bytesutil.ToBytes32(endBlock.Block().ParentRoot()))
+	require.Equal(t, hist.slotMap[middle], endBlock.Block().ParentRoot())
 }
 
 type mockHistorySpec struct {
@@ -205,7 +205,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 	require.NoError(t, err)
 
 	// generate new genesis block using the root of the deterministic state
-	gb, err := wrapper.WrappedSignedBeaconBlock(blocks.NewGenesisBlock(gsr[:]))
+	gb, err := consensusblocks.NewSignedBeaconBlock(blocks.NewGenesisBlock(gsr[:]))
 	require.NoError(t, err)
 	pr, err := gb.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -223,21 +223,24 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 		require.NoError(t, err)
 
 		// create proposer block, setting values in the order seen in the validator.md spec
-		b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		b, err := consensusblocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 
 		// set slot to mock history spec value
-		require.NoError(t, wrapper.SetBlockSlot(b, spec.slot))
+		b, err = blocktest.SetBlockSlot(b, spec.slot)
+		require.NoError(t, err)
 
 		// set the correct proposer_index in the "proposal" block
 		// so that it will pass validation in process_block. important that we do this
 		// after process_slots!
 		idx, err := helpers.BeaconProposerIndex(ctx, s)
 		require.NoError(t, err)
-		require.NoError(t, wrapper.SetProposerIndex(b, idx))
+		b, err = blocktest.SetProposerIndex(b, idx)
+		require.NoError(t, err)
 
 		// set parent root
-		require.NoError(t, wrapper.SetBlockParentRoot(b, pr))
+		b, err = blocktest.SetBlockParentRoot(b, pr)
+		require.NoError(t, err)
 
 		// now do process_block
 		s, err = transition.ProcessBlockForStateRoot(ctx, s, b)
@@ -245,7 +248,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 
 		sr, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		err = wrapper.SetBlockStateRoot(b, sr)
+		b, err = blocktest.SetBlockStateRoot(b, sr)
 		require.NoError(t, err)
 
 		pr, err = b.Block().HashTreeRoot()

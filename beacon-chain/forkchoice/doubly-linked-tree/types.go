@@ -3,9 +3,9 @@ package doublylinkedtree
 import (
 	"sync"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
@@ -24,7 +24,6 @@ type Store struct {
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint            // best unrealized finalized checkpoint in store.
 	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.
 	finalizedCheckpoint           *forkchoicetypes.Checkpoint            // latest finalized epoch in store.
-	pruneThreshold                uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot             [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot     [fieldparams.RootLength]byte           // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
@@ -38,6 +37,10 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
+	highestReceivedNode           *Node                                 // The highest slot node.
+	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
+	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
+	committeeBalance              uint64                                // tracks the total active validator balance divided by slots per epoch. Requires a lock on nodes to read/write
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
@@ -56,6 +59,7 @@ type Node struct {
 	weight                   uint64                       // weight of this node: the total balance including children
 	bestDescendant           *Node                        // bestDescendant node of this node.
 	optimistic               bool                         // whether the block has been fully validated or not
+	timestamp                uint64                       // The timestamp when the node was inserted.
 }
 
 // Vote defines an individual validator's vote.

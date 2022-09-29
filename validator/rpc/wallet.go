@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -10,14 +9,13 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -67,14 +65,17 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 		return nil, status.Errorf(codes.InvalidArgument, "Password too weak: %v", err)
 	}
 	if req.Keymanager == pb.KeymanagerKind_IMPORTED {
-		_, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-			WalletCfg: &wallet.Config{
-				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Local,
-				WalletPassword: req.WalletPassword,
-			},
-			SkipMnemonicConfirm: true,
-		})
+		opts := []accounts.Option{
+			accounts.WithWalletDir(walletDir),
+			accounts.WithKeymanagerType(keymanager.Local),
+			accounts.WithWalletPassword(req.WalletPassword),
+			accounts.WithSkipMnemonicConfirm(true),
+		}
+		acc, err := accounts.NewCLIManager(opts...)
+		if err != nil {
+			return nil, err
+		}
+		_, err = acc.WalletCreate(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -189,13 +190,18 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 		return nil, status.Error(codes.InvalidArgument, "password did not pass validation")
 	}
 
-	if _, err := accounts.RecoverWallet(ctx, &accounts.RecoverWalletConfig{
-		WalletDir:        walletDir,
-		WalletPassword:   walletPassword,
-		Mnemonic:         mnemonic,
-		NumAccounts:      numAccounts,
-		Mnemonic25thWord: req.Mnemonic25ThWord,
-	}); err != nil {
+	opts := []accounts.Option{
+		accounts.WithWalletDir(walletDir),
+		accounts.WithWalletPassword(walletPassword),
+		accounts.WithMnemonic(mnemonic),
+		accounts.WithMnemonic25thWord(req.Mnemonic25ThWord),
+		accounts.WithNumAccounts(numAccounts),
+	}
+	acc, err := accounts.NewCLIManager(opts...)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := acc.WalletRecover(ctx); err != nil {
 		return nil, err
 	}
 	if err := s.initializeWallet(ctx, &wallet.Config{
@@ -220,7 +226,7 @@ func (s *Server) RecoverWallet(ctx context.Context, req *pb.RecoverWalletRequest
 // can indeed be decrypted using a password in the request. If there is no issue,
 // we return an empty response with no error. If the password is incorrect for a single keystore,
 // we return an appropriate error.
-func (_ *Server) ValidateKeystores(
+func (*Server) ValidateKeystores(
 	_ context.Context, req *pb.ValidateKeystoresRequest,
 ) (*emptypb.Empty, error) {
 	if req.KeystoresPassword == "" {
@@ -253,70 +259,6 @@ func (_ *Server) ValidateKeystores(
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-// ImportAccounts allows importing new keystores via RPC into the wallet
-// which will be decrypted using the specified password .
-func (s *Server) ImportAccounts(
-	ctx context.Context, req *pb.ImportAccountsRequest,
-) (*pb.ImportAccountsResponse, error) {
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
-	}
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No validator service initialized")
-	}
-	ikm, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "No keymanager initialized")
-	}
-	km, ok := ikm.(keymanager.Importer)
-	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import keystores")
-	}
-	if req.KeystoresPassword == "" {
-		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
-	}
-	// Needs to unmarshal the keystores from the requests.
-	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
-	}
-	keystores := make([]*keymanager.Keystore, len(req.KeystoresImported))
-	importedPubKeys := make([][]byte, len(req.KeystoresImported))
-	for i := 0; i < len(req.KeystoresImported); i++ {
-		encoded := req.KeystoresImported[i]
-		keystore := &keymanager.Keystore{}
-		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
-		}
-		keystores[i] = keystore
-		pubKey, err := hex.DecodeString(keystore.Pubkey)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid BLS public key in keystore file: %v", err)
-		}
-		importedPubKeys[i] = pubKey
-	}
-	// Import the uploaded accounts.
-	statuses, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Importer:        km,
-		Keystores:       keystores,
-		AccountPassword: req.KeystoresPassword,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, stat := range statuses {
-		if stat.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
-			return nil, status.Error(codes.FailedPrecondition, stat.Message)
-		}
-	}
-	if len(statuses) == 0 {
-		return nil, status.Error(codes.Internal, "No statuses returned from import")
-	}
-	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportAccountsResponse{
-		ImportedPublicKeys: importedPubKeys,
-	}, nil
 }
 
 // Initialize a wallet and send it over a global feed.

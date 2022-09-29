@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 	"go.opencensus.io/trace"
@@ -99,11 +99,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
+
 			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
 			// No need to process the same block twice.
 			if inDB {
 				s.pendingQueueLock.Lock()
-				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
 					s.pendingQueueLock.Unlock()
 					return err
 				}
@@ -113,39 +114,29 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			s.pendingQueueLock.RLock()
-			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
+			inPendingQueue := s.seenPendingBlocks[b.Block().ParentRoot()]
 			s.pendingQueueLock.RUnlock()
 
-			parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
-			blockIsBad := s.hasBadBlock(blkRoot)
-			// Check if parent is a bad block.
-			if parentIsBad || blockIsBad {
-				// Set block as bad if its parent block is bad too.
-				if parentIsBad {
-					s.setBadBlock(ctx, blkRoot)
-				}
-				// Remove block from queue.
-				s.pendingQueueLock.Lock()
-				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
-					s.pendingQueueLock.Unlock()
-					return err
-				}
-				s.pendingQueueLock.Unlock()
-				span.End()
+			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
+			if err != nil {
+				return err
+			}
+			if !keepProcessing {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, b.Block().ParentRoot())
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
+			parentRoot := b.Block().ParentRoot()
 			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
-					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block().ParentRoot())),
+					"parentRoot":  hex.EncodeToString(bytesutil.Trunc(parentRoot[:])),
 				}).Debug("Requesting parent block")
-				parentRoots = append(parentRoots, bytesutil.ToBytes32(b.Block().ParentRoot()))
+				parentRoots = append(parentRoots, b.Block().ParentRoot())
 
 				span.End()
 				continue
@@ -160,7 +151,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
-				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
 				span.End()
@@ -177,7 +168,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 						s.setBadBlock(ctx, blkRoot)
 					}
 				}
-				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
 
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
@@ -188,8 +179,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			if err := s.cfg.p2p.Broadcast(ctx, b.Proto()); err != nil {
-				log.WithError(err).Debug("Could not broadcast block")
+			pb, err := b.Proto()
+			if err != nil {
+				log.WithError(err).Debug("Could not get protobuf block")
+			} else {
+				if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
+					log.WithError(err).Debug("Could not broadcast block")
+				}
 			}
 
 			s.pendingQueueLock.Lock()
@@ -209,6 +205,35 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	}
 
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
+}
+
+func (s *Service) checkIfBlockIsBad(
+	ctx context.Context,
+	span *trace.Span,
+	slot types.Slot,
+	b interfaces.SignedBeaconBlock,
+	blkRoot [32]byte,
+) (keepProcessing bool, err error) {
+	parentIsBad := s.hasBadBlock(b.Block().ParentRoot())
+	blockIsBad := s.hasBadBlock(blkRoot)
+	// Check if parent is a bad block.
+	if parentIsBad || blockIsBad {
+		// Set block as bad if its parent block is bad too.
+		if parentIsBad {
+			s.setBadBlock(ctx, blkRoot)
+		}
+		// Remove block from queue.
+		s.pendingQueueLock.Lock()
+		if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+			s.pendingQueueLock.Unlock()
+			return false, err
+		}
+		s.pendingQueueLock.Unlock()
+		span.End()
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, randGen *rand.Rand) error {
@@ -234,7 +259,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)
-			log.Debugf("Could not send recent block request: %v", err)
+			log.WithError(err).Debug("Could not send recent block request")
 		}
 		newRoots := make([][32]byte, 0, len(roots))
 		s.pendingQueueLock.RLock()
@@ -292,7 +317,7 @@ func (s *Service) validatePendingSlots() error {
 		for _, b := range blks {
 			epoch := slots.ToEpoch(slot)
 			// remove all descendant blocks of old blocks
-			if oldBlockRoots[bytesutil.ToBytes32(b.Block().ParentRoot())] {
+			if oldBlockRoots[b.Block().ParentRoot()] {
 				root, err := b.Block().HashTreeRoot()
 				if err != nil {
 					return err
@@ -337,13 +362,21 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
 	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if equality.DeepEqual(blk.Proto(), b.Proto()) {
+		blkPb, err := blk.Proto()
+		if err != nil {
+			return err
+		}
+		bPb, err := b.Proto()
+		if err != nil {
+			return err
+		}
+		if equality.DeepEqual(blkPb, bPb) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
@@ -396,7 +429,7 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaco
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 

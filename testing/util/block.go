@@ -5,25 +5,25 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assertions"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assertions"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -34,6 +34,8 @@ type BlockGenConfig struct {
 	NumAttestations      uint64
 	NumDeposits          uint64
 	NumVoluntaryExits    uint64
+	NumTransactions      uint64 // Only for post Bellatrix blocks
+	FullSyncAggregate    bool
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -45,6 +47,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumAttestations:      1,
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
+		NumTransactions:      0,
 	}
 }
 
@@ -732,7 +735,7 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
@@ -746,6 +749,8 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
 		}
 	}
 	return b
@@ -797,7 +802,7 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
@@ -812,6 +817,7 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
+			ExtraData:        make([]byte, 0),
 		}
 	}
 	return b
@@ -884,7 +890,7 @@ func HydrateV2BlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellat
 }
 
 func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(tb, err)
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
 	return wsb

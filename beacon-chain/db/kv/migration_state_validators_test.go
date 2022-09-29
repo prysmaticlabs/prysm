@@ -6,15 +6,14 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"go.etcd.io/bbolt"
 )
 
@@ -93,7 +92,7 @@ func Test_migrateStateValidators(t *testing.T) {
 					assert.NoError(t, hashErr)
 					individualHashes = append(individualHashes, hash[:])
 				}
-				pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -152,7 +151,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v1.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStatePhase0(rcvdState.InnerStateUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -255,7 +254,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v2.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStateAltair(rcvdState.InnerStateUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {

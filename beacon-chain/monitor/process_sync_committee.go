@@ -3,9 +3,9 @@ package monitor
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,7 +17,7 @@ func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedCon
 	defer s.Unlock()
 	if s.trackedIndex(idx) {
 		aggPerf := s.aggregatedPerformance[idx]
-		aggPerf.totalSyncComitteeAggregations++
+		aggPerf.totalSyncCommitteeAggregations++
 		s.aggregatedPerformance[idx] = aggPerf
 
 		log.WithField("ValidatorIndex", contribution.Message.AggregatorIndex).Info("Sync committee aggregation processed")
@@ -58,7 +58,7 @@ func (s *Service) processSyncAggregate(state state.BeaconState, blk interfaces.B
 			s.latestPerformance[validatorIdx] = latestPerf
 
 			aggPerf := s.aggregatedPerformance[validatorIdx]
-			aggPerf.totalSyncComitteeContributions += uint64(contrib)
+			aggPerf.totalSyncCommitteeContributions += uint64(contrib)
 			s.aggregatedPerformance[validatorIdx] = aggPerf
 
 			syncCommitteeContributionCounter.WithLabelValues(
