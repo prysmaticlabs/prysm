@@ -115,6 +115,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	if bestDescendant != s.headNode {
 		headChangesCount.Inc()
 		headSlotNumber.Set(float64(bestDescendant.slot))
+		if bestDescendant.parent != s.headNode {
+			s.proposerHeadNode = bestDescendant
+		}
 		s.headNode = bestDescendant
 	}
 
