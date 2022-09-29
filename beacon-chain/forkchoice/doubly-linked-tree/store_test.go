@@ -473,3 +473,581 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), count)
 }
+
+func TestStore_Orphan_LateBlock(t *testing.T) {
+	ctx := context.Background()
+	t.Run("happy case, early block", func(tt *testing.T) {
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 100)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 100)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices, root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// early block
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, 1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		expectedBalance = pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+
+		// At y is still head
+		driftGenesisTime(f, 2, params.BeaconConfig().SecondsPerETH1Block-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		expectedBalance = pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+
+		// At 0 is still head
+		driftGenesisTime(f, 3, 0)
+		require.NoError(t, f.NewSlot(ctx, 3))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		expectedBalance = uint64(0)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run("vanilla case, late block", func(tt *testing.T) {
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// late block low attestation count
+		previousHeadRoot := root
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:101], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+		expectedBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+		expectedBalance = params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+
+		// At y is still not head
+		driftGenesisTime(f, 2, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+
+		// At 0 is still not head
+		driftGenesisTime(f, 3, 0)
+		require.NoError(t, f.NewSlot(ctx, 3))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run("late block, voted at y", func(tt *testing.T) {
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// late block high attestation count
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:200], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// At y is still head
+		driftGenesisTime(f, 2, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+
+		// At 0 is still head
+		driftGenesisTime(f, 3, 0)
+		require.NoError(t, f.NewSlot(ctx, 3))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run("late block, voted between y and 0", func(tt *testing.T) {
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// late block low attestation count
+		previousHeadRoot := root
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:101], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+		expectedBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+		expectedBalance = params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+
+		// At y is still not head
+		driftGenesisTime(f, 2, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+
+		// At 0 it became head
+		driftGenesisTime(f, 3, 0)
+		require.NoError(t, f.NewSlot(ctx, 3))
+		f.ProcessAttestation(ctx, attestingIndices[101:200], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 100 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run("early block, forks", func(tt *testing.T) {
+		// An early block arrives and becomes head, even though it forks
+		// a previous block, it should also become the proposer's head
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// Next block comes early gets low attestation count
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold-1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:101], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// Next block arrives early and forks the current head but still
+		// manages to get enough votes to beat PB
+		require.NoError(t, f.NewSlot(ctx, 3))
+		driftGenesisTime(f, 3, params.BeaconConfig().OrphanLateBlockFirstThreshold-1)
+		root = [32]byte{'c'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'a'}, [32]byte{'C'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[101:200], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 99*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// At y is still head
+		driftGenesisTime(f, 3, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+
+		// At 0 is still head
+		driftGenesisTime(f, 4, 0)
+		require.NoError(t, f.NewSlot(ctx, 4))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 99 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run("late block, forks", func(tt *testing.T) {
+		// A late block arrives and has low vote count, it orphans the
+		// previous block, we orphan it back (no change from normal
+		// behaviour)
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// Next block comes early gets high attestation count
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold-1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:199], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 99*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// Next block arrives late and forks the current head and does
+		// not become head
+		previousHeadRoot := root
+		require.NoError(t, f.NewSlot(ctx, 3))
+		driftGenesisTime(f, 3, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'c'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'a'}, [32]byte{'C'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[199:200], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, previousHeadRoot, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+		expectedBalance = 99 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// At y is still not head
+		driftGenesisTime(f, 3, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, previousHeadRoot, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+
+		// At 0 is still not head
+		driftGenesisTime(f, 4, 0)
+		require.NoError(t, f.NewSlot(ctx, 4))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, previousHeadRoot, headRoot)
+		require.Equal(t, previousHeadRoot, f.store.proposerHeadNode.root)
+		expectedBalance = 99 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+
+	t.Run("late block, reorg due to attestations", func(tt *testing.T) {
+		//  A <-- B
+		//  \-------- C
+		// In this situation head is C. Then block D arrives late
+		//
+		//  A <-- B
+		//  \-------- C <---- D
+		// But there is a reorg due to attestations and B becomes head.
+		// The proposer head and head should agree.
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:100], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// Next block comes early gets low attestation count
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold-1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:101], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// Next block arrives early and forks the current head but
+		// becomes head due to PB.
+		require.NoError(t, f.NewSlot(ctx, 3))
+		driftGenesisTime(f, 3, params.BeaconConfig().OrphanLateBlockFirstThreshold-1)
+		root = [32]byte{'c'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'a'}, [32]byte{'C'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[101:103], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 2*params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// Next block arrives late we don't fork because the previous
+		// head had low vote count
+		require.NoError(t, f.NewSlot(ctx, 4))
+		driftGenesisTime(f, 4, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'d'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'c'}, [32]byte{'D'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = uint64(0)
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// At y there have been numerous attestations for the orphaned
+		// block B, there's a reorg to that block
+		driftGenesisTime(f, 4, params.BeaconConfig().SecondsPerSlot-1)
+		f.ProcessAttestation(ctx, attestingIndices[103:200], [32]byte{'b'}, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte{'b'}, headRoot)
+		require.Equal(t, headRoot, f.store.proposerHeadNode.root)
+		// 97 votes from this round plus the one vote the node held
+		expectedBalance = 98 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+
+		// At 0 the reorg holds not head
+		driftGenesisTime(f, 5, 0)
+		require.NoError(t, f.NewSlot(ctx, 5))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte{'b'}, headRoot)
+		require.Equal(t, headRoot, f.store.proposerHeadNode.root)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+	t.Run(" unlively chain, late block", func(tt *testing.T) {
+		f := setup(0, 0)
+		f.store.committeeBalance = params.BeaconConfig().MaxEffectiveBalance * 100
+		balances := make([]uint64, 300)
+		for i := range balances {
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		}
+
+		// Previous Head
+		driftGenesisTime(f, 1, 1)
+		root := [32]byte{'a'}
+		state, blkRoot, err := prepareForkchoiceState(ctx, 1, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		attestingIndices := make([]uint64, 300)
+		for i := range attestingIndices {
+			attestingIndices[i] = uint64(i)
+		}
+		f.ProcessAttestation(ctx, attestingIndices[:1], root, 0)
+		headRoot, err := f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		pbScore, err := computeProposerBoostScore(balances)
+		require.NoError(t, err)
+		expectedBalance := params.BeaconConfig().MaxEffectiveBalance + pbScore
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+
+		// late block low attestation count
+		require.NoError(t, f.NewSlot(ctx, 2))
+		driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
+		root = [32]byte{'b'}
+		state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		f.ProcessAttestation(ctx, attestingIndices[100:102], root, 0)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		expectedBalance = 2 * params.BeaconConfig().MaxEffectiveBalance
+		require.Equal(t, expectedBalance, f.store.proposerHeadNode.balance)
+
+		// At y is still head
+		driftGenesisTime(f, 2, params.BeaconConfig().SecondsPerSlot-1)
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+
+		// At 0 is still head
+		driftGenesisTime(f, 3, 0)
+		require.NoError(t, f.NewSlot(ctx, 3))
+		headRoot, err = f.Head(ctx, balances)
+		require.NoError(t, err)
+		require.Equal(t, root, headRoot)
+		require.Equal(t, root, f.store.proposerHeadNode.root)
+		require.Equal(t, expectedBalance, f.store.headNode.balance)
+	})
+
+}

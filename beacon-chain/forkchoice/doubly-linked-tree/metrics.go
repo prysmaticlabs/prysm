@@ -51,4 +51,10 @@ var (
 			Help: "The number of times pruning happened.",
 		},
 	)
+	orphanBetHits = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "doublylinkedtree_orphan_bet_hits",
+			Help: "The number of times that a late block had below the voting threshold after attestations were counted.",
+		},
+	)
 )

@@ -127,6 +127,10 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	return n.parent.setNodeAndParentValidated(ctx)
 }
 
+func (n *Node) secondsSinceSlotStart(genesisTime uint64) uint64 {
+	return n.timestamp - genesisTime - uint64(n.slot)*params.BeaconConfig().SecondsPerSlot
+}
+
 // nodeTreeDump appends to the given list all the nodes descending from this one
 func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]*v1.ForkChoiceNode, error) {
 	if ctx.Err() != nil {
@@ -160,22 +164,4 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		}
 	}
 	return nodes, nil
-}
-
-// VotedFraction returns the fraction of the committee that voted directly for
-// this node.
-func (f *ForkChoice) VotedFraction(root [32]byte) (uint64, error) {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	// Avoid division by zero before a block is inserted.
-	if f.store.committeeBalance == 0 {
-		return 0, nil
-	}
-
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		return 0, ErrNilNode
-	}
-	return node.balance * 100 / f.store.committeeBalance, nil
 }

@@ -131,6 +131,9 @@ type BeaconChainConfig struct {
 	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in beacon state.
 	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
 	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Bellatrix.
+	OrphanLateBlockFirstThreshold  uint64        // OrphanLateBlockFirstThreshold defines the maximum time we wait for a block without considering it a candidate to being orphaned.
+	OrphanLateBlockBalanceFraction uint64        // OrphanLateBlockBalanceFraction defines the maximum fraction of the committee vote that a block should have to be considered as a candidate to being orphaned.
+	ProcessAttestationsThreshold   uint64        // ProcessAttestationsThreshold defines the time within a slot in which we process attestations.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.

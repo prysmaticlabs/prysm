@@ -12,6 +12,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// liveFraction is the minimum committee vote for the previous head that we
+// require before orphaning it's child
+var liveFraction = uint64(80)
+
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes. This function requires a lock in Store.nodesLock.
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
@@ -84,13 +88,28 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	if bestDescendant == nil {
 		bestDescendant = justifiedNode
 	}
-	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
+	currentSlot := slots.SinceGenesis(time.Unix(int64(s.genesisTime), 0))
+	currentEpoch := slots.ToEpoch(currentSlot)
 	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch, currentEpoch) {
 		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
 	}
 	s.allTipsAreInvalid = false
+
+	secondsIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+	earlyCall := secondsIntoSlot >= params.BeaconConfig().ProcessAttestationsThreshold
+	noBlock := s.highestReceivedNode.slot+1 < currentSlot || (earlyCall && s.highestReceivedNode.slot < currentSlot)
+	earlyBlock := s.highestReceivedNode.secondsSinceSlotStart(s.genesisTime) <= params.BeaconConfig().OrphanLateBlockFirstThreshold && s.highestReceivedNode.slot == currentSlot
+	if noBlock || earlyBlock {
+		s.proposerHeadNode = bestDescendant
+	} else if s.committeeBalance > 0 {
+		liveChain := s.proposerHeadNode.balance*100/s.committeeBalance > liveFraction
+		votedFraction := s.highestReceivedNode.balance * 100 / s.committeeBalance
+		if !liveChain || votedFraction > params.BeaconConfig().OrphanLateBlockBalanceFraction {
+			s.proposerHeadNode = bestDescendant
+		}
+	}
 
 	// Update metrics.
 	if bestDescendant != s.headNode {
@@ -120,6 +139,11 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	parent := s.nodeByRoot[parentRoot]
+	timestamp := uint64(time.Now().Unix())
+	if timestamp < s.genesisTime+uint64(slot)*params.BeaconConfig().SecondsPerSlot {
+		log.Warning("inserting a block from the future in forkchoice. Check your clock drift.")
+		timestamp = s.genesisTime + uint64(slot)*params.BeaconConfig().SecondsPerSlot
+	}
 
 	n := &Node{
 		slot:                     slot,
@@ -131,7 +155,7 @@ func (s *Store) insert(ctx context.Context,
 		unrealizedFinalizedEpoch: finalizedEpoch,
 		optimistic:               true,
 		payloadHash:              payloadHash,
-		timestamp:                uint64(time.Now().Unix()),
+		timestamp:                timestamp,
 	}
 
 	s.nodeByPayload[payloadHash] = n
@@ -141,17 +165,14 @@ func (s *Store) insert(ctx context.Context,
 			s.treeRootNode = n
 			s.headNode = n
 			s.highestReceivedNode = n
+			s.proposerHeadNode = n
 		} else {
 			return n, errInvalidParentRoot
 		}
 	} else {
 		parent.children = append(parent.children, n)
 		// Apply proposer boost
-		timeNow := uint64(time.Now().Unix())
-		if timeNow < s.genesisTime {
-			return n, nil
-		}
-		secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+		secondsIntoSlot := (timestamp - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 		currentSlot := slots.CurrentSlot(s.genesisTime)
 		boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 		if currentSlot == slot && secondsIntoSlot < boostThreshold {

@@ -23,6 +23,7 @@ type ForkChoicer interface {
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, []uint64) ([32]byte, error)
+	ProposerHead() [32]byte
 	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)

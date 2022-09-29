@@ -29,6 +29,7 @@ type Store struct {
 	previousProposerBoostScore    uint64                                 // previous proposer boosted root score.
 	treeRootNode                  *Node                                  // the root node of the store tree.
 	headNode                      *Node                                  // last head Node
+	proposerHeadNode              *Node                                  // the head Node according to a proposer's view (allowed to orphan late blocks)
 	nodeByRoot                    map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodeByPayload                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	slashedIndices                map[types.ValidatorIndex]bool          // the list of equivocating validator indices

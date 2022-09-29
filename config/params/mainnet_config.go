@@ -188,6 +188,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,
+	OrphanLateBlockFirstThreshold:  4,
+	OrphanLateBlockBalanceFraction: 10,
+	ProcessAttestationsThreshold:   10,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
