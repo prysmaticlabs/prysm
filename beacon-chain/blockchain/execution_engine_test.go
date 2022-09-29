@@ -42,7 +42,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
@@ -431,7 +431,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	phase0State, _ := util.DeterministicGenesisState(t, 1)
@@ -677,7 +677,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
@@ -720,7 +720,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 
@@ -762,8 +762,8 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	stateGen := stategen.New(beaconDB)
 	fcs := doublylinkedtree.New()
+	stateGen := stategen.New(beaconDB, fcs)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
@@ -876,10 +876,11 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 func TestService_removeInvalidBlockAndState(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -928,10 +929,11 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 func TestService_getPayloadHash(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

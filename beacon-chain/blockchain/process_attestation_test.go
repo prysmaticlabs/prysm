@@ -21,120 +21,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
+func TestStore_OnAttestation_ErrorConditions(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(doublylinkedtree.New()),
-		WithStateGen(stategen.New(beaconDB)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	_, err = blockTree1(t, beaconDB, []byte{'g'})
-	require.NoError(t, err)
-
-	blkWithoutState := util.NewBeaconBlock()
-	blkWithoutState.Block.Slot = 0
-	util.SaveBlock(t, ctx, beaconDB, blkWithoutState)
-	BlkWithOutStateRoot, err := blkWithoutState.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	blkWithStateBadAtt := util.NewBeaconBlock()
-	blkWithStateBadAtt.Block.Slot = 1
-	util.SaveBlock(t, ctx, beaconDB, blkWithStateBadAtt)
-	BlkWithStateBadAttRoot, err := blkWithStateBadAtt.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	s, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
-
-	blkWithValidState := util.NewBeaconBlock()
-	blkWithValidState.Block.Slot = 2
-	util.SaveBlock(t, ctx, beaconDB, blkWithValidState)
-
-	blkWithValidStateRoot, err := blkWithValidState.Block.HashTreeRoot()
-	require.NoError(t, err)
-	s, err = util.NewBeaconState()
-	require.NoError(t, err)
-	err = s.SetFork(&ethpb.Fork{
-		Epoch:           0,
-		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-	})
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
-
-	tests := []struct {
-		name      string
-		a         *ethpb.Attestation
-		wantedErr string
-	}{
-		{
-			name:      "attestation's data slot not aligned with target vote",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
-			wantedErr: "slot 32 does not match target epoch 0",
-		},
-		{
-			name:      "no pre state for attestations's target block",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
-			wantedErr: "could not get pre state for epoch 0",
-		},
-		{
-			name: "process attestation doesn't match current epoch",
-			a: util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
-				Root: BlkWithStateBadAttRoot[:]}}}),
-			wantedErr: "target epoch 100 does not match current epoch",
-		},
-		{
-			name:      "process nil attestation",
-			a:         nil,
-			wantedErr: "attestation can't be nil",
-		},
-		{
-			name:      "process nil field (a.Data) in attestation",
-			a:         &ethpb.Attestation{},
-			wantedErr: "attestation's data can't be nil",
-		},
-		{
-			name: "process nil field (a.Target) in attestation",
-			a: &ethpb.Attestation{
-				Data: &ethpb.AttestationData{
-					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
-					Target:          nil,
-					Source:          &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-				},
-				AggregationBits: make([]byte, 1),
-				Signature:       make([]byte, 96),
-			},
-			wantedErr: "attestation's target can't be nil",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := service.OnAttestation(ctx, tt.a)
-			if tt.wantedErr != "" {
-				assert.ErrorContains(t, tt.wantedErr, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(doublylinkedtree.New()),
-		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fc),
+		WithStateGen(stategen.New(beaconDB, fc)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -240,7 +135,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -269,7 +164,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -331,7 +226,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -437,7 +332,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)

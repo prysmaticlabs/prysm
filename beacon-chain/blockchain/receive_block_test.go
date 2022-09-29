@@ -127,13 +127,14 @@ func TestService_ReceiveBlock(t *testing.T) {
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 
+			fc := doublylinkedtree.New()
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(doublylinkedtree.New()),
+				WithForkChoiceStore(fc),
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(stategen.New(beaconDB, fc)),
 				WithFinalizedStateAtStartUp(genesis),
 			}
 			s, err := NewService(ctx, opts...)
@@ -166,13 +167,14 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(fc),
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fc)),
 	}
 
 	s, err := NewService(ctx, opts...)
@@ -242,12 +244,13 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			fc := doublylinkedtree.New()
 			beaconDB := testDB.SetupDB(t)
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(doublylinkedtree.New()),
+				WithForkChoiceStore(fc),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
-				WithStateGen(stategen.New(beaconDB)),
+				WithStateGen(stategen.New(beaconDB, fc)),
 			}
 			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)

@@ -52,7 +52,7 @@ func TestStore_OnBlock(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 
@@ -145,10 +145,11 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -188,10 +189,11 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -223,10 +225,11 @@ func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -252,7 +255,7 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -301,7 +304,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -352,7 +355,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -408,9 +411,10 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fc)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -555,7 +559,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -646,7 +650,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -708,7 +712,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	b := util.NewBeaconBlock()
@@ -803,7 +807,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
@@ -853,7 +857,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
@@ -901,7 +905,7 @@ func TestOnBlock_NilBlock(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 	}
@@ -920,7 +924,7 @@ func TestOnBlock_InvalidSignature(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
@@ -956,7 +960,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
@@ -1169,7 +1173,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 		WithAttestationPool(attestations.NewPool()),
@@ -1307,7 +1311,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
@@ -1360,7 +1364,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	require.NoError(t, err)
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
@@ -1438,7 +1442,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -1469,11 +1473,12 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -1628,11 +1633,12 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -1788,11 +1794,12 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -1997,11 +2004,12 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
@@ -2212,7 +2220,7 @@ func noViableHead_Reboot(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, newfc)),
 		WithForkChoiceStore(newfc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
@@ -2417,11 +2425,12 @@ func noViableHead_Reboot(t *testing.T) {
 func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
+	fc := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateGen(stategen.New(beaconDB, fc)),
+		WithForkChoiceStore(fc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 	}
 	service, err := NewService(ctx, opts...)
