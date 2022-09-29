@@ -502,7 +502,7 @@ func TestStore_Orphan_LateBlock(t *testing.T) {
 		require.NoError(t, err)
 		expectedBalance := 100*params.BeaconConfig().MaxEffectiveBalance + pbScore
 		require.Equal(t, expectedBalance, f.store.headNode.balance)
-		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		require.Equal(t, f.store.headNode.root, f.ProposerHead())
 
 		// early block
 		require.NoError(t, f.NewSlot(ctx, 2))
@@ -514,7 +514,7 @@ func TestStore_Orphan_LateBlock(t *testing.T) {
 		headRoot, err = f.Head(ctx, balances)
 		require.NoError(t, err)
 		require.Equal(t, root, headRoot)
-		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		require.Equal(t, f.store.headNode.root, f.ProposerHead())
 		expectedBalance = pbScore
 		require.Equal(t, expectedBalance, f.store.headNode.balance)
 
@@ -523,7 +523,7 @@ func TestStore_Orphan_LateBlock(t *testing.T) {
 		headRoot, err = f.Head(ctx, balances)
 		require.NoError(t, err)
 		require.Equal(t, root, headRoot)
-		require.Equal(t, f.store.headNode, f.store.proposerHeadNode)
+		require.Equal(t, f.store.headNode.root, f.ProposerHead())
 		expectedBalance = pbScore
 		require.Equal(t, expectedBalance, f.store.headNode.balance)
 

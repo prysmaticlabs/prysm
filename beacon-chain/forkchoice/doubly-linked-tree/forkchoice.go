@@ -664,3 +664,10 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 	return resp, nil
 
 }
+
+// ProposerHead returns the current head from the point of view of a proposer
+func (f *ForkChoice) ProposerHead() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.proposerHeadNode.root
+}
