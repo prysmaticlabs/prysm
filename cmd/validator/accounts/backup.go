@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/cmd/utils"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
@@ -17,7 +16,7 @@ import (
 const backupPromptText = "Enter the directory where your backup.zip file will be written to"
 
 func accountsBackup(c *cli.Context) error {
-	w, km, err := utils.walletWithKeymanager(c)
+	w, km, err := walletWithKeymanager(c)
 	if err != nil {
 		return err
 	}
