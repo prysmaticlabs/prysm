@@ -81,7 +81,6 @@ func TestInitializeFromProto_Altair(t *testing.T) {
 			name:  "empty state",
 			state: &ethpb.BeaconStateAltair{},
 		},
-		// TODO: Add full state. Blocked by testutil migration.
 	}
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -205,7 +204,7 @@ func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	}
 }
 
-func TestInitializeFromProtoUnsafe_Altair(_ *testing.T) {
+func TestInitializeFromProtoUnsafe_Altair(t *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateAltair
@@ -223,12 +222,20 @@ func TestInitializeFromProtoUnsafe_Altair(_ *testing.T) {
 			name:  "empty state",
 			state: &ethpb.BeaconStateAltair{},
 		},
-		// TODO: Add full state. Blocked by testutil migration.
 	}
-	_ = initTests
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoUnsafeAltair(tt.state)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
-func TestInitializeFromProtoUnsafe_Bellatrix(_ *testing.T) {
+func TestInitializeFromProtoUnsafe_Bellatrix(t *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateBellatrix
@@ -246,9 +253,48 @@ func TestInitializeFromProtoUnsafe_Bellatrix(_ *testing.T) {
 			name:  "empty state",
 			state: &ethpb.BeaconStateBellatrix{},
 		},
-		// TODO: Add full state. Blocked by testutil migration.
 	}
-	_ = initTests
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoUnsafeBellatrix(tt.state)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestInitializeFromProtoUnsafe_Capella(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateCapella
+		error string
+	}
+	initTests := []test{
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateCapella{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateCapella{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoUnsafeCapella(tt.state)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestBeaconState_HashTreeRoot(t *testing.T) {
