@@ -251,16 +251,14 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.WithdrawalQueue.RealPosition()] = withdrawalQueueRoot
 
 		// Next withdrawal index root.
-		nextWithdrawalIndexBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(nextWithdrawalIndexBuf, state.nextWithdrawalIndex)
-		nextWithdrawalIndexRoot := bytesutil.ToBytes32(nextWithdrawalIndexBuf)
-		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot[:]
+		nextWithdrawalIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)
+		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
 
 		// Next partial withdrawal validator index root.
-		nextPartialWithdrawalValidatorIndexBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(nextPartialWithdrawalValidatorIndexBuf, uint64(state.nextPartialWithdrawalValidatorIndex))
-		nextPartialWithdrawalValidatorIndexRoot := bytesutil.ToBytes32(nextPartialWithdrawalValidatorIndexBuf)
-		fieldRoots[nativetypes.NextPartialWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot[:]
+		nextPartialWithdrawalValidatorIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextPartialWithdrawalValidatorIndexRoot, uint64(state.nextPartialWithdrawalValidatorIndex))
+		fieldRoots[nativetypes.NextPartialWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot
 	}
 
 	return fieldRoots, nil
