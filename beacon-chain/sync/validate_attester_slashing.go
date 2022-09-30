@@ -32,15 +32,15 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return rejectGossipMessage(msg), err
 	}
 	slashing, ok := m.(*ethpb.AttesterSlashing)
 	if !ok {
-		return pubsub.ValidationReject, errWrongMessage
+		return rejectGossipMessage(msg), errWrongMessage
 	}
 
 	if slashing == nil || slashing.Attestation_1 == nil || slashing.Attestation_2 == nil {
-		return pubsub.ValidationReject, errNilMessage
+		return rejectGossipMessage(msg), errNilMessage
 	}
 	if s.hasSeenAttesterSlashingIndices(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices) {
 		return pubsub.ValidationIgnore, nil
@@ -51,7 +51,7 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
-		return pubsub.ValidationReject, err
+		return rejectGossipMessage(msg), err
 	}
 
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
