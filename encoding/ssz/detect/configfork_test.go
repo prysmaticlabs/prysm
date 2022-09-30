@@ -48,7 +48,7 @@ func TestSlotFromBlock(t *testing.T) {
 }
 
 func TestByState(t *testing.T) {
-	undo, err := hackBellatrixMaxuint()
+	undo, err := hackCapellaForkEpoch()
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
@@ -127,7 +127,7 @@ func stateForVersion(v int) (state.BeaconState, error) {
 
 func TestUnmarshalState(t *testing.T) {
 	ctx := context.Background()
-	undo, err := hackBellatrixMaxuint()
+	undo, err := hackCapellaForkEpoch()
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
@@ -184,19 +184,19 @@ func TestUnmarshalState(t *testing.T) {
 	}
 }
 
-func hackBellatrixMaxuint() (func() error, error) {
-	// We monkey patch the config to use a smaller value for the bellatrix fork epoch.
+func hackCapellaForkEpoch() (func() error, error) {
+	// We monkey patch the config to use a smaller value for the capella fork epoch.
 	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
 	// Unfortunately we have unit tests that assert our config matches the upstream config, so we have to choose between
 	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
 	bc := params.MainnetConfig().Copy()
-	bc.BellatrixForkEpoch = math.MaxUint32
+	bc.CapellaForkEpoch = math.MaxUint32
 	undo, err := params.SetActiveWithUndo(bc)
 	return undo, err
 }
 
 func TestUnmarshalBlock(t *testing.T) {
-	undo, err := hackBellatrixMaxuint()
+	undo, err := hackCapellaForkEpoch()
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
@@ -288,7 +288,7 @@ func TestUnmarshalBlock(t *testing.T) {
 }
 
 func TestUnmarshalBlindedBlock(t *testing.T) {
-	undo, err := hackBellatrixMaxuint()
+	undo, err := hackCapellaForkEpoch()
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
