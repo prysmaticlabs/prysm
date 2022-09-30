@@ -254,7 +254,7 @@ func NewExecutionData(i interface{}) (interfaces.ExecutionData, error) {
 func NewExecutionDataHeader(i interface{}) (interfaces.ExecutionDataHeader, error) {
 	switch e := i.(type) {
 	case nil:
-		return nil, ErrNilObject
+		return nil, ErrNilObjectWrapped
 	case *enginev1.ExecutionPayloadHeader:
 		return initPayloadHeaderFromProto(e)
 	case *enginev1.ExecutionPayloadHeader4844:

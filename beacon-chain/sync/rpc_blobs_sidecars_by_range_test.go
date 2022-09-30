@@ -30,6 +30,7 @@ func newBlobsSidecar() *ethpb.SignedBlobsSidecar {
 	return &ethpb.SignedBlobsSidecar{
 		Message: &ethpb.BlobsSidecar{
 			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+			AggregatedProof: make([]byte, 48),
 		},
 		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}

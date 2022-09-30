@@ -265,7 +265,7 @@ func Test_NewBeaconBlockBody(t *testing.T) {
 		assert.Equal(t, version.Altair, b.version)
 	})
 	t.Run("BeaconBlockBodyBellatrix", func(t *testing.T) {
-		pb := &eth.BeaconBlockBodyBellatrix{}
+		pb := &eth.BeaconBlockBodyBellatrix{ExecutionPayload: &enginev1.ExecutionPayload{}}
 		i, err := NewBeaconBlockBody(pb)
 		require.NoError(t, err)
 		b, ok := i.(*BeaconBlockBody)
@@ -273,13 +273,31 @@ func Test_NewBeaconBlockBody(t *testing.T) {
 		assert.Equal(t, version.Bellatrix, b.version)
 	})
 	t.Run("BlindedBeaconBlockBodyBellatrix", func(t *testing.T) {
-		pb := &eth.BlindedBeaconBlockBodyBellatrix{}
+		pb := &eth.BlindedBeaconBlockBodyBellatrix{ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}}
 		i, err := NewBeaconBlockBody(pb)
 		require.NoError(t, err)
 		b, ok := i.(*BeaconBlockBody)
 		require.Equal(t, true, ok)
 		assert.Equal(t, version.Bellatrix, b.version)
 		assert.Equal(t, true, b.isBlinded)
+	})
+	t.Run("BeaconBlockBodyWithBlobKZGs", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyWithBlobKZGs{ExecutionPayload: &enginev1.ExecutionPayload4844{}}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.EIP4844, b.version)
+		assert.Equal(t, version.EIP4844, b.executionData.Version())
+	})
+	t.Run("BeaconBlockBodyWithBlobKZGsCompat", func(t *testing.T) {
+		pb := &eth.BeaconBlockBodyWithBlobKZGsCompat{ExecutionPayload: &enginev1.ExecutionPayload{}}
+		i, err := NewBeaconBlockBody(pb)
+		require.NoError(t, err)
+		b, ok := i.(*BeaconBlockBody)
+		require.Equal(t, true, ok)
+		assert.Equal(t, version.EIP4844, b.version)
+		assert.Equal(t, version.Bellatrix, b.executionData.Version())
 	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlockBody(nil)
@@ -308,19 +326,41 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 		assert.Equal(t, version.Altair, sb.Version())
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix}}
+		payload, err := NewExecutionData(&enginev1.ExecutionPayload{})
+		require.NoError(t, err)
+		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix, executionData: payload}}
 		sb, err := BuildSignedBeaconBlock(b, sig[:])
 		require.NoError(t, err)
 		assert.DeepEqual(t, sig, sb.Signature())
 		assert.Equal(t, version.Bellatrix, sb.Version())
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix, isBlinded: true}}
+		payloadHeader, err := NewExecutionDataHeader(&enginev1.ExecutionPayloadHeader{})
+		require.NoError(t, err)
+		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix, isBlinded: true, executionDataHeader: payloadHeader}}
 		sb, err := BuildSignedBeaconBlock(b, sig[:])
 		require.NoError(t, err)
 		assert.DeepEqual(t, sig, sb.Signature())
 		assert.Equal(t, version.Bellatrix, sb.Version())
 		assert.Equal(t, true, sb.IsBlinded())
+	})
+	t.Run("Eip4844", func(t *testing.T) {
+		payload, err := NewExecutionData(&enginev1.ExecutionPayload4844{})
+		require.NoError(t, err)
+		b := &BeaconBlock{version: version.EIP4844, body: &BeaconBlockBody{version: version.EIP4844, executionData: payload}}
+		sb, err := BuildSignedBeaconBlock(b, sig[:])
+		require.NoError(t, err)
+		assert.DeepEqual(t, sig, sb.Signature())
+		assert.Equal(t, version.EIP4844, sb.Version())
+	})
+	t.Run("Eip4844Compat", func(t *testing.T) {
+		payload, err := NewExecutionData(&enginev1.ExecutionPayload{})
+		require.NoError(t, err)
+		b := &BeaconBlock{version: version.EIP4844, body: &BeaconBlockBody{version: version.EIP4844, executionData: payload}}
+		sb, err := BuildSignedBeaconBlock(b, sig[:])
+		require.NoError(t, err)
+		assert.DeepEqual(t, sig, sb.Signature())
+		assert.Equal(t, version.EIP4844, sb.Version())
 	})
 }
 
