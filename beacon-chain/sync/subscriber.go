@@ -771,5 +771,5 @@ func rejectGossipMessage(msg *pubsub.Message) pubsub.ValidationResult {
 	if features.Get().EnableFullSSZDataLogging {
 		log.WithField("rawMessage", msg).Debug("Rejected gossip message with data")
 	}
-	return rejectGossipMessage(msg)
+	return pubsub.ValidationReject
 }
