@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -764,4 +765,11 @@ func multiAddr(pid peer.ID, stat *peers.Status) string {
 		return ""
 	}
 	return addrs.String()
+}
+
+func rejectGossipMessage(msg *pubsub.Message) pubsub.ValidationResult {
+	if features.Get().EnableFullSSZDataLogging {
+		log.WithField("rawMessage", msg).Debug("Rejected gossip message with data")
+	}
+	return rejectGossipMessage(msg)
 }

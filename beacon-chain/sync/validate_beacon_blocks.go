@@ -53,7 +53,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, errors.Wrap(err, "Could not decode message")
+		return rejectGossipMessage(msg), errors.Wrap(err, "Could not decode message")
 	}
 
 	s.validateBlockLock.Lock()
@@ -61,11 +61,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	blk, ok := m.(interfaces.SignedBeaconBlock)
 	if !ok {
-		return pubsub.ValidationReject, errors.New("msg is not ethpb.SignedBeaconBlock")
+		return rejectGossipMessage(msg), errors.New("msg is not ethpb.SignedBeaconBlock")
 	}
 
 	if blk.IsNil() || blk.Block().IsNil() {
-		return pubsub.ValidationReject, errors.New("block.Block is nil")
+		return rejectGossipMessage(msg), errors.New("block.Block is nil")
 	}
 
 	// Broadcast the block on a feed to notify other services in the beacon node
@@ -108,7 +108,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		s.setBadBlock(ctx, blockRoot)
 		err := fmt.Errorf("received block with root %#x that has an invalid parent %#x", blockRoot, blk.Block().ParentRoot())
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Received block with an invalid parent")
-		return pubsub.ValidationReject, err
+		return rejectGossipMessage(msg), err
 	}
 
 	s.pendingQueueLock.RLock()
@@ -180,7 +180,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		// This also does not penalize a peer which sends optimistic blocks
 		if !errors.Is(ErrOptimisticParent, err) {
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not validate beacon block")
-			return pubsub.ValidationReject, err
+			return rejectGossipMessage(msg), err
 		}
 	}
 

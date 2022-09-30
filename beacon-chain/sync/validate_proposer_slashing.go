@@ -32,16 +32,16 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return rejectGossipMessage(msg), err
 	}
 
 	slashing, ok := m.(*ethpb.ProposerSlashing)
 	if !ok {
-		return pubsub.ValidationReject, errWrongMessage
+		return rejectGossipMessage(msg), errWrongMessage
 	}
 
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil {
-		return pubsub.ValidationReject, errNilMessage
+		return rejectGossipMessage(msg), errNilMessage
 	}
 	if s.hasSeenProposerSlashingIndex(slashing.Header_1.Header.ProposerIndex) {
 		return pubsub.ValidationIgnore, nil
@@ -52,7 +52,7 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
-		return pubsub.ValidationReject, err
+		return rejectGossipMessage(msg), err
 	}
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
