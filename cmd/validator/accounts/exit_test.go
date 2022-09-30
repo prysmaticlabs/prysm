@@ -77,7 +77,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 
-	_, km, err := walletWithKeymanager(cliCtx)
+	_, km, err := walletWithKeymanager(cliCtx, nil)
 	require.NoError(t, err)
 	require.NotNil(t, km)
 
@@ -178,7 +178,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 
-	_, km, err := walletWithKeymanager(cliCtx)
+	_, km, err := walletWithKeymanager(cliCtx, nil)
 	require.NoError(t, err)
 	require.NotNil(t, km)
 

@@ -16,7 +16,7 @@ import (
 const backupPromptText = "Enter the directory where your backup.zip file will be written to"
 
 func accountsBackup(c *cli.Context) error {
-	w, km, err := walletWithKeymanager(c)
+	w, km, err := walletWithKeymanager(c, nil)
 	if err != nil {
 		return err
 	}
