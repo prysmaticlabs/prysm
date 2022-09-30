@@ -53,8 +53,12 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (interfaces.ExecutionData, error) {
+	data, err := blocks.NewExecutionData(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return data, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
