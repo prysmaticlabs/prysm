@@ -786,8 +786,9 @@ func (v *validator) isAggregator(ctx context.Context, committee []types.Validato
 //
 // Spec code:
 // def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
-//    modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
-//    return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
+//
+//	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
+//	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
 func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot types.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	res, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
@@ -938,20 +939,27 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		startTime := slots.StartTime(v.genesisTime, slotOffset+i)
-		durationTillDuty := time.Until(startTime) + time.Second
+		durationTillDuty := (time.Until(startTime) + time.Second).Truncate(time.Second) // Round up to next second.
 
 		if len(attesterKeys[i]) > 0 {
-			log.WithFields(logrus.Fields{
+			attestationLog := log.WithFields(logrus.Fields{
 				"slot":                  slotOffset + i,
 				"slotInEpoch":           (slotOffset + i) % params.BeaconConfig().SlotsPerEpoch,
-				"timeTillDuty":          durationTillDuty.Round(time.Second),
 				"attesterDutiesAtSlot":  len(attesterKeys[i]),
 				"totalAttestersInEpoch": totalAttestingKeys,
 				"pubKeys":               attesterKeys[i],
-			}).Info("Attestation schedule")
+			})
+			if durationTillDuty > 0 {
+				attestationLog = attestationLog.WithField("timeTillDuty", durationTillDuty)
+			}
+			attestationLog.Info("Attestation schedule")
 		}
 		if proposerKeys[i] != "" {
-			log.WithField("slot", slotOffset+i).WithField("timeTillDuty", durationTillDuty.Round(time.Second)).WithField("pubKey", proposerKeys[i]).Info("Proposal schedule")
+			proposerLog := log.WithField("slot", slotOffset+i).WithField("pubKey", proposerKeys[i])
+			if durationTillDuty > 0 {
+				proposerLog = proposerLog.WithField("timeTillDuty", durationTillDuty)
+			}
+			proposerLog.Info("Proposal schedule")
 		}
 	}
 }
