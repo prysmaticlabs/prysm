@@ -320,7 +320,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 // ExecutionBlocksByHashes fetches a batch of execution engine blocks by hash by calling
 // eth_blockByHash via JSON-RPC.
 func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlocksByHashes")
+	_, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlocksByHashes")
 	defer span.End()
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
