@@ -234,8 +234,17 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	}
 }
 
+func emptyRawPayload() *enginev1.ExecutionPayload {
+	e := emptyPayload()
+	p, err := e.PbGenericPayload()
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
 func TestServer_getBuilderBlock(t *testing.T) {
-	p := emptyPayload()
+	p := emptyRawPayload()
 	p.GasLimit = 123
 
 	tests := []struct {
@@ -446,7 +455,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
 	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
@@ -520,7 +529,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
 	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
@@ -760,7 +769,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
@@ -850,7 +859,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	_, err := s.circuitBreakBuilder(0)
 	require.ErrorContains(t, "no fork choicer configured", err)
 
-	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
 	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
 	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(t, err)

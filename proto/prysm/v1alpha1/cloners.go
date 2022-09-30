@@ -572,6 +572,17 @@ func CopySignedBeaconBlockWithBlobKZGs(sigBlock *SignedBeaconBlockWithBlobKZGs) 
 	}
 }
 
+// CopySignedBeaconBlockWithBlobKZGsCompat copies the provided SignedBeaconWithBlobKZGs.
+func CopySignedBeaconBlockWithBlobKZGsCompat(sigBlock *SignedBeaconBlockWithBlobKZGsCompat) *SignedBeaconBlockWithBlobKZGsCompat {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBeaconBlockWithBlobKZGsCompat{
+		Block:     CopyBeaconBlockWithBlobKZGsCompat(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
 // CopyBeaconBlockWithBlobKZGs copies the provided BeaconBlockWithBlobKZGs.
 func CopyBeaconBlockWithBlobKZGs(block *BeaconBlockWithBlobKZGs) *BeaconBlockWithBlobKZGs {
 	if block == nil {
@@ -583,6 +594,20 @@ func CopyBeaconBlockWithBlobKZGs(block *BeaconBlockWithBlobKZGs) *BeaconBlockWit
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
 		Body:          CopyBeaconBlockBodyWithBlobKZGs(block.Body),
+	}
+}
+
+// CopyBeaconBlockWithBlobKZGsCompat copies the provided BeaconBlockWithBlobKZGsCompat.
+func CopyBeaconBlockWithBlobKZGsCompat(block *BeaconBlockWithBlobKZGsCompat) *BeaconBlockWithBlobKZGsCompat {
+	if block == nil {
+		return nil
+	}
+	return &BeaconBlockWithBlobKZGsCompat{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBeaconBlockBodyWithBlobKZGsCompat(block.Body),
 	}
 }
 
@@ -602,6 +627,26 @@ func CopyBeaconBlockBodyWithBlobKZGs(body *BeaconBlockBodyWithBlobKZGs) *BeaconB
 		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
 		ExecutionPayload:  CopyExecutionPayload4844(body.ExecutionPayload),
+		BlobKzgs:          CopyBlobKZGs(body.BlobKzgs),
+	}
+}
+
+// CopyBeaconBlockBodyWithBlobKZGsCompat copies the provided BeaconBlockBodyWithBlobKZGsCompat.
+func CopyBeaconBlockBodyWithBlobKZGsCompat(body *BeaconBlockBodyWithBlobKZGsCompat) *BeaconBlockBodyWithBlobKZGsCompat {
+	if body == nil {
+		return nil
+	}
+	return &BeaconBlockBodyWithBlobKZGsCompat{
+		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:          CopyETH1Data(body.Eth1Data),
+		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:      CopyAttestations(body.Attestations),
+		Deposits:          CopyDeposits(body.Deposits),
+		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayload:  CopyExecutionPayload(body.ExecutionPayload),
 		BlobKzgs:          CopyBlobKZGs(body.BlobKzgs),
 	}
 }

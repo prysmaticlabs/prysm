@@ -61,8 +61,16 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 		cp := eth.CopySignedBeaconBlockBellatrix(pb.(*eth.SignedBeaconBlockBellatrix))
 		return initSignedBlockFromProtoBellatrix(cp)
 	case version.EIP4844:
-		cp := eth.CopySignedBeaconBlockWithBlobKZGs(pb.(*eth.SignedBeaconBlockWithBlobKZGs))
-		return initSignedBlockFromProtoEip4844(cp)
+		switch p := pb.(type) {
+		case *eth.SignedBeaconBlockWithBlobKZGs:
+			cp := eth.CopySignedBeaconBlockWithBlobKZGs(p)
+			return initSignedBlockFromProtoEip4844(cp)
+		case *eth.SignedBeaconBlockWithBlobKZGsCompat:
+			cp := eth.CopySignedBeaconBlockWithBlobKZGsCompat(p)
+			return initSignedBlockFromProtoEip4844Compat(cp)
+		default:
+			return nil, errIncorrectBlockVersion
+		}
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -93,6 +101,7 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			Block: &eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: pb.(*eth.SignedBeaconBlockBellatrix)},
 		}, nil
 	case version.EIP4844:
+		// TODO(EIP-4844): What does it mean to propose a Eip4844Compat block?
 		return &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: pb.(*eth.SignedBeaconBlockWithBlobKZGs)},
 		}, nil

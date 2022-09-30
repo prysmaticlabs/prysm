@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -54,9 +55,12 @@ func (e *EngineClient) ForkchoiceUpdated(
 
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (interfaces.ExecutionData, error) {
+	if e.ExecutionPayload == nil {
+		return emptyPayload(), e.ErrGetPayload
+	}
 	data, err := blocks.NewExecutionData(e.ExecutionPayload)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	return data, e.ErrGetPayload
 }
@@ -167,4 +171,18 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 // GetBlobsBundle --
 func (e *EngineClient) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
 	return e.BlobsBundle, nil
+}
+
+func emptyPayload() interfaces.ExecutionData {
+	b, _ := blocks.NewExecutionData(&pb.ExecutionPayload{
+		ParentHash:    make([]byte, field_params.RootLength),
+		FeeRecipient:  make([]byte, field_params.FeeRecipientLength),
+		StateRoot:     make([]byte, field_params.RootLength),
+		ReceiptsRoot:  make([]byte, field_params.RootLength),
+		LogsBloom:     make([]byte, field_params.LogsBloomLength),
+		PrevRandao:    make([]byte, field_params.RootLength),
+		BaseFeePerGas: make([]byte, field_params.RootLength),
+		BlockHash:     make([]byte, field_params.RootLength),
+	})
+	return b
 }
