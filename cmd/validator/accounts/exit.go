@@ -1,24 +1,18 @@
 package accounts
 
 import (
-	"context"
 	"io"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
 )
 
 func AccountsExit(c *cli.Context, r io.Reader) error {
-
 	dialOpts := client.ConstructDialOptions(
 		c.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		c.String(flags.CertFlag.Name),
@@ -27,20 +21,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 	)
 	grpcHeaders := strings.Split(c.String(flags.GrpcHeadersFlag.Name), ",")
 	beaconRPCProvider := c.String(flags.BeaconRPCProviderFlag.Name)
-	ctx := grpcutil.AppendHeaders(context.Background(), grpcHeaders)
-	conn, err := grpc.DialContext(ctx, beaconRPCProvider, dialOpts...)
-	if err != nil {
-		return errors.Wrapf(err, "could not dial endpoint %s", beaconRPCProvider)
-	}
-	nodeClient := ethpb.NewNodeClient(conn)
-	resp, err := nodeClient.GetGenesis(c.Context, &empty.Empty{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to get genesis info")
-	}
-	if err := conn.Close(); err != nil {
-		log.WithError(err).Error("Failed to close connection")
-	}
-	w, km, err := walletWithKeymanager(c, resp.GenesisValidatorsRoot)
+	w, km, err := walletWithKeymanager(c)
 	if err != nil {
 		return err
 	}

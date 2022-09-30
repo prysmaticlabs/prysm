@@ -3,24 +3,51 @@ package accounts
 import (
 	"strings"
 
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/node"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
 )
 
-func walletWithKeymanager(c *cli.Context, genesisValidatorsRoot []byte) (*wallet.Wallet, keymanager.IKeymanager, error) {
+func walletWithKeymanager(c *cli.Context) (*wallet.Wallet, keymanager.IKeymanager, error) {
 	if c.IsSet(flags.Web3SignerURLFlag.Name) {
 		config, err := node.Web3SignerConfig(c)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not configure web3signer")
 		}
 		w := wallet.NewWalletForWeb3Signer()
-		config.GenesisValidatorsRoot = genesisValidatorsRoot
+		dialOpts := client.ConstructDialOptions(
+			c.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+			c.String(flags.CertFlag.Name),
+			c.Uint(flags.GrpcRetriesFlag.Name),
+			c.Duration(flags.GrpcRetryDelayFlag.Name),
+		)
+		grpcHeaders := strings.Split(c.String(flags.GrpcHeadersFlag.Name), ",")
+		beaconRPCProvider := c.String(flags.BeaconRPCProviderFlag.Name)
+		ctx := grpcutil.AppendHeaders(c.Context, grpcHeaders)
+		conn, err := grpc.DialContext(ctx, beaconRPCProvider, dialOpts...)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", beaconRPCProvider)
+		}
+		nodeClient := ethpb.NewNodeClient(conn)
+		resp, err := nodeClient.GetGenesis(c.Context, &empty.Empty{})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to get genesis info")
+		}
+		if err := conn.Close(); err != nil {
+			log.WithError(err).Error("Failed to close connection")
+		}
+		config.GenesisValidatorsRoot = resp.GenesisValidatorsRoot
 		km, err := w.InitializeKeymanager(c.Context, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 		if err != nil {
 			return nil, nil, err

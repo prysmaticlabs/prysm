@@ -13,7 +13,7 @@ import (
 )
 
 func accountsDelete(c *cli.Context) error {
-	w, km, err := walletWithKeymanager(c, nil)
+	w, km, err := walletWithKeymanager(c)
 	if err != nil {
 		return err
 	}
