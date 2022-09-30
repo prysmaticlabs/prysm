@@ -253,3 +253,52 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
 	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
 }
+
+func TestService_UpdateHead_NoAtts(t *testing.T) {
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+	fcs := doublylinkedtree.New()
+	opts = append(opts,
+		WithAttestationPool(attestations.NewPool()),
+		WithStateNotifier(&mockBeaconNode{}),
+		WithForkChoiceStore(fcs),
+	)
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	genesisState, pks := util.DeterministicGenesisState(t, 64)
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	copied := genesisState.Copy()
+	// Generate a new block
+	blk, err := util.GenerateFullBlock(copied, pks, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	tRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
+	require.Equal(t, 2, fcs.NodeCount())
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	require.Equal(t, tRoot, service.head.root)
+
+	// Insert a new block to forkchoice
+	ojc := &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}
+	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
+	require.NoError(t, err)
+	b.Block.ParentRoot = service.originBlockRoot[:]
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.Equal(t, 3, fcs.NodeCount())
+
+	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
+	require.NoError(t, err, service.UpdateHead(ctx))
+
+	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
+	require.Equal(t, r, service.head.root)                                 // Validate head is the new one
+
+}

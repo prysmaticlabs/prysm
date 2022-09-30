@@ -54,6 +54,13 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	loadedState, err := service.StateByRoot(ctx, bRoot)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+
+	bal, err := service.BalancesByRoot(ctx, bRoot)
+	require.NoError(t, err)
+	require.Equal(t, 32, len(bal))
+	for i := range bal {
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, bal[i])
+	}
 }
 
 func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
