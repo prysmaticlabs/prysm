@@ -89,6 +89,11 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		"validatorIndex":     msg.ValidatorIndex,
 	}).Info("Submitted new sync message")
 	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
+
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
+	if v.emitAccountMetrics {
+		ValidatorSyncCommitteeGaugeVec.WithLabelValues(fmtKey).Set(float64(slot))
+	}
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
