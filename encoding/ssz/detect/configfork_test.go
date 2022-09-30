@@ -58,8 +58,6 @@ func TestByState(t *testing.T) {
 	require.NoError(t, err)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
-	capellaSlot, err := slots.EpochStart(bc.CapellaForkEpoch)
-	require.NoError(t, err)
 	cases := []struct {
 		name        string
 		version     int
@@ -83,12 +81,6 @@ func TestByState(t *testing.T) {
 			version:     version.Bellatrix,
 			slot:        bellaSlot,
 			forkversion: bytesutil.ToBytes4(bc.BellatrixForkVersion),
-		},
-		{
-			name:        "capella",
-			version:     version.Capella,
-			slot:        capellaSlot,
-			forkversion: bytesutil.ToBytes4(bc.CapellaForkVersion),
 		},
 	}
 	for _, c := range cases {
