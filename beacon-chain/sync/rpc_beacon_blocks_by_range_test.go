@@ -214,7 +214,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 			blockHash: payload,
 		},
 	}
-	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+	wrappedPayload, err := blocks.NewExecutionData(payload)
 	require.NoError(t, err)
 	header, err := blocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
@@ -224,7 +224,9 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 		blk := util.NewBlindedBeaconBlockBellatrix()
 		blk.Block.Slot = i
-		blk.Block.Body.ExecutionPayloadHeader = header
+		proto, err := header.PbGenericPayloadHeader()
+		require.NoError(t, err)
+		blk.Block.Body.ExecutionPayloadHeader = proto
 		if i == 0 {
 			rt, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)

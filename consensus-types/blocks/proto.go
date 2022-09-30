@@ -263,11 +263,11 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 	case version.EIP4844:
 		switch b.executionData.Version() {
 		case version.Bellatrix:
-			payload, err := b.executionData.PbEip4844Payload()
+			payload, err := b.executionData.PbGenericPayload()
 			if err != nil {
 				return nil, err
 			}
-			return &eth.BeaconBlockBodyWithBlobKZGs{
+			return &eth.BeaconBlockBodyWithBlobKZGsCompat{
 				RandaoReveal:      b.randaoReveal[:],
 				Eth1Data:          b.eth1Data,
 				Graffiti:          b.graffiti[:],
@@ -282,11 +282,11 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			}, nil
 		case version.EIP4844:
 			// TODO(EIP-4844): Blinded blocks
-			payload, err := b.executionData.PbGenericPayload()
+			payload, err := b.executionData.PbEip4844Payload()
 			if err != nil {
 				return nil, err
 			}
-			return &eth.BeaconBlockBodyWithBlobKZGsCompat{
+			return &eth.BeaconBlockBodyWithBlobKZGs{
 				RandaoReveal:      b.randaoReveal[:],
 				Eth1Data:          b.eth1Data,
 				Graffiti:          b.graffiti[:],

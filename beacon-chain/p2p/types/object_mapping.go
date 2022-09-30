@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
 )
@@ -45,12 +46,12 @@ func InitializeDataMaps() {
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
-				&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}},
+				&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: &enginev1.ExecutionPayload{}}}},
 			)
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().Eip4844ForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
-				&ethpb.SignedBeaconBlockWithBlobKZGs{Block: &ethpb.BeaconBlockWithBlobKZGs{Body: &ethpb.BeaconBlockBodyWithBlobKZGs{}}},
+				&ethpb.SignedBeaconBlockWithBlobKZGs{Block: &ethpb.BeaconBlockWithBlobKZGs{Body: &ethpb.BeaconBlockBodyWithBlobKZGs{ExecutionPayload: &enginev1.ExecutionPayload4844{}}}},
 			)
 		},
 	}

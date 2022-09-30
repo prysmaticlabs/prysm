@@ -32,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -1406,7 +1405,7 @@ func TestValidateBeaconBlockPubSub_ValidBlobKzgs(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
+	signedParentBlock, err := blocks.NewSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
 	bRoot, err := parentBlock.Block.HashTreeRoot()
@@ -1498,7 +1497,7 @@ func TestValidateBeaconBlockPubSub_InvalidBlobKzgs(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
+	signedParentBlock, err := blocks.NewSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
 	bRoot, err := parentBlock.Block.HashTreeRoot()

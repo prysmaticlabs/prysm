@@ -120,7 +120,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
 		Transactions:  encodedBinaryTxs,
 	}
-	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+	wrappedPayload, err := blocks.NewExecutionData(payload)
 	require.NoError(t, err)
 	header, err := blocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
@@ -129,7 +129,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 	// Populate the database with blocks that would match the request.
 	for i := types.Slot(1); i < 11; i++ {
 		blk := util.NewBlindedBeaconBlockBellatrix()
-		blk.Block.Body.ExecutionPayloadHeader = header
+		proto, err := header.PbGenericPayloadHeader()
+		require.NoError(t, err)
+		blk.Block.Body.ExecutionPayloadHeader = proto
 		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
