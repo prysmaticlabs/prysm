@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "execution.go",
+        "execution_header.go",
         "factory.go",
         "getters.go",
         "proto.go",

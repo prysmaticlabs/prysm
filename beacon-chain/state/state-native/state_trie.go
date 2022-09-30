@@ -119,6 +119,11 @@ func InitializeFromProtoBellatrix(st *ethpb.BeaconStateBellatrix) (state.BeaconS
 	return InitializeFromProtoUnsafeBellatrix(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
+// InitializeFromProto4844 the beacon state from a protobuf representation.
+func InitializeFromProto4844(st *ethpb.BeaconState4844) (state.BeaconState, error) {
+	return InitializeFromProtoUnsafe4844(proto.Clone(st).(*ethpb.BeaconState4844))
+}
+
 // InitializeFromProtoUnsafePhase0 directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
 func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, error) {
@@ -318,7 +323,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
-	initialPayloadHeader, err := blocks.WrappedExecutionPayloadHeader(st.LatestExecutionPayloadHeader)
+	initialPayloadHeader, err := blocks.NewExecutionDataHeader(st.LatestExecutionPayloadHeader)
 	if err != nil {
 		return nil, errors.New("failed to create new latest execution payload header")
 	}
@@ -391,7 +396,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	return b, nil
 }
 
-
 // InitializeFromProtoUnsafe4844 directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
 func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState, error) {
@@ -415,39 +419,39 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
-	initialPayloadHeader, err := blocks.WrappedExecutionPayloadHeader(st.LatestExecutionPayloadHeader)
+	initialPayloadHeader, err := blocks.NewExecutionDataHeader(st.LatestExecutionPayloadHeader)
 	if err != nil {
 		return nil, errors.New("failed to create new latest execution payload header")
 	}
 
 	fieldCount := params.BeaconConfig().BeaconState4844FieldCount
 	b := &BeaconState{
-		version:                          version.EIP4844,
-		genesisTime:                      st.GenesisTime,
-		genesisValidatorsRoot:            bytesutil.ToBytes32(st.GenesisValidatorsRoot),
-		slot:                             st.Slot,
-		fork:                             st.Fork,
-		latestBlockHeader:                st.LatestBlockHeader,
-		blockRoots:                       &bRoots,
-		stateRoots:                       &sRoots,
-		historicalRoots:                  hRoots,
-		eth1Data:                         st.Eth1Data,
-		eth1DataVotes:                    st.Eth1DataVotes,
-		eth1DepositIndex:                 st.Eth1DepositIndex,
-		validators:                       st.Validators,
-		balances:                         st.Balances,
-		randaoMixes:                      &mixes,
-		slashings:                        st.Slashings,
-		previousEpochParticipation:       st.PreviousEpochParticipation,
-		currentEpochParticipation:        st.CurrentEpochParticipation,
-		justificationBits:                st.JustificationBits,
-		previousJustifiedCheckpoint:      st.PreviousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:       st.CurrentJustifiedCheckpoint,
-		finalizedCheckpoint:              st.FinalizedCheckpoint,
-		inactivityScores:                 st.InactivityScores,
-		currentSyncCommittee:             st.CurrentSyncCommittee,
-		nextSyncCommittee:                st.NextSyncCommittee,
-		latestExecutionPayloadHeader:     initialPayloadHeader,
+		version:                      version.EIP4844,
+		genesisTime:                  st.GenesisTime,
+		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
+		slot:                         st.Slot,
+		fork:                         st.Fork,
+		latestBlockHeader:            st.LatestBlockHeader,
+		blockRoots:                   &bRoots,
+		stateRoots:                   &sRoots,
+		historicalRoots:              hRoots,
+		eth1Data:                     st.Eth1Data,
+		eth1DataVotes:                st.Eth1DataVotes,
+		eth1DepositIndex:             st.Eth1DepositIndex,
+		validators:                   st.Validators,
+		balances:                     st.Balances,
+		randaoMixes:                  &mixes,
+		slashings:                    st.Slashings,
+		previousEpochParticipation:   st.PreviousEpochParticipation,
+		currentEpochParticipation:    st.CurrentEpochParticipation,
+		justificationBits:            st.JustificationBits,
+		previousJustifiedCheckpoint:  st.PreviousJustifiedCheckpoint,
+		currentJustifiedCheckpoint:   st.CurrentJustifiedCheckpoint,
+		finalizedCheckpoint:          st.FinalizedCheckpoint,
+		inactivityScores:             st.InactivityScores,
+		currentSyncCommittee:         st.CurrentSyncCommittee,
+		nextSyncCommittee:            st.NextSyncCommittee,
+		latestExecutionPayloadHeader: initialPayloadHeader,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -505,6 +509,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 		fieldCount = params.BeaconConfig().BeaconState4844FieldCount
 	}
 
+	header, err := b.latestExecutionPayloadHeaderVal()
+	if err != nil {
+		panic(err)
+	}
 	dst := &BeaconState{
 		version: b.version,
 
@@ -541,7 +549,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		finalizedCheckpoint:          b.finalizedCheckpointVal(),
 		currentSyncCommittee:         b.currentSyncCommitteeVal(),
 		nextSyncCommittee:            b.nextSyncCommitteeVal(),
-		latestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
+		latestExecutionPayloadHeader: header,
 
 		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),

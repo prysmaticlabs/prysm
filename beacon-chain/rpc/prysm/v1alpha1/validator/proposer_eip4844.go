@@ -12,9 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
-func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockWithBlobKZGs, *ethpb.BlobsSidecar, error) {
+// TODO(inphi): interface here is a crutch. Figure out a better way
+func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (interface{}, *ethpb.BlobsSidecar, error) {
 	generic, payloadID, err := vs.buildBellatrixBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
@@ -27,7 +29,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}
 
-	payload, _, err := vs.getExecutionPayload4844(
+	payload, _, err := vs.getExecutionPayload(
 		ctx,
 		req.Slot,
 		block.ProposerIndex,
@@ -38,7 +40,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	}
 
 	// sanity check the blobs bundle
-	if !bytes.Equal(blobsBundle.BlockHash, payload.BlockHash) {
+	if !bytes.Equal(blobsBundle.BlockHash, payload.BlockHash()) {
 		return nil, nil, errors.New("invalid blobs bundle received")
 	}
 
@@ -55,34 +57,70 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		blobs = blobsBundle.Blobs
 	}
 
-
-	blk := &ethpb.BeaconBlockWithBlobKZGs{
-		Slot:          block.Slot,
-		ProposerIndex: block.ProposerIndex,
-		ParentRoot:    block.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyWithBlobKZGs{
-			RandaoReveal:      block.Body.RandaoReveal,
-			Eth1Data:          block.Body.Eth1Data,
-			Graffiti:          block.Body.Graffiti,
-			ProposerSlashings: block.Body.ProposerSlashings,
-			AttesterSlashings: block.Body.AttesterSlashings,
-			Attestations:      block.Body.Attestations,
-			Deposits:          block.Body.Deposits,
-			VoluntaryExits:    block.Body.VoluntaryExits,
-			SyncAggregate:     block.Body.SyncAggregate,
-			ExecutionPayload:  payload,
-			BlobKzgs:          kzgs,
-		},
+	var signedBlk interface{}
+	switch payload.Version() {
+	case version.Bellatrix:
+		payload, err := payload.PbGenericPayload()
+		if err != nil {
+			return nil, nil, err
+		}
+		blk := &ethpb.BeaconBlockWithBlobKZGsCompat{
+			Slot:          block.Slot,
+			ProposerIndex: block.ProposerIndex,
+			ParentRoot:    block.ParentRoot,
+			StateRoot:     params.BeaconConfig().ZeroHash[:],
+			Body: &ethpb.BeaconBlockBodyWithBlobKZGsCompat{
+				RandaoReveal:      block.Body.RandaoReveal,
+				Eth1Data:          block.Body.Eth1Data,
+				Graffiti:          block.Body.Graffiti,
+				ProposerSlashings: block.Body.ProposerSlashings,
+				AttesterSlashings: block.Body.AttesterSlashings,
+				Attestations:      block.Body.Attestations,
+				Deposits:          block.Body.Deposits,
+				VoluntaryExits:    block.Body.VoluntaryExits,
+				SyncAggregate:     block.Body.SyncAggregate,
+				ExecutionPayload:  payload,
+				BlobKzgs:          kzgs,
+			},
+		}
+		signedBlk = &ethpb.SignedBeaconBlockWithBlobKZGsCompat{
+			Block:     blk,
+			Signature: make([]byte, 96),
+		}
+	case version.EIP4844:
+		payload, err := payload.PbEip4844Payload()
+		if err != nil {
+			return nil, nil, err
+		}
+		blk := &ethpb.BeaconBlockWithBlobKZGs{
+			Slot:          block.Slot,
+			ProposerIndex: block.ProposerIndex,
+			ParentRoot:    block.ParentRoot,
+			StateRoot:     params.BeaconConfig().ZeroHash[:],
+			Body: &ethpb.BeaconBlockBodyWithBlobKZGs{
+				RandaoReveal:      block.Body.RandaoReveal,
+				Eth1Data:          block.Body.Eth1Data,
+				Graffiti:          block.Body.Graffiti,
+				ProposerSlashings: block.Body.ProposerSlashings,
+				AttesterSlashings: block.Body.AttesterSlashings,
+				Attestations:      block.Body.Attestations,
+				Deposits:          block.Body.Deposits,
+				VoluntaryExits:    block.Body.VoluntaryExits,
+				SyncAggregate:     block.Body.SyncAggregate,
+				ExecutionPayload:  payload,
+				BlobKzgs:          kzgs,
+			},
+		}
+		signedBlk = &ethpb.SignedBeaconBlockWithBlobKZGs{
+			Block:     blk,
+			Signature: make([]byte, 96),
+		}
+	default:
+		return nil, nil, errors.New("unknown payload version")
 	}
 
 	// Compute state root with the newly constructed block.
-	wsb, err := consensusblocks.NewSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockWithBlobKZGs{
-			Block:     blk,
-			Signature: make([]byte, 96),
-		},
-	)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(signedBlk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,8 +129,15 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		interop.WriteBlockToDisk(wsb, true /*failed*/)
 		return nil, nil, fmt.Errorf("could not compute state root: %v", err)
 	}
-	blk.StateRoot = stateRoot
-	r, err := blk.HashTreeRoot()
+
+	switch b := signedBlk.(type) {
+	case *ethpb.SignedBeaconBlockWithBlobKZGsCompat:
+		b.Block.StateRoot = stateRoot
+	case *ethpb.SignedBeaconBlockWithBlobKZGs:
+		b.Block.StateRoot = stateRoot
+	}
+
+	r, err := wsb.Block().HashTreeRoot()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,11 +146,11 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	if len(blobs) != 0 {
 		sideCar = &ethpb.BlobsSidecar{
 			BeaconBlockRoot: r[:],
-			BeaconBlockSlot: blk.Slot,
+			BeaconBlockSlot: wsb.Block().Slot(),
 			Blobs:           blobs,
 			AggregatedProof: blobsBundle.AggregatedProof,
 		}
 	}
 
-	return blk, sideCar, nil
+	return signedBlk, sideCar, nil
 }

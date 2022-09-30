@@ -165,7 +165,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.CurrentEpochAttestations.RealPosition()] = currAttsRoot[:]
 	}
 
-	if state.version == version.Altair || state.version == version.Bellatrix {
+	if state.version == version.Altair || state.version == version.Bellatrix || state.version == version.EIP4844 {
 		// PreviousEpochParticipation slice root.
 		prevParticipationRoot, err := stateutil.ParticipationBitsRoot(state.previousEpochParticipation)
 		if err != nil {
@@ -206,7 +206,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 	fieldRoots[nativetypes.FinalizedCheckpoint.RealPosition()] = finalRoot[:]
 
-	if state.version == version.Altair || state.version == version.Bellatrix {
+	if state.version == version.Altair || state.version == version.Bellatrix || state.version == version.EIP4844 {
 		// Inactivity scores root.
 		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores)
 		if err != nil {
@@ -229,7 +229,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.NextSyncCommittee.RealPosition()] = nextSyncCommitteeRoot[:]
 	}
 
-	if state.version == version.Bellatrix {
+	if state.version == version.Bellatrix || state.version == version.EIP4844 {
 		// Execution payload root.
 		executionPayloadRoot, err := state.latestExecutionPayloadHeader.HashTreeRoot()
 		if err != nil {

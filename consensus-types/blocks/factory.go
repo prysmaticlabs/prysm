@@ -24,6 +24,8 @@ var (
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	// ErrUnsupportedPayload is returned when the struct type is not a supported execution payload type.
+	ErrUnsupportedPayload = errors.New("unsupported execution payload")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -51,6 +53,10 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initSignedBlockFromProtoEip4844(b.Eip4844)
 	case *eth.SignedBeaconBlockWithBlobKZGs:
 		return initSignedBlockFromProtoEip4844(b)
+	case *eth.SignedBeaconBlockWithBlobKZGsCompat:
+		return initSignedBlockFromProtoEip4844Compat(b)
+	case *eth.GenericSignedBeaconBlock_Eip4844Compat:
+		return initSignedBlockFromProtoEip4844Compat(b.Eip4844Compat)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -81,6 +87,10 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return initBlockFromProtoEip4844(b.Eip4844)
 	case *eth.BeaconBlockWithBlobKZGs:
 		return initBlockFromProtoEip4844(b)
+	case *eth.GenericBeaconBlock_Eip4844Compat:
+		return initBlockFromProtoEip4844Compat(b.Eip4844Compat)
+	case *eth.BeaconBlockWithBlobKZGsCompat:
+		return initBlockFromProtoEip4844Compat(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -101,6 +111,8 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return initBlindedBlockBodyFromProtoBellatrix(b)
 	case *eth.BeaconBlockBodyWithBlobKZGs:
 		return initBlockBodyFromProtoEip4844(b)
+	case *eth.BeaconBlockBodyWithBlobKZGsCompat:
+		return initBlockBodyFromProtoEip4844Compat(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -142,11 +154,14 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	case version.EIP4844:
-		pb, ok := pb.(*eth.BeaconBlockWithBlobKZGs)
-		if !ok {
+		switch b := pb.(type) {
+		case *eth.BeaconBlockWithBlobKZGs:
+			return NewSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGs{Block: b, Signature: signature})
+		case *eth.BeaconBlockWithBlobKZGsCompat:
+			return NewSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGsCompat{Block: b, Signature: signature})
+		default:
 			return nil, errIncorrectBlockVersion
 		}
-		return NewSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGs{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
@@ -221,4 +236,30 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		Signature: sig[:],
 	}
 	return NewSignedBeaconBlock(bellatrixFullBlock)
+}
+
+func NewExecutionData(i interface{}) (interfaces.ExecutionData, error) {
+	switch e := i.(type) {
+	case nil:
+		return nil, ErrNilObjectWrapped
+	case *enginev1.ExecutionPayload:
+		return initPayloadFromProto(e)
+	case *enginev1.ExecutionPayload4844:
+		return initPayloadFromProto4844(e)
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedPayload, "unable to create execution payload from type %T", i)
+	}
+}
+
+func NewExecutionDataHeader(i interface{}) (interfaces.ExecutionDataHeader, error) {
+	switch e := i.(type) {
+	case nil:
+		return nil, ErrNilObject
+	case *enginev1.ExecutionPayloadHeader:
+		return initPayloadHeaderFromProto(e)
+	case *enginev1.ExecutionPayloadHeader4844:
+		return initPayloadHeaderFromProto4844(e)
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedPayload, "unable to create execution payload from type %T", i)
+	}
 }

@@ -69,12 +69,11 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.WrappedExecutionPayload) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
-	GetPayload4844(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload4844, error)
+	GetPayload(ctx context.Context, payloadId [8]byte) (interfaces.ExecutionData, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -84,7 +83,7 @@ type EngineCaller interface {
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.WrappedExecutionPayload) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -96,8 +95,11 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.WrappedExec
 	defer cancel()
 	result := &pb.PayloadStatus{}
 
-	proto := payload.Proto()
-	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, proto)
+	proto, err := payload.Proto()
+	if err != nil {
+		return nil, err
+	}
+	err = s.rpcClient.CallContext(ctx, result, NewPayloadMethod, proto)
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
@@ -153,7 +155,7 @@ func (s *Service) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -164,27 +166,25 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 	d := time.Now().Add(defaultEngineTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
-	result := &pb.ExecutionPayload{}
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
-	return result, handleRPCError(err)
-}
+	payload := &pb.ExecutionPayloadJSON{}
+	err := s.rpcClient.CallContext(ctx, payload, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 
-// GetPayload calls the engine_getPayloadV1 method via JSON-RPC, but expects it
-// to return a payload including the 4844 field ExcessBlobs
-func (s *Service) GetPayload4844(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload4844, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
+	if err != nil {
+		return nil, err
+	}
 
-	d := time.Now().Add(defaultEngineTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
-	defer cancel()
-	result := &pb.ExecutionPayload4844{}
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
-	return result, handleRPCError(err)
+	// EIP-4844 NOTE: Backwards compatibility for pre-4844 EVMs.
+	// We may need to revisit this once we've finalized the 4844 upgrade procedure.
+	var data interface{}
+	if payload.ExcessBlobs == nil {
+		data, err = payload.Pre4844()
+	} else {
+		data, err = payload.Post4844()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return blocks.NewExecutionData(data)
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
@@ -402,11 +402,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
-	executionPayload, err := blindedBlock.Block().Body().Execution()
-	if err != nil {
-		return nil, err
-	}
-	header, err := executionPayload.ToHeader()
+	header, err := blindedBlock.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
@@ -416,12 +412,12 @@ func (s *Service) ReconstructFullBellatrixBlock(
 
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
-	if bytes.Equal(header.GetBlockHash(), params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
 		payload := buildEmptyExecutionPayload()
 		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	}
 
-	executionBlockHash := common.BytesToHash(header.GetBlockHash())
+	executionBlockHash := common.BytesToHash(header.BlockHash())
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
@@ -459,11 +455,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if !b.Block().IsBlinded() {
 			return nil, errors.New("can only reconstruct block from blinded block format")
 		}
-		executionPayload, err := b.Block().Body().Execution()
-		if err != nil {
-			return nil, err
-		}
-		header, err := executionPayload.ToHeader()
+		header, err := b.Block().Body().Execution()
 		if err != nil {
 			return nil, err
 		}
@@ -472,10 +464,10 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		}
 		// Determine if the block is pre-merge or post-merge. Depending on the result,
 		// we will ask the execution engine for the full payload.
-		if bytes.Equal(header.GetBlockHash(), params.BeaconConfig().ZeroHash[:]) {
+		if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
 			zeroExecPayloads = append(zeroExecPayloads, i)
 		} else {
-			executionBlockHash := common.BytesToHash(header.GetBlockHash())
+			executionBlockHash := common.BytesToHash(header.BlockHash())
 			validExecPayloads = append(validExecPayloads, i)
 			executionHashes = append(executionHashes, executionBlockHash)
 		}
@@ -492,11 +484,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if b == nil {
 			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
 		}
-		executionPayload, err := blindedBlocks[realIdx].Block().Body().Execution()
-		if err != nil {
-			return nil, err
-		}
-		header, err := executionPayload.ToHeader()
+		header, err := blindedBlocks[realIdx].Block().Body().Execution()
 		if err != nil {
 			return nil, err
 		}
@@ -525,15 +513,15 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 }
 
 func fullPayloadFromExecutionBlock(
-	header interfaces.WrappedExecutionPayloadHeader, block *pb.ExecutionBlock,
+	header interfaces.ExecutionData, block *pb.ExecutionBlock,
 ) (*pb.ExecutionPayload, error) {
 	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
-	if !bytes.Equal(header.GetBlockHash(), block.Hash[:]) {
+	if !bytes.Equal(header.BlockHash(), block.Hash[:]) {
 		return nil, fmt.Errorf(
 			"block hash field in execution header %#x does not match execution block hash %#x",
-			header.GetBlockHash(),
+			header.BlockHash(),
 			block.Hash,
 		)
 	}
@@ -548,18 +536,18 @@ func fullPayloadFromExecutionBlock(
 
 	// TODO(EIP-4844): The type of payload changes here
 	return &pb.ExecutionPayload{
-		ParentHash:    header.GetParentHash(),
-		FeeRecipient:  header.GetFeeRecipient(),
-		StateRoot:     header.GetStateRoot(),
-		ReceiptsRoot:  header.GetReceiptsRoot(),
-		LogsBloom:     header.GetLogsBloom(),
-		PrevRandao:    header.GetPrevRandao(),
-		BlockNumber:   header.GetBlockNumber(),
-		GasLimit:      header.GetGasLimit(),
-		GasUsed:       header.GetGasUsed(),
-		Timestamp:     header.GetTimestamp(),
-		ExtraData:     header.GetExtraData(),
-		BaseFeePerGas: header.GetBaseFeePerGas(),
+		ParentHash:    header.ParentHash(),
+		FeeRecipient:  header.FeeRecipient(),
+		StateRoot:     header.StateRoot(),
+		ReceiptsRoot:  header.ReceiptsRoot(),
+		LogsBloom:     header.LogsBloom(),
+		PrevRandao:    header.PrevRandao(),
+		BlockNumber:   header.BlockNumber(),
+		GasLimit:      header.GasLimit(),
+		GasUsed:       header.GasUsed(),
+		Timestamp:     header.Timestamp(),
+		ExtraData:     header.ExtraData(),
+		BaseFeePerGas: header.BaseFeePerGas(),
 		BlockHash:     block.Hash[:],
 		Transactions:  txs,
 	}, nil

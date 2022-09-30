@@ -61,7 +61,11 @@ func (vs *Server) buildBellatrixBeaconBlock(ctx context.Context, req *ethpb.Bloc
 			"validatorIndex": altairBlk.ProposerIndex,
 		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
-	payload, payloadID, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
+	execData, payloadID, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
+	if err != nil {
+		return nil, enginev1.PayloadIDBytes{}, err
+	}
+	payload, err := execData.PbGenericPayload()
 	if err != nil {
 		return nil, enginev1.PayloadIDBytes{}, err
 	}
@@ -123,7 +127,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.GetBlockHash()), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +149,8 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
-	if !bytes.Equal(bid.Message.Header.ParentHash, h.GetBlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.GetBlockHash())
+	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
@@ -235,7 +239,11 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
-	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+	proto, err := h.Proto()
+	if err != nil {
+		return nil, err
+	}
+	header, ok := proto.(*enginev1.ExecutionPayloadHeader)
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}
@@ -311,9 +319,9 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.GetBlockHash()),
-		"feeRecipient": fmt.Sprintf("%#x", h.GetFeeRecipient()),
-		"gasUsed":      h.GetGasUsed(),
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
+		"gasUsed":      h.GasUsed(),
 		"slot":         b.Block().Slot(),
 		"txs":          len(payload.Transactions),
 	}).Info("Retrieved full payload from builder")

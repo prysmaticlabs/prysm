@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	testtmpl "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/testing"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -22,7 +23,7 @@ func TestBeaconState_SlotDataRace_Altair(t *testing.T) {
 
 func TestBeaconState_SlotDataRace_Bellatrix(t *testing.T) {
 	testtmpl.VerifyBeaconStateSlotDataRace(t, func() (state.BeaconState, error) {
-		return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{Slot: 1})
+		return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{Slot: 1, LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}})
 	})
 }
 
@@ -48,7 +49,7 @@ func TestBeaconState_MatchCurrentJustifiedCheckpt_Bellatrix(t *testing.T) {
 	testtmpl.VerifyBeaconStateMatchCurrentJustifiedCheckptNative(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
-			return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{CurrentJustifiedCheckpoint: cp})
+			return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{CurrentJustifiedCheckpoint: cp, LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}})
 		},
 	)
 }
@@ -75,7 +76,7 @@ func TestBeaconState_MatchPreviousJustifiedCheckpt_Bellatrix(t *testing.T) {
 	testtmpl.VerifyBeaconStateMatchPreviousJustifiedCheckptNative(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
-			return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{PreviousJustifiedCheckpoint: cp})
+			return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{PreviousJustifiedCheckpoint: cp, LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}})
 		},
 	)
 }
@@ -94,6 +95,6 @@ func TestBeaconState_ValidatorByPubkey_Altair(t *testing.T) {
 
 func TestBeaconState_ValidatorByPubkey_Bellatrix(t *testing.T) {
 	testtmpl.VerifyBeaconStateValidatorByPubkey(t, func() (state.BeaconState, error) {
-		return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{})
+		return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}})
 	})
 }

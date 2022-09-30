@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	testtmpl "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/testing"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -31,7 +32,17 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testing.T) {
 	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
 		return statenative.InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{
-			Validators: nil,
+			Validators:                   nil,
+			LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
+		})
+	})
+}
+
+func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_4844(t *testing.T) {
+	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
+		return statenative.InitializeFromProtoUnsafe4844(&ethpb.BeaconState4844{
+			Validators:                   nil,
+			LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{},
 		})
 	})
 }

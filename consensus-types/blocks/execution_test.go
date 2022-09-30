@@ -13,37 +13,41 @@ import (
 
 func TestWrapExecutionPayload(t *testing.T) {
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayload(data)
+	wsb, err := blocks.NewExecutionData(data)
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, data, wsb.Proto())
+	proto, err := wsb.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, data, proto)
 }
 
 func TestWrapExecutionPayloadHeader(t *testing.T) {
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
+	wsb, err := blocks.NewExecutionDataHeader(data)
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, data, wsb.Proto())
+	proto, err := wsb.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, data, proto)
 }
 
 func TestWrapExecutionPayload_IsNil(t *testing.T) {
-	_, err := blocks.WrappedExecutionPayload(nil)
+	_, err := blocks.NewExecutionData(nil)
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayload(data)
+	wsb, err := blocks.NewExecutionData(data)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
 }
 
 func TestWrapExecutionPayloadHeader_IsNil(t *testing.T) {
-	_, err := blocks.WrappedExecutionPayloadHeader(nil)
+	_, err := blocks.NewExecutionDataHeader(nil)
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
+	wsb, err := blocks.NewExecutionDataHeader(data)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -82,7 +86,7 @@ func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
-	wsb, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+	wsb, err := blocks.NewExecutionData(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -103,7 +107,7 @@ func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 }
 
 func createWrappedPayloadHeader(t testing.TB) interfaces.ExecutionData {
-	wsb, err := blocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+	wsb, err := blocks.NewExecutionDataHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),

@@ -179,7 +179,7 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, beaconState.SetInactivityScores([]uint64{1, 2, 3}))
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
-	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(executionPayloadHeader())
+	wrappedHeader, err := blocks.NewExecutionDataHeader(executionPayloadHeader())
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 

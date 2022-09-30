@@ -9,6 +9,7 @@ import (
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -110,13 +111,16 @@ func TestInitializeFromProto_Bellatrix(t *testing.T) {
 		{
 			name: "nil validators",
 			state: &ethpb.BeaconStateBellatrix{
-				Slot:       4,
-				Validators: nil,
+				Slot:                         4,
+				Validators:                   nil,
+				LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 			},
 		},
 		{
-			name:  "empty state",
-			state: &ethpb.BeaconStateBellatrix{},
+			name: "empty state",
+			state: &ethpb.BeaconStateBellatrix{
+				LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
+			},
 		},
 	}
 	for _, tt := range initTests {

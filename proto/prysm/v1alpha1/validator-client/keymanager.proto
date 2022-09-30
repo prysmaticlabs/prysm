@@ -83,8 +83,9 @@ message SignRequest {
         ethereum.eth.v1alpha1.ValidatorRegistrationV1 registration = 113;
 
         // EIP4844 objects.
-        ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGs blockV4 = 114;
-        ethereum.eth.v1alpha1.BlobsSidecar sidecar = 115;
+        ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGs block_eip4844 = 114;
+        ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGsCompat block_eip4844_compat = 115;
+        ethereum.eth.v1alpha1.BlobsSidecar sidecar = 116;
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];

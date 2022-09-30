@@ -52,10 +52,15 @@ message GenericSignedBeaconBlock {
 
         // Representing a signed, eip4844 compatible fork blinded beacon block.
         SignedBlindedBeaconBlockWithBlobKZGs blinded_eip4844 = 8;
+
+        // Representing a signed, eip4844 compatible fork beacon block.
+        SignedBeaconBlockWithBlobKZGsCompat eip4844_compat = 9;
+
+        // TODO(EIP-4844): Blinded variant of the above
     }
 
     // Representing an eip4844 fork signed blobs sidecar.
-    SignedBlobsSidecar sidecar = 9;
+    SignedBlobsSidecar sidecar = 10;
 }
 
 message GenericBeaconBlock {
@@ -83,10 +88,15 @@ message GenericBeaconBlock {
 
         // Representing a post-eip4844 fork beacon block.
         BlindedBeaconBlockWithBlobKZGs blinded_eip4844 = 8;
+
+        // Representing a post-eip4844 fork beacon block that's compatible with pre-4844 EL
+        BeaconBlockWithBlobKZGsCompat eip4844_compat = 9;
+
+        // TODO(EIP-4844): Blinded, eip4844 block compat for pre-4844 EL
     }
 
     // Representing an eip4844 fork blobs sidecar.
-    BlobsSidecar sidecar = 9;
+    BlobsSidecar sidecar = 10;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
@@ -580,13 +590,19 @@ message BlindedBeaconBlockBodyCapella {
 }
 
 message BeaconBlockWithBlobKZGsAndBlobsSidecar {
-    BeaconBlockWithBlobKZGs block = 1;
-    BlobsSidecar sidecar = 2;
+    oneof block {
+        BeaconBlockWithBlobKZGs data = 1;
+        BeaconBlockWithBlobKZGsCompat data_compat = 2;
+    }
+    BlobsSidecar sidecar = 3;
 }
 
 message SignedBeaconBlockWithBlobKZGsAndBlobsSidecar {
-    SignedBeaconBlockWithBlobKZGs block = 1;
-    SignedBlobsSidecar sidecar = 2;
+    oneof block {
+        SignedBeaconBlockWithBlobKZGs data = 1;
+        SignedBeaconBlockWithBlobKZGsCompat data_compat = 2;
+    }
+    SignedBlobsSidecar sidecar = 3;
 }
 
 message ValidatorRegistrationV1 {
@@ -626,6 +642,11 @@ message SignedBlindedBeaconBlockWithBlobKZGs {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message SignedBeaconBlockWithBlobKZGsCompat {
+    BeaconBlockWithBlobKZGsCompat block = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
 message BeaconBlockWithBlobKZGs {
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
     uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
@@ -640,6 +661,14 @@ message BlindedBeaconBlockWithBlobKZGs {
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
     bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
     BlindedBeaconBlockBodyWithBlobKZGs body = 5;
+}
+
+message BeaconBlockWithBlobKZGsCompat {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    BeaconBlockBodyWithBlobKZGsCompat body = 5;
 }
 
 message BeaconBlockBodyWithBlobKZGs {
@@ -667,6 +696,20 @@ message BlindedBeaconBlockBodyWithBlobKZGs {
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
     SyncAggregate sync_aggregate = 9;
     ethereum.engine.v1.ExecutionPayloadHeader4844 execution_payload_header = 10;
+    repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+}
+
+message BeaconBlockBodyWithBlobKZGsCompat {
+    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+    Eth1Data eth1_data = 2;
+    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+    SyncAggregate sync_aggregate = 9;
+    ethereum.engine.v1.ExecutionPayload execution_payload = 10;
     repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 

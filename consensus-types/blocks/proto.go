@@ -3,6 +3,7 @@ package blocks
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -74,18 +75,16 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Signature: b.signature[:],
 		}, nil
 	case version.EIP4844:
-		var block *eth.BeaconBlockWithBlobKZGs
-		if blockMessage != nil {
-			var ok bool
-			block, ok = blockMessage.(*eth.BeaconBlockWithBlobKZGs)
-			if !ok {
-				return nil, errIncorrectBlockVersion
-			}
+		switch block := blockMessage.(type) {
+		case nil:
+			return nil, ErrNilObject
+		case *eth.BeaconBlockWithBlobKZGs:
+			return &eth.SignedBeaconBlockWithBlobKZGs{Block: block, Signature: b.signature[:]}, nil
+		case *eth.BeaconBlockWithBlobKZGsCompat:
+			return &eth.SignedBeaconBlockWithBlobKZGsCompat{Block: block, Signature: b.signature[:]}, nil
+		default:
+			return nil, errIncorrectBlockVersion
 		}
-		return &eth.SignedBeaconBlockWithBlobKZGs{
-			Block:     block,
-			Signature: b.signature[:],
-		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
@@ -169,21 +168,28 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.EIP4844:
-		var body *eth.BeaconBlockBodyWithBlobKZGs
-		if bodyMessage != nil {
-			var ok bool
-			body, ok = bodyMessage.(*eth.BeaconBlockBodyWithBlobKZGs)
-			if !ok {
-				return nil, errIncorrectBlockVersion
-			}
+		switch body := bodyMessage.(type) {
+		case nil:
+			return nil, ErrNilObject
+		case *eth.BeaconBlockBodyWithBlobKZGs:
+			return &eth.BeaconBlockWithBlobKZGs{
+				Slot:          b.slot,
+				ProposerIndex: b.proposerIndex,
+				ParentRoot:    b.parentRoot[:],
+				StateRoot:     b.stateRoot[:],
+				Body:          body,
+			}, nil
+		case *eth.BeaconBlockBodyWithBlobKZGsCompat:
+			return &eth.BeaconBlockWithBlobKZGsCompat{
+				Slot:          b.slot,
+				ProposerIndex: b.proposerIndex,
+				ParentRoot:    b.parentRoot[:],
+				StateRoot:     b.stateRoot[:],
+				Body:          body,
+			}, nil
+		default:
+			return nil, errIncorrectBlockVersion
 		}
-		return &eth.BeaconBlockWithBlobKZGs{
-			Slot:          b.slot,
-			ProposerIndex: b.proposerIndex,
-			ParentRoot:    b.parentRoot[:],
-			StateRoot:     b.stateRoot[:],
-			Body:          body,
-		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block version")
 	}
@@ -221,6 +227,10 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Bellatrix:
 		if b.isBlinded {
+			payloadHeader, err := b.executionDataHeader.PbGenericPayloadHeader()
+			if err != nil {
+				return nil, err
+			}
 			return &eth.BlindedBeaconBlockBodyBellatrix{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
@@ -231,8 +241,12 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
-				ExecutionPayloadHeader: b.executionPayloadHeader,
+				ExecutionPayloadHeader: payloadHeader,
 			}, nil
+		}
+		payload, err := b.executionData.PbGenericPayload()
+		if err != nil {
+			return nil, err
 		}
 		return &eth.BeaconBlockBodyBellatrix{
 			RandaoReveal:      b.randaoReveal[:],
@@ -244,22 +258,50 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
-			ExecutionPayload:  b.executionPayload,
+			ExecutionPayload:  payload,
 		}, nil
 	case version.EIP4844:
-		return &eth.BeaconBlockBodyWithBlobKZGs{
-			RandaoReveal:      b.randaoReveal[:],
-			Eth1Data:          b.eth1Data,
-			Graffiti:          b.graffiti[:],
-			ProposerSlashings: b.proposerSlashings,
-			AttesterSlashings: b.attesterSlashings,
-			Attestations:      b.attestations,
-			Deposits:          b.deposits,
-			VoluntaryExits:    b.voluntaryExits,
-			SyncAggregate:     b.syncAggregate,
-			ExecutionPayload:  b.executionPayload4844,
-			BlobKzgs:          b.blobKzgs,
-		}, nil
+		switch b.executionData.Version() {
+		case version.Bellatrix:
+			payload, err := b.executionData.PbEip4844Payload()
+			if err != nil {
+				return nil, err
+			}
+			return &eth.BeaconBlockBodyWithBlobKZGs{
+				RandaoReveal:      b.randaoReveal[:],
+				Eth1Data:          b.eth1Data,
+				Graffiti:          b.graffiti[:],
+				ProposerSlashings: b.proposerSlashings,
+				AttesterSlashings: b.attesterSlashings,
+				Attestations:      b.attestations,
+				Deposits:          b.deposits,
+				VoluntaryExits:    b.voluntaryExits,
+				SyncAggregate:     b.syncAggregate,
+				ExecutionPayload:  payload,
+				BlobKzgs:          b.blobKzgs,
+			}, nil
+		case version.EIP4844:
+			// TODO(EIP-4844): Blinded blocks
+			payload, err := b.executionData.PbGenericPayload()
+			if err != nil {
+				return nil, err
+			}
+			return &eth.BeaconBlockBodyWithBlobKZGsCompat{
+				RandaoReveal:      b.randaoReveal[:],
+				Eth1Data:          b.eth1Data,
+				Graffiti:          b.graffiti[:],
+				ProposerSlashings: b.proposerSlashings,
+				AttesterSlashings: b.attesterSlashings,
+				Attestations:      b.attestations,
+				Deposits:          b.deposits,
+				VoluntaryExits:    b.voluntaryExits,
+				SyncAggregate:     b.syncAggregate,
+				ExecutionPayload:  payload,
+				BlobKzgs:          b.blobKzgs,
+			}, nil
+		default:
+			return nil, errors.New("unsupported execution data in beacon block")
+		}
 	default:
 		return nil, errors.New("unsupported beacon block body version")
 	}
@@ -322,6 +364,23 @@ func initSignedBlockFromProtoEip4844(pb *eth.SignedBeaconBlockWithBlobKZGs) (*Si
 	}
 
 	block, err := initBlockFromProtoEip4844(pb.Block)
+	if err != nil {
+		return nil, err
+	}
+	b := &SignedBeaconBlock{
+		version:   version.EIP4844,
+		block:     block,
+		signature: bytesutil.ToBytes96(pb.Signature),
+	}
+	return b, nil
+}
+
+func initSignedBlockFromProtoEip4844Compat(pb *eth.SignedBeaconBlockWithBlobKZGsCompat) (*SignedBeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	block, err := initBlockFromProtoEip4844Compat(pb.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -450,6 +509,26 @@ func initBlockFromProtoEip4844(pb *eth.BeaconBlockWithBlobKZGs) (*BeaconBlock, e
 	return b, nil
 }
 
+func initBlockFromProtoEip4844Compat(pb *eth.BeaconBlockWithBlobKZGsCompat) (*BeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	body, err := initBlockBodyFromProtoEip4844Compat(pb.Body)
+	if err != nil {
+		return nil, err
+	}
+	b := &BeaconBlock{
+		version:       version.EIP4844,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
+		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
+		body:          body,
+	}
+	return b, nil
+}
+
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
@@ -496,6 +575,11 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 		return nil, errNilBlockBody
 	}
 
+	executionData, err := NewExecutionData(pb.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
 		isBlinded:         false,
@@ -508,7 +592,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 		deposits:          pb.Deposits,
 		voluntaryExits:    pb.VoluntaryExits,
 		syncAggregate:     pb.SyncAggregate,
-		executionPayload:  pb.ExecutionPayload,
+		executionData:     executionData,
 	}
 	return b, nil
 }
@@ -518,19 +602,24 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 		return nil, errNilBlockBody
 	}
 
+	execHeader, err := NewExecutionDataHeader(pb.ExecutionPayloadHeader)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &BeaconBlockBody{
-		version:                version.Bellatrix,
-		isBlinded:              true,
-		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:               pb.Eth1Data,
-		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:      pb.ProposerSlashings,
-		attesterSlashings:      pb.AttesterSlashings,
-		attestations:           pb.Attestations,
-		deposits:               pb.Deposits,
-		voluntaryExits:         pb.VoluntaryExits,
-		syncAggregate:          pb.SyncAggregate,
-		executionPayloadHeader: pb.ExecutionPayloadHeader,
+		version:             version.Bellatrix,
+		isBlinded:           true,
+		randaoReveal:        bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:            pb.Eth1Data,
+		graffiti:            bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:   pb.ProposerSlashings,
+		attesterSlashings:   pb.AttesterSlashings,
+		attestations:        pb.Attestations,
+		deposits:            pb.Deposits,
+		voluntaryExits:      pb.VoluntaryExits,
+		syncAggregate:       pb.SyncAggregate,
+		executionDataHeader: execHeader,
 	}
 	return b, nil
 }
@@ -540,20 +629,155 @@ func initBlockBodyFromProtoEip4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*Beacon
 		return nil, errNilBlockBody
 	}
 
+	executionData, err := NewExecutionData(pb.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &BeaconBlockBody{
-		version:              version.EIP4844,
-		isBlinded:            false,
-		randaoReveal:         bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:             pb.Eth1Data,
-		graffiti:             bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:    pb.ProposerSlashings,
-		attesterSlashings:    pb.AttesterSlashings,
-		attestations:         pb.Attestations,
-		deposits:             pb.Deposits,
-		voluntaryExits:       pb.VoluntaryExits,
-		syncAggregate:        pb.SyncAggregate,
-		executionPayload4844: pb.ExecutionPayload,
-		blobKzgs:             pb.BlobKzgs,
+		version:           version.EIP4844,
+		isBlinded:         false,
+		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:          pb.Eth1Data,
+		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
+		syncAggregate:     pb.SyncAggregate,
+		executionData:     executionData,
+		blobKzgs:          pb.BlobKzgs,
 	}
 	return b, nil
+}
+
+func initBlockBodyFromProtoEip4844Compat(pb *eth.BeaconBlockBodyWithBlobKZGsCompat) (*BeaconBlockBody, error) {
+	if pb == nil {
+		return nil, errNilBlockBody
+	}
+
+	executionData, err := NewExecutionData(pb.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	b := &BeaconBlockBody{
+		version:           version.EIP4844,
+		isBlinded:         false,
+		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:          pb.Eth1Data,
+		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
+		syncAggregate:     pb.SyncAggregate,
+		executionData:     executionData,
+		blobKzgs:          pb.BlobKzgs,
+	}
+	return b, nil
+}
+
+func initPayloadFromProto(pb *enginev1.ExecutionPayload) (*executionPayload, error) {
+	if pb == nil {
+		return nil, errNilPayload
+	}
+
+	e := &executionPayload{
+		version:       version.Bellatrix,
+		parentHash:    pb.ParentHash,
+		feeRecipient:  pb.FeeRecipient,
+		stateRoot:     pb.StateRoot,
+		receiptsRoot:  pb.ReceiptsRoot,
+		logsBloom:     pb.LogsBloom,
+		prevRandao:    pb.PrevRandao,
+		blockNumber:   pb.BlockNumber,
+		gasLimit:      pb.GasLimit,
+		gasUsed:       pb.GasUsed,
+		timestamp:     pb.Timestamp,
+		extraData:     pb.ExtraData,
+		baseFeePerGas: pb.BaseFeePerGas,
+		blockHash:     pb.BlockHash,
+		transactions:  pb.Transactions,
+	}
+	return e, nil
+}
+
+func initPayloadFromProto4844(pb *enginev1.ExecutionPayload4844) (*executionPayload, error) {
+	if pb == nil {
+		return nil, errNilPayload
+	}
+
+	e := &executionPayload{
+		version:       version.EIP4844,
+		parentHash:    pb.ParentHash,
+		feeRecipient:  pb.FeeRecipient,
+		stateRoot:     pb.StateRoot,
+		receiptsRoot:  pb.ReceiptsRoot,
+		logsBloom:     pb.LogsBloom,
+		prevRandao:    pb.PrevRandao,
+		blockNumber:   pb.BlockNumber,
+		gasLimit:      pb.GasLimit,
+		gasUsed:       pb.GasUsed,
+		timestamp:     pb.Timestamp,
+		extraData:     pb.ExtraData,
+		baseFeePerGas: pb.BaseFeePerGas,
+		blockHash:     pb.BlockHash,
+		transactions:  pb.Transactions,
+		excessBlobs:   pb.ExcessBlobs,
+	}
+	return e, nil
+}
+
+func initPayloadHeaderFromProto(pb *enginev1.ExecutionPayloadHeader) (*executionPayloadHeader, error) {
+	if pb == nil {
+		return nil, errNilPayload
+	}
+
+	e := &executionPayloadHeader{
+		version:          version.Bellatrix,
+		parentHash:       pb.ParentHash,
+		feeRecipient:     pb.FeeRecipient,
+		stateRoot:        pb.StateRoot,
+		receiptsRoot:     pb.ReceiptsRoot,
+		logsBloom:        pb.LogsBloom,
+		prevRandao:       pb.PrevRandao,
+		blockNumber:      pb.BlockNumber,
+		gasLimit:         pb.GasLimit,
+		gasUsed:          pb.GasUsed,
+		timestamp:        pb.Timestamp,
+		extraData:        pb.ExtraData,
+		baseFeePerGas:    pb.BaseFeePerGas,
+		blockHash:        pb.BlockHash,
+		transactionsRoot: pb.TransactionsRoot,
+	}
+	return e, nil
+}
+
+func initPayloadHeaderFromProto4844(pb *enginev1.ExecutionPayloadHeader4844) (*executionPayloadHeader, error) {
+	if pb == nil {
+		return nil, errNilPayload
+	}
+
+	e := &executionPayloadHeader{
+		version:          version.EIP4844,
+		parentHash:       pb.ParentHash,
+		feeRecipient:     pb.FeeRecipient,
+		stateRoot:        pb.StateRoot,
+		receiptsRoot:     pb.ReceiptsRoot,
+		logsBloom:        pb.LogsBloom,
+		prevRandao:       pb.PrevRandao,
+		blockNumber:      pb.BlockNumber,
+		gasLimit:         pb.GasLimit,
+		gasUsed:          pb.GasUsed,
+		timestamp:        pb.Timestamp,
+		extraData:        pb.ExtraData,
+		baseFeePerGas:    pb.BaseFeePerGas,
+		blockHash:        pb.BlockHash,
+		transactionsRoot: pb.TransactionsRoot,
+		excessBlobs:      pb.ExcessBlobs,
+	}
+	return e, nil
 }

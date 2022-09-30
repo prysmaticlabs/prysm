@@ -1,6 +1,8 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -9,7 +11,7 @@ import (
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.WrappedExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionDataHeader, error) {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
@@ -21,38 +23,37 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.WrappedExecutio
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestExecutionPayloadHeaderVal(), nil
+	return b.latestExecutionPayloadHeaderVal()
 }
 
 // latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderVal() interfaces.WrappedExecutionPayloadHeader {
+func (b *BeaconState) latestExecutionPayloadHeaderVal() (interfaces.ExecutionDataHeader, error) {
 	if b.latestExecutionPayloadHeader == nil {
-		return nil
+		return nil, nil
 	}
 
-	switch payloadHeader := b.latestExecutionPayloadHeader.Proto().(type) {
+	payloadHeader, err := b.latestExecutionPayloadHeader.Proto()
+	if err != nil {
+		return nil, err
+	}
+
+	switch h := payloadHeader.(type) {
 	case *enginev1.ExecutionPayloadHeader:
-		copy := ethpb.CopyExecutionPayloadHeader(payloadHeader)
-		if copy == nil {
-			return nil
-		}
-		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(copy)
+		headerCpy := ethpb.CopyExecutionPayloadHeader(h)
+		copiedHeader, err := blocks.NewExecutionDataHeader(headerCpy)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		return copiedHeader
+		return copiedHeader, nil
 	case *enginev1.ExecutionPayloadHeader4844:
-		copy := ethpb.CopyExecutionPayloadHeader4844(payloadHeader)
-		if copy == nil {
-			return nil
-		}
-		copiedHeader, err := blocks.WrappedExecutionPayloadHeader(copy)
+		headerCpy := ethpb.CopyExecutionPayloadHeader4844(h)
+		copiedHeader, err := blocks.NewExecutionDataHeader(headerCpy)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		return copiedHeader
+		return copiedHeader, nil
 	default:
-		return nil // TODO: Should panic or return an error or something
+		return nil, fmt.Errorf("invalid payload header in beacon state: %T", payloadHeader)
 	}
 }

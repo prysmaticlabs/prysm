@@ -136,7 +136,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 			return err
 		}
 		if ph != nil {
-			copy(payloadHash[:], ph.GetBlockHash())
+			copy(payloadHash[:], ph.BlockHash())
 		}
 	}
 	jc := state.CurrentJustifiedCheckpoint()

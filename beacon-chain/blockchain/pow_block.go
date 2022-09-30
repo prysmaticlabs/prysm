@@ -50,7 +50,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	if err := validateTerminalBlockHash(b.Block().Slot(), payload); err != nil {
 		return errors.Wrap(err, "could not validate terminal block hash")
 	}
-	mergeBlockParentHash, mergeBlockTD, err := s.getBlkParentHashAndTD(ctx, payload.GetParentHash())
+	mergeBlockParentHash, mergeBlockTD, err := s.getBlkParentHashAndTD(ctx, payload.ParentHash())
 	if err != nil {
 		return errors.Wrap(err, "could not get merge block parent hash and total difficulty")
 	}
@@ -70,7 +70,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 
 	log.WithFields(logrus.Fields{
 		"slot":                            b.Block().Slot(),
-		"mergeBlockHash":                  common.BytesToHash(payload.GetParentHash()).String(),
+		"mergeBlockHash":                  common.BytesToHash(payload.ParentHash()).String(),
 		"mergeBlockParentHash":            common.BytesToHash(mergeBlockParentHash).String(),
 		"terminalTotalDifficulty":         params.BeaconConfig().TerminalTotalDifficulty,
 		"mergeBlockTotalDifficulty":       mergeBlockTD,
@@ -109,14 +109,14 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 //        assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
 //        assert block.body.execution_payload.parent_hash == TERMINAL_BLOCK_HASH
 //        return
-func validateTerminalBlockHash(blkSlot types.Slot, payload interfaces.WrappedExecutionPayload) error {
+func validateTerminalBlockHash(blkSlot types.Slot, payload interfaces.ExecutionData) error {
 	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) == [32]byte{} {
 		return nil
 	}
 	if params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(blkSlot) {
 		return errors.New("terminal block hash activation epoch not reached")
 	}
-	if !bytes.Equal(payload.GetParentHash(), params.BeaconConfig().TerminalBlockHash.Bytes()) {
+	if !bytes.Equal(payload.ParentHash(), params.BeaconConfig().TerminalBlockHash.Bytes()) {
 		return errors.New("parent hash does not match terminal block hash")
 	}
 	return nil

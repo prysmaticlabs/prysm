@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -178,7 +179,8 @@ func TestBeaconState_NoDeadlock_Bellatrix(t *testing.T) {
 		})
 	}
 	st, err := InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{
-		Validators: vals,
+		Validators:                   vals,
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	})
 	assert.NoError(t, err)
 	s, ok := st.(*BeaconState)

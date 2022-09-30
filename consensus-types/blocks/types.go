@@ -7,7 +7,6 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	engine "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -34,26 +33,27 @@ var (
 	errNilBlockBody          = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
+
+	errNilPayload              = errors.New("received nil execution payload")
+	errIncorrectPayloadVersion = errors.New("incorrect execution payload version")
 )
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.
 type BeaconBlockBody struct {
-	version                    int
-	isBlinded                  bool
-	randaoReveal               [field_params.BLSSignatureLength]byte
-	eth1Data                   *eth.Eth1Data
-	graffiti                   [field_params.RootLength]byte
-	proposerSlashings          []*eth.ProposerSlashing
-	attesterSlashings          []*eth.AttesterSlashing
-	attestations               []*eth.Attestation
-	deposits                   []*eth.Deposit
-	voluntaryExits             []*eth.SignedVoluntaryExit
-	syncAggregate              *eth.SyncAggregate
-	executionPayload           *engine.ExecutionPayload
-	executionPayloadHeader     *engine.ExecutionPayloadHeader
-	executionPayload4844       *engine.ExecutionPayload4844
-	executionPayloadHeader4844 *engine.ExecutionPayloadHeader4844
-	blobKzgs                   [][]byte
+	version             int
+	isBlinded           bool
+	randaoReveal        [field_params.BLSSignatureLength]byte
+	eth1Data            *eth.Eth1Data
+	graffiti            [field_params.RootLength]byte
+	proposerSlashings   []*eth.ProposerSlashing
+	attesterSlashings   []*eth.AttesterSlashing
+	attestations        []*eth.Attestation
+	deposits            []*eth.Deposit
+	voluntaryExits      []*eth.SignedVoluntaryExit
+	syncAggregate       *eth.SyncAggregate
+	executionData       interfaces.ExecutionData
+	executionDataHeader interfaces.ExecutionDataHeader
+	blobKzgs            [][]byte
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.

@@ -66,10 +66,20 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch eip4844 beacon block: %v", err)
 	}
-	return &ethpb.GenericBeaconBlock{
-		Block:   &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk},
-		Sidecar: sideCar,
-	}, nil
+	switch b := blk.(type) {
+	case *ethpb.SignedBeaconBlockWithBlobKZGsCompat:
+		return &ethpb.GenericBeaconBlock{
+			Block:   &ethpb.GenericBeaconBlock_Eip4844Compat{Eip4844Compat: b.Block},
+			Sidecar: sideCar,
+		}, nil
+	case *ethpb.SignedBeaconBlockWithBlobKZGs:
+		return &ethpb.GenericBeaconBlock{
+			Block:   &ethpb.GenericBeaconBlock_Eip4844{Eip4844: b.Block},
+			Sidecar: sideCar,
+		}, nil
+	default:
+		return nil, status.Errorf(codes.Internal, "Unexpected beacon block")
+	}
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt

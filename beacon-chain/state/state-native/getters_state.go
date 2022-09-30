@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -71,6 +70,10 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextSyncCommittee:           b.nextSyncCommittee,
 		}
 	case version.Bellatrix:
+		exec, err := b.latestExecutionPayloadHeader.PbGenericPayloadHeader()
+		if err != nil {
+			panic(err)
+		}
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -96,7 +99,39 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader),
+			LatestExecutionPayloadHeader: exec,
+		}
+	case version.EIP4844:
+		exec, err := b.latestExecutionPayloadHeader.PbEip4844PayloadHeader()
+		if err != nil {
+			panic(err)
+		}
+		return &ethpb.BeaconState4844{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.fork,
+			LatestBlockHeader:            b.latestBlockHeader,
+			BlockRoots:                   b.blockRoots.Slice(),
+			StateRoots:                   b.stateRoots.Slice(),
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1Data,
+			Eth1DataVotes:                b.eth1DataVotes,
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   b.validators,
+			Balances:                     b.balances,
+			RandaoMixes:                  b.randaoMixes.Slice(),
+			Slashings:                    b.slashings,
+			PreviousEpochParticipation:   b.previousEpochParticipation,
+			CurrentEpochParticipation:    b.currentEpochParticipation,
+			JustificationBits:            b.justificationBits,
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
+			FinalizedCheckpoint:          b.finalizedCheckpoint,
+			InactivityScores:             b.inactivityScores,
+			CurrentSyncCommittee:         b.currentSyncCommittee,
+			NextSyncCommittee:            b.nextSyncCommittee,
+			LatestExecutionPayloadHeader: exec,
 		}
 	default:
 		return nil
@@ -167,6 +202,14 @@ func (b *BeaconState) ToProto() interface{} {
 			NextSyncCommittee:           b.nextSyncCommitteeVal(),
 		}
 	case version.Bellatrix:
+		exec, err := b.latestExecutionPayloadHeaderVal()
+		if err != nil {
+			panic(err)
+		}
+		proto, err := exec.PbGenericPayloadHeader()
+		if err != nil {
+			panic(err)
+		}
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -192,9 +235,17 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().Proto().(*enginev1.ExecutionPayloadHeader),
+			LatestExecutionPayloadHeader: proto,
 		}
 	case version.EIP4844:
+		exec, err := b.latestExecutionPayloadHeaderVal()
+		if err != nil {
+			panic(err)
+		}
+		proto, err := exec.PbEip4844PayloadHeader()
+		if err != nil {
+			panic(err)
+		}
 		return &ethpb.BeaconState4844{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -220,7 +271,7 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal().Proto().(*enginev1.ExecutionPayloadHeader4844),
+			LatestExecutionPayloadHeader: proto,
 		}
 	default:
 		return nil
@@ -292,6 +343,16 @@ func ProtobufBeaconStateBellatrix(s interface{}) (*ethpb.BeaconStateBellatrix, e
 	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateBellatrix")
+	}
+	return pbState, nil
+}
+
+// ProtobufBeaconState4844 transforms an input into beacon state EIP-4844 in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconState4844(s interface{}) (*ethpb.BeaconState4844, error) {
+	pbState, ok := s.(*ethpb.BeaconState4844)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconState4844")
 	}
 	return pbState, nil
 }

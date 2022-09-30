@@ -4,10 +4,10 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // SignedBeaconBlock is an interface describing the method set of
@@ -67,56 +67,43 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() (proto.Message, error)
 	BlobKzgs() ([][]byte, error)
-	Execution() (WrappedExecutionPayload, error)
+	Execution() (ExecutionData, error)
 }
 
 // ExecutionData represents execution layer information that is contained
-// within post-Bellatrix beacon block bodies. ONLY the fields that are on EVERY
-// type of ExecutionPayload are here. Header and EIP-4844 fields can't be here.
-type CommonExecutionPayloadData interface {
+// within post-Bellatrix beacon block bodies.
+type ExecutionData interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
-	ProtoReflect() protoreflect.Message
-	GetParentHash() []byte
-	GetFeeRecipient() []byte
-	GetStateRoot() []byte
-	GetReceiptsRoot() []byte
-	GetLogsBloom() []byte
-	GetPrevRandao() []byte
-	GetBlockNumber() uint64
-	GetGasLimit() uint64
-	GetGasUsed() uint64
-	GetTimestamp() uint64
-	GetExtraData() []byte
-	GetBaseFeePerGas() []byte
-	GetBlockHash() []byte
-}
-
-type FieldsExecutionPayloadGetsDueToBeingWrapped interface {
 	IsNil() bool
-	Proto() proto.Message
-	GetExcessBlobs() (uint64, error) // Only on EIP-4844 blocks -- both payload and header
+	Proto() (proto.Message, error)
+	ParentHash() []byte
+	FeeRecipient() []byte
+	StateRoot() []byte
+	ReceiptsRoot() []byte
+	LogsBloom() []byte
+	PrevRandao() []byte
+	BlockNumber() uint64
+	GasLimit() uint64
+	GasUsed() uint64
+	Timestamp() uint64
+	ExtraData() []byte
+	BaseFeePerGas() []byte
+	BlockHash() []byte
+	Transactions() ([][]byte, error)
+	ExcessBlobs() (uint64, error)
+
+	Version() int
+	PbGenericPayload() (*enginev1.ExecutionPayload, error)
+	PbEip4844Payload() (*enginev1.ExecutionPayload4844, error)
 }
 
-// Can be holding either the full ExecutionPayload or an ExecutionPayloadHeader
-// and either the legacy format or the 4844 format including ExcessBlobs.
-type WrappedExecutionPayload interface {
-	CommonExecutionPayloadData
-	FieldsExecutionPayloadGetsDueToBeingWrapped
-	ToHeader() (WrappedExecutionPayloadHeader, error)
-
-	// Optional, can error!
-	GetTransactions() ([][]byte, error) // Only on payload, absent on header
-	GetTransactionsRoot() ([]byte, error) // Present as a field on header, computed on payload
-}
-
-type ExecutionPayloadHeader interface {
-	CommonExecutionPayloadData
-	GetTransactionsRoot() []byte
-}
-
-type WrappedExecutionPayloadHeader interface {
-	ExecutionPayloadHeader
-	FieldsExecutionPayloadGetsDueToBeingWrapped
+// ExecutionDataHeader represents execution layer header info that is contained
+// within post-Bellatrix beacon block bodies.
+type ExecutionDataHeader interface {
+	ExecutionData
+	TransactionsRoot() []byte
+	PbGenericPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
+	PbEip4844PayloadHeader() (*enginev1.ExecutionPayloadHeader4844, error)
 }

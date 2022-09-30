@@ -678,20 +678,160 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetParentHash()),
-			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetFeeRecipient()),
-			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetStateRoot()),
-			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetReceiptsRoot()),
-			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetLogsBloom()),
-			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetPrevRandao()),
-			BlockNumber:      sourceLatestExecutionPayloadHeader.GetBlockNumber(),
-			GasLimit:         sourceLatestExecutionPayloadHeader.GetGasLimit(),
-			GasUsed:          sourceLatestExecutionPayloadHeader.GetGasUsed(),
-			Timestamp:        sourceLatestExecutionPayloadHeader.GetTimestamp(),
-			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetExtraData()),
-			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetBaseFeePerGas()),
-			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetBlockHash()),
-			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.GetTransactionsRoot()),
+			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ParentHash()),
+			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.FeeRecipient()),
+			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.StateRoot()),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ReceiptsRoot()),
+			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.LogsBloom()),
+			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.PrevRandao()),
+			BlockNumber:      sourceLatestExecutionPayloadHeader.BlockNumber(),
+			GasLimit:         sourceLatestExecutionPayloadHeader.GasLimit(),
+			GasUsed:          sourceLatestExecutionPayloadHeader.GasUsed(),
+			Timestamp:        sourceLatestExecutionPayloadHeader.Timestamp(),
+			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExtraData()),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas()),
+			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash()),
+			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot()),
+		},
+	}
+
+	return result, nil
+}
+
+// BeaconState4844ToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, error) {
+	sourceFork := st.Fork()
+	sourceLatestBlockHeader := st.LatestBlockHeader()
+	sourceEth1Data := st.Eth1Data()
+	sourceEth1DataVotes := st.Eth1DataVotes()
+	sourceValidators := st.Validators()
+	sourceJustificationBits := st.JustificationBits()
+	sourcePrevJustifiedCheckpoint := st.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := st.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := st.FinalizedCheckpoint()
+
+	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
+	for i, vote := range sourceEth1DataVotes {
+		resultEth1DataVotes[i] = &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(vote.DepositRoot),
+			DepositCount: vote.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(vote.BlockHash),
+		}
+	}
+	resultValidators := make([]*ethpbv1.Validator, len(sourceValidators))
+	for i, validator := range sourceValidators {
+		resultValidators[i] = &ethpbv1.Validator{
+			Pubkey:                     bytesutil.SafeCopyBytes(validator.PublicKey),
+			WithdrawalCredentials:      bytesutil.SafeCopyBytes(validator.WithdrawalCredentials),
+			EffectiveBalance:           validator.EffectiveBalance,
+			Slashed:                    validator.Slashed,
+			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
+			ActivationEpoch:            validator.ActivationEpoch,
+			ExitEpoch:                  validator.ExitEpoch,
+			WithdrawableEpoch:          validator.WithdrawableEpoch,
+		}
+	}
+
+	sourcePrevEpochParticipation, err := st.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get previous epoch participation")
+	}
+	sourceCurrEpochParticipation, err := st.CurrentEpochParticipation()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current epoch participation")
+	}
+	sourceInactivityScores, err := st.InactivityScores()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get inactivity scores")
+	}
+	sourceCurrSyncCommittee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current sync committee")
+	}
+	sourceNextSyncCommittee, err := st.NextSyncCommittee()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next sync committee")
+	}
+	sourceLatestExecutionPayloadHeader, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get latest execution payload header")
+	}
+	var excessBlobs uint64
+	if val, err := sourceLatestExecutionPayloadHeader.ExcessBlobs(); err == nil {
+		excessBlobs = val
+	}
+	// else ErrUnsupportedGetter, so we ignore its value
+
+	result := &ethpbv2.BeaconState4844{
+		GenesisTime:           st.GenesisTime(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
+		Slot:                  st.Slot(),
+		Fork: &ethpbv1.Fork{
+			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
+			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
+			Epoch:           sourceFork.Epoch,
+		},
+		LatestBlockHeader: &ethpbv1.BeaconBlockHeader{
+			Slot:          sourceLatestBlockHeader.Slot,
+			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
+			ParentRoot:    bytesutil.SafeCopyBytes(sourceLatestBlockHeader.ParentRoot),
+			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
+			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
+		},
+		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		Eth1Data: &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
+			DepositCount: sourceEth1Data.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
+		},
+		Eth1DataVotes:              resultEth1DataVotes,
+		Eth1DepositIndex:           st.Eth1DepositIndex(),
+		Validators:                 resultValidators,
+		Balances:                   st.Balances(),
+		RandaoMixes:                bytesutil.SafeCopy2dBytes(st.RandaoMixes()),
+		Slashings:                  st.Slashings(),
+		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
+		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
+		JustificationBits:          bytesutil.SafeCopyBytes(sourceJustificationBits),
+		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
+		},
+		CurrentJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceCurrJustifiedCheckpoint.Root),
+		},
+		FinalizedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceFinalizedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
+		},
+		InactivityScores: sourceInactivityScores,
+		CurrentSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
+			AggregatePubkey: bytesutil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
+			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
+		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
+			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ParentHash()),
+			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.FeeRecipient()),
+			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.StateRoot()),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ReceiptsRoot()),
+			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.LogsBloom()),
+			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.PrevRandao()),
+			BlockNumber:      sourceLatestExecutionPayloadHeader.BlockNumber(),
+			GasLimit:         sourceLatestExecutionPayloadHeader.GasLimit(),
+			GasUsed:          sourceLatestExecutionPayloadHeader.GasUsed(),
+			Timestamp:        sourceLatestExecutionPayloadHeader.Timestamp(),
+			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExtraData()),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas()),
+			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash()),
+			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot()),
+			ExcessBlobs:      excessBlobs,
 		},
 	}
 

@@ -50,8 +50,8 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		if err != nil {
 			return err
 		}
-		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.GetBlockHash())))
-		txs, err := p.GetTransactions()
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
+		txs, err := p.Transactions()
 		switch {
 		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
 		case err != nil:
@@ -120,15 +120,15 @@ func logPayload(block interfaces.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
-	if payload.GetGasLimit() == 0 {
+	if payload.GasLimit() == 0 {
 		return errors.New("gas limit should not be 0")
 	}
-	gasUtilized := float64(payload.GetGasUsed()) / float64(payload.GetGasLimit())
+	gasUtilized := float64(payload.GasUsed()) / float64(payload.GasLimit())
 
 	log.WithFields(logrus.Fields{
-		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.GetBlockHash())),
-		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.GetParentHash())),
-		"blockNumber": payload.GetBlockNumber(),
+		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
+		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash())),
+		"blockNumber": payload.BlockNumber(),
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
 	}).Debug("Synced new payload")
 	return nil

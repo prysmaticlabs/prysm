@@ -656,6 +656,10 @@ func bodyAltair() *BeaconBlockBody {
 
 func bodyBellatrix() *BeaconBlockBody {
 	f := getFields()
+	data, err := NewExecutionData(f.execPayload)
+	if err != nil {
+		panic(err)
+	}
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		randaoReveal: f.sig,
@@ -671,12 +675,16 @@ func bodyBellatrix() *BeaconBlockBody {
 		deposits:          f.deposits,
 		voluntaryExits:    f.voluntaryExits,
 		syncAggregate:     f.syncAggregate,
-		executionPayload:  f.execPayload,
+		executionData:     data,
 	}
 }
 
 func bodyBlindedBellatrix() *BeaconBlockBody {
 	f := getFields()
+	data, err := NewExecutionDataHeader(f.execPayloadHeader)
+	if err != nil {
+		panic(err)
+	}
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		isBlinded:    true,
@@ -686,14 +694,14 @@ func bodyBlindedBellatrix() *BeaconBlockBody {
 			DepositCount: 128,
 			BlockHash:    f.root[:],
 		},
-		graffiti:               f.root,
-		proposerSlashings:      f.proposerSlashings,
-		attesterSlashings:      f.attesterSlashings,
-		attestations:           f.atts,
-		deposits:               f.deposits,
-		voluntaryExits:         f.voluntaryExits,
-		syncAggregate:          f.syncAggregate,
-		executionPayloadHeader: f.execPayloadHeader,
+		graffiti:            f.root,
+		proposerSlashings:   f.proposerSlashings,
+		attesterSlashings:   f.attesterSlashings,
+		attestations:        f.atts,
+		deposits:            f.deposits,
+		voluntaryExits:      f.voluntaryExits,
+		syncAggregate:       f.syncAggregate,
+		executionDataHeader: data,
 	}
 }
 

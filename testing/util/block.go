@@ -621,7 +621,7 @@ func HydrateEIP4844BeaconBlockBody(b *ethpb.BeaconBlockBodyWithBlobKZGs) *ethpb.
 		}
 	}
 	if b.ExecutionPayload == nil {
-		b.ExecutionPayload = &enginev1.ExecutionPayload{
+		b.ExecutionPayload = &enginev1.ExecutionPayload4844{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, 20),
 			StateRoot:     make([]byte, fieldparams.RootLength),

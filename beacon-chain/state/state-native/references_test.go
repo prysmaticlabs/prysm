@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -76,7 +77,7 @@ func TestStateReferenceSharing_Finalizer_Altair(t *testing.T) {
 func TestStateReferenceSharing_Finalizer_Bellatrix(t *testing.T) {
 	// This test showcases the logic on the RandaoMixes field with the GC finalizer.
 
-	s, err := InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{RandaoMixes: [][]byte{[]byte("foo")}})
+	s, err := InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{RandaoMixes: [][]byte{[]byte("foo")}, LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{}})
 	require.NoError(t, err)
 	a, ok := s.(*BeaconState)
 	require.Equal(t, true, ok)
@@ -229,6 +230,7 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation_Bellatrix(t *testing.T) {
 		StateRoots: [][]byte{
 			root1[:],
 		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	})
 	require.NoError(t, err)
 	a, ok := s.(*BeaconState)
@@ -376,6 +378,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Bellatrix(t *testing.T) {
 		RandaoMixes: [][]byte{
 			val1[:],
 		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	})
 	require.NoError(t, err)
 	a, ok := s.(*BeaconState)
@@ -658,6 +661,7 @@ func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
 			{PublicKey: []byte{'D'}},
 			{PublicKey: []byte{'E'}},
 		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	})
 	require.NoError(t, err)
 	a, ok := s.(*BeaconState)
