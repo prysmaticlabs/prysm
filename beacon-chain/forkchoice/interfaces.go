@@ -10,6 +10,10 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
+// BalanceByRooter is a handler to obtain the effective balances of the state
+// with the given block root
+type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
+
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
 	HeadRetriever        // to compute head.
@@ -77,4 +81,5 @@ type Setter interface {
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
 	NewSlot(context.Context, types.Slot) error
+	SetBalancesByRooter(BalancesByRooter)
 }

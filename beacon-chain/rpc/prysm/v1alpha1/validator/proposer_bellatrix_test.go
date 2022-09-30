@@ -17,7 +17,7 @@ import (
 	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
@@ -55,7 +55,7 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 
 	proposerServer := &Server{
 		BeaconDB: db,
-		StateGen: stategen.New(db),
+		StateGen: stategen.New(db, doublylinkedtree.New()),
 	}
 	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
-	vs := &Server{StateGen: stategen.New(db), BeaconDB: db}
+	vs := &Server{StateGen: stategen.New(db, doublylinkedtree.New()), BeaconDB: db}
 	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
@@ -446,7 +446,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
@@ -484,7 +484,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		Timestamp:        ts,
 	}
 
-	vs.StateGen = stategen.New(vs.BeaconDB)
+	vs.StateGen = stategen.New(vs.BeaconDB, doublylinkedtree.New())
 	vs.GenesisFetcher = &blockchainTest.ChainService{}
 	vs.ForkFetcher = &blockchainTest.ChainService{Fork: &ethpb.Fork{}}
 
@@ -520,7 +520,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
@@ -603,7 +603,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, doublylinkedtree.New()),
 		SyncCommitteePool: synccommittee.NewStore(),
 		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
@@ -705,7 +705,7 @@ func TestServer_GetBellatrixBeaconBlock_LocalProgressingWithBuilderSkipped(t *te
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
-		StateGen:          stategen.New(db),
+		StateGen:          stategen.New(db, doublylinkedtree.New()),
 		SyncCommitteePool: synccommittee.NewStore(),
 		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
@@ -840,7 +840,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		AttPool:             attestations.NewPool(),
 		SlashingsPool:       slashings.NewPool(),
 		ExitPool:            voluntaryexits.NewPool(),
-		StateGen:            stategen.New(db),
+		StateGen:            stategen.New(db, doublylinkedtree.New()),
 		SyncCommitteePool:   synccommittee.NewStore(),
 		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
@@ -865,7 +865,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
@@ -955,7 +955,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	_, err := s.circuitBreakBuilder(0)
 	require.ErrorContains(t, "no fork choicer configured", err)
 
-	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
 	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
 	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(t, err)

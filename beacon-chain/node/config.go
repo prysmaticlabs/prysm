@@ -96,6 +96,12 @@ func configureEth1Config(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if cliCtx.IsSet(flags.EngineEndpointTimeoutSeconds.Name) {
+		c.ExecutionEngineTimeoutValue = cliCtx.Uint64(flags.EngineEndpointTimeoutSeconds.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
 	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
 		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
 		if err := params.SetActive(c); err != nil {
