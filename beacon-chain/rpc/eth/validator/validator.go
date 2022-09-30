@@ -166,6 +166,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, s := range ss {
+			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(s, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			duties = append(duties, &ethpbv1.ProposerDuty{
 				Pubkey:         pubkey,
 				ValidatorIndex: index,
