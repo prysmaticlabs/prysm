@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
@@ -679,7 +679,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -783,7 +783,7 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -932,9 +932,12 @@ func TestProduceBlockV2(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1004,6 +1007,9 @@ func TestProduceBlockV2(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
 		resp, err := v1Server.ProduceBlockV2(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -1056,7 +1062,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -1217,7 +1223,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -1421,9 +1427,12 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -1490,6 +1499,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
 		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
@@ -1640,7 +1652,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -1744,7 +1756,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -1921,7 +1933,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New()},
+			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
 				Genesis: ti,
 			},
@@ -1937,7 +1949,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			BlockBuilder: &builderTest.MockBuilderService{
@@ -2072,7 +2084,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -2233,7 +2245,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
 			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db),
+			StateGen:          stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool: synccommittee.NewStore(),
 		}
 
@@ -2437,7 +2449,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
-			StateGen:               stategen.New(db),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}

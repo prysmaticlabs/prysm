@@ -522,6 +522,8 @@ message BlockRequest {
     // Validator's 32 byte graffiti message for the new block.
     bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 
+    // Signal server to skip outsourcing block request from mev-boost/relayer so that returned block will always be a local block.
+    bool skip_mev_boost = 4;
 }
 
 message ProposeResponse {

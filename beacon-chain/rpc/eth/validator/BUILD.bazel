@@ -60,7 +60,7 @@ go_test(
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/execution/testing:go_default_library",
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
+        "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/attestations/mock:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
