@@ -497,26 +497,15 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		var vr *validatorServiceConfig.BuilderConfig
-		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
-			vr = &validatorServiceConfig.BuilderConfig{
-				Enabled:  true,
-				GasLimit: validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-			}
-			if sgl != "" {
-				gl, err := strconv.ParseUint(sgl, 10, 64)
-				if err != nil {
-					return nil, errors.New("Gas Limit is not a uint64")
-				}
-				vr.GasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
-			}
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient:  suggestedFee,
-				BuilderConfig: vr,
+				BuilderConfig: builderConfig,
 			},
 		}
 	}
@@ -553,6 +542,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
+	if vpSettings.DefaultConfig.BuilderConfig == nil {
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		vpSettings.DefaultConfig.BuilderConfig = builderConfig
+	}
+
 	if vpSettings.DefaultConfig.BuilderConfig != nil {
 		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
@@ -578,6 +575,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			}
 			if option.BuilderConfig != nil {
 				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
+			} else {
+				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+				if err != nil {
+					return nil, err
+				}
+				option.BuilderConfig = builderConfig
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
 				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
@@ -588,6 +591,26 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	}
 
 	return vpSettings, nil
+}
+
+func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		gasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
+
+		if sgl != "" {
+			gl, err := strconv.ParseUint(sgl, 10, 64)
+			if err != nil {
+				return nil, errors.New("Gas Limit is not a uint64")
+			}
+			gasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
+		}
+		return &validatorServiceConfig.BuilderConfig{
+			Enabled:  true,
+			GasLimit: gasLimit,
+		}, nil
+	}
+	return nil, nil
 }
 
 func warnNonChecksummedAddress(feeRecipient string) error {
