@@ -737,10 +737,12 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, errNotSupported("Execution", b.version)
-	case version.Bellatrix, version.EIP4844:
+	case version.Bellatrix:
 		if b.isBlinded {
 			return b.executionDataHeader, nil
 		}
+		return b.executionData, nil
+	case version.EIP4844:
 		return b.executionData, nil
 	default:
 		return nil, errIncorrectBlockVersion

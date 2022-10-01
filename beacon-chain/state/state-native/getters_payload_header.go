@@ -16,7 +16,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionDataHe
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
 
-	if b.latestExecutionPayloadHeader == nil {
+	if b.latestExecutionPayloadHeader == nil || b.latestExecutionPayloadHeader.IsNil() {
 		return nil, nil
 	}
 

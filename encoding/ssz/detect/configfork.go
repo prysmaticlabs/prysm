@@ -103,13 +103,23 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case version.Bellatrix, version.EIP4844 /* the beacon state is unchanged in eip4844 */ :
+	case version.Bellatrix:
 		st := &ethpb.BeaconStateBellatrix{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
 		}
 		s, err = state_native.InitializeFromProtoUnsafeBellatrix(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+		}
+	case version.EIP4844:
+		st := &ethpb.BeaconState4844{}
+		err = st.UnmarshalSSZ(marshaled)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = state_native.InitializeFromProtoUnsafe4844(st)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}

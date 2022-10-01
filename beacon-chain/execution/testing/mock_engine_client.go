@@ -22,6 +22,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
+	ExecutionPayload4844        *pb.ExecutionPayload4844
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
@@ -55,10 +56,20 @@ func (e *EngineClient) ForkchoiceUpdated(
 
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (interfaces.ExecutionData, error) {
-	if e.ExecutionPayload == nil {
+	if e.ExecutionPayload != nil && e.ExecutionPayload4844 != nil {
+		panic("ExecutionPayload and ExecutionPayload4844 are mutually exclusive")
+	}
+
+	if e.ExecutionPayload == nil && e.ExecutionPayload4844 == nil {
 		return emptyPayload(), e.ErrGetPayload
 	}
-	data, err := blocks.NewExecutionData(e.ExecutionPayload)
+	var payload interface{}
+	if e.ExecutionPayload != nil {
+		payload = e.ExecutionPayload
+	} else {
+		payload = e.ExecutionPayload4844
+	}
+	data, err := blocks.NewExecutionData(payload)
 	if err != nil {
 		panic(err)
 	}
@@ -170,11 +181,14 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 
 // GetBlobsBundle --
 func (e *EngineClient) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+	if e.BlobsBundle == nil {
+		return new(pb.BlobsBundle), nil
+	}
 	return e.BlobsBundle, nil
 }
 
 func emptyPayload() interfaces.ExecutionData {
-	b, _ := blocks.NewExecutionData(&pb.ExecutionPayload{
+	b, err := blocks.NewExecutionData(&pb.ExecutionPayload{
 		ParentHash:    make([]byte, field_params.RootLength),
 		FeeRecipient:  make([]byte, field_params.FeeRecipientLength),
 		StateRoot:     make([]byte, field_params.RootLength),
@@ -184,5 +198,8 @@ func emptyPayload() interfaces.ExecutionData {
 		BaseFeePerGas: make([]byte, field_params.RootLength),
 		BlockHash:     make([]byte, field_params.RootLength),
 	})
+	if err != nil {
+		panic("cannot fail")
+	}
 	return b
 }

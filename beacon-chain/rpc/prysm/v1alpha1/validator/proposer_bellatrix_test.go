@@ -730,22 +730,23 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	}
 
 	proposerServer := &Server{
-		FinalizationFetcher: &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
-		HeadFetcher:         &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
-		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
-		SyncChecker:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       &blockchainTest.ChainService{},
-		HeadUpdater:         &blockchainTest.ChainService{},
-		ForkFetcher:         &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
-		GenesisFetcher:      &blockchainTest.ChainService{},
-		ChainStartFetcher:   &mockExecution.Chain{},
-		Eth1InfoFetcher:     &mockExecution.Chain{},
-		MockEth1Votes:       true,
-		AttPool:             attestations.NewPool(),
-		SlashingsPool:       slashings.NewPool(),
-		ExitPool:            voluntaryexits.NewPool(),
-		StateGen:            stategen.New(db),
-		SyncCommitteePool:   synccommittee.NewStore(),
+		FinalizationFetcher:    &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
+		HeadFetcher:            &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
+		TimeFetcher:            &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
+		SyncChecker:            &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:          &blockchainTest.ChainService{},
+		HeadUpdater:            &blockchainTest.ChainService{},
+		ForkFetcher:            &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
+		GenesisFetcher:         &blockchainTest.ChainService{},
+		ChainStartFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		MockEth1Votes:          true,
+		AttPool:                attestations.NewPool(),
+		SlashingsPool:          slashings.NewPool(),
+		ExitPool:               voluntaryexits.NewPool(),
+		StateGen:               stategen.New(db),
+		SyncCommitteePool:      synccommittee.NewStore(),
 		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
@@ -769,7 +770,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
+	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(&dummyDA{})}
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
@@ -859,7 +860,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	_, err := s.circuitBreakBuilder(0)
 	require.ErrorContains(t, "no fork choicer configured", err)
 
-	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(nil)}
+	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New(&dummyDA{})}
 	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
 	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(t, err)
@@ -925,4 +926,10 @@ func createState(
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
 	st, err := state_native.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
+}
+
+type dummyDA struct{}
+
+func (d *dummyDA) IsDataAvailable(context.Context, [32]byte) error {
+	return nil
 }

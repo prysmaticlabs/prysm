@@ -101,6 +101,34 @@ func TestByState(t *testing.T) {
 	}
 }
 
+func TestByStateEip4844(t *testing.T) {
+	undo, err := hackEip4844Maxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	bc := params.BeaconConfig()
+	eip4844Slot, err := slots.EpochStart(bc.Eip4844ForkEpoch)
+	require.NoError(t, err)
+	st, err := stateForVersion(version.EIP4844)
+	require.NoError(t, err)
+
+	forkversion := bytesutil.ToBytes4(bc.Eip4844ForkVersion)
+	require.NoError(t, st.SetFork(&ethpb.Fork{
+		PreviousVersion: make([]byte, 4),
+		CurrentVersion:  forkversion[:],
+		Epoch:           0,
+	}))
+	require.NoError(t, st.SetSlot(eip4844Slot))
+	m, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	cf, err := FromState(m)
+	require.NoError(t, err)
+	require.Equal(t, version.EIP4844, cf.Fork)
+	require.Equal(t, forkversion, cf.Version)
+	require.Equal(t, bc.ConfigName, cf.Config.ConfigName)
+}
+
 func stateForVersion(v int) (state.BeaconState, error) {
 	switch v {
 	case version.Phase0:
@@ -109,6 +137,8 @@ func stateForVersion(v int) (state.BeaconState, error) {
 		return util.NewBeaconStateAltair()
 	case version.Bellatrix:
 		return util.NewBeaconStateBellatrix()
+	case version.EIP4844:
+		return util.NewBeaconState4844()
 	default:
 		return nil, fmt.Errorf("unrecognoized version %d", v)
 	}
@@ -173,6 +203,39 @@ func TestUnmarshalState(t *testing.T) {
 	}
 }
 
+func TestUnmarshalStateEip4844(t *testing.T) {
+	ctx := context.Background()
+	undo, err := hackEip4844Maxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	bc := params.BeaconConfig()
+	eip4844Slot, err := slots.EpochStart(bc.Eip4844ForkEpoch)
+	forkversion := bytesutil.ToBytes4(bc.Eip4844ForkVersion)
+	require.NoError(t, err)
+	st, err := stateForVersion(version.EIP4844)
+	require.NoError(t, err)
+	require.NoError(t, st.SetFork(&ethpb.Fork{
+		PreviousVersion: make([]byte, 4),
+		CurrentVersion:  forkversion[:],
+		Epoch:           0,
+	}))
+	require.NoError(t, st.SetSlot(eip4844Slot))
+	m, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	cf, err := FromState(m)
+	require.NoError(t, err)
+	s, err := cf.UnmarshalBeaconState(m)
+	require.NoError(t, err)
+	expected, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actual, err := s.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, expected, actual)
+	require.Equal(t, st.Version(), s.Version())
+}
+
 func hackBellatrixMaxuint() (func() error, error) {
 	// We monkey patch the config to use a smaller value for the bellatrix fork epoch.
 	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
@@ -180,6 +243,17 @@ func hackBellatrixMaxuint() (func() error, error) {
 	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
 	bc := params.MainnetConfig().Copy()
 	bc.BellatrixForkEpoch = math.MaxUint32
+	undo, err := params.SetActiveWithUndo(bc)
+	return undo, err
+}
+
+func hackEip4844Maxuint() (func() error, error) {
+	// We monkey patch the config to use a smaller value for the eip4844 fork epoch.
+	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
+	// Unfortunately we have unit tests that assert our config matches the upstream config, so we have to choose between
+	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
+	bc := params.MainnetConfig().Copy()
+	bc.Eip4844ForkEpoch = math.MaxUint32
 	undo, err := params.SetActiveWithUndo(bc)
 	return undo, err
 }

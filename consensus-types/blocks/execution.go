@@ -303,13 +303,19 @@ func (e *executionPayload) ExcessBlobs() (uint64, error) {
 
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (interfaces.ExecutionDataHeader, error) {
-	txs, err := payload.Transactions()
-	if err != nil {
-		return nil, err
-	}
-	txRoot, err := ssz.TransactionsRoot(txs)
-	if err != nil {
-		return nil, err
+	var txRoot [32]byte
+	// HACK: We can sidestep an invalid getters call for Transactions() if we know we're dealing with an actual payload header
+	if h, ok := payload.(*executionPayloadHeader); ok {
+		txRoot = bytesutil.ToBytes32(h.transactionsRoot)
+	} else {
+		txs, err := payload.Transactions()
+		if err != nil {
+			return nil, err
+		}
+		txRoot, err = ssz.TransactionsRoot(txs)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var i interface{}
 	switch payload.Version() {

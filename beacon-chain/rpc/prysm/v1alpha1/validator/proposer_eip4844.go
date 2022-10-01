@@ -27,7 +27,6 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
 	if registered && err == nil {
 		// TODO(EIP-4844): Blinded EIP4844 blocks doesn't quite work yet
-		return nil, errors.New("blinded eip-4844 blocks are not yet supported")
 		/*
 			builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
 			if err != nil {
@@ -114,7 +113,7 @@ func (vs *Server) assembleEip4844Block(ctx context.Context, altairBlk *ethpb.Bea
 	}
 	blk.StateRoot = stateRoot
 
-	r, err := wsb.Block().HashTreeRoot()
+	r, err := blk.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}

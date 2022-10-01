@@ -228,7 +228,7 @@ func activationEpochNotReached(slot types.Slot) bool {
 }
 
 func emptyPayload() interfaces.ExecutionData {
-	b, _ := blockstypes.NewExecutionData(&enginev1.ExecutionPayload{
+	b, err := blockstypes.NewExecutionData(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -238,5 +238,8 @@ func emptyPayload() interfaces.ExecutionData {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 	})
+	if err != nil {
+		panic("NewExecutionData call cannot fail")
+	}
 	return b
 }
