@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
@@ -533,6 +534,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 }
 
 func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
+	transition.SkipSlotCache.Disable()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	hook := logTest.NewGlobal()

@@ -446,6 +446,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 }
 
 func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
+	transition.SkipSlotCache.Disable()
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(t)

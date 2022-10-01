@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	coretime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
@@ -2095,6 +2096,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 }
 
 func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
+	transition.SkipSlotCache.Disable()
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	hook := logTest.NewGlobal()
