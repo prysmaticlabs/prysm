@@ -112,6 +112,18 @@ type RPCClient interface {
 	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
+type RPCClientUninitialize struct {
+}
+
+func (RPCClientUninitialize) Close() {}
+func (RPCClientUninitialize) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("BatchCall to a RPCClientUnitialized")
+}
+
+func (RPCClientUninitialize) CallContext(context.Context, interface{}, string, ...interface{}) error {
+	return errors.New("CallContext to a RPCClientUnitialized")
+}
+
 // config defines a config struct for dependencies into the service.
 type config struct {
 	depositContractAddr     common.Address
@@ -169,8 +181,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	}
 
 	s := &Service{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:       ctx,
+		cancel:    cancel,
+		rpcClient: RPCClientUninitialize{},
 		cfg: &config{
 			beaconNodeStatsUpdater: &NopBeaconNodeStatsUpdater{},
 			eth1HeaderReqLimit:     defaultEth1HeaderReqLimit,
