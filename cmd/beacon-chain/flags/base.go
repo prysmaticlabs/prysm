@@ -192,6 +192,13 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
+	// EngineEndpointTimeoutSeconds defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+	// If this flag is not used then default will be used as defined here:
+	// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+	EngineEndpointTimeoutSeconds = &cli.Uint64Flag{
+		Name:  "engine-endpoint-timeout-seconds",
+		Usage: "Sets the execution engine timeout (seconds) for execution payload semantics (forkchoiceUpdated, newPayload)",
+	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{
 		Name:  "eth1-header-req-limit",

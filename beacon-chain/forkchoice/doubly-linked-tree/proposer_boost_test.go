@@ -480,7 +480,7 @@ func TestForkChoice_computeProposerBoostScore(t *testing.T) {
 }
 
 // Regression test (11053)
-func TestForkChoice_missingPreviousProposerBoost(t *testing.T) {
+func TestForkChoice_missingProposerBoostRoots(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 	balances := make([]uint64, 64) // 64 active validators.
@@ -493,6 +493,18 @@ func TestForkChoice_missingPreviousProposerBoost(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, st, root))
 
 	f.store.previousProposerBoostRoot = [32]byte{'p'}
-	_, err = f.Head(ctx, balances)
+	headRoot, err := f.Head(ctx, balances)
 	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	require.Equal(t, [32]byte{'r'}, f.store.proposerBoostRoot)
+
+	f.store.proposerBoostRoot = [32]byte{'p'}
+	driftGenesisTime(f, 3, 0)
+	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'a'}, [32]byte{'r'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	headRoot, err = f.Head(ctx, balances)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	require.Equal(t, [32]byte{'p'}, f.store.proposerBoostRoot)
 }

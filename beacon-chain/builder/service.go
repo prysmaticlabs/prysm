@@ -72,7 +72,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 }
 
 // Start initializes the service.
-func (*Service) Start() {}
+func (s *Service) Start() {
+	go s.pollRelayerStatus(s.ctx)
+}
 
 // Stop halts the service.
 func (*Service) Stop() error {
@@ -105,19 +107,12 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 
 // Status retrieves the status of the builder relay network.
 func (s *Service) Status() error {
-	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
-
 	// Return early if builder isn't initialized in service.
 	if s.c == nil {
 		return nil
 	}
 
-	return s.c.Status(ctx)
+	return nil
 }
 
 // RegisterValidator registers a validator with the builder relay network.
@@ -156,4 +151,21 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 // Configured returns true if the user has configured a builder client.
 func (s *Service) Configured() bool {
 	return s.c != nil && !reflect.ValueOf(s.c).IsNil()
+}
+
+func (s *Service) pollRelayerStatus(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if s.c != nil {
+				if err := s.c.Status(ctx); err != nil {
+					log.WithError(err).Error("Failed to call relayer status endpoint, perhaps mev-boost or relayers are down")
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

@@ -17,7 +17,6 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -34,7 +33,6 @@ var _ statefeed.Notifier = (*BeaconNode)(nil)
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	features.Init(&features.Flags{EnableNativeState: true})
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 
 	app := cli.App{}
@@ -44,6 +42,8 @@ func TestNodeClose_OK(t *testing.T) {
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "0x0000000000000000000000000000000000000000", "deposit contract address")
+	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
 	ctx := cli.NewContext(&app, set, nil)
@@ -54,7 +54,6 @@ func TestNodeClose_OK(t *testing.T) {
 	node.Close()
 
 	require.LogsContain(t, hook, "Stopping beacon node")
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestNodeStart_Ok(t *testing.T) {
@@ -63,7 +62,9 @@ func TestNodeStart_Ok(t *testing.T) {
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
-	features.Init(&features.Flags{EnableNativeState: true})
+	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
+
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
@@ -80,7 +81,6 @@ func TestNodeStart_Ok(t *testing.T) {
 }
 
 func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	numValidators := uint64(1)
 	hook := logTest.NewGlobal()
 	app := cli.App{}
@@ -88,6 +88,8 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
 	set.Uint64(flags.InteropNumValidatorsFlag.Name, numValidators, "")
+	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, numValidators)
 	require.NoError(t, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < 2; i++ {
@@ -124,7 +126,6 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 	require.NoError(t, os.Remove("genesis_ssz.json"))
-	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 // TestClearDB tests clearing the database
@@ -142,7 +143,8 @@ func TestClearDB(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
-
+	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	context := cli.NewContext(&app, set, nil)
 	_, err = New(context, WithExecutionChainOptions([]execution.Option{
 		execution.WithHttpEndpoint(endpoint),

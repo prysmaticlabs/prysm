@@ -112,7 +112,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost: 40,
@@ -255,6 +254,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,
 	MaxBuilderEpochMissedSlots:       8,
+
+	// Execution engine timeout value
+	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

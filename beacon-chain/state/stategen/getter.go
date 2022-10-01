@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -57,6 +59,33 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 		return s.beaconDB.GenesisState(ctx)
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
+}
+
+// BalancesByRoot retrieves the effective balances of all validators at the
+// state with a given root
+func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint64, error) {
+	st, err := s.StateByRoot(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return nil, errNilState
+	}
+	epoch := time.CurrentEpoch(st)
+
+	balances := make([]uint64, st.NumValidators())
+	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
+		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+			balances[idx] = val.EffectiveBalance()
+		} else {
+			balances[idx] = 0
+		}
+		return nil
+	}
+	if err := st.ReadFromEveryValidator(balanceAccretor); err != nil {
+		return nil, err
+	}
+	return balances, nil
 }
 
 // StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.

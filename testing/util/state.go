@@ -10,9 +10,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -65,10 +63,10 @@ type NewBeaconStateOption func(state *ethpb.BeaconState) error
 // NewBeaconState creates a beacon state with minimum marshalable fields.
 func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) {
 	seed := &ethpb.BeaconState{
-		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
-		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.BeaconConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
@@ -96,7 +94,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 		}
 	}
 
-	var st, err = v1.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafePhase0(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -112,10 +110,10 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 	}
 
 	seed := &ethpb.BeaconStateAltair{
-		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
-		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.BeaconConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
@@ -151,7 +149,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 		}
 	}
 
-	var st, err = v2.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafeAltair(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -167,10 +165,10 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 	}
 
 	seed := &ethpb.BeaconStateBellatrix{
-		BlockRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		StateRoots:                 filledByteSlice2D(uint64(params.MainnetConfig().SlotsPerHistoricalRoot), 32),
-		Slashings:                  make([]uint64, params.MainnetConfig().EpochsPerSlashingsVector),
-		RandaoMixes:                filledByteSlice2D(uint64(params.MainnetConfig().EpochsPerHistoricalVector), 32),
+		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.BeaconConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		Eth1Data: &ethpb.Eth1Data{
@@ -218,7 +216,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 		}
 	}
 
-	var st, err = v3.InitializeFromProtoUnsafe(seed)
+	var st, err = state_native.InitializeFromProtoUnsafeBellatrix(seed)
 	if err != nil {
 		return nil, err
 	}
