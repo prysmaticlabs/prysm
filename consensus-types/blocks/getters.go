@@ -392,9 +392,25 @@ func (b *BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 		return pb.(*eth.BeaconBlockAltair).HashTreeRoot()
 	case version.Bellatrix:
 		if b.IsBlinded() {
-			return pb.(*eth.BlindedBeaconBlockBellatrix).HashTreeRoot()
+			if b.htr != [32]byte{} {
+				return b.htr, nil
+			}
+			r, err := pb.(*eth.BlindedBeaconBlockBellatrix).HashTreeRoot()
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.htr = r
+			return r, nil
 		}
-		return pb.(*eth.BeaconBlockBellatrix).HashTreeRoot()
+		if b.htr != [32]byte{} {
+			return b.htr, nil
+		}
+		r, err := pb.(*eth.BeaconBlockBellatrix).HashTreeRoot()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		b.htr = r
+		return r, nil
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBlockVersion
 	}

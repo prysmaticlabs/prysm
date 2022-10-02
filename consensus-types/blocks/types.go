@@ -61,6 +61,7 @@ type BeaconBlock struct {
 	parentRoot    [field_params.RootLength]byte
 	stateRoot     [field_params.RootLength]byte
 	body          *BeaconBlockBody
+	htr           [32]byte
 }
 
 // SignedBeaconBlock is the main signed beacon block structure. It can represent any block type.
