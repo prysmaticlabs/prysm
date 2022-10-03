@@ -606,7 +606,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	}
 	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
 	assert.NotNil(t, err)
-	assert.Equal(t, rejectGossipMessage(msg), res, "Validated status is true")
+	assert.Equal(t, pubsub.ValidationReject, res, "Validated status is true")
 }
 
 func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *testing.T) {
@@ -696,5 +696,5 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	}
 	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
 	assert.NotNil(t, err)
-	assert.Equal(t, rejectGossipMessage(msg), res)
+	assert.Equal(t, pubsub.ValidationReject, res)
 }

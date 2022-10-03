@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
