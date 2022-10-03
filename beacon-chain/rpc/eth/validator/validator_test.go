@@ -176,6 +176,9 @@ func TestGetAttesterDuties(t *testing.T) {
 		}
 		resp, err := vs.GetAttesterDuties(ctx, req)
 		require.NoError(t, err)
+
+		bs, err = transition.ProcessSlotsIfPossible(ctx, bs, params.BeaconConfig().SlotsPerEpoch*2)
+		require.NoError(t, err)
 		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
@@ -358,6 +361,9 @@ func TestGetProposerDuties(t *testing.T) {
 			Epoch: 2,
 		}
 		resp, err := vs.GetProposerDuties(ctx, req)
+		require.NoError(t, err)
+
+		bs, err = transition.ProcessSlotsIfPossible(ctx, bs, params.BeaconConfig().SlotsPerEpoch*2)
 		require.NoError(t, err)
 		assert.DeepEqual(t, bs.BlockRoots()[31], resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))

@@ -973,6 +973,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 		}
 		dependentRootSlot = prevEpochStartSlot.Sub(1)
 	}
+
 	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get block root")

@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
@@ -16,17 +15,23 @@ import (
 // reasonable amount of time.
 var SkipSlotCache = cache.NewSkipSlotCache()
 
-// The key for skip slot cache is mixed between state root and state slot.
+// SkipSlotCacheKey is the key for skip slot cache is mixed between state root and state slot.
 // state root is in the mix to defend against different forks with same skip slots
 // to hit the same cache. We don't want beacon states mixed up between different chains.
-func cacheKey(_ context.Context, state state.ReadOnlyBeaconState) ([32]byte, error) {
+// [0:24] represents the state root
+// [24:32] represents the state slot
+func SkipSlotCacheKey(_ context.Context, state state.ReadOnlyBeaconState) ([32]byte, error) {
 	bh := state.LatestBlockHeader()
 	if bh == nil {
 		return [32]byte{}, errors.New("block head in state can't be nil")
 	}
-	r, err := bh.HashTreeRoot()
-	if err != nil {
-		return [32]byte{}, err
+	sr := bh.StateRoot
+	if len(sr) != 32 {
+		return [32]byte{}, errors.New("invalid state root in latest block header")
 	}
-	return hash.Hash(append(bytesutil.Bytes32(uint64(state.Slot())), r[:]...)), nil
+
+	var b [8]byte
+	copy(b[:], bytesutil.SlotToBytesBigEndian(state.Slot()))
+	sr = append(sr[:24], b[:]...)
+	return bytesutil.ToBytes32(sr), nil
 }
