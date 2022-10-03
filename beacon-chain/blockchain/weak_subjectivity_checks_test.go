@@ -72,7 +72,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			wv, err := NewWeakSubjectivityVerifier(tt.checkpt, beaconDB)
 			require.Equal(t, !tt.disabled, wv.enabled)
 			require.NoError(t, err)
-			fcs := protoarray.New()
+			fcs := protoarray.New(nil)
 			s := &Service{
 				cfg:        &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt, ForkChoiceStore: fcs},
 				wsVerifier: wv,

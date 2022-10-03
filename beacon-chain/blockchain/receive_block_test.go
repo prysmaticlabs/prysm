@@ -129,7 +129,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
+				WithForkChoiceStore(protoarray.New(&mockDataAvailability{})),
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -145,7 +145,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, wsb, root)
+			err = s.ReceiveBlock(ctx, wsb, root, nil)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -168,7 +168,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(protoarray.New(&mockDataAvailability{})),
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -187,7 +187,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	go func() {
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
+		require.NoError(t, s.ReceiveBlock(ctx, wsb, root, nil))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -245,7 +245,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New()),
+				WithForkChoiceStore(protoarray.New(&mockDataAvailability{})),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
 			}
@@ -259,7 +259,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			blks := []interfaces.SignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
-			err = s.ReceiveBlockBatch(ctx, blks, roots)
+			err = s.ReceiveBlockBatch(ctx, blks, roots, nil)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

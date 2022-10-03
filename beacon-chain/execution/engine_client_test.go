@@ -52,7 +52,9 @@ func TestClient_IPC(t *testing.T) {
 		payloadId := [8]byte{1}
 		resp, err := srv.GetPayload(ctx, payloadId)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
+		respProto, err := resp.Proto()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, respProto)
 	})
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
@@ -140,7 +142,9 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.GetPayload(ctx, payloadId)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
+		respProto, err := resp.Proto()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, respProto)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{

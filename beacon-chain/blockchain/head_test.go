@@ -240,7 +240,7 @@ func TestSaveOrphanedAtts_NoCommonAncestor_Protoarray(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 	// this test does not make sense in doubly linked tree since it enforces
 	// that the finalized node is a common ancestor
-	service.cfg.ForkChoiceStore = protoarray.New()
+	service.cfg.ForkChoiceStore = protoarray.New(&mockDataAvailability{})
 
 	service.genesisTime = time.Now().Add(time.Duration(-10*int64(1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
@@ -535,7 +535,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	ctx := context.Background()
 
 	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

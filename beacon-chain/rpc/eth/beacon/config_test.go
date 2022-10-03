@@ -53,6 +53,8 @@ func TestGetSpec(t *testing.T) {
 	config.ShardingForkEpoch = 102
 	config.CapellaForkVersion = []byte("CapellaForkVersion")
 	config.CapellaForkEpoch = 103
+	config.Eip4844ForkVersion = []byte("Eip4844ForkVersion")
+	config.Eip4844ForkEpoch = 104
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.ETH1AddressWithdrawalPrefixByte = byte('c')
 	config.GenesisDelay = 24
@@ -135,7 +137,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 102, len(resp.Data))
+	assert.Equal(t, 105, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -208,6 +210,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("CapellaForkVersion")), v)
 		case "CAPELLA_FORK_EPOCH":
 			assert.Equal(t, "103", v)
+		case "EIP4844_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("Eip4844ForkVersion")), v)
+		case "EIP4844_FORK_EPOCH":
+			assert.Equal(t, "104", v)
 		case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
 			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
@@ -334,6 +340,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x08000000", v)
 		case "DOMAIN_CONTRIBUTION_AND_PROOF":
 			assert.Equal(t, "0x09000000", v)
+		case "DOMAIN_BLOBS_SIDECAR":
+			assert.Equal(t, "0x10000000", v)
 		case "TRANSITION_TOTAL_DIFFICULTY":
 			assert.Equal(t, "0", v)
 		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
@@ -417,5 +425,5 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	// Genesis and Altair.
-	assert.Equal(t, 3, len(resp.Data))
+	assert.Equal(t, 4, len(resp.Data))
 }

@@ -28,7 +28,7 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(doublylinkedtree.New(nil)),
 		WithStateGen(stategen.New(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
@@ -134,7 +134,7 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(doublylinkedtree.New(nil)),
 		WithStateGen(stategen.New(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
@@ -238,7 +238,7 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := protoarray.New(nil)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -268,7 +268,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(nil)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -465,7 +465,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := protoarray.New(nil)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -496,7 +496,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(nil)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

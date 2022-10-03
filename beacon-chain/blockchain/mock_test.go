@@ -13,7 +13,7 @@ import (
 
 func testServiceOptsWithDB(t *testing.T) []Option {
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := protoarray.New(&mockDataAvailability{})
 	return []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -48,3 +48,9 @@ func satisfactoryStateBalanceCache() *stateBalanceCache {
 	err := errors.New("satisfactoryStateBalanceCache doesn't perform real caching")
 	return &stateBalanceCache{stateGen: mockStateByRooter{err: err}}
 }
+
+type mockDataAvailability struct {
+	err error
+}
+
+func (m *mockDataAvailability) IsDataAvailable(context.Context, [32]byte) error { return m.err }

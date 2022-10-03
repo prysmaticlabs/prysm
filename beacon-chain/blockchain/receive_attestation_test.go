@@ -200,7 +200,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts = append(opts,
 		WithAttestationPool(attestations.NewPool()),
 		WithStateNotifier(&mockBeaconNode{}),
@@ -220,7 +220,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
+	require.NoError(t, service.onBlock(ctx, wsb, tRoot, nil))
 	copied, err = service.cfg.StateGen.StateByRoot(ctx, tRoot)
 	require.NoError(t, err)
 	require.Equal(t, 2, fcs.NodeCount())

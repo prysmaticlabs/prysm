@@ -1921,7 +1921,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New()},
+			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: protoarray.New(nil)},
 			TimeFetcher: &mockChain.ChainService{
 				Genesis: ti,
 			},

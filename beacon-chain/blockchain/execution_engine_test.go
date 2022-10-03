@@ -40,7 +40,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -272,7 +272,7 @@ func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 
 	// Insert blocks into forkchoice
 	service := setupBeaconChain(t, beaconDB)
-	fcs := protoarray.New()
+	fcs := protoarray.New(&mockDataAvailability{})
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
@@ -379,7 +379,7 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 
 	// Insert blocks into forkchoice
 	service := setupBeaconChain(t, beaconDB)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
@@ -496,7 +496,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 
 	// Insert blocks into forkchoice
 	service := setupBeaconChain(t, beaconDB)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
@@ -574,7 +574,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -820,7 +820,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -909,7 +909,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	stateGen := stategen.New(beaconDB)
-	fcs := doublylinkedtree.New()
+	fcs := doublylinkedtree.New(&mockDataAvailability{})
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
@@ -1025,7 +1025,7 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(doublylinkedtree.New(&mockDataAvailability{})),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1077,7 +1077,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(doublylinkedtree.New(&mockDataAvailability{})),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

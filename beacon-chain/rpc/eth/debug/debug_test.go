@@ -242,7 +242,7 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 }
 
 func TestServer_GetForkChoice(t *testing.T) {
-	store := doublylinkedtree.New()
+	store := doublylinkedtree.New(nil)
 	fRoot := [32]byte{'a'}
 	jRoot := [32]byte{'b'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
