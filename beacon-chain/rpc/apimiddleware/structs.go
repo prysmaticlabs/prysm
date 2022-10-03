@@ -827,6 +827,7 @@ type sszRequestJson struct {
 // sszResponse is a common abstraction over all SSZ responses.
 type sszResponse interface {
 	SSZVersion() string
+	SSZOptimistic() bool
 	SSZData() string
 }
 
@@ -842,9 +843,14 @@ func (*sszResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
+func (*sszResponseJson) SSZOptimistic() bool {
+	return false
+}
+
 type versionedSSZResponseJson struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
+	Version             string `json:"version"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Data                string `json:"data"`
 }
 
 func (ssz *versionedSSZResponseJson) SSZData() string {
@@ -853,6 +859,10 @@ func (ssz *versionedSSZResponseJson) SSZData() string {
 
 func (ssz *versionedSSZResponseJson) SSZVersion() string {
 	return ssz.Version
+}
+
+func (ssz *versionedSSZResponseJson) SSZOptimistic() bool {
+	return ssz.ExecutionOptimistic
 }
 
 // ---------------
