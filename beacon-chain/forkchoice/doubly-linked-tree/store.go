@@ -13,7 +13,7 @@ import (
 )
 
 // liveFraction is the minimum committee vote for the previous head that we
-// require before orphaning it's child
+// require before orphaning its child
 var liveFraction = uint64(80)
 
 // applyProposerBoostScore applies the current proposer boost scores to the
