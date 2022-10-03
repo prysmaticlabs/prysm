@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -88,7 +89,7 @@ func setupService(t *testing.T) *Service {
 	}
 	return &Service{
 		config: &ValidatorMonitorConfig{
-			StateGen:            stategen.New(beaconDB),
+			StateGen:            stategen.New(beaconDB, doublylinkedtree.New()),
 			StateNotifier:       chainService.StateNotifier(),
 			HeadFetcher:         chainService,
 			AttestationNotifier: chainService.OperationNotifier(),

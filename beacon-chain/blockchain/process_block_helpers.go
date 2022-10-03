@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -163,7 +162,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil && err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if err != nil && !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return err
 	}
 	if !optimistic {

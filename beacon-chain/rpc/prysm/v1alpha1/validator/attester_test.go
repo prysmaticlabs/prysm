@@ -10,6 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
@@ -334,7 +335,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
 		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		StateNotifier:       chainService.StateNotifier(),
-		StateGen:            stategen.New(db),
+		StateGen:            stategen.New(db, doublylinkedtree.New()),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
 	util.SaveBlock(t, ctx, db, block)

@@ -10,7 +10,7 @@ import (
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -109,10 +109,10 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
@@ -159,10 +159,10 @@ func Test_validateMergeBlock(t *testing.T) {
 func Test_getBlkParentHashAndTD(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 		WithForkChoiceStore(fcs),
 	}
 	service, err := NewService(ctx, opts...)
