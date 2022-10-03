@@ -646,6 +646,16 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
+// GetBlindedBlock retrieves blinded block for given block id.
+func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv2.BlindedBlockResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
+// GetBlindedBlockSSZ returns the SSZ-serialized version of the blinded beacon block for given block id.
+func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv2.SSZContainer, error) {
+	return nil, errors.New("not implemented")
+}
+
 // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
 func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
