@@ -91,7 +91,7 @@ func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...St
 			duration: defaultHotStateDBInterval,
 		},
 		migrationLock: new(sync.Mutex),
-		fc: fc,
+		fc:            fc,
 	}
 	for _, o := range opts {
 		o(s)
