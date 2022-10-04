@@ -45,22 +45,22 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	defer span.End()
 
 	if msg.Topic == nil {
-		return rejectGossipMessage(msg), errInvalidTopic
+		return pubsub.ValidationReject, errInvalidTopic
 	}
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
-		return rejectGossipMessage(msg), errWrongMessage
+		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if err := helpers.ValidateNilAttestation(att); err != nil {
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 attestations.
 	if att.Data.Slot == 0 {
@@ -83,7 +83,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return pubsub.ValidationIgnore, err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(att.Data); err != nil {
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	if features.Get().EnableSlasher {
@@ -125,7 +125,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(att.Data.Source.Root)) {
 		attBadBlockCount.Inc()
-		return rejectGossipMessage(msg), errors.New("attestation data references bad block root")
+		return pubsub.ValidationReject, errors.New("attestation data references bad block root")
 	}
 
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
@@ -143,7 +143,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
 		attBadLmdConsistencyCount.Inc()
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Data.Target)

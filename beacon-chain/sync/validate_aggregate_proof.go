@@ -45,17 +45,17 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	raw, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 	m, ok := raw.(*ethpb.SignedAggregateAttestationAndProof)
 	if !ok {
-		return rejectGossipMessage(msg), errors.Errorf("invalid message type: %T", raw)
+		return pubsub.ValidationReject, errors.Errorf("invalid message type: %T", raw)
 	}
 	if m.Message == nil {
-		return rejectGossipMessage(msg), errNilMessage
+		return pubsub.ValidationReject, errNilMessage
 	}
 	if err := helpers.ValidateNilAttestation(m.Message.Aggregate); err != nil {
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 	// Do not process slot 0 aggregates.
 	if m.Message.Aggregate.Data.Slot == 0 {
@@ -72,7 +72,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	})
 
 	if err := helpers.ValidateSlotTargetEpoch(m.Message.Aggregate.Data); err != nil {
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
@@ -95,7 +95,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
 		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
 		attBadBlockCount.Inc()
-		return rejectGossipMessage(msg), errors.New("bad block referenced in attestation data")
+		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.

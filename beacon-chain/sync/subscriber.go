@@ -766,10 +766,3 @@ func multiAddr(pid peer.ID, stat *peers.Status) string {
 	}
 	return addrs.String()
 }
-
-func rejectGossipMessage(msg *pubsub.Message) pubsub.ValidationResult {
-	if features.Get().EnableFullSSZDataLogging {
-		log.WithField("rawMessage", msg).Debug("Rejected gossip message with data")
-	}
-	return pubsub.ValidationReject
-}

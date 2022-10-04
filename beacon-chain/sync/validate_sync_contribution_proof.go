@@ -55,7 +55,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	m, err := s.readSyncContributionMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	// The contribution's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance).
