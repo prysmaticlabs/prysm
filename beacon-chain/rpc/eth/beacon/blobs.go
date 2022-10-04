@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
 func (bs *Server) GetBlobsSidecar(ctx context.Context, req *ethpbv1.BlobsRequest) (*ethpbv1.BlobsResponse, error) {
