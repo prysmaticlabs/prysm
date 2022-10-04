@@ -281,7 +281,10 @@ func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock,
 
 // HeadState mocks HeadState method in chain service.
 func (s *ChainService) HeadState(context.Context) (state.BeaconState, error) {
-	return s.State, nil
+	if s.State == nil {
+		return nil, nil
+	}
+	return s.State.Copy(), nil
 }
 
 // CurrentFork mocks HeadState method in chain service.
