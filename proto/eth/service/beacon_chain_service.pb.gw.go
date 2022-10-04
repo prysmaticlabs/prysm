@@ -3212,9 +3212,9 @@ var (
 
 	pattern_BeaconChain_GetBlockV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "beacon", "blocks", "block_id"}, ""))
 
-	pattern_BeaconChain_GetBlindedBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v2", "beacon", "blinded_blocks", "block_id"}, ""))
+	pattern_BeaconChain_GetBlindedBlock_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "beacon", "blinded_blocks", "block_id"}, ""))
 
-	pattern_BeaconChain_GetBlindedBlockSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v2", "beacon", "blinded_blocks", "block_id", "ssz"}, ""))
+	pattern_BeaconChain_GetBlindedBlockSSZ_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v1", "beacon", "blinded_blocks", "block_id", "ssz"}, ""))
 
 	pattern_BeaconChain_GetBlockSSZV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"internal", "eth", "v2", "beacon", "blocks", "block_id", "ssz"}, ""))
 
