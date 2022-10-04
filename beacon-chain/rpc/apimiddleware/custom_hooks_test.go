@@ -717,6 +717,124 @@ func TestSerializeV2Block(t *testing.T) {
 	})
 }
 
+func TestSerializeBlindedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &blindedBlockResponseJson{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &signedBlindedBeaconBlockContainerJson{
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
+				Signature: "sig",
+			},
+			ExecutionOptimistic: true,
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &phase0BlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &blindedBlockResponseJson{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &signedBlindedBeaconBlockContainerJson{
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
+				Signature: "sig",
+			},
+			ExecutionOptimistic: true,
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &blindedBlockResponseJson{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &signedBlindedBeaconBlockContainerJson{
+				BellatrixBlock: &blindedBeaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &blindedBeaconBlockBodyBellatrixJson{},
+				},
+				Signature: "sig",
+			},
+			ExecutionOptimistic: true,
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixBlindedBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		response := &types.Empty{}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+
+	t.Run("unsupported block version", func(t *testing.T) {
+		response := &blindedBlockResponseJson{
+			Version: "unsupported",
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block version"))
+	})
+}
+
 func TestSerializeV2State(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &beaconStateV2ResponseJson{
