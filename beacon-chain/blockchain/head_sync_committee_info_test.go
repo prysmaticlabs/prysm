@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
@@ -54,7 +53,6 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 }
 
 func TestService_HeadSyncCommitteeIndices(t *testing.T) {
-	transition.SkipSlotCache.Disable()
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
 	c := &Service{}
 	c.head = &head{state: s}
