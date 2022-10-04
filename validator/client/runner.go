@@ -56,8 +56,8 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if v.HasProposerSettings() {
-		log.Infof("Provided proposer settings will periodically update settings such as fee recipient"+
+	if v.ProposerSettings() != nil {
+		log.Infof("Validator client started with provided proposer settings. The client will periodically signal updated settings such as fee recipient"+
 			" in the beacon node and custom builder ( if --%s)", flags.EnableBuilderFlag.Name)
 		if err := v.PushProposerSettings(ctx, km); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
@@ -67,7 +67,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		}
 	} else {
-		log.Info("Proposer settings such as fee recipient are not defined in the validator client" +
+		log.Warnln("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
 
@@ -127,7 +127,7 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) && v.HasProposerSettings() {
+			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
 				go func() {
 					//deadline set for next epoch rounded up
 					if err := v.PushProposerSettings(ctx, km); err != nil {
