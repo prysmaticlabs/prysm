@@ -105,6 +105,12 @@ type blockV2ResponseJson struct {
 	ExecutionOptimistic bool                              `json:"execution_optimistic"`
 }
 
+type blindedBlockResponseJson struct {
+	Version             string                                 `json:"version" enum:"true"`
+	Data                *signedBlindedBeaconBlockContainerJson `json:"data"`
+	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+}
+
 type blockRootResponseJson struct {
 	Data                *blockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
@@ -331,6 +337,13 @@ type signedBeaconBlockContainerV2Json struct {
 	AltairBlock    *beaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                    `json:"signature" hex:"true"`
+}
+
+type signedBlindedBeaconBlockContainerJson struct {
+	Phase0Block    *beaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                           `json:"signature" hex:"true"`
 }
 
 type beaconBlockContainerV2Json struct {

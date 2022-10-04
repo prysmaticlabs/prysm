@@ -439,6 +439,12 @@ type bellatrixBlockResponseJson struct {
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
 
+type bellatrixBlindedBlockResponseJson struct {
+	Version             string                                          `json:"version"`
+	Data                *signedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
+	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
+}
+
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*blockV2ResponseJson)
 	if !ok {
@@ -469,6 +475,52 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 		actualRespContainer = &bellatrixBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockBellatrixContainerJson{
+				Message:   respContainer.Data.BellatrixBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	default:
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return false, j, nil
+}
+
+func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
+	respContainer, ok := response.(*blindedBlockResponseJson)
+	if !ok {
+		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
+		actualRespContainer = &phase0BlockResponseJson{
+			Version: respContainer.Version,
+			Data: &signedBeaconBlockContainerJson{
+				Message:   respContainer.Data.Phase0Block,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
+		actualRespContainer = &altairBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &signedBeaconBlockAltairContainerJson{
+				Message:   respContainer.Data.AltairBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
+		actualRespContainer = &bellatrixBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &signedBlindedBeaconBlockBellatrixContainerJson{
 				Message:   respContainer.Data.BellatrixBlock,
 				Signature: respContainer.Data.Signature,
 			},
