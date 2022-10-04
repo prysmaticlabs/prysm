@@ -9,7 +9,7 @@ import (
 )
 
 func TestMnemonic_Generate_CanRecover(t *testing.T) {
-	generator := &EnglishMnemonicGenerator{}
+	generator := &MnemonicGenerator{}
 	data := make([]byte, 32)
 	copy(data, "hello-world")
 	phrase, err := generator.Generate(data)

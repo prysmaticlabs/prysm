@@ -8,26 +8,27 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	"github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39/wordlists"
+	"golang.org/x/text/language"
 )
 
 const confirmationText = "Confirm you have written down the recovery words somewhere safe (offline) [y|Y]"
 
-// EnglishMnemonicGenerator implements methods for creating
+// MnemonicGenerator implements methods for creating
 // mnemonic seed phrases in english using a given
 // source of entropy such as a private key.
-type EnglishMnemonicGenerator struct {
+type MnemonicGenerator struct {
 	skipMnemonicConfirm bool
 }
 
 // GenerateAndConfirmMnemonic requires confirming the generated mnemonics.
-func GenerateAndConfirmMnemonic(
-	skipMnemonicConfirm bool,
-) (string, error) {
+func GenerateAndConfirmMnemonic(skipMnemonicConfirm bool, lang string) (string, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return "", errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
-	m := &EnglishMnemonicGenerator{
+	setBip39Lang(lang)
+	m := &MnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
 	phrase, err := m.Generate(mnemonicRandomness)
@@ -42,13 +43,13 @@ func GenerateAndConfirmMnemonic(
 
 // Generate a mnemonic seed phrase in english using a source of
 // entropy given as raw bytes.
-func (_ *EnglishMnemonicGenerator) Generate(data []byte) (string, error) {
+func (_ *MnemonicGenerator) Generate(data []byte) (string, error) {
 	return bip39.NewMnemonic(data)
 }
 
 // ConfirmAcknowledgement displays the mnemonic phrase to the user
 // and confirms the user has written down the phrase securely offline.
-func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
+func (m *MnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 	log.Info(
 		"Write down the sentence below, as it is your only " +
 			"means of recovering your wallet",
@@ -74,9 +75,50 @@ func (m *EnglishMnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
-func seedFromMnemonic(mnemonic, mnemonicPassphrase string) ([]byte, error) {
+func seedFromMnemonic(mnemonic, mnemonicPassphrase string, lang string) ([]byte, error) {
+	setBip39Lang(lang)
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}
 	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
+}
+
+func setBip39Lang(lang string) {
+	matcher := language.NewMatcher([]language.Tag{
+		language.English, // The first language is used as fallback.
+		language.TraditionalChinese,
+		language.SimplifiedChinese,
+		language.Czech,
+		language.French,
+		language.Italian,
+		language.Japanese,
+		language.Korean,
+		language.Spanish,
+	})
+	tag, _ := language.MatchStrings(matcher, lang)
+
+	var wordList []string
+	switch tag {
+	case language.TraditionalChinese:
+		wordList = wordlists.ChineseTraditional
+	case language.SimplifiedChinese:
+		wordList = wordlists.ChineseSimplified
+	case language.Czech:
+		wordList = wordlists.Czech
+	case language.French:
+		wordList = wordlists.French
+	case language.Italian:
+		wordList = wordlists.Italian
+	case language.Japanese:
+		wordList = wordlists.Japanese
+	case language.Korean:
+		wordList = wordlists.Korean
+	case language.Spanish:
+		wordList = wordlists.Spanish
+	case language.English:
+		fallthrough
+	default:
+		wordList = wordlists.English
+	}
+	bip39.SetWordList(wordList)
 }
