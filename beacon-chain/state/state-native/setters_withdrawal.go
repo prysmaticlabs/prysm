@@ -14,12 +14,12 @@ import (
 // SetWithdrawalQueue for the beacon state. Updates the entire list
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetWithdrawalQueue(val []*enginev1.Withdrawal) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	if b.version < version.Capella {
 		return errNotSupported("SetWithdrawalQueue", b.version)
 	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.withdrawalQueue = val
 	b.sharedFieldReferences[nativetypes.WithdrawalQueue].MinusRef()
@@ -31,12 +31,12 @@ func (b *BeaconState) SetWithdrawalQueue(val []*enginev1.Withdrawal) error {
 
 // AppendWithdrawal adds a new withdrawal to the end of withdrawal queue.
 func (b *BeaconState) AppendWithdrawal(val *enginev1.Withdrawal) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	if b.version < version.Capella {
 		return errNotSupported("AppendWithdrawal", b.version)
 	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	q := b.withdrawalQueue
 	max := uint64(fieldparams.ValidatorRegistryLimit)
