@@ -405,15 +405,15 @@ func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest)
 			Pubkey: validatorKey,
 		},
 	}
-	if s.validatorService.ProposerSettings != nil {
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+	if s.validatorService.ProposerSettings() != nil {
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			if proposerOption.BuilderConfig != nil {
 				resp.Data.GasLimit = uint64(proposerOption.BuilderConfig.GasLimit)
 				return resp, nil
 			}
-		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
-			resp.Data.GasLimit = uint64(s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit)
+		} else if s.validatorService.ProposerSettings().DefaultConfig != nil && s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig != nil {
+			resp.Data.GasLimit = uint64(s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig.GasLimit)
 			return resp, nil
 		}
 	}
@@ -433,12 +433,12 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 
 	defaultOption := validatorServiceConfig.DefaultProposerOption()
 	var pBuilderConfig *validatorServiceConfig.BuilderConfig
-	if s.validatorService.ProposerSettings != nil &&
-		s.validatorService.ProposerSettings.DefaultConfig != nil &&
-		s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+	if s.validatorService.ProposerSettings() != nil &&
+		s.validatorService.ProposerSettings().DefaultConfig != nil &&
+		s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig != nil {
 		// Make a copy of BuildConfig from DefaultConfig (thus "*" then "&"), so when we change GasLimit, we do not mess up with
 		// "DefaultConfig.BuilderConfig".
-		bo := *s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
+		bo := *s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig
 		pBuilderConfig = &bo
 		pBuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
 	} else {
@@ -450,33 +450,35 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 	// "pOption.BuildConfig" is nil from "validatorServiceConfig.DefaultProposerOption()", so set it.
 	pOption.BuilderConfig = pBuilderConfig
 
-	if s.validatorService.ProposerSettings == nil {
+	if s.validatorService.ProposerSettings() == nil {
 		// get the default fee recipient defined with an invalid public key from beacon node
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
 			PublicKey: []byte(nonExistantPublicKey),
 		})
 		if resp == nil || len(resp.FeeRecipient) == 0 || err != nil {
-			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+			s.validatorService.SetProposerSettings(&validatorServiceConfig.ProposerSettings{
 				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
 					bytesutil.ToBytes48(validatorKey): &pOption,
 				},
 				DefaultConfig: &defaultOption,
-			}
+			})
 		} else {
-			s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+			s.validatorService.SetProposerSettings(&validatorServiceConfig.ProposerSettings{
 				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
 					bytesutil.ToBytes48(validatorKey): &pOption,
 				},
 				DefaultConfig: &validatorServiceConfig.ProposerOption{
 					FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
 				},
-			}
+			})
 		}
-	} else if s.validatorService.ProposerSettings.ProposeConfig == nil {
-		s.validatorService.ProposerSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
-		s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+	} else if s.validatorService.ProposerSettings().ProposeConfig == nil {
+		settings := s.validatorService.ProposerSettings()
+		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+		settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+		s.validatorService.SetProposerSettings(settings)
 	} else {
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			if proposerOption.BuilderConfig == nil {
 				proposerOption.BuilderConfig = pBuilderConfig
@@ -484,7 +486,7 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 				proposerOption.BuilderConfig.GasLimit = validatorServiceConfig.Uint64(req.GasLimit)
 			}
 		} else {
-			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+			s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
 		}
 	}
 	// override the 200 success with 202 according to the specs
@@ -503,7 +505,7 @@ func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGas
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	proposerSettings := s.validatorService.ProposerSettings
+	proposerSettings := s.validatorService.ProposerSettings()
 	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
 		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found && proposerOption.BuilderConfig != nil {
@@ -543,7 +545,7 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 			Ethaddress: defaultFeeRecipient,
 		},
 	}
-	if s.validatorService.ProposerSettings == nil {
+	if s.validatorService.ProposerSettings() == nil {
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
 			PublicKey: validatorKey,
 		})
@@ -552,17 +554,17 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 		}
 		return finalResp, nil
 	}
-	if s.validatorService.ProposerSettings.ProposeConfig != nil {
+	if s.validatorService.ProposerSettings().ProposeConfig != nil {
 		hexv := hexutil.Encode(validatorKey)
 		fmt.Println(hexv)
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			finalResp.Data.Ethaddress = proposerOption.FeeRecipient.Bytes()
 			return finalResp, nil
 		}
 	}
-	if s.validatorService.ProposerSettings.DefaultConfig != nil {
-		finalResp.Data.Ethaddress = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
+	if s.validatorService.ProposerSettings().DefaultConfig != nil {
+		finalResp.Data.Ethaddress = s.validatorService.ProposerSettings().DefaultConfig.FeeRecipient.Bytes()
 	}
 	return finalResp, nil
 }
@@ -584,8 +586,9 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	}
 	pOption := validatorServiceConfig.DefaultProposerOption()
 	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
+
 	switch {
-	case s.validatorService.ProposerSettings == nil:
+	case s.validatorService.ProposerSettings() == nil:
 		// get the default fee recipient defined with an invalid public key from beacon node
 		resp, err := s.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, &eth.FeeRecipientByPubKeyRequest{
 			PublicKey: []byte(nonExistantPublicKey),
@@ -602,19 +605,23 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 				FeeRecipient: common.BytesToAddress(resp.FeeRecipient),
 			}
 		}
-		s.validatorService.ProposerSettings = settings
-	case s.validatorService.ProposerSettings.ProposeConfig == nil:
-		pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
-		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+		s.validatorService.SetProposerSettings(settings)
+	case s.validatorService.ProposerSettings().ProposeConfig == nil:
+		settings := s.validatorService.ProposerSettings()
+		pOption.BuilderConfig = settings.DefaultConfig.BuilderConfig
+		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
 			bytesutil.ToBytes48(validatorKey): &pOption,
 		}
+		s.validatorService.SetProposerSettings(settings)
 	default:
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			proposerOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
 		} else {
-			pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
-			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+			settings := s.validatorService.ProposerSettings()
+			pOption.BuilderConfig = settings.DefaultConfig.BuilderConfig
+			settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+			s.validatorService.SetProposerSettings(settings)
 		}
 	}
 	// override the 200 success with 202 according to the specs
@@ -634,11 +641,11 @@ func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservi
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.DefaultConfig != nil {
-		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient
+	if s.validatorService.ProposerSettings() != nil && s.validatorService.ProposerSettings().DefaultConfig != nil {
+		defaultFeeRecipient = s.validatorService.ProposerSettings().DefaultConfig.FeeRecipient
 	}
-	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
-		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+	if s.validatorService.ProposerSettings() != nil && s.validatorService.ProposerSettings().ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
 			proposerOption.FeeRecipient = defaultFeeRecipient
 		}
