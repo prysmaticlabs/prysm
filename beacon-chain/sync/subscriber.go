@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -258,13 +259,19 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		}
 		b, err := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
-			log.WithError(err).WithFields(logrus.Fields{
+			fields := logrus.Fields{
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 				"peer id":      pid.String(),
 				"agent":        agentString(pid, s.cfg.p2p.Host()),
 				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
-			}).Debugf("Gossip message was rejected")
+			}
+			if features.Get().EnableFullSSZDataLogging {
+				obj := p2p.GossipTopicMappings(topic, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+				fields["object"] = fmt.Sprintf("%T", obj)
+				fields["message"] = hexutil.Encode(msg.Data)
+			}
+			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {
