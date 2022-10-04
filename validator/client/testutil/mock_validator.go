@@ -52,6 +52,7 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
+	proposerSettings                  *validatorserviceconfig.ProposerSettings
 	Km                                keymanager.IKeymanager
 }
 
@@ -273,11 +274,11 @@ func (_ *FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ if
 }
 
 // ProposerSettings for mocking
-func (_ *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
-	return nil
+func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return f.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (_ *FakeValidator) SetProposerSettings(_ *validatorserviceconfig.ProposerSettings) {
-
+func (f *FakeValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	f.proposerSettings = settings
 }
