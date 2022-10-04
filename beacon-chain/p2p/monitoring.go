@@ -14,6 +14,7 @@ var (
 		"nimbus",
 		"prysm",
 		"teku",
+		"lodestar",
 		"js-libp2p",
 		"rust-libp2p",
 	}
