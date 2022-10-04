@@ -85,6 +85,13 @@ var capellaFields = append(
 	nativetypes.NextPartialWithdrawalValidatorIndex,
 )
 
+const (
+	phase0SharedFieldRefCount    = 10
+	altairSharedFieldRefCount    = 11
+	bellatrixSharedFieldRefCount = 12
+	capellaSharedFieldRefCount   = 13
+)
+
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
 func InitializeFromProtoPhase0(st *ethpb.BeaconState) (state.BeaconState, error) {
 	return InitializeFromProtoUnsafePhase0(proto.Clone(st).(*ethpb.BeaconState))
@@ -157,7 +164,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, 10),
+		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount),
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
@@ -246,7 +253,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, 11),
+		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount),
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
@@ -337,7 +344,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, 12),
+		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount),
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
@@ -432,7 +439,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
 		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, 13),
+		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount),
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
@@ -539,9 +546,13 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	switch b.version {
 	case version.Phase0:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 10)
-	case version.Altair, version.Bellatrix, version.Capella:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
+		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
+	case version.Altair:
+		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
+	case version.Bellatrix:
+		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+	case version.Capella:
+		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
 	}
 
 	for field, ref := range b.sharedFieldReferences {

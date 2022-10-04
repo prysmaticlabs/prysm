@@ -17,17 +17,17 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	if b.version < version.Bellatrix {
 		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
-	header, ok := val.Proto().(*enginev1.ExecutionPayloadHeader)
-	if ok {
+
+	switch header := val.Proto().(type) {
+	case *enginev1.ExecutionPayloadHeader:
 		b.latestExecutionPayloadHeader = header
 		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
 		return nil
-	}
-	headerCapella, ok := val.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
-	if ok {
-		b.latestExecutionPayloadHeaderCapella = headerCapella
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		b.latestExecutionPayloadHeaderCapella = header
 		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeaderCapella)
 		return nil
+	default:
+		return errors.New("value must be an execution payload header")
 	}
-	return errors.New("value must be an execution payload header")
 }
