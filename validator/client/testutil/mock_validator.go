@@ -6,6 +6,7 @@ import (
 	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -51,6 +52,7 @@ type FakeValidator struct {
 	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
 	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
+	proposerSettings                  *validatorserviceconfig.ProposerSettings
 	Km                                keymanager.IKeymanager
 }
 
@@ -269,4 +271,14 @@ func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keyman
 // SignValidatorRegistrationRequest for mocking
 func (_ *FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	return nil, nil
+}
+
+// ProposerSettings for mocking
+func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return f.proposerSettings
+}
+
+// SetProposerSettings for mocking
+func (f *FakeValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	f.proposerSettings = settings
 }
