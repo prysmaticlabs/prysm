@@ -20,13 +20,6 @@ var (
 			Buckets: []float64{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000},
 		},
 	)
-	getStatusLatency = promauto.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "get_status_latency_milliseconds",
-			Help:    "Captures RPC latency for get status in milliseconds",
-			Buckets: []float64{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000},
-		},
-	)
 	registerValidatorLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "register_validator_latency_milliseconds",

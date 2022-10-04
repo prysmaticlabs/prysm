@@ -671,3 +671,8 @@ func (f *ForkChoice) ProposerHead() [32]byte {
 	defer f.store.nodesLock.RUnlock()
 	return f.store.proposerHeadNode.root
 }
+
+// SetBalancesByRooter sets the balanceByRoot handler in forkchoice
+func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
+	f.balancesByRoot = handler
+}
