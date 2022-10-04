@@ -262,7 +262,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	}
 }
 
-func TestNode_SecondsSinceSlotStart(t *testing.T) {
+func TestNode_TimeStampsChecks(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
 
@@ -276,10 +276,15 @@ func TestNode_SecondsSinceSlotStart(t *testing.T) {
 	headRoot, err := f.Head(ctx, balances)
 	require.NoError(t, err)
 	require.Equal(t, root, headRoot)
-	require.Equal(t, uint64(1), f.store.headNode.secondsSinceSlotStart(f.store.genesisTime))
+	early, err := f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, true, early)
+	late, err := f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, late)
 
 	// late block
-	driftGenesisTime(f, 2, 5)
+	driftGenesisTime(f, 2, params.BeaconConfig().OrphanLateBlockFirstThreshold+1)
 	root = [32]byte{'b'}
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, root, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
 	require.NoError(t, err)
@@ -287,15 +292,42 @@ func TestNode_SecondsSinceSlotStart(t *testing.T) {
 	headRoot, err = f.Head(ctx, balances)
 	require.NoError(t, err)
 	require.Equal(t, root, headRoot)
-	require.Equal(t, uint64(5), f.store.headNode.secondsSinceSlotStart(f.store.genesisTime))
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, late)
 
-	// block from the future
+	// very late block
+	driftGenesisTime(f, 3, params.BeaconConfig().ProcessAttestationsThreshold+1)
 	root = [32]byte{'c'}
-	state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, root, [32]byte{'b'}, [32]byte{'C'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	headRoot, err = f.Head(ctx, balances)
 	require.NoError(t, err)
 	require.Equal(t, root, headRoot)
-	require.Equal(t, uint64(0), f.store.headNode.secondsSinceSlotStart(f.store.genesisTime))
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, true, late)
+
+	// block from the future
+	// Inserting a block from the future appears as early for safety reasons
+	root = [32]byte{'d'}
+	state, blkRoot, err = prepareForkchoiceState(ctx, 5, root, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	headRoot, err = f.Head(ctx, balances)
+	require.NoError(t, err)
+	require.Equal(t, root, headRoot)
+	early, err = f.store.headNode.arrivedEarly(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, true, early)
+	late, err = f.store.headNode.arrivedAfterOrphanCheck(f.store.genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, false, late)
 }

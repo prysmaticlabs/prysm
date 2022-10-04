@@ -97,26 +97,16 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	}
 	s.allTipsAreInvalid = false
 
-	secondsIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
-	earlyCall := secondsIntoSlot >= params.BeaconConfig().ProcessAttestationsThreshold
 	currentlyOrphaning := s.proposerHeadNode != s.headNode
-	noBlock := s.highestReceivedNode.slot+1 < currentSlot || (earlyCall && s.highestReceivedNode.slot < currentSlot)
-	earlyBlock := s.highestReceivedNode.secondsSinceSlotStart(s.genesisTime) <= params.BeaconConfig().OrphanLateBlockFirstThreshold && s.highestReceivedNode.slot == currentSlot
-	if noBlock || earlyBlock {
+	updateProposerHead, err := s.shouldUpdateProposerHead()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if updateProposerHead {
+		s.proposerHeadNode = bestDescendant
 		if currentlyOrphaning {
 			currentlyOrphaning = false
 			orphanBetMisses.Inc()
-		}
-		s.proposerHeadNode = bestDescendant
-	} else if s.committeeBalance > 0 {
-		liveChain := s.proposerHeadNode.balance*100/s.committeeBalance > liveFraction
-		votedFraction := s.highestReceivedNode.balance * 100 / s.committeeBalance
-		if !liveChain || votedFraction > params.BeaconConfig().OrphanLateBlockBalanceFraction {
-			if currentlyOrphaning {
-				currentlyOrphaning = false
-				orphanBetMisses.Inc()
-			}
-			s.proposerHeadNode = bestDescendant
 		}
 	}
 
@@ -154,9 +144,11 @@ func (s *Store) insert(ctx context.Context,
 
 	parent := s.nodeByRoot[parentRoot]
 	timestamp := uint64(time.Now().Unix())
-	if timestamp < s.genesisTime+uint64(slot)*params.BeaconConfig().SecondsPerSlot {
+	secondsIntoSlot, err := slots.SecondsSinceSlotStart(slot, s.genesisTime, timestamp)
+	if err != nil {
 		log.Warning("inserting a block from the future in forkchoice. Check your clock drift.")
 		timestamp = s.genesisTime + uint64(slot)*params.BeaconConfig().SecondsPerSlot
+		secondsIntoSlot = uint64(0)
 	}
 
 	n := &Node{
@@ -186,10 +178,9 @@ func (s *Store) insert(ctx context.Context,
 	} else {
 		parent.children = append(parent.children, n)
 		// Apply proposer boost
-		secondsIntoSlot := (timestamp - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 		currentSlot := slots.CurrentSlot(s.genesisTime)
 		boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-		if currentSlot == slot && secondsIntoSlot < boostThreshold {
+		if secondsIntoSlot < boostThreshold {
 			s.proposerBoostLock.Lock()
 			s.proposerBoostRoot = root
 			s.proposerBoostLock.Unlock()
@@ -332,4 +323,31 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 		}
 	}
 	return count, nil
+}
+
+// earlyCall returns true if the current time is after the ProcessAttestationThreshold
+// where we consider blocks as candidates to being orphaned.
+func (s *Store) earlyCall() bool {
+	secondsIntoSlot := (uint64(time.Now().Unix()) - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+	return secondsIntoSlot >= params.BeaconConfig().ProcessAttestationsThreshold
+}
+
+// shouldUpdateProposerHead returns true if the proposer head should update to match the current head
+func (s *Store) shouldUpdateProposerHead() (bool, error) {
+	currentSlot := slots.SinceGenesis(time.Unix(int64(s.genesisTime), 0))
+	noBlock := s.highestReceivedNode.slot+1 < currentSlot || (s.earlyCall() && s.highestReceivedNode.slot < currentSlot)
+	earlyBlock, err := s.highestReceivedNode.arrivedEarly(s.genesisTime)
+	if err != nil {
+		return false, err
+	}
+	if noBlock || earlyBlock {
+		return true, nil
+	} else if s.committeeBalance > 0 {
+		liveChain := s.proposerHeadNode.balance*100/s.committeeBalance > liveFraction
+		votedFraction := s.highestReceivedNode.balance * 100 / s.committeeBalance
+		if !liveChain || votedFraction > params.BeaconConfig().OrphanLateBlockBalanceFraction {
+			return true, nil
+		}
+	}
+	return false, nil
 }

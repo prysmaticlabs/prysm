@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
@@ -127,8 +128,18 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	return n.parent.setNodeAndParentValidated(ctx)
 }
 
-func (n *Node) secondsSinceSlotStart(genesisTime uint64) uint64 {
-	return n.timestamp - genesisTime - uint64(n.slot)*params.BeaconConfig().SecondsPerSlot
+// arrivedEarly returns whether this node was inserted before the first
+// threshold to orphan a block.
+func (n *Node) arrivedEarly(genesisTime uint64) (bool, error) {
+	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
+	return secs <= params.BeaconConfig().OrphanLateBlockFirstThreshold, err
+}
+
+// arrivedAfterOrphanCheck returns whether this block was inserted after the
+// intermediate checkpoint to check for candidate of being orphaned.
+func (n *Node) arrivedAfterOrphanCheck(genesisTime uint64) (bool, error) {
+	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
+	return secs > params.BeaconConfig().ProcessAttestationsThreshold, err
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one
