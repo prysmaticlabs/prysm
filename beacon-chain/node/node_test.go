@@ -15,6 +15,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -152,4 +153,21 @@ func TestClearDB(t *testing.T) {
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")
+}
+
+func TestMonitor_RegisteredCorrectly(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	require.NoError(t, cmd.ValidatorMonitorIndicesFlag.Apply(set))
+	cliCtx := cli.NewContext(&app, set, nil)
+	require.NoError(t, cliCtx.Set(cmd.ValidatorMonitorIndicesFlag.Name, "1,2"))
+	n := &BeaconNode{ctx: context.Background(), cliCtx: cliCtx, services: runtime.NewServiceRegistry()}
+	require.NoError(t, n.services.RegisterService(&blockchain.Service{}))
+	require.NoError(t, n.registerValidatorMonitorService())
+
+	var mService *monitor.Service
+	require.NoError(t, n.services.FetchService(&mService))
+	require.Equal(t, true, mService.TrackedValidators[1])
+	require.Equal(t, true, mService.TrackedValidators[2])
+	require.Equal(t, false, mService.TrackedValidators[100])
 }
