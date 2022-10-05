@@ -64,8 +64,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/Inphi/bls12-381 v0.0.0-20220819032644-3ae7bcd28efc h1:dO3UA5UAc0KSHVgWNJTtG3PQwmFqlL6lJatg/9tvc38=
 github.com/Inphi/bls12-381 v0.0.0-20220819032644-3ae7bcd28efc/go.mod h1:tlkavyke+Ac7h8R3gZIjI5LKBcvMlSWnXNMgT3vZXo8=
-github.com/Inphi/go-kzg v0.0.0-20220819034031-381084440411 h1:UPONzX5HWFya8T/r8WYlbiyl1/sTwiPLsVh8NjJY7to=
-github.com/Inphi/go-kzg v0.0.0-20220819034031-381084440411/go.mod h1:sy8rQ8S75AAFdRj1QkEGm8kuSrfMa5YEDhbJ7V+nwrI=
+github.com/Inphi/go-kzg v0.0.0-20220922202249-3c7bb745d469 h1:zchOC48Wc674BrtSrurC4lt7kw9ukqPOt5gZ/nY+80I=
+github.com/Inphi/go-kzg v0.0.0-20220922202249-3c7bb745d469/go.mod h1:sy8rQ8S75AAFdRj1QkEGm8kuSrfMa5YEDhbJ7V+nwrI=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20210904205340-da82a0d3e27a/go.mod h1:iKT2vQyFJT+f8rXja6l58k8hv0gLvNx9C23FITcSP8E=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220304110512-764253afa8c2 h1:HKOeocqWNWitsHPVPdCUJRalFmDNVHs2xTKmse4svwU=

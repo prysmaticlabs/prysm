@@ -23,9 +23,7 @@ var (
 )
 
 func init() {
-	// blsModulus value copied from protolambda/go-kzg. TODO: submit a PR to request this value be
-	// publicly exposed there.
-	blsModulus.SetString("52435875175126190479447740508185965837690552500527637822603658699938581184513", 10)
+	blsModulus.SetString(bls.MODULUS_STR, 10)
 
 	// Initialize rootsOfUnity which are used by EvaluatePolyInEvaluationForm
 	var one big.Int
@@ -92,7 +90,7 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 	}
 
 	xData := eth.PolynomialAndCommitment{
-		Polynomial: make([][]byte, params.FieldElementsPerBlob, params.FieldElementsPerBlob),
+		Polynomial: make([][]byte, params.FieldElementsPerBlob),
 		Commitment: aggregatedPolyCommitment,
 	}
 	for i := 0; i < params.FieldElementsPerBlob; i++ {
@@ -145,7 +143,7 @@ func hashToBLSField(r *bls.Fr, container ssz.Marshaler) error {
 // computePowers implements compute_powers from the EIP-4844 spec
 func computePowers(x *bls.Fr, n int) []bls.Fr {
 	currentPower := bls.ONE
-	powers := make([]bls.Fr, n, n)
+	powers := make([]bls.Fr, n)
 	for i := 0; i < n; i++ {
 		powers[i] = currentPower
 		bls.MulModFr(&currentPower, &currentPower, x)
@@ -156,7 +154,7 @@ func computePowers(x *bls.Fr, n int) []bls.Fr {
 // linComb implements the function lincomb from the EIP-4844 spec
 func linComb(commitments [][]byte, scalars []bls.Fr) ([]byte, error) {
 	n := len(scalars)
-	g1s := make([]bls.G1Point, n, n)
+	g1s := make([]bls.G1Point, n)
 	for i := 0; i < n; i++ {
 		g1, err := bls.FromCompressedG1(commitments[i])
 		if err != nil {
@@ -170,7 +168,7 @@ func linComb(commitments [][]byte, scalars []bls.Fr) ([]byte, error) {
 
 // vectorLinComb implements the function vector_lincomb from the EIP-4844 spec
 func vectorLinComb(blobs []*v1.Blob, scalars []bls.Fr) ([]bls.Fr, error) {
-	r := make([]bls.Fr, params.FieldElementsPerBlob, params.FieldElementsPerBlob)
+	r := make([]bls.Fr, params.FieldElementsPerBlob)
 	x := bls.Fr{}
 	var fe [32]byte
 	feSlice := fe[:]       // create a slice that is backed by a tmp [32]byte array
