@@ -35,16 +35,16 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	exit, ok := m.(*ethpb.SignedVoluntaryExit)
 	if !ok {
-		return rejectGossipMessage(msg), errWrongMessage
+		return pubsub.ValidationReject, errWrongMessage
 	}
 
 	if exit.Exit == nil {
-		return rejectGossipMessage(msg), errNilMessage
+		return pubsub.ValidationReject, errNilMessage
 	}
 	if s.hasSeenExitIndex(exit.Exit.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
@@ -56,14 +56,14 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	if uint64(exit.Exit.ValidatorIndex) >= uint64(headState.NumValidators()) {
-		return rejectGossipMessage(msg), errors.New("validator index is invalid")
+		return pubsub.ValidationReject, errors.New("validator index is invalid")
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorsRoot()); err != nil {
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	msg.ValidatorData = exit // Used in downstream subscriber

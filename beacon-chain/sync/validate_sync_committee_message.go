@@ -58,14 +58,14 @@ func (s *Service) validateSyncCommitteeMessage(
 	}
 
 	if msg.Topic == nil {
-		return rejectGossipMessage(msg), errInvalidTopic
+		return pubsub.ValidationReject, errInvalidTopic
 	}
 
 	// Read the data from the pubsub message, and reject if there is an error.
 	m, err := s.readSyncCommitteeMessage(msg)
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return rejectGossipMessage(msg), err
+		return pubsub.ValidationReject, err
 	}
 
 	// Validate sync message times before proceeding.
