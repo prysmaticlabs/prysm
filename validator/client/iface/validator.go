@@ -6,6 +6,7 @@ import (
 	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -60,9 +61,10 @@ type Validator interface {
 	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	HasProposerSettings() bool
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
+	ProposerSettings() *validatorserviceconfig.ProposerSettings
+	SetProposerSettings(*validatorserviceconfig.ProposerSettings)
 }
 
 // SigningFunc interface defines a type for the a function that signs a message
