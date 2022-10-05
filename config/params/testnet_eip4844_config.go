@@ -20,9 +20,9 @@ func EIP4844Config() *BeaconChainConfig {
 	cfg.Eth1FollowDistance = 15
 	cfg.ConfigName = EIP4844Name
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x0f, 0xfd}
-	cfg.SecondsPerETH1Block = 14
-	cfg.DepositChainID = 1331
-	cfg.DepositNetworkID = 69
+	cfg.SecondsPerETH1Block = 12
+	cfg.DepositChainID = 1332
+	cfg.DepositNetworkID = 70
 	cfg.AltairForkEpoch = 1
 	cfg.AltairForkVersion = []byte{0x01, 0x00, 0x0f, 0xfd}
 	cfg.BellatrixForkEpoch = 2
@@ -30,7 +30,7 @@ func EIP4844Config() *BeaconChainConfig {
 	cfg.Eip4844ForkEpoch = 3
 	cfg.SlotsPerEpoch = 8 // 96 secs; reduced from 32 (6.4 mins) for testing
 	cfg.Eip4844ForkVersion = []byte{0x83, 0x00, 0x0f, 0xfd}
-	cfg.TerminalTotalDifficulty = "40"
+	cfg.TerminalTotalDifficulty = "2"
 	cfg.DepositContractAddress = "0x8A04d14125D0FDCDc742F4A05C051De07232EDa4"
 	cfg.DomainBlobsSidecar = [4]byte{0x0a, 0x00, 0x00, 0x00}
 	cfg.InitializeForkSchedule()
