@@ -100,7 +100,7 @@ type validator struct {
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
-	ProposerSettings                   *validatorserviceconfig.ProposerSettings
+	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
 }
 
@@ -964,8 +964,12 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-func (v *validator) HasProposerSettings() bool {
-	return v.ProposerSettings != nil
+func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return v.proposerSettings
+}
+
+func (v *validator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	v.proposerSettings = settings
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
@@ -1035,11 +1039,11 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			v.pubkeyToValidatorIndex[k] = i
 		}
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
-		if v.ProposerSettings.DefaultConfig != nil {
-			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
+		if v.ProposerSettings().DefaultConfig != nil {
+			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipient // Use cli config for fee recipient.
 		}
-		if v.ProposerSettings.ProposeConfig != nil {
-			config, ok := v.ProposerSettings.ProposeConfig[k]
+		if v.ProposerSettings().ProposeConfig != nil {
+			config, ok := v.ProposerSettings().ProposeConfig[k]
 			if ok && config != nil {
 				feeRecipient = config.FeeRecipient // Use file config for fee recipient.
 			}
@@ -1065,16 +1069,16 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
-		if v.ProposerSettings.DefaultConfig != nil {
-			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient // Use cli config for fee recipient.
-			config := v.ProposerSettings.DefaultConfig.BuilderConfig
+		if v.ProposerSettings().DefaultConfig != nil {
+			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipient // Use cli config for fee recipient.
+			config := v.ProposerSettings().DefaultConfig.BuilderConfig
 			if config != nil && config.Enabled {
 				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
-		if v.ProposerSettings.ProposeConfig != nil {
-			config, ok := v.ProposerSettings.ProposeConfig[k]
+		if v.ProposerSettings().ProposeConfig != nil {
+			config, ok := v.ProposerSettings().ProposeConfig[k]
 			if ok && config != nil {
 				feeRecipient = config.FeeRecipient // Use file config for fee recipient.
 				builderConfig := config.BuilderConfig
