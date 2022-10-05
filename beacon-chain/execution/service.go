@@ -112,7 +112,7 @@ type RPCClient interface {
 	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
-type RPCClientUninitialize struct {
+type RPCClientEmpty struct {
 }
 
 func (RPCClientUninitialize) Close() {}
