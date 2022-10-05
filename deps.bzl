@@ -2976,7 +2976,6 @@ def prysm_deps():
     go_repository(
         name = "com_github_rivo_uniseg",
         importpath = "github.com/rivo/uniseg",
-        debug_mode = 1,
         build_directives = [
             "gazelle:exclude gen_breaktest.go",
             "gazelle:exclude gen_properties.go",
