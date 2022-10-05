@@ -92,7 +92,7 @@ type ExecutionData interface {
 	BaseFeePerGas() []byte
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
-	ExcessDataGas() (uint64, error)
+	ExcessDataGas() ([]byte, error)
 
 	Version() int
 	PbGenericPayload() (*enginev1.ExecutionPayload, error)

@@ -31,7 +31,7 @@ type executionPayloadHeader struct {
 	baseFeePerGas    []byte
 	blockHash        []byte
 	transactionsRoot []byte
-	excessDataGas    uint64
+	excessDataGas    []byte
 }
 
 // IsNil checks if the underlying data is nil.
@@ -304,12 +304,12 @@ func (e *executionPayloadHeader) Transactions() ([][]byte, error) {
 }
 
 // ExcessDataGas --
-func (e *executionPayloadHeader) ExcessDataGas() (uint64, error) {
+func (e *executionPayloadHeader) ExcessDataGas() ([]byte, error) {
 	switch e.version {
 	case version.EIP4844:
 		return e.excessDataGas, nil
 	default:
-		return 0, ErrUnsupportedGetter
+		return nil, ErrUnsupportedGetter
 	}
 }
 
@@ -366,7 +366,7 @@ func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, erro
 	case err != nil:
 		return false, err
 	default:
-		if excessDataGas != 0 {
+		if !bytes.Equal(excessDataGas, make([]byte, fieldparams.RootLength)) {
 			return false, nil
 		}
 	}

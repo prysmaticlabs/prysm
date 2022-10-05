@@ -466,7 +466,7 @@ func CopyExecutionPayload4844(payload *enginev1.ExecutionPayload4844) *enginev1.
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		ExcessDataGas:   payload.ExcessDataGas,
+		ExcessDataGas: bytesutil.SafeCopyBytes(payload.ExcessDataGas),
 	}
 }
 
@@ -513,7 +513,7 @@ func CopyExecutionPayloadHeader4844(payload *enginev1.ExecutionPayloadHeader4844
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
-		ExcessDataGas:      payload.ExcessDataGas,
+		ExcessDataGas:    bytesutil.SafeCopyBytes(payload.ExcessDataGas),
 	}
 }
 

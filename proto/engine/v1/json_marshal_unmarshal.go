@@ -126,7 +126,7 @@ type ExecutionPayloadJSON struct {
 	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
-	ExcessDataGas *hexutil.Uint64 `json:"excessDataGas"`
+	ExcessDataGas *string         `json:"excessDataGas"`
 }
 
 func (e *ExecutionPayloadJSON) Pre4844() (*ExecutionPayload, error) {
@@ -259,11 +259,17 @@ func (e *ExecutionPayloadJSON) Post4844() (*ExecutionPayload4844, error) {
 	payload.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
 	payload.BlockHash = e.BlockHash.Bytes()
 	transactions := make([][]byte, len(e.Transactions))
-	payload.ExcessDataGas = uint64(*e.ExcessDataGas)
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
 	payload.Transactions = transactions
+
+	excessDataGas, err := hexutil.DecodeBig(*e.ExcessDataGas)
+	if err != nil {
+		return nil, err
+	}
+	payload.ExcessDataGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(excessDataGas.Bytes()), fieldparams.RootLength)
+
 	return &payload, nil
 }
 
@@ -311,6 +317,9 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 	}
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
+	excessDataGas := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.ExcessDataGas))
+	excessDataGasHex := hexutil.EncodeBig(excessDataGas)
+
 	pHash := common.BytesToHash(e.ParentHash)
 	sRoot := common.BytesToHash(e.StateRoot)
 	recRoot := common.BytesToHash(e.ReceiptsRoot)
@@ -322,7 +331,6 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 	timeStamp := hexutil.Uint64(e.Timestamp)
 	recipient := common.BytesToAddress(e.FeeRecipient)
 	logsBloom := hexutil.Bytes(e.LogsBloom)
-	excessDataGas := hexutil.Uint64(e.ExcessDataGas)
 	return json.Marshal(ExecutionPayloadJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
@@ -338,7 +346,7 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
-		ExcessDataGas: &excessDataGas,
+		ExcessDataGas: &excessDataGasHex,
 	})
 }
 
@@ -397,7 +405,7 @@ func (e *ExecutionPayload4844) UnmarshalJSON(enc []byte) error {
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
-		ExcessDataGas: payload.ExcessDataGas,
+		ExcessDataGas: bytesutil.SafeCopyBytes(payload.ExcessDataGas),
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ type executionPayload struct {
 	baseFeePerGas []byte
 	blockHash     []byte
 	transactions  [][]byte
-	excessDataGas uint64
+	excessDataGas []byte
 }
 
 // IsNil checks if the underlying data is nil.
@@ -292,12 +292,12 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 }
 
 // ExcessDataGas --
-func (e *executionPayload) ExcessDataGas() (uint64, error) {
+func (e *executionPayload) ExcessDataGas() ([]byte, error) {
 	switch e.version {
 	case version.EIP4844:
 		return e.excessDataGas, nil
 	default:
-		return 0, ErrUnsupportedGetter
+		return nil, ErrUnsupportedGetter
 	}
 }
 
@@ -356,7 +356,7 @@ func PayloadToHeader(payload interfaces.ExecutionData) (interfaces.ExecutionData
 			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
 			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 			TransactionsRoot: txRoot[:],
-			ExcessDataGas:    excessDataGas,
+			ExcessDataGas:    bytesutil.SafeCopyBytes(excessDataGas),
 		}
 	default:
 		return nil, errors.New("unsupported execution payload")
@@ -425,7 +425,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	case err != nil:
 		return false, err
 	default:
-		if excessDataGas != 0 {
+		if !bytes.Equal(excessDataGas, make([]byte, fieldparams.RootLength)) {
 			return false, nil
 		}
 	}
