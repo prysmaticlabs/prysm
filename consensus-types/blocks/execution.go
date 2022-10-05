@@ -14,8 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var errUnsupportedExecutionField = errors.New("unsupported field")
-
 // executionPayload is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
