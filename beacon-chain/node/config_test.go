@@ -39,20 +39,6 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	)
 }
 
-func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
-	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
-	cliCtx := cli.NewContext(&app, set, nil)
-
-	require.NoError(t, configureSafeSlotsToImportOptimistically(cliCtx))
-
-	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
-}
-
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
@@ -104,7 +90,8 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
-	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
+	assert.LogsContain(t, hook, "0xB is not a valid fee recipient address")
+	require.NoError(t, err)
 
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)

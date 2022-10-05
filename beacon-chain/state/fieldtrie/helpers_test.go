@@ -12,7 +12,6 @@ import (
 	nativeStateTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -93,7 +92,6 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 }
 
 func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	type args struct {
 		field      stateTypes.BeaconStateField
 		indices    []uint64
@@ -370,5 +368,4 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 			}
 		})
 	}
-	features.Init(&features.Flags{EnableNativeState: false})
 }

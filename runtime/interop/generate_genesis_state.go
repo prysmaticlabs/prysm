@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -70,12 +68,7 @@ func GenerateGenesisStateFromDepositData(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	var pbState *ethpb.BeaconState
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
-	} else {
-		pbState, err = v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
-	}
+	pbState, err := statenative.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
 	if err != nil {
 		return nil, nil, err
 	}

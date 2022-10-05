@@ -239,7 +239,8 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
