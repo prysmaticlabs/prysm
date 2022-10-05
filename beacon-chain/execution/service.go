@@ -121,7 +121,7 @@ func (RPCClientUninitialize) BatchCall([]gethRPC.BatchElem) error {
 }
 
 func (RPCClientUninitialize) CallContext(context.Context, interface{}, string, ...interface{}) error {
-	return errors.New("CallContext to a RPCClientUnitialized")
+	return errors.New("rpc client is not initialized")
 }
 
 // config defines a config struct for dependencies into the service.
