@@ -69,7 +69,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	ProposerSettings      *validatorserviceconfig.ProposerSettings
+	proposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -120,7 +120,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
-		ProposerSettings:      cfg.ProposerSettings,
+		proposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -204,7 +204,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		ProposerSettings:               v.ProposerSettings,
+		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
@@ -246,6 +246,15 @@ func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 
 func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
+}
+
+func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return v.validator.ProposerSettings()
+}
+
+func (v *ValidatorService) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	v.proposerSettings = settings
+	v.validator.SetProposerSettings(settings)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
