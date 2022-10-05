@@ -40,6 +40,14 @@ func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
+func handleGetBlobsSidecarSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		fileName:     "blobs_sidecar.ssz",
+		responseJson: &sszResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
 func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_block.ssz",

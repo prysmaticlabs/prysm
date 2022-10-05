@@ -1008,3 +1008,15 @@ type eventErrorJson struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
 }
+
+// 4844
+type blobsSidecarJson struct {
+	BeaconBlockRoot string   `json:"beacon_block_root" hex:"true"`
+	BeaconBlockSlot string   `json:"beacon_block_slot"`
+	Blobs           []string `json:"blobs" hex:"true"`
+	AggregatedProof string   `json:"kzg_aggregated_proof" hex:"true"`
+}
+
+type blobsSidecarResponseJson struct {
+	Data *blobsSidecarJson `json:"data"`
+}

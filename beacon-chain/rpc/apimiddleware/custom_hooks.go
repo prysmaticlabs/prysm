@@ -429,6 +429,44 @@ type tempSyncSubcommitteeValidatorsJson struct {
 	Validators []string `json:"validators"`
 }
 
+type tempBlobJson struct {
+	Data string `json:"data"`
+}
+
+type tempBlobsSidecarJson struct {
+	BeaconBlockRoot string         `json:"beacon_block_root"`
+	BeaconBlockSlot string         `json:"beacon_block_slot"`
+	Blobs           []tempBlobJson `json:"blobs"`
+	AggregatedProof string         `json:"kzg_aggregated_proof"`
+}
+
+type tempBlobsResponseJson struct {
+	Data tempBlobsSidecarJson `json:"data"`
+}
+
+// This takes the blobs list and exposes the data field of each blob as the blob content itself in the json
+func prepareBlobsResponse(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	tempContainer := &tempBlobsResponseJson{}
+	if err := json.Unmarshal(body, tempContainer); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
+	}
+	container, ok := responseContainer.(*blobsSidecarResponseJson)
+	if !ok {
+		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	container.Data = &blobsSidecarJson{
+		BeaconBlockRoot: tempContainer.Data.BeaconBlockRoot,
+		BeaconBlockSlot: tempContainer.Data.BeaconBlockSlot,
+		Blobs:           make([]string, len(tempContainer.Data.Blobs)),
+		AggregatedProof: tempContainer.Data.AggregatedProof,
+	}
+	for i, blob := range tempContainer.Data.Blobs {
+		container.Data.Blobs[i] = blob.Data
+	}
+	return false, nil
+}
+
 // https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.0.0#/Beacon/getEpochSyncCommittees returns validator_aggregates as a nested array.
 // grpc-gateway returns a struct with nested fields which we have to transform into a plain 2D array.
 func prepareValidatorAggregates(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
