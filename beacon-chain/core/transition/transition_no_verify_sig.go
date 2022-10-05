@@ -285,7 +285,7 @@ func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfac
 		return nil, errors.Wrap(err, "could not get transactions from payload")
 	}
 	if err := eip4844.VerifyKzgsAgainstTxs(txs, blobKzgsInput); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not verify kzgs against txs")
 	}
 	return state, nil
 }
