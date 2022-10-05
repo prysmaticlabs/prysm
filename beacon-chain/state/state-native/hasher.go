@@ -247,8 +247,11 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
 
 		// Withdrawal queue root.
-		withdrawalQueueRoot := []byte("stub")
-		fieldRoots[nativetypes.WithdrawalQueue.RealPosition()] = withdrawalQueueRoot
+		withdrawalQueueRoot, err := ssz.WithdrawalSliceRoot(hasher, state.withdrawalQueue, fieldparams.WithdrawalQueueLimit)
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[nativetypes.WithdrawalQueue.RealPosition()] = withdrawalQueueRoot[:]
 
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)

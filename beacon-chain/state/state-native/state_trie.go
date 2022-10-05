@@ -834,7 +834,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 	case nativetypes.LatestExecutionPayloadHeaderCapella:
 		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
 	case nativetypes.WithdrawalQueue:
-		return [32]byte{}, errors.New("not implemented")
+		return ssz.WithdrawalSliceRoot(hasher, b.withdrawalQueue, fieldparams.WithdrawalQueueLimit)
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
 	case nativetypes.NextPartialWithdrawalValidatorIndex:

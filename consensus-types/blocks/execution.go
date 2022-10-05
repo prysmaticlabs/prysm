@@ -7,6 +7,7 @@ import (
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -141,6 +142,11 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// Withdrawals --
+func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -264,6 +270,11 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// Withdrawals --
+func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -421,6 +432,11 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// Withdrawals --
+func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return e.p.Withdrawals, nil
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -544,7 +560,12 @@ func (e executionPayloadHeaderCapella) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
-	return nil, errUnsupportedExecutionField
+	return nil, ErrUnsupportedGetter
+}
+
+// Withdrawals --
+func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -557,6 +578,15 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	if err != nil {
 		return nil, err
 	}
+	withdrawals, err := payload.Withdrawals()
+	if err != nil {
+		return nil, err
+	}
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
+		return nil, err
+	}
+
 	return &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient()),
@@ -572,7 +602,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 		TransactionsRoot: txRoot[:],
-		WithdrawalsRoot:  []byte("stub"),
+		WithdrawalsRoot:  withdrawalsRoot[:],
 	}, nil
 }
 
