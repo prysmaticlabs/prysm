@@ -180,7 +180,8 @@
       ".*\\.pb.*.go": "Generated code is ok",
       ".*generated\\.ssz\\.go": "Generated code is ok",
       ".*_test\\.go": "Tests are ok (for now)",
-      "tools/analyzers/ineffassign/ineffassign\\.go": "3rd party code with a massive switch statement"
+      "tools/analyzers/ineffassign/ineffassign\\.go": "3rd party code with a massive switch statement",
+      "third_party/uniseg/.*": "Ignore vendored package"
     }
   }
 }
