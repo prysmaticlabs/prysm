@@ -756,9 +756,9 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get latest execution payload header")
 	}
-	var excessBlobs uint64
-	if val, err := sourceLatestExecutionPayloadHeader.ExcessBlobs(); err == nil {
-		excessBlobs = val
+	var excessDataGas uint64
+	if val, err := sourceLatestExecutionPayloadHeader.ExcessDataGas(); err == nil {
+		excessDataGas = val
 	}
 	// else ErrUnsupportedGetter, so we ignore its value
 
@@ -831,7 +831,7 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas()),
 			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash()),
 			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot()),
-			ExcessBlobs:      excessBlobs,
+			ExcessDataGas:    excessDataGas,
 		},
 	}
 

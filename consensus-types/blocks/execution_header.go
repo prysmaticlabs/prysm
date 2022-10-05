@@ -31,7 +31,7 @@ type executionPayloadHeader struct {
 	baseFeePerGas    []byte
 	blockHash        []byte
 	transactionsRoot []byte
-	excessBlobs      uint64
+	excessDataGas    uint64
 }
 
 // IsNil checks if the underlying data is nil.
@@ -222,7 +222,7 @@ func (e *executionPayloadHeader) Proto() (proto.Message, error) {
 			BaseFeePerGas:    e.baseFeePerGas,
 			BlockHash:        e.blockHash,
 			TransactionsRoot: e.transactionsRoot,
-			ExcessBlobs:      e.excessBlobs,
+			ExcessDataGas:    e.excessDataGas,
 		}, nil
 	default:
 		return nil, errors.New("unsupported execution payload")
@@ -303,11 +303,11 @@ func (e *executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// ExcessBlobs --
-func (e *executionPayloadHeader) ExcessBlobs() (uint64, error) {
+// ExcessDataGas --
+func (e *executionPayloadHeader) ExcessDataGas() (uint64, error) {
 	switch e.version {
 	case version.EIP4844:
-		return e.excessBlobs, nil
+		return e.excessDataGas, nil
 	default:
 		return 0, ErrUnsupportedGetter
 	}
@@ -360,13 +360,13 @@ func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, erro
 		return false, nil
 	}
 
-	excessBlobs, err := data.ExcessBlobs()
+	excessDataGas, err := data.ExcessDataGas()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
 		return false, err
 	default:
-		if excessBlobs != 0 {
+		if excessDataGas != 0 {
 			return false, nil
 		}
 	}

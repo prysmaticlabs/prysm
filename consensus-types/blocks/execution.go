@@ -33,7 +33,7 @@ type executionPayload struct {
 	baseFeePerGas []byte
 	blockHash     []byte
 	transactions  [][]byte
-	excessBlobs   uint64
+	excessDataGas uint64
 }
 
 // IsNil checks if the underlying data is nil.
@@ -214,7 +214,7 @@ func (e *executionPayload) Proto() (proto.Message, error) {
 			BaseFeePerGas: e.baseFeePerGas,
 			BlockHash:     e.blockHash,
 			Transactions:  e.transactions,
-			ExcessBlobs:   e.excessBlobs,
+			ExcessDataGas: e.excessDataGas,
 		}, nil
 	default:
 		return nil, errors.New("unsupported execution payload")
@@ -291,11 +291,11 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.transactions, nil
 }
 
-// ExcessBlobs --
-func (e *executionPayload) ExcessBlobs() (uint64, error) {
+// ExcessDataGas --
+func (e *executionPayload) ExcessDataGas() (uint64, error) {
 	switch e.version {
 	case version.EIP4844:
-		return e.excessBlobs, nil
+		return e.excessDataGas, nil
 	default:
 		return 0, ErrUnsupportedGetter
 	}
@@ -337,7 +337,7 @@ func PayloadToHeader(payload interfaces.ExecutionData) (interfaces.ExecutionData
 			TransactionsRoot: txRoot[:],
 		}
 	case version.EIP4844:
-		excessBlobs, err := payload.ExcessBlobs()
+		excessDataGas, err := payload.ExcessDataGas()
 		if err != nil {
 			return nil, err
 		}
@@ -356,7 +356,7 @@ func PayloadToHeader(payload interfaces.ExecutionData) (interfaces.ExecutionData
 			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
 			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 			TransactionsRoot: txRoot[:],
-			ExcessBlobs:      excessBlobs,
+			ExcessDataGas:    excessDataGas,
 		}
 	default:
 		return nil, errors.New("unsupported execution payload")
@@ -419,13 +419,13 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		return false, nil
 	}
 
-	excessBlobs, err := data.ExcessBlobs()
+	excessDataGas, err := data.ExcessDataGas()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
 		return false, err
 	default:
-		if excessBlobs != 0 {
+		if excessDataGas != 0 {
 			return false, nil
 		}
 	}

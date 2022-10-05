@@ -75,7 +75,7 @@ message ExecutionPayload4844 {
 	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
-	uint64 excess_blobs         = 15; // New in EIP-4844
+	uint64 excess_data_gas      = 15; // New in EIP-4844
 }
 
 message ExecutionPayloadHeader {
@@ -128,7 +128,7 @@ message ExecutionPayloadHeader4844 {
 	bytes base_fee_per_gas  = 12 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 excess_blobs     = 15;
+	uint64 excess_data_gas  = 15; // New in EIP-4844.
 }
 
 message TransitionConfiguration {

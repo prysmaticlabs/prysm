@@ -116,7 +116,7 @@ func UpgradeToEip4844(ctx context.Context, state state.BeaconState) (state.Beaco
 		return nil, err
 	}
 
-	// Copy all the old fields and add ExcessBlobs of 0
+	// Copy all the old fields and add ExcessDataGas of 0
 	upgradedLatestExecutionPayloadHeader := &enginev1.ExecutionPayloadHeader4844{
 		ParentHash:       latestExecutionPayloadHeader.ParentHash(),
 		FeeRecipient:     latestExecutionPayloadHeader.FeeRecipient(),
@@ -131,7 +131,7 @@ func UpgradeToEip4844(ctx context.Context, state state.BeaconState) (state.Beaco
 		BaseFeePerGas:    latestExecutionPayloadHeader.BaseFeePerGas(),
 		BlockHash:        latestExecutionPayloadHeader.BlockHash(),
 		TransactionsRoot: latestExecutionPayloadHeader.TransactionsRoot(),
-		ExcessBlobs:      0,
+		ExcessDataGas:    0,
 	}
 
 	s := &ethpb.BeaconState4844{

@@ -726,7 +726,7 @@ func initPayloadFromProto4844(pb *enginev1.ExecutionPayload4844) (*executionPayl
 		baseFeePerGas: pb.BaseFeePerGas,
 		blockHash:     pb.BlockHash,
 		transactions:  pb.Transactions,
-		excessBlobs:   pb.ExcessBlobs,
+		excessDataGas: pb.ExcessDataGas,
 	}
 	return e, nil
 }
@@ -777,7 +777,7 @@ func initPayloadHeaderFromProto4844(pb *enginev1.ExecutionPayloadHeader4844) (*e
 		baseFeePerGas:    pb.BaseFeePerGas,
 		blockHash:        pb.BlockHash,
 		transactionsRoot: pb.TransactionsRoot,
-		excessBlobs:      pb.ExcessBlobs,
+		excessDataGas:    pb.ExcessDataGas,
 	}
 	return e, nil
 }
