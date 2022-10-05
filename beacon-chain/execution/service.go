@@ -115,12 +115,12 @@ type RPCClient interface {
 type RPCClientEmpty struct {
 }
 
-func (RPCClientUninitialize) Close() {}
-func (RPCClientUninitialize) BatchCall([]gethRPC.BatchElem) error {
-	return errors.New("rpc client is not initialized)
+func (RPCClientEmpty) Close() {}
+func (RPCClientEmpty) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("rpc client is not initialized")
 }
 
-func (RPCClientUninitialize) CallContext(context.Context, interface{}, string, ...interface{}) error {
+func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...interface{}) error {
 	return errors.New("rpc client is not initialized")
 }
 
@@ -183,7 +183,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	s := &Service{
 		ctx:       ctx,
 		cancel:    cancel,
-		rpcClient: RPCClientUninitialize{},
+		rpcClient: RPCClientEmpty{},
 		cfg: &config{
 			beaconNodeStatsUpdater: &NopBeaconNodeStatsUpdater{},
 			eth1HeaderReqLimit:     defaultEth1HeaderReqLimit,
