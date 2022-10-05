@@ -267,8 +267,6 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 			}
 			if features.Get().EnableFullSSZDataLogging {
-				obj := p2p.GossipTopicMappings(topic, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
-				fields["object"] = fmt.Sprintf("%T", obj)
 				fields["message"] = hexutil.Encode(msg.Data)
 			}
 			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
