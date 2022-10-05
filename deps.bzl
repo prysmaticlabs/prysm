@@ -2289,9 +2289,6 @@ def prysm_deps():
 
     go_repository(
         name = "com_github_mattn_go_runewidth",
-        build_directives = [
-            "gazelle:resolve go github.com/rivo/uniseg @prysm//third_party/uniseg:uniseg",
-        ],
         importpath = "github.com/mattn/go-runewidth",
         sum = "h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4OSgU=",
         version = "v0.0.13",
@@ -2979,6 +2976,11 @@ def prysm_deps():
     go_repository(
         name = "com_github_rivo_uniseg",
         importpath = "github.com/rivo/uniseg",
+        debug_mode = 1,
+        build_directives = [
+            "gazelle:exclude gen_breaktest.go",
+            "gazelle:exclude gen_properties.go",
+        ],
         sum = "h1:3Z3Eu6FGHZWSfNKJTOUiPatWwfc7DzJRU04jFUqJODw=",
         version = "v0.3.4",
     )
