@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/v3/validator/node"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
@@ -31,7 +32,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 	)
 	grpcHeaders := strings.Split(c.String(flags.GrpcHeadersFlag.Name), ",")
 	beaconRPCProvider := c.String(flags.BeaconRPCProviderFlag.Name)
-	if !c.IsSet(flags.Web3SignerURLFlag.Name) && !c.IsSet(flags.WalletDirFlag.Name) {
+	if !c.IsSet(flags.Web3SignerURLFlag.Name) && !c.IsSet(flags.WalletDirFlag.Name) && !c.IsSet(flags.InteropNumValidators.Name) {
 		return errors.Errorf("No validators found, please provide a prysm wallet directory via flag --%s "+
 			"or a web3signer location with corresponding public keys via flags --%s and --%s ",
 			flags.WalletDirFlag.Name,
@@ -39,7 +40,13 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 			flags.Web3SignerPublicValidatorKeysFlag,
 		)
 	}
-
+	if c.IsSet(flags.InteropNumValidators.Name) {
+		km, err = local.NewInteropKeymanager(c.Context, c.Uint64(flags.InteropStartIndex.Name), c.Uint64(flags.InteropNumValidators.Name))
+		if err != nil {
+			return errors.Wrap(err, "could not generate interop keys for key manager")
+		}
+		w = &wallet.Wallet{}
+	}
 	if c.IsSet(flags.Web3SignerURLFlag.Name) {
 		ctx := grpcutil.AppendHeaders(c.Context, grpcHeaders)
 		conn, err := grpc.DialContext(ctx, beaconRPCProvider, dialOpts...)
