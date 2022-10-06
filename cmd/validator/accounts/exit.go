@@ -46,8 +46,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 			return errors.Wrap(err, "could not generate interop keys for key manager")
 		}
 		w = &wallet.Wallet{}
-	}
-	if c.IsSet(flags.Web3SignerURLFlag.Name) {
+	} else if c.IsSet(flags.Web3SignerURLFlag.Name) {
 		ctx := grpcutil.AppendHeaders(c.Context, grpcHeaders)
 		conn, err := grpc.DialContext(ctx, beaconRPCProvider, dialOpts...)
 		if err != nil {
