@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"

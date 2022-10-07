@@ -8,7 +8,7 @@ go_library(
     deps = [
         "@com_github_btcsuite_btcd_btcec_v2//:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
-        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
+        "@com_github_libp2p_go_libp2p//core/crypto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -22,6 +22,6 @@ go_test(
         "//testing/require:go_default_library",
         "@com_github_btcsuite_btcd_btcec_v2//:go_default_library",
         "@com_github_ethereum_go_ethereum//crypto:go_default_library",
-        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
+        "@com_github_libp2p_go_libp2p//core/crypto:go_default_library",
     ],
 )
