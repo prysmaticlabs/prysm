@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
