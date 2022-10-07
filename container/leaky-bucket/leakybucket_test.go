@@ -32,7 +32,7 @@ func reset(t *testing.T, c *Collector) {
 func TestNewLeakyBucket(t *testing.T) {
 	rate := 1.0
 	capacity := int64(5)
-	b := NewLeakyBucket(rate, capacity)
+	b := NewLeakyBucket(rate, capacity, time.Second)
 
 	if b.p != now() {
 		t.Fatal("Didn't initialize priority?!")
@@ -114,7 +114,7 @@ var varied = testSet{
 
 func runTest(t *testing.T, test *testSet) {
 	setElapsed(0)
-	b := NewLeakyBucket(test.rate, test.capacity)
+	b := NewLeakyBucket(test.rate, test.capacity, time.Second)
 
 	for i, v := range test.set {
 		switch v.action {

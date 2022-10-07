@@ -9,7 +9,7 @@ import (
 func TestNewCollector(t *testing.T) {
 	rate := 1.0
 	capacity := int64(2)
-	c := NewCollector(rate, capacity, true)
+	c := NewCollector(rate, capacity, time.Second, true)
 
 	if c.buckets == nil {
 		t.Fatal("Didn't initialize priority?!")
@@ -123,7 +123,7 @@ func TestCollector(t *testing.T) {
 
 		key := "127.0.0.1"
 
-		c := NewCollector(test.rate, test.capacity, false)
+		c := NewCollector(test.rate, test.capacity, time.Second, false)
 
 		// Run and test Remove()
 		runKey(t, c, key, &test)
@@ -159,8 +159,8 @@ func TestCollector(t *testing.T) {
 func TestPeriodicPrune(t *testing.T) {
 	setElapsed(0)
 	key := "localhost"
-	c := NewCollector(1e7, 8, false)
-	c.PeriodicPrune(time.Microsecond)
+	c := NewCollector(1e7, 8, time.Second, false)
+	c.PeriodicPrune()
 	n := c.Add(key, 100)
 	if n != 8 {
 		t.Fatal("Didn't fill bucket?!")

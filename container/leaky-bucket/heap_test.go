@@ -13,7 +13,7 @@ func TestLen(t *testing.T) {
 	}
 
 	for i := 1; i <= 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		q.Push(b)
 
 		l := q.Len()
@@ -35,7 +35,7 @@ func TestPeak(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 0; i < 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		q.Push(b)
 	}
 }
@@ -44,7 +44,7 @@ func TestLess(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 0; i < 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		b.p = now().Add(time.Duration(i))
 		q.Push(b)
 	}
@@ -60,7 +60,7 @@ func TestSwap(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 0; i < 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		q.Push(b)
 	}
 
@@ -81,7 +81,7 @@ func TestPush(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 0; i < 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		q.Push(b)
 
 		if b != q[len(q)-1] {
@@ -94,7 +94,7 @@ func TestPop(t *testing.T) {
 	q := make(priorityQueue, 0, 4096)
 
 	for i := 1; i <= 5; i++ {
-		b := NewLeakyBucket(1.0, 5)
+		b := NewLeakyBucket(1.0, 5, time.Second)
 		q.Push(b)
 	}
 
