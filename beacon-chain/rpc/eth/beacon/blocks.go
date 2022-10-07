@@ -422,7 +422,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	phase0Blk, err := blk.PbPhase0Block()
 	if err == nil {
 		if phase0Blk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v1Blk, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -445,7 +445,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 		if err != nil {
@@ -469,7 +469,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
 		if err != nil {
@@ -500,7 +500,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 
 	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 		if blindedBellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
 		if err != nil {
@@ -558,7 +558,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	phase0Blk, err := blk.PbPhase0Block()
 	if err == nil {
 		if phase0Blk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -578,7 +578,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 		if err != nil {
@@ -603,7 +603,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
 		if err != nil {
@@ -635,7 +635,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 
 	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 		if blindedBellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
 		if err != nil {
@@ -698,7 +698,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	phase0Blk, err := blk.PbPhase0Block()
 	if err == nil {
 		if phase0Blk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v1Blk, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -721,7 +721,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 		if err != nil {
@@ -745,7 +745,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		blindedBlkInterface, err := blk.ToBlinded()
 		if err != nil {
@@ -784,7 +784,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 
 	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 		if blindedBellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlk.Block)
 		if err != nil {
@@ -830,7 +830,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	phase0Blk, err := blk.PbPhase0Block()
 	if err == nil {
 		if phase0Blk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
 		if err != nil {
@@ -850,7 +850,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	altairBlk, err := blk.PbAltairBlock()
 	if err == nil {
 		if altairBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
 		if err != nil {
@@ -875,7 +875,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	bellatrixBlk, err := blk.PbBellatrixBlock()
 	if err == nil {
 		if bellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		blindedBlkInterface, err := blk.ToBlinded()
 		if err != nil {
@@ -915,7 +915,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 
 	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 		if blindedBellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
+			return nil, status.Error(codes.Internal, "Nil block")
 		}
 		v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlk.Block)
 		if err != nil {
