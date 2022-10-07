@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"

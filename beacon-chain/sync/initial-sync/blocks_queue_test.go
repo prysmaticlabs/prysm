@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p/core/peer"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
