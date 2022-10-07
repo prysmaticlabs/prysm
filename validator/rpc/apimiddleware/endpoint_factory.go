@@ -28,24 +28,24 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
 	case "/eth/v1/keystores":
-		endpoint.GetResponse = &listKeystoresResponseJson{}
-		endpoint.PostRequest = &importKeystoresRequestJson{}
-		endpoint.PostResponse = &importKeystoresResponseJson{}
-		endpoint.DeleteRequest = &deleteKeystoresRequestJson{}
-		endpoint.DeleteResponse = &deleteKeystoresResponseJson{}
+		endpoint.GetResponse = &ListKeystoresResponseJson{}
+		endpoint.PostRequest = &ImportKeystoresRequestJson{}
+		endpoint.PostResponse = &ImportKeystoresResponseJson{}
+		endpoint.DeleteRequest = &DeleteKeystoresRequestJson{}
+		endpoint.DeleteResponse = &DeleteKeystoresResponseJson{}
 	case "/eth/v1/remotekeys":
-		endpoint.GetResponse = &listRemoteKeysResponseJson{}
-		endpoint.PostRequest = &importRemoteKeysRequestJson{}
-		endpoint.PostResponse = &importRemoteKeysResponseJson{}
-		endpoint.DeleteRequest = &deleteRemoteKeysRequestJson{}
-		endpoint.DeleteResponse = &deleteRemoteKeysResponseJson{}
+		endpoint.GetResponse = &ListRemoteKeysResponseJson{}
+		endpoint.PostRequest = &ImportRemoteKeysRequestJson{}
+		endpoint.PostResponse = &ImportRemoteKeysResponseJson{}
+		endpoint.DeleteRequest = &DeleteRemoteKeysRequestJson{}
+		endpoint.DeleteResponse = &DeleteRemoteKeysResponseJson{}
 	case "/eth/v1/validator/{pubkey}/feerecipient":
-		endpoint.GetResponse = &getFeeRecipientByPubkeyResponseJson{}
-		endpoint.PostRequest = &setFeeRecipientByPubkeyRequestJson{}
+		endpoint.GetResponse = &GetFeeRecipientByPubkeyResponseJson{}
+		endpoint.PostRequest = &SetFeeRecipientByPubkeyRequestJson{}
 	case "/eth/v1/validator/{pubkey}/gas_limit":
-		endpoint.GetResponse = &getGasLimitResponseJson{}
-		endpoint.PostRequest = &setGasLimitRequestJson{}
-		endpoint.DeleteRequest = &deleteGasLimitRequestJson{}
+		endpoint.GetResponse = &GetGasLimitResponseJson{}
+		endpoint.PostRequest = &SetGasLimitRequestJson{}
+		endpoint.DeleteRequest = &DeleteGasLimitRequestJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}
