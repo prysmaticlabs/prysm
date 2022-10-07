@@ -76,6 +76,7 @@ func TestServer_GetEip4844BeaconBlock_NoBlobKZGs(t *testing.T) {
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
+		ExcessDataGas: make([]byte, fieldparams.RootLength),
 	}
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	blk := &ethpb.SignedBeaconBlockWithBlobKZGs{
@@ -117,7 +118,6 @@ func TestServer_GetEip4844BeaconBlock_NoBlobKZGs(t *testing.T) {
 			PayloadIDBytes:       &v1.PayloadIDBytes{1},
 			ExecutionPayload4844: emptyPayload,
 			BlobsBundle:          &v1.BlobsBundle{BlockHash: emptyPayload.BlockHash},
-			// TODO(inphi): Add blob kzgs
 		},
 		BeaconDB:               db,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -208,6 +208,7 @@ func TestServer_GetEip4844BeaconBlock_WithBlobKZGs(t *testing.T) {
 		PrevRandao:    random,
 		Timestamp:     uint64(tstamp.Unix()),
 		Transactions:  [][]byte{w.Bytes()},
+		ExcessDataGas: make([]byte, fieldparams.RootLength),
 	}
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte

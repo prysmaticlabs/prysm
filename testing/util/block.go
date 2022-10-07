@@ -631,6 +631,7 @@ func HydrateEIP4844BeaconBlockBody(b *ethpb.BeaconBlockBodyWithBlobKZGs) *ethpb.
 			ExtraData:     make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
+			ExcessDataGas: make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b

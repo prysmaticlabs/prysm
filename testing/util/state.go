@@ -273,6 +273,7 @@ func NewBeaconState4844(options ...func(state *ethpb.BeaconState4844) error) (st
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, 32),
+			ExcessDataGas:    make([]byte, 32),
 		},
 	}
 
