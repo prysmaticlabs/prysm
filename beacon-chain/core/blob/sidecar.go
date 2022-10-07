@@ -2,6 +2,7 @@ package blob
 
 import (
 	"math/big"
+	"math/bits"
 
 	"github.com/ethereum/go-ethereum/crypto/kzg"
 	"github.com/ethereum/go-ethereum/params"
@@ -48,7 +49,22 @@ func init() {
 		current.Mul(&current, &rootOfUnity).
 			Mod(&current, &blsModulus)
 	}
+
+	rootsOfUnity = bitReversalPermutation(rootsOfUnity)
 }
+
+// Return a copy with bit-reversed permutation. This operation is idempotent.
+// l is the array of roots of unity
+func bitReversalPermutation(l [params.FieldElementsPerBlob]bls.Fr) [params.FieldElementsPerBlob]bls.Fr {
+		var out [params.FieldElementsPerBlob]bls.Fr
+
+		for i := range l {
+			j := bits.Reverse64(uint64(i)) >> (65 - bits.Len64(params.FieldElementsPerBlob))
+			out[i] = l[j]
+		}
+
+		return out
+ }
 
 // ValidateBlobsSidecar verifies the integrity of a sidecar, returning nil if the blob is valid.
 // It implements validate_blob_transaction_wrapper in the EIP-4844 spec.
