@@ -29,13 +29,13 @@ var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 type sszConfig struct {
 	fileName     string
-	responseJson sszResponse
+	responseJson SszResponse
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_state.ssz",
-		responseJson: &sszResponseJson{},
+		responseJson: &SszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -43,7 +43,7 @@ func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_block.ssz",
-		responseJson: &sszResponseJson{},
+		responseJson: &SszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -51,7 +51,7 @@ func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_state.ssz",
-		responseJson: &versionedSSZResponseJson{},
+		responseJson: &VersionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -59,7 +59,7 @@ func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_block.ssz",
-		responseJson: &versionedSSZResponseJson{},
+		responseJson: &VersionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -80,7 +80,7 @@ func handleSubmitBlindedBlockSSZ(
 func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "produce_beacon_block.ssz",
-		responseJson: &versionedSSZResponseJson{},
+		responseJson: &VersionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -93,7 +93,7 @@ func handleProduceBlindedBlockSSZ(
 ) (handled bool) {
 	config := sszConfig{
 		fileName:     "produce_blinded_beacon_block.ssz",
-		responseJson: &versionedSSZResponseJson{},
+		responseJson: &VersionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -275,7 +275,7 @@ func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
 	if err != nil {
 		return apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
-	j := sszRequestJson{Data: base64.StdEncoding.EncodeToString(buf)}
+	j := SszRequestJson{Data: base64.StdEncoding.EncodeToString(buf)}
 	data, err := json.Marshal(j)
 	if err != nil {
 		return apimiddleware.InternalServerErrorWithMessage(err, "could not prepare POST data")
@@ -286,7 +286,7 @@ func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
 	return nil
 }
 
-func serializeMiddlewareResponseIntoSSZ(respJson sszResponse) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
+func serializeMiddlewareResponseIntoSSZ(respJson SszResponse) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
 	data, err := base64.StdEncoding.DecodeString(respJson.SSZData())
 	if err != nil {
@@ -363,16 +363,16 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 
 			switch string(msg.Event) {
 			case events.HeadTopic:
-				data = &eventHeadJson{}
+				data = &EventHeadJson{}
 			case events.BlockTopic:
-				data = &receivedBlockDataJson{}
+				data = &ReceivedBlockDataJson{}
 			case events.AttestationTopic:
-				data = &attestationJson{}
+				data = &AttestationJson{}
 
 				// Data received in the event does not fit the expected event stream output.
 				// We extract the underlying attestation from event data
 				// and assign the attestation back to event data for further processing.
-				eventData := &aggregatedAttReceivedDataJson{}
+				eventData := &AggregatedAttReceivedDataJson{}
 				if err := json.Unmarshal(msg.Data, eventData); err != nil {
 					return apimiddleware.InternalServerError(err)
 				}
@@ -382,15 +382,15 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				}
 				msg.Data = attData
 			case events.VoluntaryExitTopic:
-				data = &signedVoluntaryExitJson{}
+				data = &SignedVoluntaryExitJson{}
 			case events.FinalizedCheckpointTopic:
-				data = &eventFinalizedCheckpointJson{}
+				data = &EventFinalizedCheckpointJson{}
 			case events.ChainReorgTopic:
-				data = &eventChainReorgJson{}
+				data = &EventChainReorgJson{}
 			case events.SyncCommitteeContributionTopic:
-				data = &signedContributionAndProofJson{}
+				data = &SignedContributionAndProofJson{}
 			case "error":
-				data = &eventErrorJson{}
+				data = &EventErrorJson{}
 			default:
 				return &apimiddleware.DefaultErrorJson{
 					Message: fmt.Sprintf("Event type '%s' not supported", string(msg.Event)),
