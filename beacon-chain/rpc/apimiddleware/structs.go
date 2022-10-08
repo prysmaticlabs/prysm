@@ -461,7 +461,7 @@ type beaconBlockBodyEip4844Json struct {
 	Deposits          []*depositJson             `json:"deposits"`
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
-	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
+	ExecutionPayload  *executionPayload4844Json  `json:"execution_payload"`
 	BlobKzgs          []string                   `json:"blob_kzgs" hex:"true"`
 }
 
@@ -492,6 +492,24 @@ type executionPayloadJson struct {
 	TimeStamp     string   `json:"timestamp"`
 	ExtraData     string   `json:"extra_data" hex:"true"`
 	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
+	BlockHash     string   `json:"block_hash" hex:"true"`
+	Transactions  []string `json:"transactions" hex:"true"`
+}
+
+type executionPayload4844Json struct {
+	ParentHash    string   `json:"parent_hash" hex:"true"`
+	FeeRecipient  string   `json:"fee_recipient" hex:"true"`
+	StateRoot     string   `json:"state_root" hex:"true"`
+	ReceiptsRoot  string   `json:"receipts_root" hex:"true"`
+	LogsBloom     string   `json:"logs_bloom" hex:"true"`
+	PrevRandao    string   `json:"prev_randao" hex:"true"`
+	BlockNumber   string   `json:"block_number"`
+	GasLimit      string   `json:"gas_limit"`
+	GasUsed       string   `json:"gas_used"`
+	TimeStamp     string   `json:"timestamp"`
+	ExtraData     string   `json:"extra_data" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
+	ExcessDataGas string   `json:"excess_data_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
 }
