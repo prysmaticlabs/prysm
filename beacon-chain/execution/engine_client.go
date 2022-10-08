@@ -176,7 +176,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (interfaces
 	// EIP-4844 NOTE: Backwards compatibility for pre-4844 EVMs.
 	// We may need to revisit this once we've finalized the 4844 upgrade procedure.
 	var data interface{}
-	if payload.ExcessBlobs == nil {
+	if payload.ExcessDataGas == nil {
 		data, err = payload.Pre4844()
 	} else {
 		data, err = payload.Post4844()
