@@ -440,13 +440,9 @@ type tempBlobsSidecarJson struct {
 	AggregatedProof string         `json:"kzg_aggregated_proof"`
 }
 
-type tempBlobsResponseJson struct {
-	Data tempBlobsSidecarJson `json:"data"`
-}
-
 // This takes the blobs list and exposes the data field of each blob as the blob content itself in the json
 func prepareBlobsResponse(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	tempContainer := &tempBlobsResponseJson{}
+	tempContainer := &tempBlobsSidecarJson{}
 	if err := json.Unmarshal(body, tempContainer); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
 	}
@@ -456,12 +452,12 @@ func prepareBlobsResponse(body []byte, responseContainer interface{}) (apimiddle
 	}
 
 	container.Data = &blobsSidecarJson{
-		BeaconBlockRoot: tempContainer.Data.BeaconBlockRoot,
-		BeaconBlockSlot: tempContainer.Data.BeaconBlockSlot,
-		Blobs:           make([]string, len(tempContainer.Data.Blobs)),
-		AggregatedProof: tempContainer.Data.AggregatedProof,
+		BeaconBlockRoot: tempContainer.BeaconBlockRoot,
+		BeaconBlockSlot: tempContainer.BeaconBlockSlot,
+		Blobs:           make([]string, len(tempContainer.Blobs)),
+		AggregatedProof: tempContainer.AggregatedProof,
 	}
-	for i, blob := range tempContainer.Data.Blobs {
+	for i, blob := range tempContainer.Blobs {
 		container.Data.Blobs[i] = blob.Data
 	}
 	return false, nil

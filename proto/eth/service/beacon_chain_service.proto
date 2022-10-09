@@ -391,7 +391,7 @@ service BeaconChain {
 
   // GetBlobs retrieves blob data by block ID and data hash
   rpc GetBlobsSidecar(v1.BlobsRequest) returns (v1.BlobsResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/blobs/sidecar"};
+    option (google.api.http) = {get: "/internal/eth/v1/blobs/sidecar/{block_id}"};
   }
 }
 
