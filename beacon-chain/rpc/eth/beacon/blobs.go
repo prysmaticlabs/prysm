@@ -8,12 +8,13 @@ import (
 )
 
 func (bs *Server) GetBlobsSidecar(ctx context.Context, req *ethpbv1.BlobsRequest) (*ethpbv1.BlobsResponse, error) {
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlockError(blk, err)
+	sblk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	err = handleGetBlockError(sblk, err)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetBlobs")
 	}
-	root, err := blk.Block().HashTreeRoot()
+	block := sblk.Block()
+	root, err := block.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to htr block")
 	}
@@ -22,18 +23,22 @@ func (bs *Server) GetBlobsSidecar(ctx context.Context, req *ethpbv1.BlobsRequest
 		return nil, fmt.Errorf("failed to get blobs sidecar for block %x", root)
 	}
 	var blobs []*ethpbv1.Blob
-	for _, b := range sidecar.Blobs {
-		var data []byte
-		// go through each element, concat them
-		for _, el := range b.Blob {
-			data = append(data, el...)
+	var aggregatedProof []byte
+	if sidecar != nil {
+		aggregatedProof = sidecar.AggregatedProof
+		for _, b := range sidecar.Blobs {
+			var data []byte
+			// go through each element, concat them
+			for _, el := range b.Blob {
+				data = append(data, el...)
+			}
+			blobs = append(blobs, &ethpbv1.Blob{Data: data})
 		}
-		blobs = append(blobs, &ethpbv1.Blob{Data: data})
 	}
 	return &ethpbv1.BlobsResponse{
-		BeaconBlockRoot: sidecar.BeaconBlockRoot,
-		BeaconBlockSlot: uint64(sidecar.BeaconBlockSlot),
+		BeaconBlockRoot: root[:],
+		BeaconBlockSlot: uint64(block.Slot()),
 		Blobs:           blobs,
-		AggregatedProof: sidecar.AggregatedProof,
+		AggregatedProof: aggregatedProof,
 	}, nil
 }
