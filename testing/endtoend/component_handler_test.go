@@ -110,7 +110,7 @@ func (c *componentHandler) setup() {
 	eth1Nodes := eth1.NewNodeSet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
-			return errors.Wrap(err, "ETH1 nodes require ETH1 miner to run")
+			return errors.Wrap(err, "Execution nodes require miner to run")
 		}
 		eth1Nodes.SetMinerENR(eth1Miner.ENR())
 		if err := eth1Nodes.Start(ctx); err != nil {
