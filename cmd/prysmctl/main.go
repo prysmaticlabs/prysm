@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/deprecated"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/p2p"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/unfinalizedblocks"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/weaksubjectivity"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -33,4 +34,5 @@ func init() {
 	prysmctlCommands = append(prysmctlCommands, p2p.Commands...)
 	prysmctlCommands = append(prysmctlCommands, testnet.Commands...)
 	prysmctlCommands = append(prysmctlCommands, weaksubjectivity.Commands...)
+	prysmctlCommands = append(prysmctlCommands, unfinalizedblocks.Commands...)
 }
