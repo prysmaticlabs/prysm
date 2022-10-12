@@ -4,9 +4,9 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/libp2p/go-libp2p-core/control"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/control"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"github.com/sirupsen/logrus"
@@ -153,8 +153,8 @@ func configureFilter(cfg *Config) (*multiaddr.Filters, error) {
 	return addrFilter, nil
 }
 
-//helper function to either accept or deny all private addresses
-//if a new rule for a private address is in conflict with a previous one, log a warning
+// helper function to either accept or deny all private addresses
+// if a new rule for a private address is in conflict with a previous one, log a warning
 func privateCIDRFilter(addrFilter *multiaddr.Filters, action multiaddr.Action) (*multiaddr.Filters, error) {
 	for _, privCidr := range privateCIDRList {
 		_, ipnet, err := net.ParseCIDR(privCidr)

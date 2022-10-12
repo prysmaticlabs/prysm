@@ -100,6 +100,9 @@ type ReadOnlyValidator interface {
 	ExitEpoch() types.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
 	WithdrawalCredentials() []byte
+	HasETH1WithdrawalCredential() bool
+	IsFullyWithdrawable(types.Epoch) bool
+	IsPartiallyWithdrawable(uint64) bool
 	Slashed() bool
 	IsNil() bool
 }
