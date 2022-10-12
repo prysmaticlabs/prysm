@@ -76,6 +76,10 @@ func TestReadOnlyValidator_HasETH1WithdrawalCredentials(t *testing.T) {
 	v, err = statenative.NewValidator(&ethpb.Validator{WithdrawalCredentials: creds})
 	require.NoError(t, err)
 	require.Equal(t, true, v.HasETH1WithdrawalCredential())
+	// No Withdrawal cred
+	v, err = statenative.NewValidator(&ethpb.Validator{})
+	require.NoError(t, err)
+	require.Equal(t, false, v.HasETH1WithdrawalCredential())
 }
 
 func TestReadOnlyValidator_IsFullyWithdrawable(t *testing.T) {

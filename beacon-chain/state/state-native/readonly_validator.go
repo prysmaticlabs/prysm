@@ -83,7 +83,7 @@ func (v readOnlyValidator) WithdrawalCredentials() []byte {
 // Withdrawal prefix.
 func (v readOnlyValidator) HasETH1WithdrawalCredential() bool {
 	cred := v.WithdrawalCredentials()
-	return cred[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	return len(cred) > 0 && cred[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 }
 
 // IsFullyWithdrawable returns whether the validator is able to perform a full
