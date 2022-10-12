@@ -294,6 +294,28 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 				return err
 			}
+		case *ethpb.BeaconStateCapella:
+			pbState, err := statenative.ProtobufBeaconStateCapella(rawType)
+			if err != nil {
+				return err
+			}
+			if pbState == nil {
+				return errors.New("nil state")
+			}
+			valEntries := pbState.Validators
+			pbState.Validators = make([]*ethpb.Validator, 0)
+			rawObj, err := pbState.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			encodedState := snappy.Encode(nil, append(capellaKey, rawObj...))
+			if err := bucket.Put(rt[:], encodedState); err != nil {
+				return err
+			}
+			pbState.Validators = valEntries
+			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+				return err
+			}
 		default:
 			return errors.New("invalid state type")
 		}
@@ -451,11 +473,25 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
+	case hasCapellaKey(enc):
+		// Marshal state bytes to capella beacon state.
+		protoState := &ethpb.BeaconStateCapella{}
+		if err := protoState.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for capella")
+		}
+		ok, err := s.isStateValidatorMigrationOver()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			protoState.Validators = validatorEntries
+		}
+		return statenative.InitializeFromProtoUnsafeCapella(protoState)
 	case hasBellatrixKey(enc):
-		// Marshal state bytes to altair beacon state.
+		// Marshal state bytes to bellatrix beacon state.
 		protoState := &ethpb.BeaconStateBellatrix{}
 		if err := protoState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for bellatrix")
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
@@ -531,6 +567,19 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(bellatrixKey, rawObj...)), nil
+	case *ethpb.BeaconStateCapella:
+		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateCapella)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		if rState == nil {
+			return nil, errors.New("nil state")
+		}
+		rawObj, err := rState.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		return snappy.Encode(nil, append(capellaKey, rawObj...)), nil
 	default:
 		return nil, errors.New("invalid inner state")
 	}
