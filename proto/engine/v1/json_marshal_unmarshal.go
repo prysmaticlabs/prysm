@@ -124,6 +124,7 @@ type executionPayloadJSON struct {
 	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
+	Fees          string          `json:"fees"`
 }
 
 // MarshalJSON --
@@ -145,6 +146,8 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	timeStamp := hexutil.Uint64(e.Timestamp)
 	recipient := common.BytesToAddress(e.FeeRecipient)
 	logsBloom := hexutil.Bytes(e.LogsBloom)
+	fee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.Fees))
+	feeHex := hexutil.EncodeBig(fee)
 	return json.Marshal(executionPayloadJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
@@ -160,6 +163,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
+		Fees:          feeHex,
 	})
 }
 
@@ -233,6 +237,12 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		transactions[i] = tx
 	}
 	e.Transactions = transactions
+
+	fees, err := hexutil.DecodeBig(dec.Fees)
+	if err != nil {
+		return err
+	}
+	e.Fees = bytesutil.PadTo(bytesutil.ReverseByteOrder(fees.Bytes()), fieldparams.RootLength)
 	return nil
 }
 

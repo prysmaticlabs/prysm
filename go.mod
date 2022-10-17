@@ -258,3 +258,5 @@ replace github.com/MariusVanDerWijden/tx-fuzz => github.com/marcopolo/tx-fuzz v0
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220721162526-0d1c40b5f064
+
+replace github.com/ethereum/go-ethereum => github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20221016200254-6ac55f94f8c1

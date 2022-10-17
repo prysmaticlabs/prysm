@@ -128,6 +128,12 @@ var (
 		Name:  "enable-full-ssz-data-logging",
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
+	builderBlockFraction = &cli.IntFlag{
+		Name:   "use-builder-block-fraction",
+		Usage:  "Node will choose local block over builder block if the local block has a higher fee after builder block mutiplies the fraction. Default is 100%",
+		Value:  100,
+		Hidden: true,
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -173,6 +179,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	disableDefensivePull,
 	enableFullSSZDataLogging,
+	builderBlockFraction,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

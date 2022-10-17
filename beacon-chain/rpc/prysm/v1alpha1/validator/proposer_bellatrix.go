@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -44,17 +45,18 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, err
 	}
 
+	var builderOk bool
+	var builderBlock *ethpb.GenericBeaconBlock
 	if !req.SkipMevBoost {
 		registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
 		if registered && err == nil {
-			builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
+			builderOk, builderBlock, err = vs.GetAndBuildBlindBlock(ctx, altairBlk)
 			if err != nil {
 				// In the event of an error, the node should fall back to default execution engine for building block.
 				log.WithError(err).Error("Failed to build a block from external builder, falling " +
 					"back to local execution client")
 				builderGetPayloadMissCount.Inc()
-			} else if builderReady {
-				return b, nil
+				builderOk = false
 			}
 		} else if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{
@@ -66,6 +68,17 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
 	if err != nil {
 		return nil, err
+	}
+
+	// Only use builder payload if it has a higher fee (after fraction) comparing to local payload
+	if builderOk {
+		builderPayload := builderBlock.GetBellatrix().Body.ExecutionPayload
+		builderFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(builderPayload.Fees))
+		builderFee.Div(builderFee, big.NewInt(100)).Mul(builderFee, big.NewInt(int64(features.Get().BuilderBlockFraction)))
+		localFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(payload.Fees))
+		if builderFee.Cmp(localFee) > 1 {
+			payload = builderPayload
+		}
 	}
 
 	blk := &ethpb.BeaconBlockBellatrix{

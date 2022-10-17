@@ -69,6 +69,8 @@ type Flags struct {
 	EnableOnlyBlindedBeaconBlocks     bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
+	BuilderBlockFraction int // BuilderBlockFraction enables proposer to selection local block if it's higher than builder block mutiplies this fraction.
+
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
@@ -255,6 +257,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableFullSSZDataLogging.Name) {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
+	}
+	if ctx.IsSet(builderBlockFraction.Name) {
+		logEnabled(builderBlockFraction)
+		cfg.BuilderBlockFraction = builderBlockFraction.Value
 	}
 	Init(cfg)
 	return nil
