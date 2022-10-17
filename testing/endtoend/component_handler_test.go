@@ -96,7 +96,7 @@ func (c *componentHandler) setup() {
 	eth1Miner := eth1.NewMiner()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+			return errors.Wrap(err, "miner require boot node to run")
 		}
 		eth1Miner.SetBootstrapENR(bootNode.ENR())
 		if err := eth1Miner.Start(ctx); err != nil {
@@ -110,7 +110,7 @@ func (c *componentHandler) setup() {
 	eth1Nodes := eth1.NewNodeSet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
+			return errors.Wrap(err, "execution nodes require miner to run")
 		}
 		eth1Nodes.SetMinerENR(eth1Miner.ENR())
 		if err := eth1Nodes.Start(ctx); err != nil {
@@ -137,7 +137,7 @@ func (c *componentHandler) setup() {
 	proxies := eth1.NewProxySet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
+			return errors.Wrap(err, "proxies require execution nodes to run")
 		}
 		if err := proxies.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start proxies")
@@ -150,7 +150,7 @@ func (c *componentHandler) setup() {
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode}); err != nil {
-			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
+			return errors.Wrap(err, "beacon nodes require proxies, execution and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
 		if err := beaconNodes.Start(ctx); err != nil {
@@ -164,7 +164,7 @@ func (c *componentHandler) setup() {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
 			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode, beaconNodes}); err != nil {
-				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
+				return errors.Wrap(err, "lighthouse beacon nodes require proxies, execution, beacon and boot node to run")
 			}
 			lighthouseNodes.SetENR(bootNode.ENR())
 			if err := lighthouseNodes.Start(ctx); err != nil {
@@ -196,10 +196,10 @@ func (c *componentHandler) setup() {
 		lighthouseValidatorNodes = components.NewLighthouseValidatorNodeSet(config)
 		g.Go(func() error {
 			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{keyGen, lighthouseNodes}); err != nil {
-				return errors.Wrap(err, "validator nodes require beacon nodes to run")
+				return errors.Wrap(err, "lighthouse validator nodes require lighthouse beacon nodes to run")
 			}
 			if err := lighthouseValidatorNodes.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start validator nodes")
+				return errors.Wrap(err, "failed to start lighthouse validator nodes")
 			}
 			return nil
 		})
