@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -400,7 +401,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
-	wsc, err := web3SignerConfig(c.cliCtx)
+	wsc, err := Web3SignerConfig(c.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -437,7 +438,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(v)
 }
 
-func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
 	var web3signerConfig *remoteweb3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
@@ -525,7 +526,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if fileConfig == nil {
 		return nil, nil
 	}
-	//convert file config to proposer config for internal use
+	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
 	// default fileConfig is mandatory
@@ -632,7 +633,7 @@ func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConf
 	if gasLimit == 0 {
 		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 	}
-	//TODO(10810): add in warning for ranges
+	// TODO(10810): add in warning for ranges
 	return gasLimit
 }
 
@@ -691,8 +692,8 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
+	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
