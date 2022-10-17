@@ -52,7 +52,7 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 		return errors.New("could not get sync status")
 	}
 
-	if (*syncStatus).Syncing {
+	if syncStatus.Syncing {
 		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 

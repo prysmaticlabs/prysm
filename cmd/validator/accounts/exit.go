@@ -66,12 +66,16 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 		}
 		config.GenesisValidatorsRoot = resp.GenesisValidatorsRoot
 		w, km, err = walletWithWeb3SignerKeymanager(c, config)
+		if err != nil {
+			return err
+		}
 	} else {
 		w, km, err = walletWithKeymanager(c)
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
+
 	opts := []accounts.Option{
 		accounts.WithWallet(w),
 		accounts.WithKeymanager(km),
