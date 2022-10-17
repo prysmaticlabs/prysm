@@ -11,6 +11,7 @@ go_library(
         "//cmd/validator:__subpackages__",
         "//testing/endtoend:__subpackages__",
         "//validator:__subpackages__",
+        "//cmd/prysmctl:__subpackages__",
     ],
     deps = [
         "//config/params:go_default_library",
