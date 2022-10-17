@@ -697,21 +697,6 @@ func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 	}
 }
 
-func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBodyBellatrix{
-		RandaoReveal:           bytes(32),
-		Eth1Data:               genEth1Data(),
-		Graffiti:               bytes(32),
-		ProposerSlashings:      genProposerSlashings(5),
-		AttesterSlashings:      genAttesterSlashings(5),
-		Attestations:           genAttestations(10),
-		Deposits:               genDeposits(5),
-		VoluntaryExits:         genSignedVoluntaryExits(12),
-		SyncAggregate:          genSyncAggregate(),
-		ExecutionPayloadHeader: genPayloadHeader(),
-	}
-}
-
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
