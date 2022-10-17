@@ -14,14 +14,20 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.version == version.Phase0 || b.version == version.Altair {
+	if b.version < version.Bellatrix {
 		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
-	header, ok := val.Proto().(*enginev1.ExecutionPayloadHeader)
-	if !ok {
+
+	switch header := val.Proto().(type) {
+	case *enginev1.ExecutionPayloadHeader:
+		b.latestExecutionPayloadHeader = header
+		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
+		return nil
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		b.latestExecutionPayloadHeaderCapella = header
+		b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeaderCapella)
+		return nil
+	default:
 		return errors.New("value must be an execution payload header")
 	}
-	b.latestExecutionPayloadHeader = header
-	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
-	return nil
 }

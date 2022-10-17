@@ -33,6 +33,14 @@ func TestBeaconState_PreviousJustifiedCheckpointNil_Bellatrix(t *testing.T) {
 		})
 }
 
+func TestBeaconState_PreviousJustifiedCheckpointNil_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpointNil(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{})
+		})
+}
+
 func TestBeaconState_PreviousJustifiedCheckpoint_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpoint(
 		t,
@@ -54,6 +62,14 @@ func TestBeaconState_PreviousJustifiedCheckpoint_Bellatrix(t *testing.T) {
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{PreviousJustifiedCheckpoint: cp})
+		})
+}
+
+func TestBeaconState_PreviousJustifiedCheckpoint_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpoint(
+		t,
+		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{PreviousJustifiedCheckpoint: cp})
 		})
 }
 
@@ -81,6 +97,14 @@ func TestBeaconState_CurrentJustifiedCheckpointNil_Bellatrix(t *testing.T) {
 		})
 }
 
+func TestBeaconState_CurrentJustifiedCheckpointNil_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpointNil(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{})
+		})
+}
+
 func TestBeaconState_CurrentJustifiedCheckpoint_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpoint(
 		t,
@@ -102,6 +126,14 @@ func TestBeaconState_CurrentJustifiedCheckpoint_Bellatrix(t *testing.T) {
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{CurrentJustifiedCheckpoint: cp})
+		})
+}
+
+func TestBeaconState_CurrentJustifiedCheckpoint_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpoint(
+		t,
+		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{CurrentJustifiedCheckpoint: cp})
 		})
 }
 
@@ -129,6 +161,14 @@ func TestBeaconState_FinalizedCheckpointNil_Bellatrix(t *testing.T) {
 		})
 }
 
+func TestBeaconState_FinalizedCheckpointNil_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateFinalizedCheckpointNil(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{})
+		})
+}
+
 func TestBeaconState_FinalizedCheckpoint_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateFinalizedCheckpoint(
 		t,
@@ -150,6 +190,14 @@ func TestBeaconState_FinalizedCheckpoint_Bellatrix(t *testing.T) {
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
 			return InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{FinalizedCheckpoint: cp})
+		})
+}
+
+func TestBeaconState_FinalizedCheckpoint_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateFinalizedCheckpoint(
+		t,
+		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{FinalizedCheckpoint: cp})
 		})
 }
 
@@ -177,6 +225,14 @@ func TestBeaconState_JustificationBitsNil_Bellatrix(t *testing.T) {
 		})
 }
 
+func TestBeaconState_JustificationBitsNil_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateJustificationBitsNil(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{})
+		})
+}
+
 func TestBeaconState_JustificationBits_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateJustificationBits(
 		t,
@@ -198,5 +254,13 @@ func TestBeaconState_JustificationBits_Bellatrix(t *testing.T) {
 		t,
 		func(bits bitfield.Bitvector4) (state.BeaconState, error) {
 			return InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{JustificationBits: bits})
+		})
+}
+
+func TestBeaconState_JustificationBits_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateJustificationBits(
+		t,
+		func(bits bitfield.Bitvector4) (state.BeaconState, error) {
+			return InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{JustificationBits: bits})
 		})
 }

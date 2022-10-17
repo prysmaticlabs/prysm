@@ -252,7 +252,7 @@ func TestReceiveEvents(t *testing.T) {
 
 	go func() {
 		base64Val := "Zm9v"
-		data := &eventFinalizedCheckpointJson{
+		data := &EventFinalizedCheckpointJson{
 			Block: base64Val,
 			State: base64Val,
 			Epoch: "1",
@@ -301,7 +301,7 @@ func TestReceiveEvents_TrailingSpace(t *testing.T) {
 
 	go func() {
 		base64Val := "Zm9v"
-		data := &eventFinalizedCheckpointJson{
+		data := &EventFinalizedCheckpointJson{
 			Block: base64Val,
 			State: base64Val,
 			Epoch: "1",
@@ -327,7 +327,7 @@ data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":
 
 func TestWriteEvent(t *testing.T) {
 	base64Val := "Zm9v"
-	data := &eventFinalizedCheckpointJson{
+	data := &EventFinalizedCheckpointJson{
 		Block: base64Val,
 		State: base64Val,
 		Epoch: "1",
@@ -341,7 +341,7 @@ func TestWriteEvent(t *testing.T) {
 	w := httptest.NewRecorder()
 	w.Body = &bytes.Buffer{}
 
-	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
+	errJson := writeEvent(msg, w, &EventFinalizedCheckpointJson{})
 	require.Equal(t, true, errJson == nil)
 	written := w.Body.String()
 	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\",\"execution_optimistic\":false}\n\n", written)
