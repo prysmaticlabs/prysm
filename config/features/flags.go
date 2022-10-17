@@ -124,6 +124,10 @@ var (
 		Value:  false,
 		Hidden: true,
 	}
+	enableFullSSZDataLogging = &cli.BoolFlag{
+		Name:  "enable-full-ssz-data-logging",
+		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -168,6 +172,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableOnlyBlindedBeaconBlocks,
 	enableStartupOptimistic,
 	disableDefensivePull,
+	enableFullSSZDataLogging,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

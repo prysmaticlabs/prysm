@@ -100,6 +100,7 @@ ssz_gen_marshal(
         "BeaconState",
         "BeaconStateAltair",
         "BeaconStateBellatrix",
+        "BeaconStateCapella",
         "SigningData",
         "SyncCommittee",
         "SyncAggregatorSelectionData",

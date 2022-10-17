@@ -10,7 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/v3/network"
 	_ "github.com/prysmaticlabs/prysm/v3/runtime/maxprocs"

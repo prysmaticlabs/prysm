@@ -47,6 +47,7 @@ type State struct {
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 	backfillStatus          *backfill.Status
+	migrationLock           *sync.Mutex
 	fc                      forkchoice.ForkChoicer
 }
 
@@ -89,7 +90,8 @@ func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...St
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
-		fc: fc,
+		migrationLock: new(sync.Mutex),
+		fc:            fc,
 	}
 	for _, o := range opts {
 		o(s)
