@@ -338,14 +338,3 @@ func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error
 	}
 	return pbState, nil
 }
-
-// InnerStateUnsafe returns the pointer value of the underlying
-// beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) InnerStateUnsafe() interface{} {
-	return b.ToProtoUnsafe()
-}
-
-// CloneInnerState the beacon state into a protobuf for usage.
-func (b *BeaconState) CloneInnerState() interface{} {
-	return b.ToProto()
-}
