@@ -1,6 +1,7 @@
 package interop_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestKeyGenerator(t *testing.T) {
 	require.NoError(t, err)
 	testCases := &KeyTest{}
 	require.NoError(t, yaml.Unmarshal(file, testCases))
-	priv, _, err := interop.DeterministicallyGenerateKeys(0, 1000)
+	priv, pubkeys, err := interop.DeterministicallyGenerateKeys(0, 1000)
 	require.NoError(t, err)
 	// cross-check with the first 1000 keys generated from the python spec
 	for i, key := range priv {
@@ -38,5 +39,6 @@ func TestKeyGenerator(t *testing.T) {
 			continue
 		}
 		assert.DeepEqual(t, key.Marshal(), nKey)
+		fmt.Println(fmt.Sprintf("pubkey: %s privkey: %s ", hexutil.Encode(pubkeys[i].Marshal()), hexutil.Encode(key.Marshal())))
 	}
 }

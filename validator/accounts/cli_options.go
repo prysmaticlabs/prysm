@@ -227,7 +227,7 @@ func WithMnemonic25thWord(mnemonic25thWord string) Option {
 	}
 }
 
-// WithMnemonic25thWord specifies the password for backups.
+// WithNumAccounts specifies the number of accounts.
 func WithNumAccounts(numAccounts int) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.numAccounts = numAccounts

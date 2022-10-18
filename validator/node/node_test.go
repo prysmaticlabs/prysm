@@ -195,7 +195,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 				require.NoError(t, set.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, key))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := web3SignerConfig(cliCtx)
+			got, err := Web3SignerConfig(cliCtx)
 			if tt.wantErrMsg != "" {
 				require.ErrorContains(t, tt.wantErrMsg, err)
 				return
@@ -617,7 +617,7 @@ func TestProposerSettings(t *testing.T) {
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
 					w.Header().Set("Content-Type", "application/json")
-					_, err := fmt.Fprintf(w, string(content))
+					_, err := fmt.Fprintf(w, "%s", content)
 					require.NoError(t, err)
 				}))
 				defer srv.Close()
