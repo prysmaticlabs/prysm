@@ -2206,7 +2206,7 @@ type newForkChoicer func() forkchoice.ForkChoicer
 // 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
 // INVALID from NewPayload, with LVH block 12. No head is viable. We check that
 // the node can reboot from this state
-func noViableHead_Reboot(t *testing.T) {
+func TestNoViableHead_Reboot(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 6
