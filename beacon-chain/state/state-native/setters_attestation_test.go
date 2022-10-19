@@ -55,7 +55,8 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	s := st.(*BeaconState)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
 	for i := nativetypes.FieldIndex(0); i < nativetypes.FieldIndex(params.BeaconConfig().BeaconStateFieldCount); i++ {
 		s.dirtyFields[i] = true
 	}
