@@ -83,7 +83,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		srv.Stop()
 	})
 	bState, _ := util.DeterministicGenesisState(t, 10)
-	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProtoUnsafe())
 	require.NoError(t, err)
 	mockTrie, err := trie.NewTrie(0)
 	require.NoError(t, err)
@@ -117,7 +117,8 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
-	stateGen := stategen.New(beaconDB)
+	fc := doublylinkedtree.New()
+	stateGen := stategen.New(beaconDB, fc)
 	// Safe a state in stategen to purposes of testing a service stop / shutdown.
 	require.NoError(t, stateGen.SaveState(ctx, bytesutil.ToBytes32(bState.FinalizedCheckpoint().Root), bState))
 
@@ -128,7 +129,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithP2PBroadcaster(&mockBroadcaster{}),
 		WithStateNotifier(&mockBeaconNode{}),
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(fc),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 	}
@@ -305,9 +306,10 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
+	fc := doublylinkedtree.New()
+	stateGen := stategen.New(beaconDB, fc)
 	c, err := NewService(ctx,
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(fc),
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
 		WithAttestationService(attSrv),
@@ -323,7 +325,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	assert.DeepEqual(t, headBlock, pb, "Head block incorrect")
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Head state incorrect")
 	assert.Equal(t, c.HeadSlot(), headBlock.Block.Slot, "Head slot incorrect")
 	r, err := c.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -364,9 +366,10 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	}
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, ss))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: headRoot[:], Epoch: slots.ToEpoch(finalizedSlot)}))
-	stateGen := stategen.New(beaconDB)
+	fc := doublylinkedtree.New()
+	stateGen := stategen.New(beaconDB, fc)
 	c, err := NewService(ctx,
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(fc),
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
 		WithAttestationService(attSrv),
@@ -377,7 +380,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, c.StartFromSavedState(headState))
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
+	assert.DeepSSZEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	pb, err := c.head.block.Proto()
 	require.NoError(t, err)
@@ -387,8 +390,9 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 func TestChainService_SaveHeadNoDB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
+	fc := doublylinkedtree.New()
 	s := &Service{
-		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB), ForkChoiceStore: doublylinkedtree.New()},
+		cfg: &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB, fc), ForkChoiceStore: fc},
 	}
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
@@ -431,7 +435,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
+		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB, doublylinkedtree.New())},
 		ctx:            ctx,
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
@@ -531,9 +535,10 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: slots.ToEpoch(finalizedSlot), Root: headRoot[:]}))
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
+	fc := doublylinkedtree.New()
+	stateGen := stategen.New(beaconDB, fc)
 	c, err := NewService(ctx,
-		WithForkChoiceStore(doublylinkedtree.New()),
+		WithForkChoiceStore(fc),
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
 		WithAttestationService(attSrv),

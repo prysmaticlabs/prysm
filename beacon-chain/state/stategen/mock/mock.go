@@ -51,6 +51,11 @@ func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (s
 	return m.StatesByRoot[blockRoot], nil
 }
 
+// BalancesByRoot --
+func (*MockStateManager) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+	return []uint64{}, nil
+}
+
 // StateByRootInitialSync --
 func (_ *MockStateManager) StateByRootInitialSync(_ context.Context, _ [32]byte) (state.BeaconState, error) {
 	panic("implement me")

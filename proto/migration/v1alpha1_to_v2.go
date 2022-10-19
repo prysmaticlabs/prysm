@@ -431,9 +431,13 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
-	sourceLatestExecutionPayloadHeader, err := st.LatestExecutionPayloadHeader()
+	executionPayloadHeaderInterface, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get latest execution payload header")
+	}
+	sourceLatestExecutionPayloadHeader, ok := executionPayloadHeaderInterface.Proto().(*enginev1.ExecutionPayloadHeader)
+	if !ok {
+		return nil, errors.New("execution payload header has incorrect type")
 	}
 
 	result := &ethpbv2.BeaconStateBellatrix{

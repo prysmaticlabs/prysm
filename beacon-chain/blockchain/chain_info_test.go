@@ -84,7 +84,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB)),
+		WithStateGen(stategen.New(beaconDB, fcs)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -198,7 +198,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	c.head = &head{state: s}
 	headState, err := c.HeadState(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Incorrect head state received")
+	assert.DeepEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Incorrect head state received")
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {

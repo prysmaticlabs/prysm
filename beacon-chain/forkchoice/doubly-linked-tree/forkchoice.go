@@ -136,7 +136,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 			return err
 		}
 		if ph != nil {
-			copy(payloadHash[:], ph.BlockHash)
+			copy(payloadHash[:], ph.BlockHash())
 		}
 	}
 	jc := state.CurrentJustifiedCheckpoint()
@@ -663,4 +663,9 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 	}
 	return resp, nil
 
+}
+
+// SetBalancesByRooter sets the balanceByRoot handler in forkchoice
+func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
+	f.balancesByRoot = handler
 }

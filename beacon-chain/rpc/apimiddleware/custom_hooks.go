@@ -25,14 +25,14 @@ func wrapFeeRecipientsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*feeRecipientsRequestJSON); !ok {
+	if _, ok := endpoint.PostRequest.(*FeeRecipientsRequestJSON); !ok {
 		return true, nil
 	}
-	recipients := make([]*feeRecipientJson, 0)
+	recipients := make([]*FeeRecipientJson, 0)
 	if err := json.NewDecoder(req.Body).Decode(&recipients); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 	}
-	j := &feeRecipientsRequestJSON{Recipients: recipients}
+	j := &FeeRecipientsRequestJSON{Recipients: recipients}
 	b, err := json.Marshal(j)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -48,14 +48,14 @@ func wrapSignedValidatorRegistrationsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*signedValidatorRegistrationsRequestJson); !ok {
+	if _, ok := endpoint.PostRequest.(*SignedValidatorRegistrationsRequestJson); !ok {
 		return true, nil
 	}
-	registrations := make([]*signedValidatorRegistrationJson, 0)
+	registrations := make([]*SignedValidatorRegistrationJson, 0)
 	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 	}
-	j := &signedValidatorRegistrationsRequestJson{Registrations: registrations}
+	j := &SignedValidatorRegistrationsRequestJson{Registrations: registrations}
 	b, err := json.Marshal(j)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -71,12 +71,12 @@ func wrapAttestationsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitAttestationRequestJson); ok {
+	if _, ok := endpoint.PostRequest.(*SubmitAttestationRequestJson); ok {
 		atts := make([]*AttestationJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitAttestationRequestJson{Data: atts}
+		j := &SubmitAttestationRequestJson{Data: atts}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -93,12 +93,12 @@ func wrapValidatorIndicesArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*dutiesRequestJson); ok {
+	if _, ok := endpoint.PostRequest.(*DutiesRequestJson); ok {
 		indices := make([]string, 0)
 		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &dutiesRequestJson{Index: indices}
+		j := &DutiesRequestJson{Index: indices}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -115,12 +115,12 @@ func wrapSignedAggregateAndProofArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitAggregateAndProofsRequestJson); ok {
-		data := make([]*signedAggregateAttestationAndProofJson, 0)
+	if _, ok := endpoint.PostRequest.(*SubmitAggregateAndProofsRequestJson); ok {
+		data := make([]*SignedAggregateAttestationAndProofJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitAggregateAndProofsRequestJson{Data: data}
+		j := &SubmitAggregateAndProofsRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -137,12 +137,12 @@ func wrapBeaconCommitteeSubscriptionsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitBeaconCommitteeSubscriptionsRequestJson); ok {
-		data := make([]*beaconCommitteeSubscribeJson, 0)
+	if _, ok := endpoint.PostRequest.(*SubmitBeaconCommitteeSubscriptionsRequestJson); ok {
+		data := make([]*BeaconCommitteeSubscribeJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitBeaconCommitteeSubscriptionsRequestJson{Data: data}
+		j := &SubmitBeaconCommitteeSubscriptionsRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -159,12 +159,12 @@ func wrapSyncCommitteeSubscriptionsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSubscriptionRequestJson); ok {
-		data := make([]*syncCommitteeSubscriptionJson, 0)
+	if _, ok := endpoint.PostRequest.(*SubmitSyncCommitteeSubscriptionRequestJson); ok {
+		data := make([]*SyncCommitteeSubscriptionJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitSyncCommitteeSubscriptionRequestJson{Data: data}
+		j := &SubmitSyncCommitteeSubscriptionRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -181,12 +181,12 @@ func wrapSyncCommitteeSignaturesArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitSyncCommitteeSignaturesRequestJson); ok {
-		data := make([]*syncCommitteeMessageJson, 0)
+	if _, ok := endpoint.PostRequest.(*SubmitSyncCommitteeSignaturesRequestJson); ok {
+		data := make([]*SyncCommitteeMessageJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitSyncCommitteeSignaturesRequestJson{Data: data}
+		j := &SubmitSyncCommitteeSignaturesRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -203,12 +203,12 @@ func wrapSignedContributionAndProofsArray(
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*submitContributionAndProofsRequestJson); ok {
-		data := make([]*signedContributionAndProofJson, 0)
+	if _, ok := endpoint.PostRequest.(*SubmitContributionAndProofsRequestJson); ok {
+		data := make([]*SignedContributionAndProofJson, 0)
 		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &submitContributionAndProofsRequestJson{Data: data}
+		j := &SubmitContributionAndProofsRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -404,12 +404,12 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 	if err := json.Unmarshal(body, tempContainer); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
 	}
-	container, ok := responseContainer.(*syncCommitteesResponseJson)
+	container, ok := responseContainer.(*SyncCommitteesResponseJson)
 	if !ok {
 		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
 
-	container.Data = &syncCommitteeValidatorsJson{}
+	container.Data = &SyncCommitteeValidatorsJson{}
 	container.Data.Validators = tempContainer.Data.Validators
 	container.Data.ValidatorAggregates = make([][]string, len(tempContainer.Data.ValidatorAggregates))
 	for i, srcValAgg := range tempContainer.Data.ValidatorAggregates {
@@ -439,8 +439,14 @@ type bellatrixBlockResponseJson struct {
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
 
+type bellatrixBlindedBlockResponseJson struct {
+	Version             string                                          `json:"version"`
+	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
+	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
+}
+
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*blockV2ResponseJson)
+	respContainer, ok := response.(*BlockV2ResponseJson)
 	if !ok {
 		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
@@ -485,23 +491,69 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	return false, j, nil
 }
 
+func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
+	respContainer, ok := response.(*BlindedBlockResponseJson)
+	if !ok {
+		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
+		actualRespContainer = &phase0BlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBeaconBlockContainerJson{
+				Message:   respContainer.Data.Phase0Block,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
+		actualRespContainer = &altairBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBeaconBlockAltairContainerJson{
+				Message:   respContainer.Data.AltairBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
+		actualRespContainer = &bellatrixBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBlindedBeaconBlockBellatrixContainerJson{
+				Message:   respContainer.Data.BellatrixBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	default:
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return false, j, nil
+}
+
 type phase0StateResponseJson struct {
 	Version string           `json:"version"`
-	Data    *beaconStateJson `json:"data"`
+	Data    *BeaconStateJson `json:"data"`
 }
 
 type altairStateResponseJson struct {
 	Version string                 `json:"version"`
-	Data    *beaconStateAltairJson `json:"data"`
+	Data    *BeaconStateAltairJson `json:"data"`
 }
 
 type bellatrixStateResponseJson struct {
 	Version string                    `json:"version"`
-	Data    *beaconStateBellatrixJson `json:"data"`
+	Data    *BeaconStateBellatrixJson `json:"data"`
 }
 
 func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*beaconStateV2ResponseJson)
+	respContainer, ok := response.(*BeaconStateV2ResponseJson)
 	if !ok {
 		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
@@ -555,7 +607,7 @@ type bellatrixProduceBlindedBlockResponseJson struct {
 }
 
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*produceBlockResponseV2Json)
+	respContainer, ok := response.(*ProduceBlockResponseV2Json)
 	if !ok {
 		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
@@ -589,7 +641,7 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 }
 
 func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*produceBlindedBlockResponseJson)
+	respContainer, ok := response.(*ProduceBlindedBlockResponseJson)
 	if !ok {
 		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}

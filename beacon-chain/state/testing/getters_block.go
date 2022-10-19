@@ -35,27 +35,6 @@ func VerifyBeaconStateLatestBlockHeader(
 
 type getStateWithLBlockRoots func([][]byte) (state.BeaconState, error)
 
-func VerifyBeaconStateBlockRoots(
-	t *testing.T,
-	factory getState,
-	factoryBR getStateWithLBlockRoots,
-) {
-	s, err := factory()
-	require.NoError(t, err)
-	got := s.BlockRoots()
-	require.DeepEqual(t, ([][]byte)(nil), got)
-
-	want := [][]byte{{'a'}}
-	s, err = factoryBR(want)
-	require.NoError(t, err)
-	got = s.BlockRoots()
-	require.DeepEqual(t, want, got)
-
-	// Test copy does not mutate.
-	got[0][0] = 'b'
-	require.DeepNotEqual(t, want, got)
-}
-
 func VerifyBeaconStateBlockRootsNative(
 	t *testing.T,
 	factory getState,
@@ -87,26 +66,6 @@ func VerifyBeaconStateBlockRootsNative(
 	// Test copy does not mutate.
 	got[0][0] = 'b'
 	require.DeepNotEqual(t, want, got)
-}
-
-func VerifyBeaconStateBlockRootAtIndex(
-	t *testing.T,
-	factory getState,
-	factoryBR getStateWithLBlockRoots,
-) {
-	s, err := factory()
-	require.NoError(t, err)
-	got, err := s.BlockRootAtIndex(0)
-	require.NoError(t, err)
-	require.DeepEqual(t, ([]byte)(nil), got)
-
-	r := [][]byte{{'a'}}
-	s, err = factoryBR(r)
-	require.NoError(t, err)
-	got, err = s.BlockRootAtIndex(0)
-	require.NoError(t, err)
-	want := bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-	require.DeepSSZEqual(t, want, got)
 }
 
 func VerifyBeaconStateBlockRootAtIndexNative(

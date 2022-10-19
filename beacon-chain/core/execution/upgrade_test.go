@@ -61,6 +61,9 @@ func TestUpgradeToBellatrix(t *testing.T) {
 
 	header, err := mSt.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
+	protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeader)
+	require.Equal(t, true, ok)
+
 	wanted := &enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
@@ -76,5 +79,5 @@ func TestUpgradeToBellatrix(t *testing.T) {
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 	}
-	require.DeepEqual(t, wanted, header)
+	require.DeepEqual(t, wanted, protoHeader)
 }

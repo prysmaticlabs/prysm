@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -32,6 +33,7 @@ type StateManager interface {
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
+	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
@@ -45,6 +47,8 @@ type State struct {
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 	backfillStatus          *backfill.Status
+	migrationLock           *sync.Mutex
+	fc                      forkchoice.ForkChoicer
 }
 
 // This tracks the config in the event of long non-finality,
@@ -76,7 +80,7 @@ func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
 }
 
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...StateGenOption) *State {
 	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
@@ -86,10 +90,13 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 		saveHotStateDB: &saveHotStateDbConfig{
 			duration: defaultHotStateDBInterval,
 		},
+		migrationLock: new(sync.Mutex),
+		fc:            fc,
 	}
 	for _, o := range opts {
 		o(s)
 	}
+	fc.SetBalancesByRooter(s.BalancesByRoot)
 
 	return s
 }

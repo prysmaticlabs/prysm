@@ -7,6 +7,7 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -34,7 +35,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	util.SaveBlock(t, ctx, db, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	gen := stategen.New(db)
+	gen := stategen.New(db, doublylinkedtree.New())
 	require.NoError(t, gen.SaveState(ctx, gRoot, st))
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	bs := &Server{

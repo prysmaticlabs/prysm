@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -19,7 +20,7 @@ func TestService_headSyncCommitteeFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
 		},
 	}
 	c.head = &head{}
@@ -37,7 +38,7 @@ func TestService_HeadDomainFetcher_Errors(t *testing.T) {
 	beaconDB := dbtest.SetupDB(t)
 	c := &Service{
 		cfg: &config{
-			StateGen: stategen.New(beaconDB),
+			StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
 		},
 	}
 	c.head = &head{}
