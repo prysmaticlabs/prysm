@@ -1115,7 +1115,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			newGasLimit: 7777,
 			// proposerSettings is not set - we need to create proposerSettings and set gaslimit properly
 			w: []want{
-				want{
+				{
 					pubkey:   pubkey1,
 					gaslimit: 7777,
 				},

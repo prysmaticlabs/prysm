@@ -78,35 +78,35 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
 	case "/eth/v1/beacon/genesis":
-		endpoint.GetResponse = &genesisResponseJson{}
+		endpoint.GetResponse = &GenesisResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/root":
-		endpoint.GetResponse = &stateRootResponseJson{}
+		endpoint.GetResponse = &StateRootResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/fork":
-		endpoint.GetResponse = &stateForkResponseJson{}
+		endpoint.GetResponse = &StateForkResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
-		endpoint.GetResponse = &stateFinalityCheckpointResponseJson{}
+		endpoint.GetResponse = &StateFinalityCheckpointResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/validators":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}}
-		endpoint.GetResponse = &stateValidatorsResponseJson{}
+		endpoint.GetResponse = &StateValidatorsResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
-		endpoint.GetResponse = &stateValidatorResponseJson{}
+		endpoint.GetResponse = &StateValidatorResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}}
-		endpoint.GetResponse = &validatorBalancesResponseJson{}
+		endpoint.GetResponse = &ValidatorBalancesResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/committees":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
-		endpoint.GetResponse = &stateCommitteesResponseJson{}
+		endpoint.GetResponse = &StateCommitteesResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/sync_committees":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
-		endpoint.GetResponse = &syncCommitteesResponseJson{}
+		endpoint.GetResponse = &SyncCommitteesResponseJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareValidatorAggregates,
 		}
 	case "/eth/v1/beacon/headers":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "parent_root", Hex: true}}
-		endpoint.GetResponse = &blockHeadersResponseJson{}
+		endpoint.GetResponse = &BlockHeadersResponseJson{}
 	case "/eth/v1/beacon/headers/{block_id}":
-		endpoint.GetResponse = &blockHeaderResponseJson{}
+		endpoint.GetResponse = &BlockHeaderResponseJson{}
 	case "/eth/v1/beacon/blocks":
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
@@ -120,108 +120,108 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlindedBlockSSZ}
 	case "/eth/v1/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &blockResponseJson{}
+		endpoint.GetResponse = &BlockResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}
 	case "/eth/v2/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &blockV2ResponseJson{}
+		endpoint.GetResponse = &BlockV2ResponseJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: serializeV2Block,
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
 	case "/eth/v1/beacon/blocks/{block_id}/root":
-		endpoint.GetResponse = &blockRootResponseJson{}
+		endpoint.GetResponse = &BlockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
-		endpoint.GetResponse = &blockAttestationsResponseJson{}
+		endpoint.GetResponse = &BlockAttestationsResponseJson{}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
-		endpoint.GetResponse = &attestationsPoolResponseJson{}
-		endpoint.PostRequest = &submitAttestationRequestJson{}
-		endpoint.Err = &indexedVerificationFailureErrorJson{}
+		endpoint.GetResponse = &AttestationsPoolResponseJson{}
+		endpoint.PostRequest = &SubmitAttestationRequestJson{}
+		endpoint.Err = &IndexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapAttestationsArray,
 		}
 	case "/eth/v1/beacon/pool/attester_slashings":
-		endpoint.PostRequest = &attesterSlashingJson{}
-		endpoint.GetResponse = &attesterSlashingsPoolResponseJson{}
+		endpoint.PostRequest = &AttesterSlashingJson{}
+		endpoint.GetResponse = &AttesterSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/proposer_slashings":
-		endpoint.PostRequest = &proposerSlashingJson{}
-		endpoint.GetResponse = &proposerSlashingsPoolResponseJson{}
+		endpoint.PostRequest = &ProposerSlashingJson{}
+		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/voluntary_exits":
-		endpoint.PostRequest = &signedVoluntaryExitJson{}
-		endpoint.GetResponse = &voluntaryExitsPoolResponseJson{}
+		endpoint.PostRequest = &SignedVoluntaryExitJson{}
+		endpoint.GetResponse = &VoluntaryExitsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/sync_committees":
-		endpoint.PostRequest = &submitSyncCommitteeSignaturesRequestJson{}
-		endpoint.Err = &indexedVerificationFailureErrorJson{}
+		endpoint.PostRequest = &SubmitSyncCommitteeSignaturesRequestJson{}
+		endpoint.Err = &IndexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
 		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
-		endpoint.GetResponse = &identityResponseJson{}
+		endpoint.GetResponse = &IdentityResponseJson{}
 	case "/eth/v1/node/peers":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}}
-		endpoint.GetResponse = &peersResponseJson{}
+		endpoint.GetResponse = &PeersResponseJson{}
 	case "/eth/v1/node/peers/{peer_id}":
 		endpoint.RequestURLLiterals = []string{"peer_id"}
-		endpoint.GetResponse = &peerResponseJson{}
+		endpoint.GetResponse = &PeerResponseJson{}
 	case "/eth/v1/node/peer_count":
-		endpoint.GetResponse = &peerCountResponseJson{}
+		endpoint.GetResponse = &PeerCountResponseJson{}
 	case "/eth/v1/node/version":
-		endpoint.GetResponse = &versionResponseJson{}
+		endpoint.GetResponse = &VersionResponseJson{}
 	case "/eth/v1/node/syncing":
-		endpoint.GetResponse = &syncingResponseJson{}
+		endpoint.GetResponse = &SyncingResponseJson{}
 	case "/eth/v1/node/health":
 		// Use default endpoint
 	case "/eth/v1/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &beaconStateResponseJson{}
+		endpoint.GetResponse = &BeaconStateResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZ}
 	case "/eth/v2/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &beaconStateV2ResponseJson{}
+		endpoint.GetResponse = &BeaconStateV2ResponseJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: serializeV2State,
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
-		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
+		endpoint.GetResponse = &ForkChoiceHeadsResponseJson{}
 	case "/eth/v2/debug/beacon/heads":
-		endpoint.GetResponse = &v2ForkChoiceHeadsResponseJson{}
+		endpoint.GetResponse = &V2ForkChoiceHeadsResponseJson{}
 	case "/eth/v1/debug/beacon/forkchoice":
-		endpoint.GetResponse = &forkchoiceResponse{}
+		endpoint.GetResponse = &ForkchoiceResponse{}
 	case "/eth/v1/config/fork_schedule":
-		endpoint.GetResponse = &forkScheduleResponseJson{}
+		endpoint.GetResponse = &ForkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
-		endpoint.GetResponse = &depositContractResponseJson{}
+		endpoint.GetResponse = &DepositContractResponseJson{}
 	case "/eth/v1/config/spec":
-		endpoint.GetResponse = &specResponseJson{}
+		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &dutiesRequestJson{}
-		endpoint.PostResponse = &attesterDutiesResponseJson{}
+		endpoint.PostRequest = &DutiesRequestJson{}
+		endpoint.PostResponse = &AttesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
 		}
 	case "/eth/v1/validator/duties/proposer/{epoch}":
-		endpoint.GetResponse = &proposerDutiesResponseJson{}
+		endpoint.GetResponse = &ProposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
 	case "/eth/v1/validator/duties/sync/{epoch}":
-		endpoint.PostRequest = &dutiesRequestJson{}
-		endpoint.PostResponse = &syncCommitteeDutiesResponseJson{}
+		endpoint.PostRequest = &DutiesRequestJson{}
+		endpoint.PostResponse = &SyncCommitteeDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
 		}
 	case "/eth/v1/validator/blocks/{slot}":
-		endpoint.GetResponse = &produceBlockResponseJson{}
+		endpoint.GetResponse = &ProduceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
 	case "/eth/v2/validator/blocks/{slot}":
-		endpoint.GetResponse = &produceBlockResponseV2Json{}
+		endpoint.GetResponse = &ProduceBlockResponseV2Json{}
 		endpoint.RequestURLLiterals = []string{"slot"}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
 		endpoint.Hooks = apimiddleware.HookCollection{
@@ -229,7 +229,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlockSSZ}
 	case "/eth/v1/validator/blinded_blocks/{slot}":
-		endpoint.GetResponse = &produceBlindedBlockResponseJson{}
+		endpoint.GetResponse = &ProduceBlindedBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
 		endpoint.Hooks = apimiddleware.HookCollection{
@@ -237,43 +237,43 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlindedBlockSSZ}
 	case "/eth/v1/validator/attestation_data":
-		endpoint.GetResponse = &produceAttestationDataResponseJson{}
+		endpoint.GetResponse = &ProduceAttestationDataResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 	case "/eth/v1/validator/aggregate_attestation":
-		endpoint.GetResponse = &aggregateAttestationResponseJson{}
+		endpoint.GetResponse = &AggregateAttestationResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "attestation_data_root", Hex: true}, {Name: "slot"}}
 	case "/eth/v1/validator/beacon_committee_subscriptions":
-		endpoint.PostRequest = &submitBeaconCommitteeSubscriptionsRequestJson{}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
+		endpoint.PostRequest = &SubmitBeaconCommitteeSubscriptionsRequestJson{}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBeaconCommitteeSubscriptionsArray,
 		}
 	case "/eth/v1/validator/sync_committee_subscriptions":
-		endpoint.PostRequest = &submitSyncCommitteeSubscriptionRequestJson{}
-		endpoint.Err = &nodeSyncDetailsErrorJson{}
+		endpoint.PostRequest = &SubmitSyncCommitteeSubscriptionRequestJson{}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSubscriptionsArray,
 		}
 	case "/eth/v1/validator/aggregate_and_proofs":
-		endpoint.PostRequest = &submitAggregateAndProofsRequestJson{}
+		endpoint.PostRequest = &SubmitAggregateAndProofsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedAggregateAndProofArray,
 		}
 	case "/eth/v1/validator/sync_committee_contribution":
-		endpoint.GetResponse = &produceSyncCommitteeContributionResponseJson{}
+		endpoint.GetResponse = &ProduceSyncCommitteeContributionResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "subcommittee_index"}, {Name: "beacon_block_root", Hex: true}}
 	case "/eth/v1/validator/contribution_and_proofs":
-		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
+		endpoint.PostRequest = &SubmitContributionAndProofsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedContributionAndProofsArray,
 		}
 	case "/eth/v1/validator/prepare_beacon_proposer":
-		endpoint.PostRequest = &feeRecipientsRequestJSON{}
+		endpoint.PostRequest = &FeeRecipientsRequestJSON{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
 		}
 	case "/eth/v1/validator/register_validator":
-		endpoint.PostRequest = &signedValidatorRegistrationsRequestJson{}
+		endpoint.PostRequest = &SignedValidatorRegistrationsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedValidatorRegistrationsArray,
 		}
