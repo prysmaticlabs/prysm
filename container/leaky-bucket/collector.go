@@ -142,9 +142,9 @@ func (c *Collector) Add(key string, amount int64) int64 {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	b, _ := c.buckets[key]
+	b, ok := c.buckets[key]
 
-	if b == nil {
+	if !ok || b == nil {
 		// Create a new bucket.
 		b = &LeakyBucket{
 			key:      key,
