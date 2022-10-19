@@ -4,6 +4,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -89,4 +90,5 @@ type ExecutionData interface {
 	BaseFeePerGas() []byte
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
+	Withdrawals() ([]*enginev1.Withdrawal, error)
 }

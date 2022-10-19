@@ -44,6 +44,18 @@ func TestBeaconState_LatestBlockHeader_Bellatrix(t *testing.T) {
 	)
 }
 
+func TestBeaconState_LatestBlockHeader_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateLatestBlockHeader(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{})
+		},
+		func(BH *ethpb.BeaconBlockHeader) (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{LatestBlockHeader: BH})
+		},
+	)
+}
+
 func TestBeaconState_BlockRoots_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateBlockRootsNative(
 		t,
@@ -80,6 +92,18 @@ func TestBeaconState_BlockRoots_Bellatrix(t *testing.T) {
 	)
 }
 
+func TestBeaconState_BlockRoots_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateBlockRootsNative(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{})
+		},
+		func(BR [][]byte) (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{BlockRoots: BR})
+		},
+	)
+}
+
 func TestBeaconState_BlockRootAtIndex_Phase0(t *testing.T) {
 	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
 		t,
@@ -112,6 +136,18 @@ func TestBeaconState_BlockRootAtIndex_Bellatrix(t *testing.T) {
 		},
 		func(BR [][]byte) (state.BeaconState, error) {
 			return InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{BlockRoots: BR})
+		},
+	)
+}
+
+func TestBeaconState_BlockRootAtIndex_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateBlockRootAtIndexNative(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{})
+		},
+		func(BR [][]byte) (state.BeaconState, error) {
+			return InitializeFromProtoCapella(&ethpb.BeaconStateCapella{BlockRoots: BR})
 		},
 	)
 }
