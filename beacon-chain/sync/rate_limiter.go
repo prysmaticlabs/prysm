@@ -19,6 +19,9 @@ const defaultBurstLimit = 5
 
 const leakyBucketPeriod = 1 * time.Second
 
+// Only allow in 1 batch per minute.
+const blockBucketPeriod = 60 * leakyBucketPeriod
+
 // Dummy topic to validate all incoming rpc requests.
 const rpcLimiterTopic = "rpc-limiter-topic"
 
@@ -52,9 +55,9 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	topicMap[addEncoding(p2p.RPCStatusTopicV1)] = leakybucket.NewCollector(1, defaultBurstLimit, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 
 	// Use a single collector for block requests
-	blockCollector := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, leakyBucketPeriod, false /* deleteEmptyBuckets */)
+	blockCollector := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, blockBucketPeriod, false /* deleteEmptyBuckets */)
 	// Collector for V2
-	blockCollectorV2 := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, leakyBucketPeriod, false /* deleteEmptyBuckets */)
+	blockCollectorV2 := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, blockBucketPeriod, false /* deleteEmptyBuckets */)
 
 	// BlocksByRoots requests
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV1)] = blockCollector
