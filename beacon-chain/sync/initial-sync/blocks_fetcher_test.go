@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
