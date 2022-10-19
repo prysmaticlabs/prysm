@@ -270,6 +270,98 @@ func TestReceiveEvents(t *testing.T) {
 
 	errJson := receiveEvents(ch, w, req)
 	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: finalized_checkpoint
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":false}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
+}
+
+func TestReceiveEvents_AggregatedAtt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := AggregatedAttReceivedDataJson{
+			Aggregate: &AttestationJson{
+				AggregationBits: base64Val,
+				Data: &AttestationDataJson{
+					Slot:            "1",
+					CommitteeIndex:  "1",
+					BeaconBlockRoot: base64Val,
+					Source:          nil,
+					Target:          nil,
+				},
+				Signature: base64Val,
+			},
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte(events.AttestationTopic),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: attestation
+data: {"aggregation_bits":"0x666f6f","data":{"slot":"1","index":"1","beacon_block_root":"0x666f6f","source":null,"target":null},"signature":"0x666f6f"}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
+}
+
+func TestReceiveEvents_UnaggregatedAtt(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan *sse.Event)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	req := httptest.NewRequest("GET", "http://foo.example", &bytes.Buffer{})
+	req = req.WithContext(ctx)
+
+	go func() {
+		base64Val := "Zm9v"
+		data := UnaggregatedAttReceivedDataJson{
+			AggregationBits: base64Val,
+			Data: &AttestationDataJson{
+				Slot:            "1",
+				CommitteeIndex:  "1",
+				BeaconBlockRoot: base64Val,
+				Source:          nil,
+				Target:          nil,
+			},
+			Signature: base64Val,
+		}
+		bData, err := json.Marshal(data)
+		require.NoError(t, err)
+		msg := &sse.Event{
+			Data:  bData,
+			Event: []byte(events.AttestationTopic),
+		}
+		ch <- msg
+		time.Sleep(time.Second)
+		cancel()
+	}()
+
+	errJson := receiveEvents(ch, w, req)
+	assert.Equal(t, true, errJson == nil)
+
+	expectedEvent := `event: attestation
+data: {"aggregation_bits":"0x666f6f","data":{"slot":"1","index":"1","beacon_block_root":"0x666f6f","source":null,"target":null},"signature":"0x666f6f"}
+
+`
+	assert.DeepEqual(t, expectedEvent, w.Body.String())
 }
 
 func TestReceiveEvents_EventNotSupported(t *testing.T) {

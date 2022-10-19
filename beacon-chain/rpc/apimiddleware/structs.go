@@ -879,6 +879,12 @@ type AggregatedAttReceivedDataJson struct {
 	Aggregate *AttestationJson `json:"aggregate"`
 }
 
+type UnaggregatedAttReceivedDataJson struct {
+	AggregationBits string               `json:"aggregation_bits" hex:"true"`
+	Data            *AttestationDataJson `json:"data"`
+	Signature       string               `json:"signature" hex:"true"`
+}
+
 type EventFinalizedCheckpointJson struct {
 	Block               string `json:"block" hex:"true"`
 	State               string `json:"state" hex:"true"`

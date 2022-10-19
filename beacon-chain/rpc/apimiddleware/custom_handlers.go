@@ -369,16 +369,30 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 			case events.AttestationTopic:
 				data = &AttestationJson{}
 
-				// Data received in the event does not fit the expected event stream output.
+				// Data received in the aggregated att event does not fit the expected event stream output.
 				// We extract the underlying attestation from event data
 				// and assign the attestation back to event data for further processing.
-				eventData := &AggregatedAttReceivedDataJson{}
-				if err := json.Unmarshal(msg.Data, eventData); err != nil {
+				aggEventData := &AggregatedAttReceivedDataJson{}
+				if err := json.Unmarshal(msg.Data, aggEventData); err != nil {
 					return apimiddleware.InternalServerError(err)
 				}
-				attData, err := json.Marshal(eventData.Aggregate)
-				if err != nil {
-					return apimiddleware.InternalServerError(err)
+				var attData []byte
+				var err error
+				// If true, then we have an unaggregated attestation
+				if aggEventData.Aggregate == nil {
+					unaggEventData := &UnaggregatedAttReceivedDataJson{}
+					if err := json.Unmarshal(msg.Data, unaggEventData); err != nil {
+						return apimiddleware.InternalServerError(err)
+					}
+					attData, err = json.Marshal(unaggEventData)
+					if err != nil {
+						return apimiddleware.InternalServerError(err)
+					}
+				} else {
+					attData, err = json.Marshal(aggEventData.Aggregate)
+					if err != nil {
+						return apimiddleware.InternalServerError(err)
+					}
 				}
 				msg.Data = attData
 			case events.VoluntaryExitTopic:
