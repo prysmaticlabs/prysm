@@ -1075,7 +1075,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
@@ -1295,7 +1295,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	// Connect peer that has all the blocks available.
 	allBlocksPeer := connectPeerHavingBlocks(t, p2p, chain, finalizedSlot, p2p.Peers())

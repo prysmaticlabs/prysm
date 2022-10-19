@@ -547,7 +547,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
-	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), false)
+	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 1*time.Second, false)
 	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
@@ -842,7 +842,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1, chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}})
-	fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 640, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 640, 1*time.Second, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
