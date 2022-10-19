@@ -27,6 +27,34 @@ func TestNewCollector(t *testing.T) {
 	c.Free()
 }
 
+func TestNewCollector_LargerPeriod(t *testing.T) {
+	testNow := now
+	now = time.Now
+	defer func() {
+		now = testNow
+	}()
+	rate := 10.0
+	capacity := int64(20)
+	c := NewCollector(rate, capacity, 5*time.Second, true)
+
+	c.Add("test", 10)
+	c.Add("test", 10)
+
+	if c.Remaining("test") != 0 {
+		t.Errorf("Excess capacity exists of: %d", c.Remaining("test"))
+	}
+	time.Sleep(1 * time.Second)
+	if c.Remaining("test") >= 20 {
+		t.Errorf("Excess capacity exists in: %d", c.Remaining("test"))
+	}
+	time.Sleep(4 * time.Second)
+
+	if c.Add("test", 10) != 10 {
+		t.Errorf("Internal counter not refreshed: %d", c.Count("test"))
+	}
+	c.Free()
+}
+
 var collectorSimple = testSet{
 	capacity: int64(5),
 	rate:     1.0,
