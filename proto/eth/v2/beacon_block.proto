@@ -40,6 +40,12 @@ message BlockResponseV2 {
   bool execution_optimistic = 3;
 }
 
+message BlindedBlockResponse {
+  v2.Version version = 1;
+  SignedBlindedBeaconBlockContainer data = 2;
+  bool execution_optimistic = 3;
+}
+
 message BeaconBlockContainerV2 {
   oneof block {
     v1.BeaconBlock phase0_block = 1;

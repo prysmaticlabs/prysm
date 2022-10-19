@@ -33,6 +33,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/beacon/blocks/{block_id}",
 		"/eth/v1/beacon/blocks/{block_id}/root",
 		"/eth/v1/beacon/blocks/{block_id}/attestations",
+		"/eth/v1/beacon/blinded_blocks/{block_id}",
 		"/eth/v1/beacon/pool/attestations",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
@@ -132,6 +133,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &BlockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
 		endpoint.GetResponse = &BlockAttestationsResponseJson{}
+	case "/eth/v1/beacon/blinded_blocks/{block_id}":
+		endpoint.GetResponse = &BlindedBlockResponseJson{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: serializeBlindedBlock,
+		}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 		endpoint.GetResponse = &AttestationsPoolResponseJson{}
