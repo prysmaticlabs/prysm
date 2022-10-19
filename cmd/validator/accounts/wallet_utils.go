@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	remote_web3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,14 +19,22 @@ func walletWithKeymanager(c *cli.Context) (*wallet.Wallet, keymanager.IKeymanage
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not open wallet")
 	}
-	// TODO(#9883) - Remove this when we have a better way to handle this. this is fine.
-	// genesis root is not set here which is used for sign function, but fetch keys should be fine.
 	km, err := w.InitializeKeymanager(c.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
 	if err != nil && strings.Contains(err.Error(), keymanager.IncorrectPasswordErrMsg) {
 		return nil, nil, errors.New("wrong wallet password entered")
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
+	}
+	return w, km, nil
+
+}
+
+func walletWithWeb3SignerKeymanager(c *cli.Context, config *remote_web3signer.SetupConfig) (*wallet.Wallet, keymanager.IKeymanager, error) {
+	w := wallet.NewWalletForWeb3Signer()
+	km, err := w.InitializeKeymanager(c.Context, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
+	if err != nil {
+		return nil, nil, err
 	}
 	return w, km, nil
 }
