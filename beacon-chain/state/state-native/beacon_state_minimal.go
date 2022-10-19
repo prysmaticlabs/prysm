@@ -20,7 +20,7 @@ import (
 type BeaconState struct {
 	version                             int
 	genesisTime                         uint64                                  `ssz-gen:"true"`
-	genesisValidatorsRoot               customtypes.Byte32                      `ssz-gen:"true" ssz-size:"32"`
+	genesisValidatorsRoot               [32]byte                                `ssz-gen:"true" ssz-size:"32"`
 	slot                                eth2types.Slot                          `ssz-gen:"true"`
 	fork                                *ethpb.Fork                             `ssz-gen:"true"`
 	latestBlockHeader                   *ethpb.BeaconBlockHeader                `ssz-gen:"true"`

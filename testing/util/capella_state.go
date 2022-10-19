@@ -17,8 +17,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-// DeterministicGenesisStateBellatrix returns a genesis state in Bellatrix format made using the deterministic deposits.
-func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
+// DeterministicGenesisStateCapella returns a genesis state in Capella format made using the deterministic deposits.
+func DeterministicGenesisStateCapella(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -27,7 +27,7 @@ func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (sta
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
-	beaconState, err := genesisBeaconStateBellatrix(context.Background(), deposits, uint64(0), eth1Data)
+	beaconState, err := genesisBeaconStateCapella(context.Background(), deposits, uint64(0), eth1Data)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
@@ -35,9 +35,9 @@ func DeterministicGenesisStateBellatrix(t testing.TB, numValidators uint64) (sta
 	return beaconState, privKeys
 }
 
-// genesisBeaconStateBellatrix returns the genesis beacon state.
-func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
-	st, err := emptyGenesisStateBellatrix()
+// genesisBeaconStateCapella returns the genesis beacon state.
+func genesisBeaconStateCapella(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+	st, err := emptyGenesisStateCapella()
 	if err != nil {
 		return nil, err
 	}
@@ -53,17 +53,17 @@ func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return buildGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data())
+	return buildGenesisBeaconStateCapella(genesisTime, st, st.Eth1Data())
 }
 
-// emptyGenesisStateBellatrix returns an empty genesis state in Bellatrix format.
-func emptyGenesisStateBellatrix() (state.BeaconState, error) {
-	st := &ethpb.BeaconStateBellatrix{
+// emptyGenesisStateCapella returns an empty genesis state in Capella format.
+func emptyGenesisStateCapella() (state.BeaconState, error) {
+	st := &ethpb.BeaconStateCapella{
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().AltairForkVersion,
-			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
 			Epoch:           0,
 		},
 		// Validator registry fields.
@@ -81,12 +81,12 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{},
 	}
-	return state_native.InitializeFromProtoBellatrix(st)
+	return state_native.InitializeFromProtoCapella(st)
 }
 
-func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -134,7 +134,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 	if err != nil {
 		return nil, err
 	}
-	st := &ethpb.BeaconStateBellatrix{
+	st := &ethpb.BeaconStateCapella{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
@@ -183,7 +183,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 	}
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
-	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
+	bodyRoot, err := (&ethpb.BeaconBlockBodyCapella{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),
@@ -194,7 +194,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 			SyncCommitteeBits:      scBits[:],
 			SyncCommitteeSignature: make([]byte, 96),
 		},
-		ExecutionPayload: &enginev1.ExecutionPayload{
+		ExecutionPayload: &enginev1.ExecutionPayloadCapella{
 			ParentHash:    make([]byte, 32),
 			FeeRecipient:  make([]byte, 20),
 			StateRoot:     make([]byte, 32),
@@ -228,7 +228,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
+	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, 32),
@@ -238,7 +238,8 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		BaseFeePerGas:    make([]byte, 32),
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
+		WithdrawalsRoot:  make([]byte, 32),
 	}
 
-	return state_native.InitializeFromProtoBellatrix(st)
+	return state_native.InitializeFromProtoCapella(st)
 }
