@@ -62,8 +62,8 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			PreviousVersion: params.BeaconConfig().AltairForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 			Epoch:           0,
 		},
 		// Validator registry fields.

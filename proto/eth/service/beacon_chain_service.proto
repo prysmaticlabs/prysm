@@ -249,6 +249,24 @@ service BeaconChain {
     };
   }
 
+  // GetBlindedBlock retrieves blinded block for given block id.
+  //
+  // https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getBlindedBlock
+  rpc GetBlindedBlock(v1.BlockRequest) returns (v2.BlindedBlockResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blinded_blocks/{block_id}"
+    };
+  }
+
+  // GetBlindedBlockSSZ returns the SSZ-serialized version of blinded block details for given block id.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getBlindedBlock
+  rpc GetBlindedBlockSSZ(v1.BlockRequest) returns (v2.SSZContainer) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/blinded_blocks/{block_id}/ssz"
+    };
+  }
+
   // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockV2

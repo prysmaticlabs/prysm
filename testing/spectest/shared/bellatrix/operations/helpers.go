@@ -69,10 +69,10 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.InnerStateUnsafe())
+		pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
+			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}
