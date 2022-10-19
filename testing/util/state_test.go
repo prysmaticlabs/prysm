@@ -16,7 +16,7 @@ func TestNewBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
 }
@@ -28,7 +28,7 @@ func TestNewBeaconStateAltair(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateAltair{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
 }
@@ -40,7 +40,7 @@ func TestNewBeaconStateBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateBellatrix{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
 }
@@ -52,7 +52,7 @@ func TestNewBeaconStateCapella(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateCapella{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	if !reflect.DeepEqual(st.InnerStateUnsafe(), got) {
+	if !reflect.DeepEqual(st.ToProtoUnsafe(), got) {
 		t.Fatal("State did not match after round trip marshal")
 	}
 }

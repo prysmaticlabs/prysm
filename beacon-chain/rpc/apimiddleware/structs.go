@@ -105,6 +105,12 @@ type BlockV2ResponseJson struct {
 	ExecutionOptimistic bool                              `json:"execution_optimistic"`
 }
 
+type BlindedBlockResponseJson struct {
+	Version             string                                 `json:"version" enum:"true"`
+	Data                *SignedBlindedBeaconBlockContainerJson `json:"data"`
+	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+}
+
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
@@ -331,6 +337,13 @@ type SignedBeaconBlockContainerV2Json struct {
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                    `json:"signature" hex:"true"`
+}
+
+type SignedBlindedBeaconBlockContainerJson struct {
+	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                           `json:"signature" hex:"true"`
 }
 
 type BeaconBlockContainerV2Json struct {
@@ -827,6 +840,7 @@ type SszRequestJson struct {
 // SszResponse is a common abstraction over all SSZ responses.
 type SszResponse interface {
 	SSZVersion() string
+	SSZOptimistic() bool
 	SSZData() string
 }
 
@@ -842,9 +856,14 @@ func (*SszResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
+func (*SszResponseJson) SSZOptimistic() bool {
+	return false
+}
+
 type VersionedSSZResponseJson struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
+	Version             string `json:"version"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Data                string `json:"data"`
 }
 
 func (ssz *VersionedSSZResponseJson) SSZData() string {
@@ -853,6 +872,10 @@ func (ssz *VersionedSSZResponseJson) SSZData() string {
 
 func (ssz *VersionedSSZResponseJson) SSZVersion() string {
 	return ssz.Version
+}
+
+func (ssz *VersionedSSZResponseJson) SSZOptimistic() bool {
+	return ssz.ExecutionOptimistic
 }
 
 // ---------------

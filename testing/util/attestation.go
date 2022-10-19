@@ -69,7 +69,7 @@ func GenerateAttestations(
 		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := state_native.ProtobufBeaconStatePhase0(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
@@ -79,7 +79,7 @@ func GenerateAttestations(
 			}
 			headState = genState
 		case version.Altair:
-			pbState, err := state_native.ProtobufBeaconStateAltair(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +89,7 @@ func GenerateAttestations(
 			}
 			headState = genState
 		case version.Bellatrix:
-			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
