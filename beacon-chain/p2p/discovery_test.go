@@ -246,7 +246,7 @@ func TestInboundPeerLimit(t *testing.T) {
 	fakePeer := testp2p.NewTestP2P(t)
 	s := &Service{
 		cfg:       &Config{MaxPeers: 30},
-		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, false),
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, 1*time.Second, false),
 		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
 			PeerLimit:    30,
 			ScorerParams: &scorers.Config{},
