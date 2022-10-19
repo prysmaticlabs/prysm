@@ -94,8 +94,8 @@ func (c *Collector) Count(key string) int64 {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	b, _ := c.buckets[key]
-	if b == nil {
+	b, ok := c.buckets[key]
+	if !ok || b == nil {
 		return 0
 	}
 
@@ -109,8 +109,8 @@ func (c *Collector) TillEmpty(key string) time.Duration {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	b, _ := c.buckets[key]
-	if b == nil {
+	b, ok := c.buckets[key]
+	if !ok || b == nil {
 		return 0
 	}
 
@@ -123,8 +123,8 @@ func (c *Collector) Remove(key string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	b, _ := c.buckets[key]
-	if b == nil {
+	b, ok := c.buckets[key]
+	if !ok || b == nil {
 		return
 	}
 
