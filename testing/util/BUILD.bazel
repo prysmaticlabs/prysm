@@ -10,6 +10,7 @@ go_library(
         "bellatrix.go",
         "bellatrix_state.go",
         "block.go",
+        "capella_state.go",
         "deposits.go",
         "helpers.go",
         "merge.go",

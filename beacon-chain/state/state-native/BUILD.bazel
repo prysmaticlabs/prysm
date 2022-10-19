@@ -86,6 +86,7 @@ go_test(
         "references_test.go",
         "setters_attestation_test.go",
         "setters_withdrawal_test.go",
+        "state_fuzz_test.go",
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",
@@ -95,6 +96,7 @@ go_test(
     }),
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
@@ -104,6 +106,7 @@ go_test(
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//container/trie:go_default_library",
+        "//crypto/rand:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
