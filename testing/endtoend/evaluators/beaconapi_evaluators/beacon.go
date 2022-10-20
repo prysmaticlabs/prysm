@@ -136,6 +136,9 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	}
 
 	finalizedEpoch, err := strconv.ParseUint(forkJSONPrysm.Data.Epoch, 10, 64)
+	if err != nil {
+		return err
+	}
 	if finalizedEpoch < 8 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}

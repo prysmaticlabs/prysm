@@ -17,10 +17,8 @@ func withCompareNodeMetaData(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err := compareNodeIdentity(ctx, beaconNodeIdx, nodeClient); err != nil {
 		return err
 	}
-	if err := compareNodePeers(ctx, beaconNodeIdx, nodeClient); err != nil {
-		return err
-	}
-	return nil
+	err := compareNodePeers(ctx, beaconNodeIdx, nodeClient)
+	return err
 }
 
 // /eth/v1/node/identity
