@@ -54,6 +54,14 @@ func (SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBloc
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockCapella, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
@@ -208,6 +216,10 @@ func (BeaconBlockBody) Proto() (proto.Message, error) {
 }
 
 func (BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+	panic("implement me")
+}
+
+func (BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
 	panic("implement me")
 }
 

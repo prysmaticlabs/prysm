@@ -564,7 +564,7 @@ func (b *BeaconBlock) MarshalSSZ() ([]byte, error) {
 		return pb.(*eth.BeaconBlockBellatrix).MarshalSSZ()
 	case version.Capella:
 		if b.IsBlinded() {
-			return pb.(*eth.BlindedBeaconBlockBodyCapella).MarshalSSZ()
+			return pb.(*eth.BlindedBeaconBlockCapella).MarshalSSZ()
 		}
 		return pb.(*eth.BeaconBlockCapella).MarshalSSZ()
 	default:
@@ -723,9 +723,9 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 		return &validatorpb.SignRequest_BlockBellatrix{BlockBellatrix: pb.(*eth.BeaconBlockBellatrix)}, nil
 	case version.Capella:
 		if b.IsBlinded() {
-			return &validatorpb.SignRequest_BlindedBlockBellatrix{BlindedBlockBellatrix: pb.(*eth.BlindedBeaconBlockBellatrix)}, nil
+			return &validatorpb.SignRequest_BlindedBlockCapella{BlindedBlockCapella: pb.(*eth.BlindedBeaconBlockCapella)}, nil
 		}
-		return &validatorpb.SignRequest_BlockBellatrix{BlockBellatrix: pb.(*eth.BeaconBlockBellatrix)}, nil
+		return &validatorpb.SignRequest_BlockCapella{BlockCapella: pb.(*eth.BeaconBlockCapella)}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -794,9 +794,21 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 			return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
 		}
 		return WrappedExecutionPayload(b.executionPayload)
+	case version.Capella:
+		if b.isBlinded {
+			return WrappedExecutionPayloadHeaderCapella(b.executionPayloadHeaderCapella)
+		}
+		return WrappedExecutionPayloadCapella(b.executionPayloadCapella)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
+}
+
+func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
+	if b.version < version.Capella {
+		return nil, errNotSupported("BLSToExecutionChanges", b.version)
+	}
+	return b.blsToExecutionChanges, nil
 }
 
 // HashTreeRoot returns the ssz root of the block body.
@@ -815,6 +827,11 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 			return pb.(*eth.BlindedBeaconBlockBodyBellatrix).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyBellatrix).HashTreeRoot()
+	case version.Capella:
+		if b.isBlinded {
+			return pb.(*eth.BlindedBeaconBlockBodyCapella).HashTreeRoot()
+		}
+		return pb.(*eth.BeaconBlockBodyCapella).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}

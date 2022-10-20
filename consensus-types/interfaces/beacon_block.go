@@ -24,6 +24,8 @@ type SignedBeaconBlock interface {
 	ToBlinded() (SignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
+	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
+	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
