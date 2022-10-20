@@ -22,6 +22,11 @@ import (
 )
 
 func TestService_roundRobinSync(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		currentSlot         types.Slot

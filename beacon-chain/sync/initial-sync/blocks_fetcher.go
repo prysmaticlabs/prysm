@@ -54,6 +54,9 @@ var (
 	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
 )
 
+// Period to calculate expected limit for a single peer.
+var blockLimiterPeriod = 30 * time.Second
+
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	chain                    blockchainService
@@ -114,7 +117,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	// Allow fetcher to go almost to the full burst capacity (less a single batch).
 	rateLimiter := leakybucket.NewCollector(
 		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
-		30*time.Second, false /* deleteEmptyBuckets */)
+		blockLimiterPeriod, false /* deleteEmptyBuckets */)
 
 	capacityWeight := cfg.peerFilterCapacityWeight
 	if capacityWeight >= 1 {
