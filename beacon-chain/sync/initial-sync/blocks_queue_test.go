@@ -248,6 +248,13 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				chain: mc,
 				p2p:   p2p,
 			})
+			// Use custom rate limiter, to allow tests to be executed in a reasonable time.
+			blocksPerSecond := flags.Get().BlockBatchLimit
+			allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit
+			rateLimiter := leakybucket.NewCollector(
+				float64(blocksPerSecond), int64(allowedBlocksBurst),
+				1*time.Second, false /* deleteEmptyBuckets */)
+			fetcher.rateLimiter = rateLimiter
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
 				chain:               mc,
