@@ -126,16 +126,16 @@ func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...inter
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	depositContractAddr     common.Address
 	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
 	stateNotifier           statefeed.Notifier
-	stateGen                *stategen.State
-	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
+	finalizedStateAtStartup state.BeaconState
+	depositCache            *depositcache.DepositCache
+	stateGen                *stategen.State
 	currHttpEndpoint        network.Endpoint
 	headers                 []string
-	finalizedStateAtStartup state.BeaconState
+	eth1HeaderReqLimit      uint64
+	depositContractAddr     common.Address
 }
 
 // Service fetches important information about the canonical
@@ -145,25 +145,25 @@ type config struct {
 // Validator Registration Contract on the eth1 chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
-	connectedETH1           bool
-	isRunning               bool
-	processingLock          sync.RWMutex
-	latestEth1DataLock      sync.RWMutex
-	cfg                     *config
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	eth1HeadTicker          *time.Ticker
 	httpLogger              bind.ContractFilterer
-	eth1DataFetcher         RPCDataFetcher
+	preGenesisState         state.BeaconState
+	runError                error
 	rpcClient               RPCClient
+	eth1DataFetcher         RPCDataFetcher
+	ctx                     context.Context
+	cfg                     *config
+	eth1HeadTicker          *time.Ticker
+	cancel                  context.CancelFunc
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositTrie             *trie.SparseMerkleTrie
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
-	runError                error
-	preGenesisState         state.BeaconState
+	latestEth1DataLock      sync.RWMutex
+	processingLock          sync.RWMutex
+	connectedETH1           bool
+	isRunning               bool
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.

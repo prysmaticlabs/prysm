@@ -12,9 +12,9 @@ import (
 
 // ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedSchedule
 type ForkScheduleEntry struct {
-	Version [fieldparams.VersionLength]byte
-	Epoch   types.Epoch
 	Name    string
+	Epoch   types.Epoch
+	Version [fieldparams.VersionLength]byte
 }
 
 // OrderedSchedule provides a type that can be used to sort the fork schedule and find the Version

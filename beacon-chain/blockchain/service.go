@@ -43,44 +43,44 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                     *config
-	ctx                     context.Context
-	cancel                  context.CancelFunc
 	genesisTime             time.Time
-	head                    *head
-	headLock                sync.RWMutex
-	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot   types.Slot
-	boundaryRoots           [][32]byte
+	ctx                     context.Context
 	checkpointStateCache    *cache.CheckpointStateCache
+	cancel                  context.CancelFunc
+	head                    *head
+	cfg                     *config
 	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
-	initSyncBlocksLock      sync.RWMutex
 	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
+	boundaryRoots           [][32]byte
+	nextEpochBoundarySlot   types.Slot
+	headLock                sync.RWMutex
+	initSyncBlocksLock      sync.RWMutex
 	processAttestationsLock sync.Mutex
+	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
 }
 
 // config options for the service.
 type config struct {
-	BeaconBlockBuf          int
+	ForkChoiceStore         f.ForkChoicer
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
-	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
+	ExecutionEngineCaller   execution.EngineCaller
+	FinalizedStateAtStartUp state.BeaconState
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
 	P2p                     p2p.Broadcaster
-	MaxRoutines             int
+	BlockFetcher            execution.POWBlockFetcher
 	StateNotifier           statefeed.Notifier
-	ForkChoiceStore         f.ForkChoicer
+	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
 	AttService              *attestations.Service
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
-	BlockFetcher            execution.POWBlockFetcher
-	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   execution.EngineCaller
+	DepositCache            *depositcache.DepositCache
+	MaxRoutines             int
+	BeaconBlockBuf          int
 }
 
 // NewService instantiates a new block service instance that will

@@ -39,8 +39,8 @@ type SyncCommitteeCache struct {
 // key and `vIndexToPositionMap` is value. Inside `vIndexToPositionMap`, validator positions
 // are cached where key is the validator index and the value is the `positionInCommittee` struct.
 type syncCommitteeIndexPosition struct {
-	currentSyncCommitteeRoot [32]byte
 	vIndexToPositionMap      map[types.ValidatorIndex]*positionInCommittee
+	currentSyncCommitteeRoot [32]byte
 }
 
 // Index position of individual validator of current period and next period sync committee.

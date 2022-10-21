@@ -16,9 +16,9 @@ import (
 // SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across Ethereum consensus functionality.
 type SparseMerkleTrie struct {
-	depth         uint
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
+	depth         uint
 }
 
 // NewTrie returns a new merkle trie filled with zerohashes to use.
@@ -101,8 +101,9 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 }
 
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
-//  Spec Definition:
-//   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
+//
+//	Spec Definition:
+//	 sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
 func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
 	enc := [32]byte{}
 	depositCount := uint64(len(m.originalItems))

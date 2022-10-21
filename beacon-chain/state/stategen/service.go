@@ -41,33 +41,33 @@ type StateManager interface {
 // State is a concrete implementation of StateManager.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	slotsPerArchivedPoint   types.Slot
+	fc                      forkchoice.ForkChoicer
 	hotStateCache           *hotStateCache
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 	backfillStatus          *backfill.Status
 	migrationLock           *sync.Mutex
-	fc                      forkchoice.ForkChoicer
+	slotsPerArchivedPoint   types.Slot
 }
 
 // This tracks the config in the event of long non-finality,
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
 type saveHotStateDbConfig struct {
-	enabled                 bool
-	lock                    sync.Mutex
-	duration                types.Slot
 	blockRootsOfSavedStates [][32]byte
+	duration                types.Slot
+	lock                    sync.Mutex
+	enabled                 bool
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
 // cold and hot sections of the DB splits.
 type finalizedInfo struct {
-	slot  types.Slot
-	root  [32]byte
 	state state.BeaconState
+	slot  types.Slot
 	lock  sync.RWMutex
+	root  [32]byte
 }
 
 // StateGenOption is a functional option for controlling the initialization of a *State value

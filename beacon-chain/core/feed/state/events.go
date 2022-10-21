@@ -30,14 +30,10 @@ const (
 
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
-	// Slot is the slot of the processed block.
-	Slot types.Slot
-	// BlockRoot of the processed block.
-	BlockRoot [32]byte
-	// SignedBlock is the physical processed block.
-	SignedBlock interfaces.SignedBeaconBlock
-	// Verified is true if the block's BLS contents have been verified.
-	Verified bool
+	SignedBlock interfaces.SignedBeaconBlock // SignedBlock is the physical processed block.
+	Slot        types.Slot                   // Slot is the slot of the processed block.
+	BlockRoot   [32]byte                     // BlockRoot of the processed block.
+	Verified    bool                         // Verified is true if the block's BLS contents have been verified.
 }
 
 // ChainStartedData is the data sent with ChainStarted events.

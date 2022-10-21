@@ -183,11 +183,11 @@ func (s Uint64String) MarshalText() ([]byte, error) {
 }
 
 type ExecHeaderResponse struct {
-	Version string `json:"version,omitempty"`
-	Data    struct {
+	Data struct {
 		Signature hexutil.Bytes `json:"signature,omitempty"`
 		Message   *BuilderBid   `json:"message,omitempty"`
 	} `json:"data,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 func (ehr *ExecHeaderResponse) ToProto() (*eth.SignedBuilderBid, error) {

@@ -14,10 +14,10 @@ import (
 
 type subnetIDs struct {
 	attester          *lru.Cache
-	attesterLock      sync.RWMutex
 	aggregator        *lru.Cache
-	aggregatorLock    sync.RWMutex
 	persistentSubnets *cache.Cache
+	attesterLock      sync.RWMutex
+	aggregatorLock    sync.RWMutex
 	subnetsLock       sync.RWMutex
 }
 

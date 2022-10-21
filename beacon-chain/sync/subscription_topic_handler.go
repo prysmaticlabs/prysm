@@ -11,9 +11,9 @@ import (
 // CRUD operations on the topic map. All operations are thread safe
 // so they can be called from multiple routines.
 type subTopicHandler struct {
-	sync.RWMutex
 	subTopics map[string]*pubsub.Subscription
 	digestMap map[[4]byte]int
+	sync.RWMutex
 }
 
 func newSubTopicHandler() *subTopicHandler {

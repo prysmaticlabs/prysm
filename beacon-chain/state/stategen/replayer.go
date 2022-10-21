@@ -63,9 +63,9 @@ type chainer interface {
 }
 
 type stateReplayer struct {
+	chainer chainer
 	target  types.Slot
 	method  retrievalMethod
-	chainer chainer
 }
 
 // ReplayBlocks applies all the blocks that were accumulated when building the Replayer.

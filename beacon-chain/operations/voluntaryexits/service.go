@@ -23,8 +23,8 @@ type PoolManager interface {
 
 // Pool is a concrete implementation of PoolManager.
 type Pool struct {
-	lock    sync.RWMutex
 	pending []*ethpb.SignedVoluntaryExit
+	lock    sync.RWMutex
 }
 
 // NewPool accepts a head fetcher (for reading the validator set) and returns an initialized

@@ -13,12 +13,12 @@ type BeaconNodeStatsUpdater interface {
 }
 
 type PowchainCollector struct {
+	ctx               context.Context
 	SyncEth1Connected *prometheus.Desc
 	updateChan        chan clientstats.BeaconNodeStats
+	finishChan        chan struct{}
 	latestStats       clientstats.BeaconNodeStats
 	sync.Mutex
-	ctx        context.Context
-	finishChan chan struct{}
 }
 
 var _ BeaconNodeStatsUpdater = &PowchainCollector{}

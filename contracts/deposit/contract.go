@@ -286,15 +286,13 @@ func (_DepositContract *DepositContractTransactorSession) Deposit(pubkey []byte,
 
 // DepositContractDepositEventIterator is returned from FilterDepositEvent and is used to iterate over the raw logs and unpacked data for DepositEvent events raised by the DepositContract contract.
 type DepositContractDepositEventIterator struct {
-	Event *DepositContractDepositEvent // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	sub      ethereum.Subscription
+	fail     error
+	Event    *DepositContractDepositEvent
+	contract *bind.BoundContract
+	logs     chan types.Log
+	event    string
+	done     bool
 }
 
 // Next advances the iterator to the subsequent event, returning whether there

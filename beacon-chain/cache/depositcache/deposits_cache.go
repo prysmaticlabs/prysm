@@ -49,11 +49,10 @@ type FinalizedDeposits struct {
 // DepositCache stores all in-memory deposit objects. This
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
-	// Beacon chain deposits in memory.
-	pendingDeposits   []*ethpb.DepositContainer
-	deposits          []*ethpb.DepositContainer
 	finalizedDeposits *FinalizedDeposits
 	depositsByKey     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer
+	pendingDeposits   []*ethpb.DepositContainer
+	deposits          []*ethpb.DepositContainer
 	depositsLock      sync.RWMutex
 }
 

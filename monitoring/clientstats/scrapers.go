@@ -16,8 +16,8 @@ import (
 )
 
 type beaconNodeScraper struct {
-	url     string
 	tripper http.RoundTripper
+	url     string
 }
 
 func (bc *beaconNodeScraper) Scrape() (io.Reader, error) {
@@ -43,8 +43,8 @@ func NewBeaconNodeScraper(promExpoURL string) Scraper {
 }
 
 type validatorScraper struct {
-	url     string
 	tripper http.RoundTripper
+	url     string
 }
 
 func (vc *validatorScraper) Scrape() (io.Reader, error) {

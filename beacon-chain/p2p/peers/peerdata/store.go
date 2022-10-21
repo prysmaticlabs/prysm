@@ -37,33 +37,29 @@ type StoreConfig struct {
 // Note: access to data is controlled by clients i.e. client code is responsible for locking/unlocking
 // the mutex when accessing data.
 type Store struct {
-	sync.RWMutex
 	ctx    context.Context
 	config *StoreConfig
 	peers  map[peer.ID]*PeerData
+	sync.RWMutex
 }
 
 // PeerData aggregates protocol and application level info about a single peer.
 type PeerData struct {
-	// Network related data.
-	Address       ma.Multiaddr
-	Direction     network.Direction
-	ConnState     PeerConnectionState
-	Enr           *enr.Record
-	NextValidTime time.Time
-	// Chain related data.
+	BlockProviderUpdated      time.Time
+	ChainStateLastUpdated     time.Time
+	NextValidTime             time.Time
+	Address                   ma.Multiaddr
+	ChainStateValidationError error
 	MetaData                  metadata.Metadata
 	ChainState                *ethpb.Status
-	ChainStateLastUpdated     time.Time
-	ChainStateValidationError error
-	// Scorers internal data.
-	BadResponses         int
-	ProcessedBlocks      uint64
-	BlockProviderUpdated time.Time
-	// Gossip Scoring data.
-	TopicScores      map[string]*ethpb.TopicScoreSnapshot
-	GossipScore      float64
-	BehaviourPenalty float64
+	Enr                       *enr.Record
+	TopicScores               map[string]*ethpb.TopicScoreSnapshot
+	BadResponses              int
+	ProcessedBlocks           uint64
+	Direction                 network.Direction
+	GossipScore               float64
+	BehaviourPenalty          float64
+	ConnState                 PeerConnectionState
 }
 
 // NewStore creates new peer data store.

@@ -16,8 +16,8 @@ type Endpoint struct {
 
 // AuthorizationData holds all information necessary to authorize with HTTP.
 type AuthorizationData struct {
-	Method authorization.AuthorizationMethod
 	Value  string
+	Method authorization.AuthorizationMethod
 }
 
 // Equals compares two endpoints for equality.

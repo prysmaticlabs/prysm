@@ -103,39 +103,39 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *config
 	ctx                              context.Context
-	cancel                           context.CancelFunc
-	slotToPendingBlocks              *gcache.Cache
+	badBlockCache                    *lru.Cache
+	seenExitCache                    *lru.Cache
+	chainStarted                     *abool.AtomicBool
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	subHandler                       *subTopicHandler
-	pendingAttsLock                  sync.RWMutex
-	pendingQueueLock                 sync.RWMutex
-	chainStarted                     *abool.AtomicBool
-	validateBlockLock                sync.RWMutex
-	rateLimiter                      *limiter
-	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   *lru.Cache
-	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   *lru.Cache
-	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache *lru.Cache
-	seenExitLock                     sync.RWMutex
-	seenExitCache                    *lru.Cache
-	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        *lru.Cache
-	seenAttesterSlashingLock         sync.RWMutex
-	seenAttesterSlashingCache        map[uint64]bool
-	seenSyncMessageLock              sync.RWMutex
-	seenSyncMessageCache             *lru.Cache
-	seenSyncContributionLock         sync.RWMutex
+	signatureChan                    chan *signatureVerifier
+	syncContributionBitsOverlapCache *lru.Cache
+	slotToPendingBlocks              *gcache.Cache
+	cancel                           context.CancelFunc
 	seenSyncContributionCache        *lru.Cache
-	badBlockCache                    *lru.Cache
+	rateLimiter                      *limiter
+	seenBlockCache                   *lru.Cache
+	seenSyncMessageCache             *lru.Cache
+	seenAggregatedAttestationCache   *lru.Cache
+	cfg                              *config
+	seenUnAggregatedAttestationCache *lru.Cache
+	seenAttesterSlashingCache        map[uint64]bool
+	seenProposerSlashingCache        *lru.Cache
+	seenUnAggregatedAttestationLock  sync.RWMutex
+	seenProposerSlashingLock         sync.RWMutex
+	seenAttesterSlashingLock         sync.RWMutex
+	seenExitLock                     sync.RWMutex
+	seenSyncMessageLock              sync.RWMutex
+	seenAggregatedAttestationLock    sync.RWMutex
+	seenSyncContributionLock         sync.RWMutex
+	seenBlockLock                    sync.RWMutex
+	validateBlockLock                sync.RWMutex
 	badBlockLock                     sync.RWMutex
 	syncContributionBitsOverlapLock  sync.RWMutex
-	syncContributionBitsOverlapCache *lru.Cache
-	signatureChan                    chan *signatureVerifier
+	pendingQueueLock                 sync.RWMutex
+	pendingAttsLock                  sync.RWMutex
 }
 
 // NewService initializes new regular sync service.

@@ -41,17 +41,9 @@ func New() *PriorityQueue {
 // must be kept in sync with the data slice.
 // See https://golang.org/pkg/container/heap/#example__priorityQueue
 type PriorityQueue struct {
-	// data is the internal structure that holds the queue, and is operated on by
-	// heap functions
-	data queue
-
-	// dataMap represents all the items in the queue, with unique indexes, used
-	// for finding specific items. dataMap is kept in sync with the data slice
-	dataMap map[string]*Item
-
-	// lock is a read/write mutex, and used to facilitate read/write locks on the
-	// data and dataMap fields
-	lock sync.RWMutex
+	dataMap map[string]*Item // dataMap represents all the items in the queue, with unique indexes, used for finding specific items. dataMap is kept in sync with the data slice
+	data    queue            // data is the internal structure that holds the queue, and is operated on by heap functions
+	lock    sync.RWMutex     // lock is a read/write mutex, and used to facilitate read/write locks on the data and dataMap fields
 }
 
 // queue is the internal data structure used to satisfy heap.Interface. This
@@ -60,19 +52,10 @@ type queue []*Item
 
 // Item is something managed in the priority queue
 type Item struct {
-	// Key is a unique string used to identify items in the internal data map
-	Key string
-	// Value is an unspecified type that implementations can use to store
-	// information
-	Value interface{}
-
-	// Priority determines ordering in the queue, with the lowest value being the
-	// highest priority
-	Priority int64
-
-	// index is an internal value used by the heap package, and should not be
-	// modified by any consumer of the priority queue
-	index int
+	Value    interface{} // Value is an unspecified type that implementations can use to store information
+	Key      string      // Key is a unique string used to identify items in the internal data map
+	Priority int64       // Priority determines ordering in the queue, with the lowest value being the highest priority
+	index    int         // index is an internal value used by the heap package, and should not be modified by any consumer of the priority queue
 }
 
 // Len returns the count of items in the Priority Queue

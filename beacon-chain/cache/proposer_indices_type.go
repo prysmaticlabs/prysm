@@ -12,6 +12,6 @@ var ErrNotProposerIndices = errors.New("object is not a proposer indices struct"
 
 // ProposerIndices defines the cached struct for proposer indices.
 type ProposerIndices struct {
-	BlockRoot       [32]byte
 	ProposerIndices []types.ValidatorIndex
+	BlockRoot       [32]byte
 }

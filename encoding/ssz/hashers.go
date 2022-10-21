@@ -16,8 +16,8 @@ type Hasher interface {
 // HasherFunc defines a structure to hold a hash function and can be used for multiple rounds of
 // hashing.
 type HasherFunc struct {
-	b        [64]byte
 	hashFunc HashFn
+	b        [64]byte
 }
 
 // NewHasherFunc is the constructor for the object
