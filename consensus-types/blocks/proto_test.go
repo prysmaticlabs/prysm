@@ -12,16 +12,19 @@ import (
 )
 
 type fields struct {
-	root              [32]byte
-	sig               [96]byte
-	deposits          []*eth.Deposit
-	atts              []*eth.Attestation
-	proposerSlashings []*eth.ProposerSlashing
-	attesterSlashings []*eth.AttesterSlashing
-	voluntaryExits    []*eth.SignedVoluntaryExit
-	syncAggregate     *eth.SyncAggregate
-	execPayload       *enginev1.ExecutionPayload
-	execPayloadHeader *enginev1.ExecutionPayloadHeader
+	root                     [32]byte
+	sig                      [96]byte
+	deposits                 []*eth.Deposit
+	atts                     []*eth.Attestation
+	proposerSlashings        []*eth.ProposerSlashing
+	attesterSlashings        []*eth.AttesterSlashing
+	voluntaryExits           []*eth.SignedVoluntaryExit
+	syncAggregate            *eth.SyncAggregate
+	execPayload              *enginev1.ExecutionPayload
+	execPayloadHeader        *enginev1.ExecutionPayloadHeader
+	execPayloadCapella       *enginev1.ExecutionPayloadCapella
+	execPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
+	blsToExecutionChanges    []*eth.SignedBLSToExecutionChange
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
@@ -163,6 +166,74 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Capella", func(t *testing.T) {
+		expectedBlock := &eth.SignedBeaconBlockCapella{
+			Block: &eth.BeaconBlockCapella{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
+				Body:          bodyPbCapella(),
+			},
+			Signature: f.sig[:],
+		}
+		block := &SignedBeaconBlock{
+			version: version.Capella,
+			block: &BeaconBlock{
+				version:       version.Capella,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
+				body:          bodyCapella(),
+			},
+			signature: f.sig,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBeaconBlockCapella)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("CapellaBlind", func(t *testing.T) {
+		expectedBlock := &eth.SignedBlindedBeaconBlockCapella{
+			Block: &eth.BlindedBeaconBlockCapella{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.root[:],
+				StateRoot:     f.root[:],
+				Body:          bodyPbBlindedCapella(),
+			},
+			Signature: f.sig[:],
+		}
+		block := &SignedBeaconBlock{
+			version: version.Capella,
+			block: &BeaconBlock{
+				version:       version.Capella,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.root,
+				stateRoot:     f.root,
+				body:          bodyBlindedCapella(),
+			},
+			signature: f.sig,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBlindedBeaconBlockCapella)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlock_Proto(t *testing.T) {
@@ -276,6 +347,60 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Capella", func(t *testing.T) {
+		expectedBlock := &eth.BeaconBlockCapella{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbCapella(),
+		}
+		block := &BeaconBlock{
+			version:       version.Capella,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
+			body:          bodyCapella(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockCapella)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("CapellaBlind", func(t *testing.T) {
+		expectedBlock := &eth.BlindedBeaconBlockCapella{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbBlindedCapella(),
+		}
+		block := &BeaconBlock{
+			version:       version.Capella,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.root,
+			stateRoot:     f.root,
+			body:          bodyBlindedCapella(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockCapella)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
@@ -325,6 +450,32 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		result, err := body.Proto()
 		require.NoError(t, err)
 		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Capella", func(t *testing.T) {
+		expectedBody := bodyPbCapella()
+		body := bodyCapella()
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBodyCapella)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("CapellaBlind", func(t *testing.T) {
+		expectedBody := bodyPbBlindedCapella()
+		body := bodyBlindedCapella()
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyCapella)
 		require.Equal(t, true, ok)
 		resultHTR, err := resultBlock.HashTreeRoot()
 		require.NoError(t, err)
@@ -422,6 +573,50 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
 }
 
+func Test_initSignedBlockFromProtoCapella(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBeaconBlockCapella{
+		Block: &eth.BeaconBlockCapella{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbCapella(),
+		},
+		Signature: f.sig[:],
+	}
+	resultBlock, err := initSignedBlockFromProtoCapella(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
+}
+
+func Test_initBlindedSignedBlockFromProtoCapella(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBlindedBeaconBlockCapella{
+		Block: &eth.BlindedBeaconBlockCapella{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.root[:],
+			StateRoot:     f.root[:],
+			Body:          bodyPbBlindedCapella(),
+		},
+		Signature: f.sig[:],
+	}
+	resultBlock, err := initBlindedSignedBlockFromProtoCapella(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])
+}
+
 func Test_initBlockFromProtoPhase0(t *testing.T) {
 	f := getFields()
 	expectedBlock := &eth.BeaconBlock{
@@ -494,6 +689,42 @@ func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
 	assert.DeepEqual(t, expectedHTR, resultHTR)
 }
 
+func Test_initBlockFromProtoCapella(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BeaconBlockCapella{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
+		Body:          bodyPbCapella(),
+	}
+	resultBlock, err := initBlockFromProtoCapella(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockFromProtoBlindedCapella(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BlindedBeaconBlockCapella{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.root[:],
+		StateRoot:     f.root[:],
+		Body:          bodyPbBlindedCapella(),
+	}
+	resultBlock, err := initBlindedBlockFromProtoCapella(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
 func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
 	expectedBody := bodyPbPhase0()
 	resultBody, err := initBlockBodyFromProtoPhase0(expectedBody)
@@ -530,6 +761,28 @@ func Test_initBlockBodyFromProtoBellatrix(t *testing.T) {
 func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
 	expectedBody := bodyPbBlindedBellatrix()
 	resultBody, err := initBlindedBlockBodyFromProtoBellatrix(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoCapella(t *testing.T) {
+	expectedBody := bodyPbCapella()
+	resultBody, err := initBlockBodyFromProtoCapella(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoBlindedCapella(t *testing.T) {
+	expectedBody := bodyPbBlindedCapella()
+	resultBody, err := initBlindedBlockBodyFromProtoCapella(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
 	require.NoError(t, err)
@@ -615,6 +868,48 @@ func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
 	}
 }
 
+func bodyPbCapella() *eth.BeaconBlockBodyCapella {
+	f := getFields()
+	return &eth.BeaconBlockBodyCapella{
+		RandaoReveal: f.sig[:],
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		Graffiti:              f.root[:],
+		ProposerSlashings:     f.proposerSlashings,
+		AttesterSlashings:     f.attesterSlashings,
+		Attestations:          f.atts,
+		Deposits:              f.deposits,
+		VoluntaryExits:        f.voluntaryExits,
+		SyncAggregate:         f.syncAggregate,
+		ExecutionPayload:      f.execPayloadCapella,
+		BlsToExecutionChanges: f.blsToExecutionChanges,
+	}
+}
+
+func bodyPbBlindedCapella() *eth.BlindedBeaconBlockBodyCapella {
+	f := getFields()
+	return &eth.BlindedBeaconBlockBodyCapella{
+		RandaoReveal: f.sig[:],
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		Graffiti:               f.root[:],
+		ProposerSlashings:      f.proposerSlashings,
+		AttesterSlashings:      f.attesterSlashings,
+		Attestations:           f.atts,
+		Deposits:               f.deposits,
+		VoluntaryExits:         f.voluntaryExits,
+		SyncAggregate:          f.syncAggregate,
+		ExecutionPayloadHeader: f.execPayloadHeaderCapella,
+		BlsToExecutionChanges:  f.blsToExecutionChanges,
+	}
+}
+
 func bodyPhase0() *BeaconBlockBody {
 	f := getFields()
 	return &BeaconBlockBody{
@@ -694,6 +989,51 @@ func bodyBlindedBellatrix() *BeaconBlockBody {
 		voluntaryExits:         f.voluntaryExits,
 		syncAggregate:          f.syncAggregate,
 		executionPayloadHeader: f.execPayloadHeader,
+	}
+}
+
+func bodyCapella() *BeaconBlockBody {
+	f := getFields()
+	return &BeaconBlockBody{
+		version:      version.Capella,
+		randaoReveal: f.sig,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		graffiti:                f.root,
+		proposerSlashings:       f.proposerSlashings,
+		attesterSlashings:       f.attesterSlashings,
+		attestations:            f.atts,
+		deposits:                f.deposits,
+		voluntaryExits:          f.voluntaryExits,
+		syncAggregate:           f.syncAggregate,
+		executionPayloadCapella: f.execPayloadCapella,
+		blsToExecutionChanges:   f.blsToExecutionChanges,
+	}
+}
+
+func bodyBlindedCapella() *BeaconBlockBody {
+	f := getFields()
+	return &BeaconBlockBody{
+		version:      version.Capella,
+		isBlinded:    true,
+		randaoReveal: f.sig,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.root[:],
+			DepositCount: 128,
+			BlockHash:    f.root[:],
+		},
+		graffiti:                      f.root,
+		proposerSlashings:             f.proposerSlashings,
+		attesterSlashings:             f.attesterSlashings,
+		attestations:                  f.atts,
+		deposits:                      f.deposits,
+		voluntaryExits:                f.voluntaryExits,
+		syncAggregate:                 f.syncAggregate,
+		executionPayloadHeaderCapella: f.execPayloadHeaderCapella,
+		blsToExecutionChanges:         f.blsToExecutionChanges,
 	}
 }
 
@@ -850,17 +1190,72 @@ func getFields() fields {
 		BlockHash:        root[:],
 		TransactionsRoot: root[:],
 	}
+	execPayloadCapella := &enginev1.ExecutionPayloadCapella{
+		ParentHash:    root[:],
+		FeeRecipient:  b20,
+		StateRoot:     root[:],
+		ReceiptsRoot:  root[:],
+		LogsBloom:     b256,
+		PrevRandao:    root[:],
+		BlockNumber:   128,
+		GasLimit:      128,
+		GasUsed:       128,
+		Timestamp:     128,
+		ExtraData:     root[:],
+		BaseFeePerGas: root[:],
+		BlockHash:     root[:],
+		Transactions: [][]byte{
+			[]byte("transaction1"),
+			[]byte("transaction2"),
+			[]byte("transaction8"),
+		},
+		Withdrawals: []*enginev1.Withdrawal{
+			{
+				WithdrawalIndex:  128,
+				ExecutionAddress: b20,
+				Amount:           128,
+			},
+		},
+	}
+	execPayloadHeaderCapella := &enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       root[:],
+		FeeRecipient:     b20,
+		StateRoot:        root[:],
+		ReceiptsRoot:     root[:],
+		LogsBloom:        b256,
+		PrevRandao:       root[:],
+		BlockNumber:      128,
+		GasLimit:         128,
+		GasUsed:          128,
+		Timestamp:        128,
+		ExtraData:        root[:],
+		BaseFeePerGas:    root[:],
+		BlockHash:        root[:],
+		TransactionsRoot: root[:],
+		WithdrawalsRoot:  root[:],
+	}
+	blsToExecutionChanges := []*eth.SignedBLSToExecutionChange{{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex:     128,
+			FromBlsPubkey:      b48,
+			ToExecutionAddress: b20,
+		},
+		Signature: sig[:],
+	}}
 
 	return fields{
-		root:              root,
-		sig:               sig,
-		deposits:          deposits,
-		atts:              atts,
-		proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-		attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-		voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-		syncAggregate:     syncAggregate,
-		execPayload:       execPayload,
-		execPayloadHeader: execPayloadHeader,
+		root:                     root,
+		sig:                      sig,
+		deposits:                 deposits,
+		atts:                     atts,
+		proposerSlashings:        []*eth.ProposerSlashing{proposerSlashing},
+		attesterSlashings:        []*eth.AttesterSlashing{attesterSlashing},
+		voluntaryExits:           []*eth.SignedVoluntaryExit{voluntaryExit},
+		syncAggregate:            syncAggregate,
+		execPayload:              execPayload,
+		execPayloadHeader:        execPayloadHeader,
+		execPayloadCapella:       execPayloadCapella,
+		execPayloadHeaderCapella: execPayloadHeaderCapella,
+		blsToExecutionChanges:    blsToExecutionChanges,
 	}
 }

@@ -22,6 +22,8 @@ func TestExtractBlockDataType(t *testing.T) {
 	require.NoError(t, err)
 	bellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, params.BeaconConfig().ZeroHash[:])
 	require.NoError(t, err)
+	capellaDigest, err := signing.ComputeForkDigest(params.BeaconConfig().CapellaForkVersion, params.BeaconConfig().ZeroHash[:])
+	require.NoError(t, err)
 
 	type args struct {
 		digest []byte
@@ -99,6 +101,19 @@ func TestExtractBlockDataType(t *testing.T) {
 			},
 			want: func() interfaces.SignedBeaconBlock {
 				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "capella fork version",
+			args: args{
+				digest: capellaDigest[:],
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			want: func() interfaces.SignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}})
 				require.NoError(t, err)
 				return wsb
 			}(),

@@ -67,6 +67,28 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "capella",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBeaconBlockCapella()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "capella blind",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockCapella()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
 }
 
 func TestStore_SaveBackfillBlockRoot(t *testing.T) {
