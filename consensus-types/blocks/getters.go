@@ -203,7 +203,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	}
 
 	switch p := payload.Proto().(type) {
-	case *enginev1.ExecutionPayloadHeader:
+	case *enginev1.ExecutionPayload:
 		header, err := PayloadToHeader(payload)
 		if err != nil {
 			return nil, err
@@ -230,7 +230,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 				},
 				Signature: b.signature[:],
 			})
-	case *enginev1.ExecutionPayloadHeaderCapella:
+	case *enginev1.ExecutionPayloadCapella:
 		header, err := PayloadToHeaderCapella(payload)
 		if err != nil {
 			return nil, err
