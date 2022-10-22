@@ -63,6 +63,7 @@ type ReadOnlyBeaconState interface {
 	IsNil() bool
 	Version() int
 	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
+	NextWithdrawalIndex() (uint64, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -88,6 +89,7 @@ type WriteOnlyBeaconState interface {
 	SetWithdrawalQueue(val []*enginev1.Withdrawal) error
 	AppendWithdrawal(val *enginev1.Withdrawal) error
 	SetNextWithdrawalIndex(i uint64) error
+	IncreaseNextWithdrawalIndex() error
 	SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }
 

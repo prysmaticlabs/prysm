@@ -3,9 +3,12 @@ package state_native
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -64,10 +67,23 @@ func (b *BeaconState) SetNextWithdrawalIndex(i uint64) error {
 		return errNotSupported("SetNextWithdrawalIndex", b.version)
 	}
 
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.nextWithdrawalIndex = i
+	return nil
+}
+
+// IncreaseNextWithdrawalIndex increases the index that will be assigned to the next withdrawal.
+func (b *BeaconState) IncreaseNextWithdrawalIndex() error {
+	if b.version < version.Capella {
+		return errNotSupported("IncreaseNextWithdrawalIndex", b.version)
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.nextWithdrawalIndex += 1
 	return nil
 }
 
@@ -78,9 +94,47 @@ func (b *BeaconState) SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIn
 		return errNotSupported("SetNextPartialWithdrawalValidatorIndex", b.version)
 	}
 
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.nextPartialWithdrawalValidatorIndex = i
 	return nil
+}
+
+// WithdrawBalance withdraws the balance from the validator and creates and
+// withdrawal receipt for the EL to process
+func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64) error {
+	if b.version < version.Capella {
+		return errNotSupported("WithdrawBalance", b.version)
+	}
+
+	if err := helpers.DecreaseBalance(b, index, amount); err != nil {
+		return errors.Wrap(err, "could not withdraw balance from validator")
+	}
+	nextWithdrawalIndex, err := b.NextWithdrawalIndex()
+	if err != nil {
+		return errors.Wrap(err, "could not withdraw balance from validator")
+	}
+	val, err := b.ValidatorAtIndex(index)
+	if err != nil {
+		return errors.Wrap(err, "could not withdraw balance from validator")
+	}
+
+	// Protection against withdrawing a BLS validator, this should not
+	// happen in runtime!
+	creds := val.WithdrawalCredentials
+	if len(creds) < fieldparams.RootLength || creds[0] != params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
+		return errors.New("could not withdraw balance from validator: invalid withdrawal credentials")
+	}
+
+	withdrawal := &enginev1.Withdrawal{
+		WithdrawalIndex:  nextWithdrawalIndex,
+		ExecutionAddress: creds[12:],
+		Amount:           amount,
+	}
+
+	if err := b.IncreaseNextWithdrawalIndex(); err != nil {
+		return errors.Wrap(err, "could not withdraw balance from validator")
+	}
+	return b.AppendWithdrawal(withdrawal)
 }
