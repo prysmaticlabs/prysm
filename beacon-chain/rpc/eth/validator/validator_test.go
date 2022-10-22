@@ -328,7 +328,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
 		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 10565, [8]byte{3}, [32]byte{4})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
 
 		_, err := vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
@@ -341,7 +341,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, types.ValidatorIndex(0), vid)
 		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(10565), vid)
+		require.Equal(t, types.ValidatorIndex(4309), vid)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
