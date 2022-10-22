@@ -31,6 +31,9 @@ proto_library(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
+    includes = [
+        "//consensus-types/primitives:go_default_library",
+    ],
     objs = [
         "ExecutionPayload",
         "ExecutionPayloadCapella",
