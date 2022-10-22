@@ -109,15 +109,15 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	}
 
 	if err := helpers.DecreaseBalance(b, index, amount); err != nil {
-		return errors.Wrap(err, "could not withdraw balance from validator")
+		return errors.Wrap(err, "could not decrease balance")
 	}
 	nextWithdrawalIndex, err := b.NextWithdrawalIndex()
 	if err != nil {
-		return errors.Wrap(err, "could not withdraw balance from validator")
+		return errors.Wrap(err, "could not get the next withdrawal index")
 	}
 	val, err := b.ValidatorAtIndex(index)
 	if err != nil {
-		return errors.Wrap(err, "could not withdraw balance from validator")
+		return errors.Wrapf(err, "could not get validator at index %d", index)
 	}
 
 	// Protection against withdrawing a BLS validator, this should not
@@ -135,7 +135,7 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	}
 
 	if err := b.IncreaseNextWithdrawalIndex(); err != nil {
-		return errors.Wrap(err, "could not withdraw balance from validator")
+		return errors.Wrap(err, "could not increase next withdrawal index")
 	}
 	return b.AppendWithdrawal(withdrawal)
 }
