@@ -129,6 +129,7 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 
 	withdrawal := &enginev1.Withdrawal{
 		WithdrawalIndex:  nextWithdrawalIndex,
+		ValidatorIndex:   index,
 		ExecutionAddress: creds[12:],
 		Amount:           amount,
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -148,6 +149,7 @@ func TestWithdrawBalance(t *testing.T) {
 	withdrawal := s.withdrawalQueue[0]
 	require.Equal(t, uint64(2), withdrawal.WithdrawalIndex)
 	require.Equal(t, params.BeaconConfig().MinDepositAmount, withdrawal.Amount)
+	require.Equal(t, types.ValidatorIndex(0), withdrawal.ValidatorIndex)
 
 	// BLS validator
 	err := s.WithdrawBalance(1, params.BeaconConfig().MinDepositAmount)
