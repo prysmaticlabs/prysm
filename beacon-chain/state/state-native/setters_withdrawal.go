@@ -64,8 +64,8 @@ func (b *BeaconState) SetNextWithdrawalIndex(i uint64) error {
 		return errNotSupported("SetNextWithdrawalIndex", b.version)
 	}
 
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.nextWithdrawalIndex = i
 	return nil
@@ -78,8 +78,8 @@ func (b *BeaconState) SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIn
 		return errNotSupported("SetNextPartialWithdrawalValidatorIndex", b.version)
 	}
 
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.nextPartialWithdrawalValidatorIndex = i
 	return nil
