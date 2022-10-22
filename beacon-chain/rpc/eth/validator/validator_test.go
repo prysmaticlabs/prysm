@@ -322,6 +322,28 @@ func TestGetProposerDuties(t *testing.T) {
 		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
+	t.Run("Prune payload ID cache ok", func(t *testing.T) {
+		req := &ethpbv1.ProposerDutiesRequest{
+			Epoch: 1,
+		}
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
+		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
+
+		_, err := vs.GetProposerDuties(ctx, req)
+		require.NoError(t, err)
+
+		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
+		require.Equal(t, false, has)
+		require.Equal(t, types.ValidatorIndex(0), vid)
+		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
+		require.Equal(t, false, has)
+		require.Equal(t, types.ValidatorIndex(0), vid)
+		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
+		require.Equal(t, true, has)
+		require.Equal(t, types.ValidatorIndex(4309), vid)
+	})
+
 	t.Run("Require slot processing", func(t *testing.T) {
 		// We create local variables to not interfere with other tests.
 		// Slot processing might have unexpected side-effects.
