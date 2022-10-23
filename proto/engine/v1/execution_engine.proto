@@ -132,10 +132,13 @@ message Withdrawal {
 	// Withdrawal index for accounting purposes
 	uint64 withdrawal_index = 1;
 
+	// Validator index for the withdrawal
+	uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+
 	// The execution address receiving the funds
-	bytes execution_address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	bytes execution_address = 3 [(ethereum.eth.ext.ssz_size) = "20"];
 
 	// The withdrawn amount in Gwei
-	uint64 amount = 3;
+	uint64 amount = 4;
 }
 
