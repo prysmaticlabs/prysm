@@ -72,7 +72,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 		t.Fatalf("expected justified epoch to change to 3, received %d", beaconState.CurrentJustifiedCheckpoint().Epoch)
 	}
 	if beaconState.FinalizedCheckpointEpoch() != 2 {
-		t.Fatalf("expected finalized epoch to change to 2, received %d", beaconState.CurrentJustifiedCheckpoint().Epoch)
+		t.Fatalf("expected finalized epoch to change to 2, received %d", beaconState.FinalizedCheckpointEpoch())
 	}
 }
 
