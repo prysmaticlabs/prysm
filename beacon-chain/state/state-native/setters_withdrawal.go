@@ -7,7 +7,6 @@ import (
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -123,22 +122,21 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	if err != nil {
 		return errors.Wrap(err, "could not get the next withdrawal index")
 	}
-	val, err := b.ValidatorAtIndex(index)
+	val, err := b.ValidatorAtIndexReadOnly(index)
 	if err != nil {
 		return errors.Wrapf(err, "could not get validator at index %d", index)
 	}
 
 	// Protection against withdrawing a BLS validator, this should not
 	// happen in runtime!
-	creds := val.WithdrawalCredentials
-	if len(creds) < fieldparams.RootLength || creds[0] != params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
+	if !val.HasETH1WithdrawalCredential() {
 		return errors.New("could not withdraw balance from validator: invalid withdrawal credentials")
 	}
 
 	withdrawal := &enginev1.Withdrawal{
 		WithdrawalIndex:  nextWithdrawalIndex,
 		ValidatorIndex:   index,
-		ExecutionAddress: creds[12:],
+		ExecutionAddress: val.WithdrawalCredentials()[12:],
 		Amount:           amount,
 	}
 
