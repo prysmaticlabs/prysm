@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -107,9 +106,18 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	if b.version < version.Capella {
 		return errNotSupported("WithdrawBalance", b.version)
 	}
+	balAtIdx, err := b.BalanceAtIndex(index)
+	if err != nil {
+		return errors.Wrapf(err, "could not get balance at index %d", index)
+	}
+	if amount > balAtIdx {
+		balAtIdx = 0
+	} else {
+		balAtIdx -= amount
+	}
 
-	if err := helpers.DecreaseBalance(b, index, amount); err != nil {
-		return errors.Wrap(err, "could not decrease balance")
+	if err := b.UpdateBalancesAtIndex(index, balAtIdx); err != nil {
+		return errors.Wrapf(err, "could not update balance of validator index %d", index)
 	}
 	nextWithdrawalIndex, err := b.NextWithdrawalIndex()
 	if err != nil {
