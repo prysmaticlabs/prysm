@@ -99,7 +99,7 @@ func (b *BeaconState) SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIn
 	return nil
 }
 
-// WithdrawBalance withdraws the balance from the validator and creates and
+// WithdrawBalance withdraws the balance from the validator and creates a
 // withdrawal receipt for the EL to process
 func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64) error {
 	if b.version < version.Capella {
