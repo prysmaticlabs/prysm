@@ -26,5 +26,6 @@ import "proto/eth/v2/version.proto";
 
 message SSZContainer {
   Version version = 1;
-  bytes data = 2;
+  bool execution_optimistic = 2;
+  bytes data = 3;
 }

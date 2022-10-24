@@ -112,6 +112,18 @@ type RPCClient interface {
 	CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error
 }
 
+type RPCClientEmpty struct {
+}
+
+func (RPCClientEmpty) Close() {}
+func (RPCClientEmpty) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("rpc client is not initialized")
+}
+
+func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...interface{}) error {
+	return errors.New("rpc client is not initialized")
+}
+
 // config defines a config struct for dependencies into the service.
 type config struct {
 	depositContractAddr     common.Address
@@ -169,8 +181,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	}
 
 	s := &Service{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:       ctx,
+		cancel:    cancel,
+		rpcClient: RPCClientEmpty{},
 		cfg: &config{
 			beaconNodeStatsUpdater: &NopBeaconNodeStatsUpdater{},
 			eth1HeaderReqLimit:     defaultEth1HeaderReqLimit,
@@ -778,7 +791,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
+		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
 		if err != nil {
 			return err
 		}
