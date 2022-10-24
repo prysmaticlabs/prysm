@@ -496,7 +496,7 @@ func genAttestation() *v1alpha1.Attestation {
 	return &v1alpha1.Attestation{
 		AggregationBits: bytes(32),
 		Data:            genAttData(),
-		Signature:       bytes(32),
+		Signature:       bytes(96),
 	}
 }
 
