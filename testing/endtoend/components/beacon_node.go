@@ -32,10 +32,10 @@ var _ e2etypes.BeaconNodeSet = (*BeaconNodeSet)(nil)
 type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
-	nodes   []e2etypes.ComponentRunner
-	enr     string
-	ids     []string
 	started chan struct{}
+	enr     string
+	nodes   []e2etypes.ComponentRunner
+	ids     []string
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
@@ -150,10 +150,10 @@ type BeaconNode struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
-	index   int
+	cmd     *exec.Cmd
 	enr     string
 	peerID  string
-	cmd     *exec.Cmd
+	index   int
 }
 
 // NewBeaconNode creates and returns a beacon node.

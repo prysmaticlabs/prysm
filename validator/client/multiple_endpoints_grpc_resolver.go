@@ -30,8 +30,8 @@ func (*multipleEndpointsGrpcResolverBuilder) Scheme() string {
 }
 
 type multipleEndpointsGrpcResolver struct {
-	target resolver.Target
 	cc     resolver.ClientConn
+	target resolver.Target
 }
 
 func (r *multipleEndpointsGrpcResolver) start() {

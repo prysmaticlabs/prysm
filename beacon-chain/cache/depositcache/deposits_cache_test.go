@@ -36,10 +36,10 @@ func TestInsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	insertions := []struct {
-		blkNum      uint64
 		deposit     *ethpb.Deposit
-		index       int64
 		expectedErr string
+		blkNum      uint64
+		index       int64
 	}{
 		{
 			blkNum:      0,
@@ -841,8 +841,8 @@ func TestPruneProofs_Ok(t *testing.T) {
 	require.NoError(t, err)
 
 	deposits := []struct {
-		blkNum  uint64
 		deposit *ethpb.Deposit
+		blkNum  uint64
 		index   int64
 	}{
 		{
@@ -888,8 +888,8 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 	require.NoError(t, err)
 
 	deposits := []struct {
-		blkNum  uint64
 		deposit *ethpb.Deposit
+		blkNum  uint64
 		index   int64
 	}{
 		{
@@ -930,8 +930,8 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 	require.NoError(t, err)
 
 	deposits := []struct {
-		blkNum  uint64
 		deposit *ethpb.Deposit
+		blkNum  uint64
 		index   int64
 	}{
 		{
@@ -977,8 +977,8 @@ func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	deposits := []struct {
-		blkNum  uint64
 		deposit *ethpb.Deposit
+		blkNum  uint64
 		index   int64
 	}{
 		{

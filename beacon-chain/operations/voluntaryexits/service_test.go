@@ -357,9 +357,9 @@ func TestPool_PendingExits(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
+		want   []*ethpb.SignedVoluntaryExit
 		fields fields
 		args   args
-		want   []*ethpb.SignedVoluntaryExit
 	}{
 		{
 			name: "Empty list",

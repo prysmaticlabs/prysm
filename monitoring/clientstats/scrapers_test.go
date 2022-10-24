@@ -75,9 +75,9 @@ func scrapeBeaconNodeStats(body string) (*BeaconNodeStats, error) {
 
 func TestInvertEth1Metrics(t *testing.T) {
 	cases := []struct {
+		test func(*BeaconNodeStats) bool
 		key  string
 		body string
-		test func(*BeaconNodeStats) bool
 	}{
 		{
 			key:  "SyncEth1Connected",

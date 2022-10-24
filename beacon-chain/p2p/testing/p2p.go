@@ -37,15 +37,15 @@ const metatadataV2Topic = "/eth2/beacon_chain/req/metadata/2"
 
 // TestP2P represents a p2p implementation that can be used for testing.
 type TestP2P struct {
-	t               *testing.T
 	BHost           host.Host
+	LocalMetadata   metadata.Metadata
+	t               *testing.T
 	pubsub          *pubsub.PubSub
 	joinedTopics    map[string]*pubsub.Topic
+	peers           *peers.Status
+	Digest          [4]byte
 	BroadcastCalled bool
 	DelaySend       bool
-	Digest          [4]byte
-	peers           *peers.Status
-	LocalMetadata   metadata.Metadata
 }
 
 // NewTestP2P initializes a new p2p test service.

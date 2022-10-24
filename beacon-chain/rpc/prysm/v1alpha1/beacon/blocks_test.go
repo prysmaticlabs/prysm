@@ -44,8 +44,8 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	cases := []struct {
-		name       string
 		zeroSetter func(val *ethpb.Checkpoint) error
+		name       string
 	}{
 		{
 			name:       "zero-value prev justified",

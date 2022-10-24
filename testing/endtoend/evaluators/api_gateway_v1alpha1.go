@@ -144,11 +144,11 @@ func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error
 		Root  string `json:"root"`
 	}
 	type attestationDataJSON struct {
+		Source          *checkpointJSON `json:"source"`
+		Target          *checkpointJSON `json:"target"`
 		Slot            string          `json:"slot"`
 		CommitteeIndex  string          `json:"committeeIndex"`
 		BeaconBlockRoot string          `json:"beaconBlockRoot"`
-		Source          *checkpointJSON `json:"source"`
-		Target          *checkpointJSON `json:"target"`
 	}
 	type attestationJSON struct {
 		AggregationBits string               `json:"aggregationBits"`
@@ -156,8 +156,8 @@ func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error
 		Signature       string               `json:"signature"`
 	}
 	type attestationsResponseJSON struct {
-		Attestations  []*attestationJSON `json:"attestations"`
 		NextPageToken string             `json:"nextPageToken"`
+		Attestations  []*attestationJSON `json:"attestations"`
 		TotalSize     int32              `json:"totalSize"`
 	}
 	ctx := context.Background()
@@ -277,20 +277,20 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		PublicKey                  string `json:"publicKey"`
 		WithdrawalCredentials      string `json:"withdrawalCredentials"`
 		EffectiveBalance           string `json:"effectiveBalance"`
-		Slashed                    bool   `json:"slashed"`
 		ActivationEligibilityEpoch string `json:"activationEligibilityEpoch"`
 		ActivationEpoch            string `json:"activationEpoch"`
 		ExitEpoch                  string `json:"exitEpoch"`
 		WithdrawableEpoch          string `json:"withdrawableEpoch"`
+		Slashed                    bool   `json:"slashed"`
 	}
 	type validatorContainerJSON struct {
-		Index     string         `json:"index"`
 		Validator *validatorJSON `json:"validator"`
+		Index     string         `json:"index"`
 	}
 	type validatorsResponseJSON struct {
 		Epoch         string                    `json:"epoch"`
-		ValidatorList []*validatorContainerJSON `json:"validatorList"`
 		NextPageToken string                    `json:"nextPageToken"`
+		ValidatorList []*validatorContainerJSON `json:"validatorList"`
 		TotalSize     int32                     `json:"totalSize"`
 	}
 	ctx := context.Background()

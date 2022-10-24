@@ -29,9 +29,9 @@ func TestSigningRoot_ComputeSigningRoot(t *testing.T) {
 
 func TestSigningRoot_ComputeDomain(t *testing.T) {
 	tests := []struct {
+		domain     []byte
 		epoch      uint64
 		domainType [4]byte
-		domain     []byte
 	}{
 		{epoch: 1, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
 		{epoch: 2, domainType: [4]byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 245, 165, 253, 66, 209, 106, 32, 48, 39, 152, 239, 110, 211, 9, 151, 155, 67, 0, 61, 35, 32, 217, 240, 232, 234, 152, 49, 169}},
@@ -50,11 +50,11 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 
 func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
-		name       string
 		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
 		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock
-		domainType [4]byte
+		name       string
 		want       []byte
+		domainType [4]byte
 	}{
 		{
 			name: "block proposer",

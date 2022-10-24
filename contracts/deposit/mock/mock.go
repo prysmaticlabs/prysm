@@ -25,11 +25,11 @@ var (
 // TestAccount represents a test account in the simulated backend,
 // through which we can perform actions on the eth1.0 chain.
 type TestAccount struct {
-	Addr         common.Address
-	ContractAddr common.Address
 	Contract     *deposit.DepositContract
 	Backend      *backends.SimulatedBackend
 	TxOpts       *bind.TransactOpts
+	Addr         common.Address
+	ContractAddr common.Address
 }
 
 // Setup creates the simulated backend with the deposit contract deployed
@@ -64,7 +64,7 @@ func Setup() (*TestAccount, error) {
 	}
 	backend.Commit()
 
-	return &TestAccount{addr, contractAddr, contract, backend, txOpts}, nil
+	return &TestAccount{Addr: addr, ContractAddr: contractAddr, Contract: contract, Backend: backend, TxOpts: txOpts}, nil
 }
 
 // Amount32Eth returns 32Eth(in wei) in terms of the big.Int type.

@@ -17,11 +17,11 @@ const (
 
 // Graffiti is a graffiti container.
 type Graffiti struct {
-	Hash     [32]byte
+	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
 	Default  string                          `yaml:"default,omitempty"`
 	Ordered  []string                        `yaml:"ordered,omitempty"`
 	Random   []string                        `yaml:"random,omitempty"`
-	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
+	Hash     [32]byte
 }
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.

@@ -151,12 +151,12 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
+		committee      []types.ValidatorIndex
 		index          types.ValidatorIndex
 		slot           types.Slot
-		committee      []types.ValidatorIndex
 		committeeIndex types.CommitteeIndex
-		isProposer     bool
 		proposerSlot   types.Slot
+		isProposer     bool
 	}{
 		{
 			index:          0,

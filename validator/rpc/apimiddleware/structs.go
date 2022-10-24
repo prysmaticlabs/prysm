@@ -10,9 +10,9 @@ type KeystoreJson struct {
 }
 
 type ImportKeystoresRequestJson struct {
+	SlashingProtection string   `json:"slashing_protection"`
 	Keystores          []string `json:"keystores"`
 	Passwords          []string `json:"passwords"`
-	SlashingProtection string   `json:"slashing_protection"`
 }
 
 type ImportKeystoresResponseJson struct {
@@ -29,8 +29,8 @@ type StatusJson struct {
 }
 
 type DeleteKeystoresResponseJson struct {
-	Statuses           []*StatusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
+	Statuses           []*StatusJson `json:"data"`
 }
 
 //remote keymanager api

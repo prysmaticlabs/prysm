@@ -18,8 +18,8 @@ import (
 
 // MockPeersProvider implements PeersProvider for testing.
 type MockPeersProvider struct {
-	lock  sync.Mutex
 	peers *peers.Status
+	lock  sync.Mutex
 }
 
 // ClearPeers removes all known peers.

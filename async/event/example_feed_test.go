@@ -27,8 +27,8 @@ func ExampleFeed_acknowledgedEvents() {
 	// interaction between event consumers and producers.
 	var feed event.Feed
 	type ackedEvent struct {
-		i   int
 		ack chan<- struct{}
+		i   int
 	}
 
 	// Consumers wait for events on the feed and acknowledge processing.

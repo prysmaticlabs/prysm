@@ -56,11 +56,11 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 
 func TestExtractGossipDigest(t *testing.T) {
 	tests := []struct {
+		error   error
 		name    string
 		topic   string
 		want    [4]byte
 		wantErr bool
-		error   error
 	}{
 		{
 			name:    "empty topic",

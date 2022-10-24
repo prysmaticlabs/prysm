@@ -235,13 +235,13 @@ func TestExtractMetaDataType(t *testing.T) {
 	require.NoError(t, err)
 
 	type args struct {
-		digest []byte
 		chain  blockchain.ChainInfoFetcher
+		digest []byte
 	}
 	tests := []struct {
+		want    metadata.Metadata
 		name    string
 		args    args
-		want    metadata.Metadata
 		wantErr bool
 	}{
 		{

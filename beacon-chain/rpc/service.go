@@ -71,19 +71,19 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
-	Host                          string
-	Port                          string
-	CertFlag                      string
-	KeyFlag                       string
-	BeaconMonitoringHost          string
-	BeaconMonitoringPort          int
+	DepositFetcher                depositcache.DepositFetcher
+	PeerManager                   p2p.PeerManager
+	BlockBuilder                  builder.BlockBuilder
+	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
+	ExecutionEngineCaller         execution.EngineCaller
+	OperationNotifier             opfeed.Notifier
+	BlockNotifier                 blockfeed.Notifier
 	BeaconDB                      db.HeadAccessDatabase
 	ChainInfoFetcher              blockchain.ChainInfoFetcher
 	HeadUpdater                   blockchain.HeadUpdater
-	HeadFetcher                   blockchain.HeadFetcher
+	GenesisFetcher                blockchain.GenesisFetcher
 	CanonicalFetcher              blockchain.CanonicalFetcher
-	ForkFetcher                   blockchain.ForkFetcher
+	StateNotifier                 statefeed.Notifier
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	AttestationReceiver           blockchain.AttestationReceiver
 	BlockReceiver                 blockchain.BlockReceiver
@@ -91,9 +91,9 @@ type Config struct {
 	ChainStartFetcher             execution.ChainStartFetcher
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
-	GenesisFetcher                blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints       bool
-	MockEth1Votes                 bool
+	HeadFetcher                   blockchain.HeadFetcher
+	PendingDepositFetcher         depositcache.PendingDepositsFetcher
+	ForkFetcher                   blockchain.ForkFetcher
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
@@ -102,19 +102,19 @@ type Config struct {
 	SyncService                   chainSync.Checker
 	Broadcaster                   p2p.Broadcaster
 	PeersFetcher                  p2p.PeersProvider
-	PeerManager                   p2p.PeerManager
+	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	MetadataProvider              p2p.MetadataProvider
-	DepositFetcher                depositcache.DepositFetcher
-	PendingDepositFetcher         depositcache.PendingDepositsFetcher
-	StateNotifier                 statefeed.Notifier
-	BlockNotifier                 blockfeed.Notifier
-	OperationNotifier             opfeed.Notifier
 	StateGen                      *stategen.State
-	MaxMsgSize                    int
-	ExecutionEngineCaller         execution.EngineCaller
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
-	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
-	BlockBuilder                  builder.BlockBuilder
+	Host                          string
+	CertFlag                      string
+	BeaconMonitoringHost          string
+	KeyFlag                       string
+	Port                          string
+	BeaconMonitoringPort          int
+	MaxMsgSize                    int
+	MockEth1Votes                 bool
+	EnableDebugRPCEndpoints       bool
 }
 
 // NewService instantiates a new RPC service instance that will

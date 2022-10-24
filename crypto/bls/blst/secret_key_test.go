@@ -29,9 +29,9 @@ func TestMarshalUnmarshal(t *testing.T) {
 
 func TestSecretKeyFromBytes(t *testing.T) {
 	tests := []struct {
+		err   error
 		name  string
 		input []byte
-		err   error
 	}{
 		{
 			name: "Nil",

@@ -18,11 +18,11 @@ func TestFork(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 
 	tests := []struct {
+		want        *ethpb.Fork
+		setConfg    func()
 		name        string
 		targetEpoch types.Epoch
-		want        *ethpb.Fork
 		wantErr     bool
-		setConfg    func()
 	}{
 		{
 			name:        "no fork",
@@ -254,11 +254,11 @@ func TestNextForkData(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()
 	tests := []struct {
-		name              string
 		setConfg          func()
+		name              string
 		currEpoch         types.Epoch
-		wantedForkVerison [4]byte
 		wantedEpoch       types.Epoch
+		wantedForkVerison [4]byte
 	}{
 		{
 			name:              "genesis fork",

@@ -70,27 +70,27 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
-	sync.Mutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	rand            *rand.Rand
 	chain           blockchainService
-	p2p             p2p.P2P
+	ctx             context.Context
 	db              db.ReadOnlyDatabase
-	blocksPerSecond uint64
+	p2p             p2p.P2P
+	rand            *rand.Rand
+	cancel          context.CancelFunc
 	rateLimiter     *leakybucket.Collector
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
-	capacityWeight  float64       // how remaining capacity affects peer selection
-	mode            syncMode      // allows to use fetcher in different sync scenarios
 	quit            chan struct{} // termination notifier
+	blocksPerSecond uint64
+	capacityWeight  float64 // how remaining capacity affects peer selection
+	sync.Mutex
+	mode syncMode // allows to use fetcher in different sync scenarios
 }
 
 // peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
 type peerLock struct {
-	sync.Mutex
 	accessed time.Time
+	sync.Mutex
 }
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
@@ -103,11 +103,11 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
+	err    error
 	pid    peer.ID
+	blocks []interfaces.SignedBeaconBlock
 	start  types.Slot
 	count  uint64
-	blocks []interfaces.SignedBeaconBlock
-	err    error
 }
 
 // newBlocksFetcher creates ready to use fetcher.

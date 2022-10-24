@@ -120,9 +120,9 @@ func (s *ProxySet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
 type Proxy struct {
 	e2etypes.ComponentRunner
 	started     chan struct{}
-	index       int
 	engineProxy *proxy.Proxy
 	cancel      func()
+	index       int
 }
 
 // NewProxy creates and returns an engine-api proxy.

@@ -19,11 +19,11 @@ import (
 func TestService_CheckForNextEpochFork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name         string
 		svcCreator   func(t *testing.T) *Service
+		postSvcCheck func(t *testing.T, s *Service)
+		name         string
 		currEpoch    types.Epoch
 		wantErr      bool
-		postSvcCheck func(t *testing.T, s *Service)
 	}{
 		{
 			name: "no fork in the next epoch",
@@ -153,11 +153,11 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 func TestService_CheckForPreviousEpochFork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name         string
 		svcCreator   func(t *testing.T) *Service
+		postSvcCheck func(t *testing.T, s *Service)
+		name         string
 		currEpoch    types.Epoch
 		wantErr      bool
-		postSvcCheck func(t *testing.T, s *Service)
 	}{
 		{
 			name: "no fork in the previous epoch",

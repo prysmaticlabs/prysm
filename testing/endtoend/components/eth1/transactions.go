@@ -24,10 +24,10 @@ import (
 )
 
 type TransactionGenerator struct {
-	keystore string
-	seed     int64
 	started  chan struct{}
 	cancel   context.CancelFunc
+	keystore string
+	seed     int64
 }
 
 func NewTransactionGenerator(keystore string, seed int64) *TransactionGenerator {

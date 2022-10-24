@@ -437,8 +437,8 @@ func TestMinSpanChunksSlice_StartEpoch(t *testing.T) {
 		currentEpoch types.Epoch
 	}
 	tests := []struct {
-		name           string
 		params         *Parameters
+		name           string
 		args           args
 		wantEpoch      types.Epoch
 		shouldNotExist bool
@@ -503,8 +503,8 @@ func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
 		currentEpoch types.Epoch
 	}
 	tests := []struct {
-		name           string
 		params         *Parameters
+		name           string
 		args           args
 		wantEpoch      types.Epoch
 		shouldNotExist bool
@@ -551,8 +551,8 @@ func TestMaxSpanChunksSlice_StartEpoch(t *testing.T) {
 
 func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 	tests := []struct {
-		name       string
 		params     *Parameters
+		name       string
 		startEpoch types.Epoch
 		want       types.Epoch
 	}{
@@ -597,8 +597,8 @@ func TestMinSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 
 func TestMaxSpanChunksSlice_NextChunkStartEpoch(t *testing.T) {
 	tests := []struct {
-		name       string
 		params     *Parameters
+		name       string
 		startEpoch types.Epoch
 		want       types.Epoch
 	}{

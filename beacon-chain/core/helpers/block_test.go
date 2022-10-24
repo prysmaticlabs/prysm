@@ -82,9 +82,9 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 
 	tests := []struct {
+		expectedErr string
 		slot        types.Slot
 		stateSlot   types.Slot
-		expectedErr string
 	}{
 		{
 			slot:        1000,

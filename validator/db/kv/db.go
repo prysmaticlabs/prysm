@@ -62,10 +62,10 @@ type Config struct {
 // using BoltDB as the underlying persistent kv-store for Ethereum consensus nodes.
 type Store struct {
 	db                                 *bolt.DB
-	databasePath                       string
 	batchedAttestations                *QueuedAttestationRecords
 	batchedAttestationsChan            chan *AttestationRecord
 	batchAttestationsFlushedFeed       *event.Feed
+	databasePath                       string
 	batchedAttestationsFlushInProgress abool.AtomicBool
 }
 

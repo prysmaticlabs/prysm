@@ -113,10 +113,10 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 
 	tests := []struct {
 		name   string
+		err    string
 		fields fields
 		args   args
 		want   []*PendingAttesterSlashing
-		err    string
 	}{
 		{
 			name: "Empty list",
@@ -327,16 +327,16 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 
 func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 	type fields struct {
-		pending  []*PendingAttesterSlashing
 		included map[types.ValidatorIndex]bool
+		pending  []*PendingAttesterSlashing
 	}
 	type args struct {
 		slashing *ethpb.AttesterSlashing
 	}
 	tests := []struct {
+		args   args
 		name   string
 		fields fields
-		args   args
 		want   fields
 	}{
 		{
@@ -467,8 +467,8 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   []*ethpb.AttesterSlashing
+		fields fields
 	}{
 		{
 			name: "Empty list",
@@ -547,8 +547,8 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	result := append(slashings[1:5], slashings[6:]...)
 	tests := []struct {
 		name   string
-		fields fields
 		want   []*ethpb.AttesterSlashing
+		fields fields
 	}{
 		{
 			name: "One item",

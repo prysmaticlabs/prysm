@@ -295,9 +295,9 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
 		req  *ethpb.ListAttestationsRequest
 		res  *ethpb.ListAttestationsResponse
+		name string
 	}{
 		{
 			name: "1st of 3 pages",

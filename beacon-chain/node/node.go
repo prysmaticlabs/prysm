@@ -82,32 +82,32 @@ type serviceFlagOpts struct {
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	cliCtx                  *cli.Context
+	syncCommitteePool       synccommittee.Pool
 	ctx                     context.Context
-	cancel                  context.CancelFunc
-	services                *runtime.ServiceRegistry
-	lock                    sync.RWMutex
-	stop                    chan struct{} // Channel to wait for termination notifications.
+	forkChoicer             forkchoice.ForkChoicer
+	CheckpointInitializer   checkpoint.Initializer
+	GenesisInitializer      genesis.Initializer
+	finalizedStateAtStartUp state.BeaconState
 	db                      db.Database
 	slasherDB               db.SlasherDatabase
 	attestationPool         attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
-	syncCommitteePool       synccommittee.Pool
 	depositCache            *depositcache.DepositCache
+	collector               *bcnodeCollector
 	proposerIdsCache        *cache.ProposerPayloadIDsCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
 	stateGen                *stategen.State
-	collector               *bcnodeCollector
+	cliCtx                  *cli.Context
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	finalizedStateAtStartUp state.BeaconState
+	stop                    chan struct{} // Channel to wait for termination notifications.
 	serviceFlagOpts         *serviceFlagOpts
-	GenesisInitializer      genesis.Initializer
-	CheckpointInitializer   checkpoint.Initializer
-	forkChoicer             forkchoice.ForkChoicer
+	cancel                  context.CancelFunc
+	services                *runtime.ServiceRegistry
+	lock                    sync.RWMutex
 }
 
 // New creates a new node instance, sets up configuration options, and registers

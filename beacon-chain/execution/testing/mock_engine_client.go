@@ -17,23 +17,23 @@ import (
 
 // EngineClient --
 type EngineClient struct {
-	NewPayloadResp              []byte
-	PayloadIDBytes              *pb.PayloadIDBytes
-	ForkChoiceUpdatedResp       []byte
-	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionBlock              *pb.ExecutionBlock
-	Err                         error
 	ErrLatestExecBlock          error
-	ErrExecBlockByHash          error
-	ErrForkchoiceUpdated        error
-	ErrNewPayload               error
 	ErrGetPayload               error
+	ErrNewPayload               error
+	ErrForkchoiceUpdated        error
+	ErrExecBlockByHash          error
+	Err                         error
+	ExecutionBlock              *pb.ExecutionBlock
+	ExecutionPayload            *pb.ExecutionPayload
+	PayloadIDBytes              *pb.PayloadIDBytes
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
-	NumReconstructedPayloads    uint64
+	NewPayloadResp              []byte
+	ForkChoiceUpdatedResp       []byte
 	TerminalBlockHash           []byte
-	TerminalBlockHashExists     bool
+	NumReconstructedPayloads    uint64
 	OverrideValidHash           [32]byte
+	TerminalBlockHashExists     bool
 }
 
 // NewPayload --

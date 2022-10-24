@@ -92,10 +92,10 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
 	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee
 	tests := []struct {
+		err    error
 		name   string
 		inputs []bitfield.Bitlist
 		want   []bitfield.Bitlist
-		err    error
 	}{
 		{
 			name:   "empty list",

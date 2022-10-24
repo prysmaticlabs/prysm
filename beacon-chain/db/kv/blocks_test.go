@@ -20,8 +20,8 @@ import (
 )
 
 var blockTests = []struct {
-	name     string
 	newBlock func(types.Slot, []byte) (interfaces.SignedBeaconBlock, error)
+	name     string
 }{
 	{
 		name: "phase0",

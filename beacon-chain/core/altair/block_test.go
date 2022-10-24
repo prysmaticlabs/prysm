@@ -259,10 +259,10 @@ func Test_ApplySyncRewardsPenalties(t *testing.T) {
 func Test_SyncRewards(t *testing.T) {
 	tests := []struct {
 		name                  string
+		errString             string
 		activeBalance         uint64
 		wantProposerReward    uint64
 		wantParticipantReward uint64
-		errString             string
 	}{
 		{
 			name:                  "active balance is 0",

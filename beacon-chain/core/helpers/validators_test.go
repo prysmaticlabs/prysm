@@ -58,8 +58,8 @@ func TestIsActiveValidatorUsingTrie_OK(t *testing.T) {
 
 func TestIsSlashableValidator_OK(t *testing.T) {
 	tests := []struct {
-		name      string
 		validator *ethpb.Validator
+		name      string
 		epoch     types.Epoch
 		slashable bool
 	}{
@@ -352,8 +352,8 @@ func TestActiveValidatorIndices(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      args
-		want      []types.ValidatorIndex
 		wantedErr string
+		want      []types.ValidatorIndex
 	}{
 		{
 			name: "all_active_epoch_10",
@@ -512,9 +512,9 @@ func TestComputeProposerIndex(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
+		wantedErr string
 		args      args
 		want      types.ValidatorIndex
-		wantedErr string
 	}{
 		{
 			name: "all_active_indices",
@@ -615,8 +615,8 @@ func TestComputeProposerIndex(t *testing.T) {
 
 func TestIsEligibleForActivationQueue(t *testing.T) {
 	tests := []struct {
-		name      string
 		validator *ethpb.Validator
+		name      string
 		want      bool
 	}{
 		{"Eligible",
@@ -638,9 +638,9 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 
 func TestIsIsEligibleForActivation(t *testing.T) {
 	tests := []struct {
-		name      string
 		validator *ethpb.Validator
 		state     *ethpb.BeaconState
+		name      string
 		want      bool
 	}{
 		{"Eligible",

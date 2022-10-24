@@ -9,9 +9,9 @@ import (
 
 // MockBroadcaster implements p2p.Broadcaster for testing.
 type MockBroadcaster struct {
-	BroadcastCalled       bool
 	BroadcastMessages     []proto.Message
 	BroadcastAttestations []*ethpb.Attestation
+	BroadcastCalled       bool
 }
 
 // Broadcast records a broadcast occurred.

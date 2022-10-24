@@ -9,10 +9,10 @@ import (
 
 func TestParseNodeVersion(t *testing.T) {
 	cases := []struct {
-		name string
-		v    string
 		err  error
 		nv   *NodeVersion
+		name string
+		v    string
 	}{
 		{
 			name: "empty string",
@@ -82,11 +82,11 @@ func TestParseNodeVersion(t *testing.T) {
 
 func TestValidHostname(t *testing.T) {
 	cases := []struct {
+		err     error
 		name    string
 		hostArg string
 		path    string
 		joined  string
-		err     error
 	}{
 		{
 			name:    "hostname without port",

@@ -94,15 +94,15 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	type args struct {
 		field      stateTypes.BeaconStateField
-		indices    []uint64
 		elements   interface{}
+		indices    []uint64
 		convertAll bool
 	}
 	tests := []struct {
-		name           string
 		args           *args
-		wantHex        []string
+		name           string
 		errMsg         string
+		wantHex        []string
 		expectedLength int
 	}{
 		{

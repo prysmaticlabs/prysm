@@ -30,8 +30,8 @@ func TestIsSlashableBlock(t *testing.T) {
 	})
 	require.NoError(t, err)
 	tests := []struct {
-		name              string
 		blockToCheck      *slashertypes.SignedBlockHeaderWrapper
+		name              string
 		shouldBeSlashable bool
 	}{
 		{
@@ -99,8 +99,8 @@ func TestIsSlashableAttestation(t *testing.T) {
 	require.Equal(t, 0, len(attesterSlashings))
 
 	tests := []struct {
-		name         string
 		attToCheck   *slashertypes.IndexedAttestationWrapper
+		name         string
 		amtSlashable uint64
 	}{
 		{

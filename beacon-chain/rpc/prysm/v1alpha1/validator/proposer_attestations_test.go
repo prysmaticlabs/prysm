@@ -39,8 +39,8 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 
 func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	type testData struct {
-		slot types.Slot
 		bits bitfield.Bitlist
+		slot types.Slot
 	}
 	getAtts := func(data []testData) proposerAtts {
 		var atts proposerAtts

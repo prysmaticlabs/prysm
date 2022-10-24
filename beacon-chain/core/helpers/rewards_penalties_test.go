@@ -37,8 +37,8 @@ func TestTotalBalance_ReturnsEffectiveBalanceIncrement(t *testing.T) {
 
 func TestGetBalance_OK(t *testing.T) {
 	tests := []struct {
-		i uint64
 		b []uint64
+		i uint64
 	}{
 		{i: 0, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}},
 		{i: 1, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}},
@@ -119,8 +119,8 @@ func TestTotalActiveBalance_WithCache(t *testing.T) {
 
 func TestIncreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  types.ValidatorIndex
 		b  []uint64
+		i  types.ValidatorIndex
 		nb uint64
 		eb uint64
 	}{
@@ -142,8 +142,8 @@ func TestIncreaseBalance_OK(t *testing.T) {
 
 func TestDecreaseBalance_OK(t *testing.T) {
 	tests := []struct {
-		i  types.ValidatorIndex
 		b  []uint64
+		i  types.ValidatorIndex
 		nb uint64
 		eb uint64
 	}{
@@ -257,8 +257,8 @@ func buildState(slot types.Slot, validatorCount uint64) *ethpb.BeaconState {
 
 func TestIncreaseBadBalance_NotOK(t *testing.T) {
 	tests := []struct {
-		i  types.ValidatorIndex
 		b  []uint64
+		i  types.ValidatorIndex
 		nb uint64
 	}{
 		{i: 0, b: []uint64{math.MaxUint64, math.MaxUint64, math.MaxUint64}, nb: 1},

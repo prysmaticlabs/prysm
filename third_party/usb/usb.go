@@ -29,27 +29,25 @@ var ErrUnsupportedPlatform = errors.New("usb: unsupported platform")
 // DeviceInfo contains all the information we know about a USB device. In case of
 // HID devices, that might be a lot more extensive (empty fields for raw USB).
 type DeviceInfo struct {
+	// Raw low level libusb endpoint data for simplified communication
+	rawDevice    interface{}
+	rawWriter    *uint8 // Pointer to differentiate between unset and endpoint 0
+	rawReader    *uint8 // Pointer to differentiate between unset and endpoint 0
+	rawPort      *uint8 // Pointer to differentiate between unset and port 0
 	Path         string // Platform-specific device path
-	VendorID     uint16 // Device Vendor ID
-	ProductID    uint16 // Device Product ID
-	Release      uint16 // Device Release Number in binary-coded decimal, also known as Device Version Number
 	Serial       string // Serial Number
 	Manufacturer string // Manufacturer String
 	Product      string // Product string
-	UsagePage    uint16 // Usage Page for this Device/Interface (Windows/Mac only)
-	Usage        uint16 // Usage for this Device/Interface (Windows/Mac only)
-
 	// The USB interface which this logical device
 	// represents. Valid on both Linux implementations
 	// in all cases, and valid on the Windows implementation
 	// only if the device contains more than one interface.
 	Interface int
-
-	// Raw low level libusb endpoint data for simplified communication
-	rawDevice interface{}
-	rawPort   *uint8 // Pointer to differentiate between unset and port 0
-	rawReader *uint8 // Pointer to differentiate between unset and endpoint 0
-	rawWriter *uint8 // Pointer to differentiate between unset and endpoint 0
+	Usage     uint16 // Usage for this Device/Interface (Windows/Mac only)
+	UsagePage uint16 // Usage Page for this Device/Interface (Windows/Mac only)
+	Release   uint16 // Device Release Number in binary-coded decimal, also known as Device Version Number
+	ProductID uint16 // Device Product ID
+	VendorID  uint16 // Device Vendor ID
 }
 
 // Device is a generic USB device interface. It may either be backed by a USB HID

@@ -3,6 +3,7 @@ run:
     - validator/web/site_data.go
     - .*_test.go
     - .*.pb.go
+    - .*.yaml.go
   skip-dirs:
     - proto
     - tools/analyzers
@@ -25,6 +26,7 @@ linters-settings:
     # TODO: We should target for < 50
     min-complexity: 65
   govet:
+    disable-all: true
     enable:
       - fieldalignment
 

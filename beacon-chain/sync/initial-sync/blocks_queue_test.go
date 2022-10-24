@@ -141,9 +141,9 @@ func TestBlocksQueue_Loop(t *testing.T) {
 	}()
 	tests := []struct {
 		name                string
-		highestExpectedSlot types.Slot
 		expectedBlockSlots  []types.Slot
 		peers               []*peerData
+		highestExpectedSlot types.Slot
 	}{
 		{
 			name:                "Single peer with all blocks",

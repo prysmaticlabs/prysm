@@ -39,12 +39,12 @@ func TestBestForSlot(t *testing.T) {
 	copy(betterHTR[:], []byte{42})
 
 	cases := []struct {
-		name   string
 		err    error
+		cc     CanonicalChecker
+		name   string
 		blocks []interfaces.SignedBeaconBlock
 		roots  [][32]byte
 		root   [32]byte
-		cc     CanonicalChecker
 	}{
 		{
 			name:  "empty list",
@@ -115,10 +115,10 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
+		name    string
 		slot    types.Slot
 		highest types.Slot
 		canon   types.Slot
-		name    string
 	}{
 		{slot: hist.current, highest: end, canon: end, name: "slot > end"},
 		{slot: end, highest: end, canon: end, name: "slot == end"},
@@ -159,12 +159,12 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
-		name              string
-		slot              types.Slot
 		canon             CanonicalChecker
-		overrideHighest   func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
-		slotOrderExpected []types.Slot
 		err               error
+		overrideHighest   func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
+		name              string
+		slotOrderExpected []types.Slot
+		slot              types.Slot
 		root              [32]byte
 	}{
 		{
@@ -394,9 +394,9 @@ func TestChainForSlot(t *testing.T) {
 
 	cases := []struct {
 		name       string
+		blockRoots [][32]byte
 		slot       types.Slot
 		stateRoot  [32]byte
-		blockRoots [][32]byte
 	}{
 		{
 			name:       "above latest slot (but before current slot)",
@@ -517,9 +517,9 @@ func TestAncestorChainOrdering(t *testing.T) {
 }
 
 type mockCanonicalChecker struct {
+	err     error
 	isCanon func([32]byte) (bool, error)
 	is      bool
-	err     error
 }
 
 func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bool, error) {

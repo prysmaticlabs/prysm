@@ -660,14 +660,14 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 
 func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 	tests := []struct {
-		name                  string
-		paramsTd              string
+		errLatestExecutionBlk error
 		currentPowBlock       *pb.ExecutionBlock
 		parentPowBlock        *pb.ExecutionBlock
-		errLatestExecutionBlk error
+		name                  string
+		paramsTd              string
+		errString             string
 		wantTerminalBlockHash []byte
 		wantExists            bool
-		errString             string
 	}{
 		{
 			name:      "config td overflows",
@@ -932,8 +932,8 @@ func (c *customError) Timeout() bool {
 }
 
 type dataError struct {
-	code int
 	data interface{}
+	code int
 }
 
 func (c *dataError) ErrorCode() int {
@@ -953,10 +953,10 @@ func Test_handleRPCError(t *testing.T) {
 	require.Equal(t, true, got == nil)
 
 	var tests = []struct {
-		name             string
 		expected         error
-		expectedContains string
 		given            error
+		name             string
+		expectedContains string
 	}{
 		{
 			name:             "not an rpc error",

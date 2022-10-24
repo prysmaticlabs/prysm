@@ -40,10 +40,10 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		epoch types.Epoch
 	}
 	tests := []struct {
-		name      string
 		args      args
-		wantErr   bool
+		name      string
 		errString string
+		wantErr   bool
 	}{
 		{
 			name: "genesis validator count, epoch 0",
@@ -144,10 +144,10 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		epoch types.Epoch
 	}
 	tests := []struct {
-		name      string
 		args      args
-		wantErr   bool
+		name      string
 		errString string
+		wantErr   bool
 	}{
 		{
 			name: "genesis validator count, epoch 0",
@@ -194,8 +194,8 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 
 func TestValidateNilSyncContribution(t *testing.T) {
 	tests := []struct {
-		name    string
 		s       *ethpb.SignedContributionAndProof
+		name    string
 		wantErr bool
 	}{
 		{
@@ -272,8 +272,8 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 	}
 
 	type args struct {
-		syncMessageSlot types.Slot
 		genesisTime     time.Time
+		syncMessageSlot types.Slot
 	}
 	tests := []struct {
 		name      string

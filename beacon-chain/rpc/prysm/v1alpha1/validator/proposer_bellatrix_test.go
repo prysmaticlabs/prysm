@@ -129,12 +129,12 @@ func TestServer_getPayloadHeader(t *testing.T) {
 
 	require.NoError(t, err)
 	tests := []struct {
-		name           string
 		head           interfaces.SignedBeaconBlock
 		mock           *builderTest.MockBuilderService
 		fetcher        *blockchainTest.ChainService
-		err            string
 		returnedHeader *v1.ExecutionPayloadHeader
+		name           string
+		err            string
 	}{
 		{
 			name: "head is not bellatrix ready",
@@ -239,11 +239,11 @@ func TestServer_getBuilderBlock(t *testing.T) {
 	p.GasLimit = 123
 
 	tests := []struct {
-		name        string
 		blk         interfaces.SignedBeaconBlock
-		mock        *builderTest.MockBuilderService
-		err         string
 		returnedBlk interfaces.SignedBeaconBlock
+		mock        *builderTest.MockBuilderService
+		name        string
+		err         string
 	}{
 		{
 			name: "nil block",

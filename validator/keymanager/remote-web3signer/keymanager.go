@@ -45,11 +45,11 @@ type SetupConfig struct {
 // Keymanager defines the web3signer keymanager.
 type Keymanager struct {
 	client                internal.HttpSignerClient
-	genesisValidatorsRoot []byte
-	publicKeysURL         string
-	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
+	publicKeysURL         string
+	genesisValidatorsRoot []byte
+	providedPublicKeys    [][48]byte
 	publicKeysUrlCalled   bool
 }
 

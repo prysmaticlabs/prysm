@@ -205,14 +205,14 @@ type tracker struct {
 }
 
 type lockTracker struct {
+	rLockSelector   *selIdentList
 	funcEnd         token.Pos
 	retEnd          token.Pos
 	deferEnd        token.Pos
 	funcLitEnd      token.Pos
 	goroutinePos    token.Pos
-	deferredRUnlock bool
 	foundRLock      int
-	rLockSelector   *selIdentList
+	deferredRUnlock bool
 }
 
 func (t lockTracker) String() string {
@@ -288,9 +288,9 @@ type selIdentNode struct {
 // For example, each item in "a.b.c()" is stored as a node in this list, with the start node being "a"
 type selIdentList struct {
 	start        *selIdentNode
-	length       int
 	current      *selIdentNode // used for internal functions
-	currentIndex int           // used for internal functions
+	length       int
+	currentIndex int // used for internal functions
 }
 
 // returns the next item in the list, and increments the counter keeping track of where we are in the list

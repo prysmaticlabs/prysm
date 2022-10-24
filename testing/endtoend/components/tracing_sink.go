@@ -29,8 +29,8 @@ import (
 type TracingSink struct {
 	cancel   context.CancelFunc
 	started  chan struct{}
-	endpoint string
 	server   *http.Server
+	endpoint string
 }
 
 // NewTracingSink initializes the tracing sink component.

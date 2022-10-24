@@ -63,16 +63,16 @@ var (
 )
 
 type validator struct {
-	logValidatorBalances               bool
-	useWeb                             bool
-	emitAccountMetrics                 bool
-	domainDataLock                     sync.Mutex
-	attLogsLock                        sync.Mutex
-	aggregatedSlotCommitteeIDCacheLock sync.Mutex
-	highestValidSlotLock               sync.Mutex
-	prevBalanceLock                    sync.RWMutex
-	slashableKeysLock                  sync.RWMutex
+	node                               ethpb.NodeClient
+	validatorClient                    ethpb.BeaconNodeValidatorClient
+	ticker                             slots.Ticker
+	keyManager                         keymanager.IKeymanager
+	beaconClient                       ethpb.BeaconChainClient
+	db                                 vdb.Database
+	slashingProtectionClient           ethpb.SlasherClient
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
+	blockFeed                          *event.Feed
+	walletInitializedChannel           chan *wallet.Wallet
 	walletInitializedFeed              *event.Feed
 	attLogs                            map[[32]byte]*attSubmitted
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
@@ -80,33 +80,33 @@ type validator struct {
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
 	signedValidatorRegistrations       map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
-	graffitiOrderedIndex               uint64
+	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
-	highestValidSlot                   types.Slot
-	genesisTime                        uint64
-	blockFeed                          *event.Feed
-	interopKeysConfig                  *local.InteropKeymanagerConfig
-	wallet                             *wallet.Wallet
+	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	graffitiStruct                     *graffiti.Graffiti
-	node                               ethpb.NodeClient
-	slashingProtectionClient           ethpb.SlasherClient
-	db                                 vdb.Database
-	beaconClient                       ethpb.BeaconChainClient
-	keyManager                         keymanager.IKeymanager
-	ticker                             slots.Ticker
-	validatorClient                    ethpb.BeaconNodeValidatorClient
+	wallet                             *wallet.Wallet
+	interopKeysConfig                  *local.InteropKeymanagerConfig
 	graffiti                           []byte
 	voteStats                          voteStats
+	genesisTime                        uint64
+	graffitiOrderedIndex               uint64
+	highestValidSlot                   types.Slot
 	syncCommitteeStats                 syncCommitteeStats
-	Web3SignerConfig                   *remoteweb3signer.SetupConfig
-	proposerSettings                   *validatorserviceconfig.ProposerSettings
-	walletInitializedChannel           chan *wallet.Wallet
+	prevBalanceLock                    sync.RWMutex
+	slashableKeysLock                  sync.RWMutex
+	highestValidSlotLock               sync.Mutex
+	domainDataLock                     sync.Mutex
+	attLogsLock                        sync.Mutex
+	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	useWeb                             bool
+	emitAccountMetrics                 bool
+	logValidatorBalances               bool
 }
 
 type validatorStatus struct {
-	publicKey []byte
 	status    *ethpb.ValidatorStatusResponse
+	publicKey []byte
 	index     types.ValidatorIndex
 }
 

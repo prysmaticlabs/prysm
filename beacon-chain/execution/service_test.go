@@ -699,8 +699,8 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 
 func TestService_ValidateDepositContainers(t *testing.T) {
 	var tt = []struct {
-		name        string
 		ctrsFunc    func() []*ethpb.DepositContainer
+		name        string
 		expectedRes bool
 	}{
 		{

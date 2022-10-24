@@ -6,19 +6,19 @@ import (
 )
 
 type builder struct {
-	roots     []*block
 	block     *block
 	vars      map[*ast.Object]*variable
+	labelStmt *ast.LabeledStmt
+	roots     []*block
 	results   []*ast.FieldList
 	breaks    branchStack
 	continues branchStack
 	gotos     branchStack
-	labelStmt *ast.LabeledStmt
 }
 
 type block struct {
-	children []*block
 	ops      map[*ast.Object][]operation
+	children []*block
 }
 
 func (b *block) addChild(c *block) {
@@ -434,8 +434,8 @@ type branchStack []*branch
 
 type branch struct {
 	label *ast.Object
-	srcs  []*block
 	dst   *block
+	srcs  []*block
 }
 
 func (s *branchStack) push(lbl *ast.Object) *branch {

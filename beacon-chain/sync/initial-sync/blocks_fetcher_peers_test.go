@@ -25,10 +25,10 @@ func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
 	}
 	fetcher := newBlocksFetcher(context.Background(), &blocksFetcherConfig{})
 	tests := []struct {
-		name    string
-		args    args
-		want    peer.ID
 		wantErr error
+		name    string
+		want    peer.ID
+		args    args
 	}{
 		{
 			name: "No peers provided",
@@ -120,10 +120,10 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	tests := []struct {
-		name   string
-		args   args
 		update func(s *scorers.BlockProviderScorer)
+		name   string
 		want   []peer.ID
+		args   args
 	}{
 		{
 			name: "no peers available",
@@ -303,14 +303,14 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 
 func TestBlocksFetcher_removeStalePeerLocks(t *testing.T) {
 	type peerData struct {
-		peerID   peer.ID
 		accessed time.Time
+		peerID   peer.ID
 	}
 	tests := []struct {
 		name     string
-		age      time.Duration
 		peersIn  []peerData
 		peersOut []peerData
+		age      time.Duration
 	}{
 		{
 			name:     "empty map",

@@ -24,13 +24,13 @@ func TestExtractBlockDataType(t *testing.T) {
 	require.NoError(t, err)
 
 	type args struct {
-		digest []byte
 		chain  blockchain.ChainInfoFetcher
+		digest []byte
 	}
 	tests := []struct {
+		want    interfaces.SignedBeaconBlock
 		name    string
 		args    args
-		want    interfaces.SignedBeaconBlock
 		wantErr bool
 	}{
 		{

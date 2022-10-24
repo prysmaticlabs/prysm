@@ -11,8 +11,8 @@ import (
 func TestInitializeDataMaps(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name   string
 		action func()
+		name   string
 		exists bool
 	}{
 		{

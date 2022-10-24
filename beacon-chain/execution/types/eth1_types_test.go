@@ -14,9 +14,9 @@ func Test_headerToHeaderInfo(t *testing.T) {
 		hdr *gethTypes.Header
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *HeaderInfo
+		name    string
 		wantErr bool
 	}{
 		{

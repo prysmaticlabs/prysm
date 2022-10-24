@@ -22,9 +22,9 @@ import (
 type Node struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
-	index   int
-	enr     string
 	cmd     *exec.Cmd
+	enr     string
+	index   int
 }
 
 // NewNode creates and returns ETH1 node.

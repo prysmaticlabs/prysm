@@ -15,9 +15,9 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 		atts []*ethpb.Attestation
 	}
 	tests := []struct {
+		want *aggregation.MaxCoverProblem
 		name string
 		args args
-		want *aggregation.MaxCoverProblem
 	}{
 		{
 			name: "nil attestations",
@@ -78,8 +78,8 @@ func TestAggregateAttestations_MaxCover_NewMaxCover(t *testing.T) {
 func TestAggregateAttestations_MaxCover_AttList_validate(t *testing.T) {
 	tests := []struct {
 		name      string
-		atts      attList
 		wantedErr string
+		atts      attList
 	}{
 		{
 			name:      "nil list",
@@ -301,13 +301,13 @@ func TestAggregateAttestations_rearrangeProcessedAttestations(t *testing.T) {
 func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 	sign := bls.NewAggregateSignature().Marshal()
 	tests := []struct {
+		coverage      *bitfield.Bitlist64
 		name          string
+		wantErr       string
 		atts          []*ethpb.Attestation
 		wantAtts      []*ethpb.Attestation
 		keys          []int
-		coverage      *bitfield.Bitlist64
 		wantTargetIdx int
-		wantErr       string
 	}{
 		{
 			name:          "nil attestation",

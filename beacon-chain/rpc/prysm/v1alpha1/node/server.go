@@ -32,16 +32,16 @@ import (
 // version information, and services the node implements and runs.
 type Server struct {
 	LogsStreamer         logs.Streamer
-	StreamLogsBufferSize int
 	SyncChecker          sync.Checker
-	Server               *grpc.Server
 	BeaconDB             db.ReadOnlyDatabase
 	PeersFetcher         p2p.PeersProvider
 	PeerManager          p2p.PeerManager
 	GenesisTimeFetcher   blockchain.TimeFetcher
 	GenesisFetcher       blockchain.GenesisFetcher
 	POWChainInfoFetcher  execution.ChainInfoFetcher
+	Server               *grpc.Server
 	BeaconMonitoringHost string
+	StreamLogsBufferSize int
 	BeaconMonitoringPort int
 }
 

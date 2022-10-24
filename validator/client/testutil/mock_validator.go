@@ -19,41 +19,41 @@ var _ iface.Validator = (*FakeValidator)(nil)
 
 // FakeValidator for mocking.
 type FakeValidator struct {
-	DoneCalled                        bool
-	WaitForWalletInitializationCalled bool
-	SlasherReadyCalled                bool
-	NextSlotCalled                    bool
-	UpdateDutiesCalled                bool
-	UpdateProtectionsCalled           bool
-	RoleAtCalled                      bool
-	AttestToBlockHeadCalled           bool
-	ProposeBlockCalled                bool
-	LogValidatorGainsAndLossesCalled  bool
-	SaveProtectionsCalled             bool
-	DeleteProtectionCalled            bool
-	SlotDeadlineCalled                bool
-	HandleKeyReloadCalled             bool
+	Km                                keymanager.IKeymanager
+	ProposerSettingsErr               error
+	UpdateDutiesRet                   error
+	NextSlotRet                       <-chan types.Slot
+	proposerSettings                  *validatorserviceconfig.ProposerSettings
+	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
+	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
+	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
+	Balances                          map[[fieldparams.BLSPubkeyLength]byte]uint64
+	PublicKey                         string
+	RolesAtRet                        []iface.ValidatorRole
+	WaitForActivationCalled           int
+	RoleAtArg1                        uint64
+	UpdateDutiesArg1                  uint64
 	WaitForChainStartCalled           int
 	WaitForSyncCalled                 int
-	WaitForActivationCalled           int
+	AttestToBlockHeadArg1             uint64
 	CanonicalHeadSlotCalled           int
 	ReceiveBlocksCalled               int
 	RetryTillSuccess                  int
 	ProposeBlockArg1                  uint64
-	AttestToBlockHeadArg1             uint64
-	RoleAtArg1                        uint64
-	UpdateDutiesArg1                  uint64
-	NextSlotRet                       <-chan types.Slot
-	PublicKey                         string
-	UpdateDutiesRet                   error
-	ProposerSettingsErr               error
-	RolesAtRet                        []iface.ValidatorRole
-	Balances                          map[[fieldparams.BLSPubkeyLength]byte]uint64
-	IndexToPubkeyMap                  map[uint64][fieldparams.BLSPubkeyLength]byte
-	PubkeyToIndexMap                  map[[fieldparams.BLSPubkeyLength]byte]uint64
-	PubkeysToStatusesMap              map[[fieldparams.BLSPubkeyLength]byte]ethpb.ValidatorStatus
-	proposerSettings                  *validatorserviceconfig.ProposerSettings
-	Km                                keymanager.IKeymanager
+	ProposeBlockCalled                bool
+	DoneCalled                        bool
+	HandleKeyReloadCalled             bool
+	DeleteProtectionCalled            bool
+	SaveProtectionsCalled             bool
+	LogValidatorGainsAndLossesCalled  bool
+	SlotDeadlineCalled                bool
+	AttestToBlockHeadCalled           bool
+	UpdateDutiesCalled                bool
+	UpdateProtectionsCalled           bool
+	RoleAtCalled                      bool
+	NextSlotCalled                    bool
+	SlasherReadyCalled                bool
+	WaitForWalletInitializationCalled bool
 }
 
 type ctxKey string

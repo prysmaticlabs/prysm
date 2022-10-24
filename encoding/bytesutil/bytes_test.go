@@ -14,8 +14,8 @@ import (
 
 func TestToBytes(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0}},
 		{1, []byte{1}},
@@ -56,8 +56,8 @@ func TestToBytes(t *testing.T) {
 
 func TestBytes1(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0}},
 		{1, []byte{1}},
@@ -74,8 +74,8 @@ func TestBytes1(t *testing.T) {
 
 func TestBytes2(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0, 0}},
 		{1, []byte{1, 0}},
@@ -92,8 +92,8 @@ func TestBytes2(t *testing.T) {
 
 func TestBytes3(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0, 0, 0}},
 		{255, []byte{255, 0, 0}},
@@ -110,8 +110,8 @@ func TestBytes3(t *testing.T) {
 
 func TestBytes4(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0, 0, 0, 0}},
 		{256, []byte{0, 1, 0, 0}},
@@ -128,8 +128,8 @@ func TestBytes4(t *testing.T) {
 
 func TestBytes8(t *testing.T) {
 	tests := []struct {
-		a uint64
 		b []byte
+		a uint64
 	}{
 		{0, []byte{0, 0, 0, 0, 0, 0, 0, 0}},
 		{16777216, []byte{0, 0, 0, 1, 0, 0, 0, 0}},
@@ -244,8 +244,8 @@ func TestReverse(t *testing.T) {
 func TestSetBit(t *testing.T) {
 	tests := []struct {
 		a []byte
-		b int
 		c []byte
+		b int
 	}{
 		{[]byte{0b00000000}, 1, []byte{0b00000010}},
 		{[]byte{0b00000010}, 7, []byte{0b10000010}},
@@ -262,8 +262,8 @@ func TestSetBit(t *testing.T) {
 func TestClearBit(t *testing.T) {
 	tests := []struct {
 		a []byte
-		b int
 		c []byte
+		b int
 	}{
 		{[]byte{0b00000000}, 1, []byte{0b00000000}},
 		{[]byte{0b00000010}, 1, []byte{0b00000000}},
@@ -405,8 +405,8 @@ func TestSafeCopyRootAtIndex(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   [][]byte
-		idx     uint64
 		want    []byte
+		idx     uint64
 		wantErr bool
 	}{
 		{

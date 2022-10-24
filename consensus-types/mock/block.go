@@ -87,10 +87,10 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 }
 
 type BeaconBlock struct {
-	Htr             [field_params.RootLength]byte
 	HtrErr          error
 	BeaconBlockBody interfaces.BeaconBlockBody
 	BlockSlot       types.Slot
+	Htr             [field_params.RootLength]byte
 }
 
 func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {

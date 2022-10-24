@@ -10,12 +10,12 @@ import (
 
 // MockBuilderService to mock builder.
 type MockBuilderService struct {
-	HasConfigured         bool
-	Payload               *v1.ExecutionPayload
 	ErrSubmitBlindedBlock error
-	Bid                   *ethpb.SignedBuilderBid
 	ErrGetHeader          error
 	ErrRegisterValidator  error
+	Payload               *v1.ExecutionPayload
+	Bid                   *ethpb.SignedBuilderBid
+	HasConfigured         bool
 }
 
 // Configured for mocking.

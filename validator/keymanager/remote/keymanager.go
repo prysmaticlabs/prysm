@@ -53,10 +53,10 @@ type KeymanagerOpts struct {
 // certificate authority certs, client certs, and client keys
 // for TLS gRPC connections.
 type CertificateConfig struct {
-	RequireTls     bool   `json:"require_tls"`
 	ClientCertPath string `json:"crt_path"`
 	ClientKeyPath  string `json:"key_path"`
 	CACertPath     string `json:"ca_crt_path"`
+	RequireTls     bool   `json:"require_tls"`
 }
 
 // SetupConfig includes configuration values for initializing
@@ -68,10 +68,10 @@ type SetupConfig struct {
 
 // Keymanager implementation using remote signing keys via gRPC.
 type Keymanager struct {
-	opts                *KeymanagerOpts
 	client              validatorpb.RemoteSignerClient
-	orderedPubKeys      [][fieldparams.BLSPubkeyLength]byte
+	opts                *KeymanagerOpts
 	accountsChangedFeed *event.Feed
+	orderedPubKeys      [][fieldparams.BLSPubkeyLength]byte
 }
 
 // NewKeymanager instantiates a new imported keymanager from configuration options.

@@ -31,8 +31,8 @@ type MaxCoverProblem struct {
 
 // MaxCoverCandidate represents a candidate set to be used in aggregation.
 type MaxCoverCandidate struct {
-	key       int
 	bits      *bitfield.Bitlist
+	key       int
 	score     uint64
 	processed bool
 }

@@ -10,9 +10,9 @@ import (
 )
 
 type mockChain struct {
+	genesisTime     time.Time
 	currentFork     *ethpb.Fork
 	genesisValsRoot [32]byte
-	genesisTime     time.Time
 }
 
 func (m *mockChain) ForkChoicer() forkchoice.ForkChoicer {

@@ -64,8 +64,8 @@ type accountStore struct {
 type AccountsKeystoreRepresentation struct {
 	Crypto  map[string]interface{} `json:"crypto"`
 	ID      string                 `json:"uuid"`
-	Version uint                   `json:"version"`
 	Name    string                 `json:"name"`
+	Version uint                   `json:"version"`
 }
 
 // ResetCaches for the keymanager.

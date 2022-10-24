@@ -12,8 +12,8 @@ func TestStore_SavePowchainData(t *testing.T) {
 		data *v2.ETH1ChainData
 	}
 	tests := []struct {
-		name    string
 		args    args
+		name    string
 		wantErr bool
 	}{
 		{

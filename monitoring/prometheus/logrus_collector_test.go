@@ -35,9 +35,9 @@ func TestLogrusCollector(t *testing.T) {
 
 	tests := []struct {
 		name   string
+		prefix string
 		want   int
 		count  int
-		prefix string
 		level  log.Level
 	}{
 		{"info message with empty prefix", 3, 3, "", log.InfoLevel},

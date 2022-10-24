@@ -272,8 +272,8 @@ func TestNotInt64(t *testing.T) {
 
 func TestIsInUint64(t *testing.T) {
 	testCases := []struct {
-		a      uint64
 		b      []uint64
+		a      uint64
 		result bool
 	}{
 		{0, []uint64{}, false},
@@ -292,8 +292,8 @@ func TestIsInUint64(t *testing.T) {
 
 func TestIsInInt64(t *testing.T) {
 	testCases := []struct {
-		a      int64
 		b      []int64
+		a      int64
 		result bool
 	}{
 		{0, []int64{}, false},
@@ -571,8 +571,8 @@ func TestNotSlot(t *testing.T) {
 
 func TestIsInSlots(t *testing.T) {
 	testCases := []struct {
-		a      types.Slot
 		b      []types.Slot
+		a      types.Slot
 		result bool
 	}{
 		{0, []types.Slot{}, false},

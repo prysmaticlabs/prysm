@@ -154,9 +154,9 @@ func TestEth2FastAggregateVerify_ReturnsTrueOnG2PointAtInfinity(t *testing.T) {
 
 func TestSignatureFromBytes(t *testing.T) {
 	tests := []struct {
+		err   error
 		name  string
 		input []byte
-		err   error
 	}{
 		{
 			name: "Nil",
@@ -204,9 +204,9 @@ func TestSignatureFromBytes(t *testing.T) {
 
 func TestMultipleSignatureFromBytes(t *testing.T) {
 	tests := []struct {
+		err   error
 		name  string
 		input [][]byte
-		err   error
 	}{
 		{
 			name: "Nil",

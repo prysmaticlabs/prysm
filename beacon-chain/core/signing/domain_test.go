@@ -19,9 +19,9 @@ func TestDomain_OK(t *testing.T) {
 		},
 	}
 	tests := []struct {
+		result     []byte
 		epoch      types.Epoch
 		domainType [4]byte
-		result     []byte
 	}{
 		{epoch: 1, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},
 		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(947067381421703172, 32)},

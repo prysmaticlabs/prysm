@@ -9,11 +9,11 @@ import (
 )
 
 type config struct {
-	proxyPort      int
-	proxyHost      string
 	destinationUrl *url.URL
 	logger         *logrus.Logger
+	proxyHost      string
 	secret         string
+	proxyPort      int
 }
 
 type Option func(p *Proxy) error

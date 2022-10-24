@@ -33,8 +33,8 @@ func TestDeepEqualBasicTypes(t *testing.T) {
 
 func TestDeepEqualStructs(t *testing.T) {
 	type Store struct {
-		V1 uint64
 		V2 []byte
+		V1 uint64
 	}
 	store1 := Store{uint64(1234), nil}
 	store2 := Store{uint64(1234), []byte{}}
@@ -45,9 +45,9 @@ func TestDeepEqualStructs(t *testing.T) {
 
 func TestDeepEqualStructs_Unexported(t *testing.T) {
 	type Store struct {
-		V1           uint64
-		V2           []byte
 		dontIgnoreMe string
+		V2           []byte
+		V1           uint64
 	}
 	store1 := Store{uint64(1234), nil, "hi there"}
 	store2 := Store{uint64(1234), []byte{}, "hi there"}
@@ -88,8 +88,8 @@ func TestDeepEqualProto(t *testing.T) {
 
 func Test_IsProto(t *testing.T) {
 	tests := []struct {
-		name string
 		item interface{}
+		name string
 		want bool
 	}{
 		{

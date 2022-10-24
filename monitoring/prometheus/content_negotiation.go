@@ -16,11 +16,8 @@ const (
 
 // generatedResponse is a container for response output.
 type generatedResponse struct {
-	// Err is protocol error, if any.
-	Err string `json:"error"`
-
-	// Data is response output, if any.
-	Data interface{} `json:"data"`
+	Data interface{} `json:"data"`  // Data is response output, if any.
+	Err  string      `json:"error"` // Err is protocol error, if any.
 }
 
 // negotiateContentType parses "Accept:" header and returns preferred content type string.

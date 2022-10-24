@@ -18,11 +18,11 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		pubKeys[i] = val.PublicKey
 	}
 	tests := []struct {
-		name                 string
 		currentSyncCommittee *ethpb.SyncCommittee
 		nextSyncCommittee    *ethpb.SyncCommittee
 		currentSyncMap       map[types.ValidatorIndex][]types.CommitteeIndex
 		nextSyncMap          map[types.ValidatorIndex][]types.CommitteeIndex
+		name                 string
 	}{
 		{
 			name: "only current epoch",

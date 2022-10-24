@@ -16,14 +16,14 @@ import (
 
 func TestEnterPassword(t *testing.T) {
 	type rets struct {
-		pw  string
 		err error
+		pw  string
 	}
 	var tt = []struct {
-		name        string
-		rets        []rets
 		expectedErr error
+		name        string
 		expectedPw  string
+		rets        []rets
 	}{
 		{
 			"first_match",

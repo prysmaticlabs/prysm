@@ -144,10 +144,10 @@ type LighthouseValidatorNode struct {
 	e2etypes.ComponentRunner
 	config       *e2etypes.E2EConfig
 	started      chan struct{}
+	cmd          *exec.Cmd
 	validatorNum int
 	index        int
 	offset       int
-	cmd          *exec.Cmd
 }
 
 // NewLighthouseValidatorNode creates and returns a lighthouse validator node.

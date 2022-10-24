@@ -36,18 +36,18 @@ import (
 )
 
 type testCache struct {
-	sync.RWMutex
 	rootCache       map[types.Slot][32]byte
 	parentSlotCache map[types.Slot]types.Slot
+	sync.RWMutex
 }
 
 var cache = &testCache{}
 
 type peerData struct {
 	blocks         []types.Slot // slots that peer has blocks
+	failureSlots   []types.Slot // slots at which the peer will return an error
 	finalizedEpoch types.Epoch
 	headSlot       types.Slot
-	failureSlots   []types.Slot // slots at which the peer will return an error
 	forkedPeer     bool
 }
 

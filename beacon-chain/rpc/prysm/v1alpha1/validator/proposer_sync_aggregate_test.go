@@ -422,9 +422,9 @@ func TestProposerSyncContributions_MostProfitable(t *testing.T) {
 	copy(aggBits4_2[:], b4_2)
 
 	tests := []struct {
+		want *v2.SyncCommitteeContribution
 		name string
 		cs   proposerSyncContributions
-		want *v2.SyncCommitteeContribution
 	}{
 		{
 			name: "Same item",

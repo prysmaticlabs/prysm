@@ -62,14 +62,14 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
-		name              string
 		st                state.BeaconState
-		errString         string
 		forkchoiceErr     error
 		payloadID         *pb.PayloadIDBytes
-		terminalBlockHash common.Hash
+		name              string
+		errString         string
 		activationEpoch   types.Epoch
 		validatorIndx     types.ValidatorIndex
+		terminalBlockHash common.Hash
 	}{
 		{
 			name:      "transition completed, nil payload id",
@@ -228,14 +228,14 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name                  string
-		paramsTerminalHash    []byte
-		paramsTd              string
 		currentPowBlock       *pb.ExecutionBlock
 		parentPowBlock        *pb.ExecutionBlock
+		name                  string
+		paramsTd              string
+		errString             string
+		paramsTerminalHash    []byte
 		wantTerminalBlockHash []byte
 		wantExists            bool
-		errString             string
 	}{
 		{
 			name:               "use terminal block hash, doesn't exist",

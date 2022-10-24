@@ -71,53 +71,40 @@ type compiledColorScheme struct {
 }
 
 type TextFormatter struct {
-	// Set to true to bypass checking for a TTY before outputting colors.
-	ForceColors bool
-
-	// Whether the logger's out is to a terminal.
-	isTerminal bool
-
-	// Force disabling colors. For a TTY colors are enabled by default.
-	DisableColors bool
-
-	// Force formatted layout, even for non-TTY output.
-	ForceFormatting bool
-
-	// Disable timestamp logging. useful when output is redirected to logging
-	// system that already adds timestamps.
-	DisableTimestamp bool
-
-	// Disable the conversion of the log levels to uppercase
-	DisableUppercase bool
-
-	// Enable logging the full timestamp when a TTY is attached instead of just
-	// the time passed since beginning of execution.
-	FullTimestamp bool
-
-	// The fields are sorted by default for a consistent output. For applications
-	// that log extremely frequently and don't use the JSON formatter this may not
-	// be desired.
-	DisableSorting bool
-
-	// Wrap empty fields in quotes if true.
-	QuoteEmptyFields bool
-
-	sync.Once
-
+	// Color scheme to use.
+	colorScheme *compiledColorScheme
+	// Timestamp format to use for display when a full timestamp is printed.
+	TimestampFormat string
+	// Can be set to the override the default quoting character "
+	// with something else. For example: ', or `.
+	QuoteCharacter string
 	// Pad msg field with spaces on the right for display.
 	// The value for this parameter will be the size of padding.
 	// Its default value is zero, which means no padding will be applied for msg.
 	SpacePadding int
-
-	// Color scheme to use.
-	colorScheme *compiledColorScheme
-
-	// Can be set to the override the default quoting character "
-	// with something else. For example: ', or `.
-	QuoteCharacter string
-
-	// Timestamp format to use for display when a full timestamp is printed.
-	TimestampFormat string
+	sync.Once
+	// Force formatted layout, even for non-TTY output.
+	ForceFormatting bool
+	// Enable logging the full timestamp when a TTY is attached instead of just
+	// the time passed since beginning of execution.
+	FullTimestamp bool
+	// The fields are sorted by default for a consistent output. For applications
+	// that log extremely frequently and don't use the JSON formatter this may not
+	// be desired.
+	DisableSorting bool
+	// Wrap empty fields in quotes if true.
+	QuoteEmptyFields bool
+	// Disable the conversion of the log levels to uppercase
+	DisableUppercase bool
+	// Disable timestamp logging. useful when output is redirected to logging
+	// system that already adds timestamps.
+	DisableTimestamp bool
+	// Set to true to bypass checking for a TTY before outputting colors.
+	ForceColors bool
+	// Force disabling colors. For a TTY colors are enabled by default.
+	DisableColors bool
+	// Whether the logger's out is to a terminal.
+	isTerminal bool
 }
 
 func getCompiledColor(main string, fallback string) func(string) string {

@@ -64,9 +64,9 @@ func (db *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interf
 
 func TestSlotCovered(t *testing.T) {
 	cases := []struct {
+		status *Status
 		name   string
 		slot   types.Slot
-		status *Status
 		result bool
 	}{
 		{
@@ -168,10 +168,10 @@ func TestReload(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		name     string
 		db       BackfillDB
 		err      error
 		expected *Status
+		name     string
 	}{
 		/*{
 			name: "origin not found, implying genesis sync ",

@@ -9,8 +9,8 @@ import (
 
 // InitKeymanagerConfig defines configuration options for initializing a keymanager.
 type InitKeymanagerConfig struct {
-	ListenForChanges bool
 	Web3SignerConfig *remoteweb3signer.SetupConfig
+	ListenForChanges bool
 }
 
 // Wallet defines a struct which has capabilities and knowledge of how

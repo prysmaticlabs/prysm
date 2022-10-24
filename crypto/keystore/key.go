@@ -46,11 +46,9 @@ const (
 
 // Key is the object that stores all the user data related to their public/secret keys.
 type Key struct {
-	ID uuid.UUID // Version 4 "random" for unique id not derived from key data
-
 	PublicKey bls.PublicKey // Represents the public key of the user.
-
 	SecretKey bls.SecretKey // Represents the private key of the user.
+	ID        uuid.UUID     // Version 4 "random" for unique id not derived from key data
 }
 
 type keyStore interface {

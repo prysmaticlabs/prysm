@@ -24,12 +24,12 @@ type APIMessage struct {
 // Note that some metrics are labeled NA because they are expected
 // to be present with their zero-value when not supported by a client.
 type CommonStats struct {
-	APIMessage             `json:",inline"`
 	ClientName             string `json:"client_name"`
 	ClientVersion          string `json:"client_version"`
-	CPUProcessSecondsTotal int64  `json:"cpu_process_seconds_total"`
-	MemoryProcessBytes     int64  `json:"memory_process_bytes"`
-	ClientBuild            int64  `json:"client_build"`
+	APIMessage             `json:",inline"`
+	CPUProcessSecondsTotal int64 `json:"cpu_process_seconds_total"`
+	MemoryProcessBytes     int64 `json:"memory_process_bytes"`
+	ClientBuild            int64 `json:"client_build"`
 	// TODO(#8849): parse the grpc connection string to determine
 	// if multiple addresses are present
 	SyncEth2FallbackConfigured bool `json:"sync_eth2_fallback_configured"`

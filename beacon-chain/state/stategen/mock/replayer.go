@@ -77,8 +77,8 @@ func (m *MockReplayer) ReplayToSlot(_ context.Context, _ types.Slot) (state.Beac
 var _ stategen.Replayer = &MockReplayer{}
 
 type MockCanonicalChecker struct {
-	Is  bool
 	Err error
+	Is  bool
 }
 
 func (m *MockCanonicalChecker) IsCanonical(_ context.Context, _ [32]byte) (bool, error) {

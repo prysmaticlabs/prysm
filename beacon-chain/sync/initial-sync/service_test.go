@@ -34,10 +34,10 @@ func TestService_Constants(t *testing.T) {
 func TestService_InitStartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	tests := []struct {
-		name         string
 		assert       func()
 		methodRuns   func(fd *event.Feed)
 		chainService func() *mock.ChainService
+		name         string
 	}{
 		{
 			name: "head is not ready",

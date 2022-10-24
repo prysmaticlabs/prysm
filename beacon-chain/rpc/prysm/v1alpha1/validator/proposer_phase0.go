@@ -20,15 +20,15 @@ import (
 
 // blockData required to create a beacon block.
 type blockData struct {
-	ParentRoot        []byte
-	Graffiti          [32]byte
-	ProposerIdx       types.ValidatorIndex
 	Eth1Data          *ethpb.Eth1Data
+	ParentRoot        []byte
 	Deposits          []*ethpb.Deposit
 	Attestations      []*ethpb.Attestation
 	ProposerSlashings []*ethpb.ProposerSlashing
 	AttesterSlashings []*ethpb.AttesterSlashing
 	VoluntaryExits    []*ethpb.SignedVoluntaryExit
+	ProposerIdx       types.ValidatorIndex
+	Graffiti          [32]byte
 }
 
 func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {

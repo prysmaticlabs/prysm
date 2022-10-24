@@ -50,12 +50,12 @@ func TestFieldSpecBytes4(t *testing.T) {
 
 func TestFieldSpecSlice(t *testing.T) {
 	cases := []struct {
-		offset    int
-		fieldType fieldType
-		slice     []byte
 		err       error
 		name      string
+		slice     []byte
 		expected  []byte
+		offset    int
+		fieldType fieldType
 	}{
 		{
 			offset:    0,

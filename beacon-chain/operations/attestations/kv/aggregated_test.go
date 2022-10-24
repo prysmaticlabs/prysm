@@ -96,10 +96,10 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T
 
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 	tests := []struct {
-		name          string
 		att           *ethpb.Attestation
-		count         int
+		name          string
 		wantErrString string
+		count         int
 	}{
 		{
 			name:          "nil attestation",
@@ -174,9 +174,9 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 	tests := []struct {
 		name          string
+		wantErrString string
 		atts          []*ethpb.Attestation
 		count         int
-		wantErrString string
 	}{
 		{
 			name: "no duplicates",
@@ -209,9 +209,9 @@ func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_SaveAggregatedAttestations_SomeGoodSomeBad(t *testing.T) {
 	tests := []struct {
 		name          string
+		wantErrString string
 		atts          []*ethpb.Attestation
 		count         int
-		wantErrString string
 	}{
 		{
 			name: "the first attestation is bad",
@@ -335,11 +335,11 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 	tests := []struct {
+		err      error
+		input    *ethpb.Attestation
 		name     string
 		existing []*ethpb.Attestation
-		input    *ethpb.Attestation
 		want     bool
-		err      error
 	}{
 		{
 			name:  "nil attestation",
