@@ -597,7 +597,8 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 	}
 
 	p, err := WrappedExecutionPayload(pb.ExecutionPayload)
-	if err != nil {
+	// We allow the payload to be nil
+	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -623,7 +624,8 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	}
 
 	ph, err := WrappedExecutionPayloadHeader(pb.ExecutionPayloadHeader)
-	if err != nil {
+	// We allow the payload to be nil
+	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -649,7 +651,8 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 	}
 
 	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload)
-	if err != nil {
+	// We allow the payload to be nil
+	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
@@ -676,7 +679,8 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 	}
 
 	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader)
-	if err != nil {
+	// We allow the payload to be nil
+	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
