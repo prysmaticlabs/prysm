@@ -973,6 +973,7 @@ func genWithdrawals(num int) []*enginev1.Withdrawal {
 func genWithdrawal() *enginev1.Withdrawal {
 	return &enginev1.Withdrawal{
 		WithdrawalIndex:  123456,
+		ValidatorIndex:   654321,
 		ExecutionAddress: bytes(20),
 		Amount:           55555,
 	}

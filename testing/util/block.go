@@ -137,7 +137,7 @@ func GenerateFullBlock(
 	if numToGen > 0 {
 		exits, err = generateVoluntaryExits(bState, privs, numToGen)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+			return nil, errors.Wrapf(err, "failed generating %d voluntary exits:", numToGen)
 		}
 	}
 
