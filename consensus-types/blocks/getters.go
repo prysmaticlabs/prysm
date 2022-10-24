@@ -797,7 +797,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 			}
 			return WrappedExecutionPayloadHeader(ph)
 		}
-		p, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayload)
+		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayload)
 		if !ok {
 			return nil, errPayloadWrongType
 		}
@@ -810,7 +810,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 			}
 			return WrappedExecutionPayloadHeaderCapella(ph)
 		}
-		p, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadCapella)
+		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayloadCapella)
 		if !ok {
 			return nil, errPayloadWrongType
 		}
