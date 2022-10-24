@@ -3,6 +3,7 @@ package blocks
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -252,6 +253,10 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Bellatrix:
 		if b.isBlinded {
+			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
+			if !ok {
+				return nil, errPayloadHeaderWrongType
+			}
 			return &eth.BlindedBeaconBlockBodyBellatrix{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
@@ -262,8 +267,12 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
-				ExecutionPayloadHeader: b.executionPayloadHeader,
+				ExecutionPayloadHeader: ph,
 			}, nil
+		}
+		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayload)
+		if !ok {
+			return nil, errPayloadWrongType
 		}
 		return &eth.BeaconBlockBodyBellatrix{
 			RandaoReveal:      b.randaoReveal[:],
@@ -275,10 +284,14 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Deposits:          b.deposits,
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
-			ExecutionPayload:  b.executionPayload,
+			ExecutionPayload:  p,
 		}, nil
 	case version.Capella:
 		if b.isBlinded {
+			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+			if !ok {
+				return nil, errPayloadHeaderWrongType
+			}
 			return &eth.BlindedBeaconBlockBodyCapella{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
@@ -289,9 +302,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				Deposits:               b.deposits,
 				VoluntaryExits:         b.voluntaryExits,
 				SyncAggregate:          b.syncAggregate,
-				ExecutionPayloadHeader: b.executionPayloadHeaderCapella,
+				ExecutionPayloadHeader: ph,
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
 			}, nil
+		}
+		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayloadCapella)
+		if !ok {
+			return nil, errPayloadWrongType
 		}
 		return &eth.BeaconBlockBodyCapella{
 			RandaoReveal:          b.randaoReveal[:],
@@ -303,7 +320,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			Deposits:              b.deposits,
 			VoluntaryExits:        b.voluntaryExits,
 			SyncAggregate:         b.syncAggregate,
-			ExecutionPayload:      b.executionPayloadCapella,
+			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 		}, nil
 	default:
@@ -579,6 +596,10 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 		return nil, errNilBlockBody
 	}
 
+	p, err := WrappedExecutionPayload(pb.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
 		isBlinded:         false,
@@ -591,7 +612,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 		deposits:          pb.Deposits,
 		voluntaryExits:    pb.VoluntaryExits,
 		syncAggregate:     pb.SyncAggregate,
-		executionPayload:  pb.ExecutionPayload,
+		executionPayload:  p,
 	}
 	return b, nil
 }
@@ -601,6 +622,10 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 		return nil, errNilBlockBody
 	}
 
+	ph, err := WrappedExecutionPayloadHeader(pb.ExecutionPayloadHeader)
+	if err != nil {
+		return nil, err
+	}
 	b := &BeaconBlockBody{
 		version:                version.Bellatrix,
 		isBlinded:              true,
@@ -613,7 +638,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 		deposits:               pb.Deposits,
 		voluntaryExits:         pb.VoluntaryExits,
 		syncAggregate:          pb.SyncAggregate,
-		executionPayloadHeader: pb.ExecutionPayloadHeader,
+		executionPayloadHeader: ph,
 	}
 	return b, nil
 }
@@ -623,20 +648,24 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
+	p, err := WrappedExecutionPayloadCapella(pb.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
 	b := &BeaconBlockBody{
-		version:                 version.Capella,
-		isBlinded:               false,
-		randaoReveal:            bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:                pb.Eth1Data,
-		graffiti:                bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:       pb.ProposerSlashings,
-		attesterSlashings:       pb.AttesterSlashings,
-		attestations:            pb.Attestations,
-		deposits:                pb.Deposits,
-		voluntaryExits:          pb.VoluntaryExits,
-		syncAggregate:           pb.SyncAggregate,
-		executionPayloadCapella: pb.ExecutionPayload,
-		blsToExecutionChanges:   pb.BlsToExecutionChanges,
+		version:               version.Capella,
+		isBlinded:             false,
+		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:              pb.Eth1Data,
+		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:     pb.ProposerSlashings,
+		attesterSlashings:     pb.AttesterSlashings,
+		attestations:          pb.Attestations,
+		deposits:              pb.Deposits,
+		voluntaryExits:        pb.VoluntaryExits,
+		syncAggregate:         pb.SyncAggregate,
+		executionPayload:      p,
+		blsToExecutionChanges: pb.BlsToExecutionChanges,
 	}
 	return b, nil
 }
@@ -646,20 +675,24 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 		return nil, errNilBlockBody
 	}
 
+	ph, err := WrappedExecutionPayloadHeaderCapella(pb.ExecutionPayloadHeader)
+	if err != nil {
+		return nil, err
+	}
 	b := &BeaconBlockBody{
-		version:                       version.Capella,
-		isBlinded:                     true,
-		randaoReveal:                  bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:                      pb.Eth1Data,
-		graffiti:                      bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings:             pb.ProposerSlashings,
-		attesterSlashings:             pb.AttesterSlashings,
-		attestations:                  pb.Attestations,
-		deposits:                      pb.Deposits,
-		voluntaryExits:                pb.VoluntaryExits,
-		syncAggregate:                 pb.SyncAggregate,
-		executionPayloadHeaderCapella: pb.ExecutionPayloadHeader,
-		blsToExecutionChanges:         pb.BlsToExecutionChanges,
+		version:                version.Capella,
+		isBlinded:              true,
+		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:               pb.Eth1Data,
+		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:      pb.ProposerSlashings,
+		attesterSlashings:      pb.AttesterSlashings,
+		attestations:           pb.Attestations,
+		deposits:               pb.Deposits,
+		voluntaryExits:         pb.VoluntaryExits,
+		syncAggregate:          pb.SyncAggregate,
+		executionPayloadHeader: ph,
+		blsToExecutionChanges:  pb.BlsToExecutionChanges,
 	}
 	return b, nil
 }

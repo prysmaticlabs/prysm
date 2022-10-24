@@ -791,14 +791,30 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 		return nil, errNotSupported("Execution", b.version)
 	case version.Bellatrix:
 		if b.isBlinded {
-			return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
+			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
+			if !ok {
+				return nil, errPayloadHeaderWrongType
+			}
+			return WrappedExecutionPayloadHeader(ph)
 		}
-		return WrappedExecutionPayload(b.executionPayload)
+		p, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayload)
+		if !ok {
+			return nil, errPayloadWrongType
+		}
+		return WrappedExecutionPayload(p)
 	case version.Capella:
 		if b.isBlinded {
-			return WrappedExecutionPayloadHeaderCapella(b.executionPayloadHeaderCapella)
+			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+			if !ok {
+				return nil, errPayloadHeaderWrongType
+			}
+			return WrappedExecutionPayloadHeaderCapella(ph)
 		}
-		return WrappedExecutionPayloadCapella(b.executionPayloadCapella)
+		p, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadCapella)
+		if !ok {
+			return nil, errPayloadWrongType
+		}
+		return WrappedExecutionPayloadCapella(p)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
