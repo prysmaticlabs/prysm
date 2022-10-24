@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
-	"golang.org/x/text/language"
 )
 
 const confirmationText = "Confirm you have written down the recovery words somewhere safe (offline) [y|Y]"
@@ -84,41 +83,23 @@ func seedFromMnemonic(mnemonic, mnemonicLanguage, mnemonicPassphrase string) ([]
 }
 
 func setBip39Lang(lang string) {
-	matcher := language.NewMatcher([]language.Tag{
-		language.English, // The first language is used as fallback.
-		language.TraditionalChinese,
-		language.SimplifiedChinese,
-		language.Czech,
-		language.French,
-		language.Italian,
-		language.Japanese,
-		language.Korean,
-		language.Spanish,
-	})
-	tag, _ := language.MatchStrings(matcher, lang)
-
-	var wordList []string
-	switch tag {
-	case language.TraditionalChinese:
-		wordList = wordlists.ChineseTraditional
-	case language.SimplifiedChinese:
-		wordList = wordlists.ChineseSimplified
-	case language.Czech:
-		wordList = wordlists.Czech
-	case language.French:
-		wordList = wordlists.French
-	case language.Italian:
-		wordList = wordlists.Italian
-	case language.Japanese:
-		wordList = wordlists.Japanese
-	case language.Korean:
-		wordList = wordlists.Korean
-	case language.Spanish:
-		wordList = wordlists.Spanish
-	case language.English:
-		fallthrough
-	default:
-		wordList = wordlists.English
+	wordlist := wordlists.English
+	allowedLanguages := map[string][]string{
+		"chinese_simplified":  wordlists.ChineseSimplified,
+		"chinese_traditional": wordlists.ChineseTraditional,
+		"czech":               wordlists.Czech,
+		"english":             wordlists.English,
+		"french":              wordlists.French,
+		"japanese":            wordlists.Japanese,
+		"korean":              wordlists.Korean,
+		"italian":             wordlists.Italian,
+		"spanish":             wordlists.Spanish,
 	}
-	bip39.SetWordList(wordList)
+
+	for k, v := range allowedLanguages {
+		if k == lang {
+			wordlist = v
+		}
+	}
+	bip39.SetWordList(wordlist)
 }

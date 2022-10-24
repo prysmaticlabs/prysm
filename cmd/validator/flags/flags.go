@@ -165,7 +165,7 @@ var (
 	// MnemonicLanguageFlag is used to specify the language of the mnemonic.
 	MnemonicLanguageFlag = &cli.StringFlag{
 		Name:  "mnemonic-language",
-		Usage: "Allows specifying mnemonic language. Supported languages are: english|czech|chinese_simplified|chinese_traditional|japanese|spanish",
+		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish",
 	}
 	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
