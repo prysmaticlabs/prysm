@@ -162,6 +162,11 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
+	// MnemonicLanguageFlag is used to specify the language of the mnemonic.
+	MnemonicLanguageFlag = &cli.StringFlag{
+		Name:  "mnemonic-language",
+		Usage: "Allows specifying mnemonic language. Supported languages are: english|czech|chinese_simplified|chinese_traditional|japanese|spanish",
+	}
 	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",

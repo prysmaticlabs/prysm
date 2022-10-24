@@ -22,12 +22,12 @@ type MnemonicGenerator struct {
 }
 
 // GenerateAndConfirmMnemonic requires confirming the generated mnemonics.
-func GenerateAndConfirmMnemonic(skipMnemonicConfirm bool, lang string) (string, error) {
+func GenerateAndConfirmMnemonic(mnemonicLanguage string, skipMnemonicConfirm bool) (string, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return "", errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
-	setBip39Lang(lang)
+	setBip39Lang(mnemonicLanguage)
 	m := &MnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
@@ -75,8 +75,8 @@ func (m *MnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
-func seedFromMnemonic(mnemonic, mnemonicPassphrase string, lang string) ([]byte, error) {
-	setBip39Lang(lang)
+func seedFromMnemonic(mnemonic, mnemonicLanguage, mnemonicPassphrase string) ([]byte, error) {
+	setBip39Lang(mnemonicLanguage)
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}
