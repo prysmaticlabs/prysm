@@ -2,6 +2,7 @@ run:
   skip-files:
     - validator/web/site_data.go
     - .*_test.go
+    - .*.pb.go
   skip-dirs:
     - proto
     - tools/analyzers
@@ -17,11 +18,15 @@ linters:
     - errcheck
     - gosimple
     - gocognit
+    - govet
 
 linters-settings:
   gocognit:
     # TODO: We should target for < 50
     min-complexity: 65
+  govet:
+    enable:
+      - fieldalignment
 
 output:
   print-issued-lines: true
