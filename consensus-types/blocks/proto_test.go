@@ -117,7 +117,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				proposerIndex: 128,
 				parentRoot:    f.root,
 				stateRoot:     f.root,
-				body:          bodyBellatrix(),
+				body:          bodyBellatrix(t),
 			},
 			signature: f.sig,
 		}
@@ -151,7 +151,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				proposerIndex: 128,
 				parentRoot:    f.root,
 				stateRoot:     f.root,
-				body:          bodyBlindedBellatrix(),
+				body:          bodyBlindedBellatrix(t),
 			},
 			signature: f.sig,
 		}
@@ -185,7 +185,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				proposerIndex: 128,
 				parentRoot:    f.root,
 				stateRoot:     f.root,
-				body:          bodyCapella(),
+				body:          bodyCapella(t),
 			},
 			signature: f.sig,
 		}
@@ -219,7 +219,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				proposerIndex: 128,
 				parentRoot:    f.root,
 				stateRoot:     f.root,
-				body:          bodyBlindedCapella(),
+				body:          bodyBlindedCapella(t),
 			},
 			signature: f.sig,
 		}
@@ -307,7 +307,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			proposerIndex: 128,
 			parentRoot:    f.root,
 			stateRoot:     f.root,
-			body:          bodyBellatrix(),
+			body:          bodyBellatrix(t),
 		}
 
 		result, err := block.Proto()
@@ -334,7 +334,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			proposerIndex: 128,
 			parentRoot:    f.root,
 			stateRoot:     f.root,
-			body:          bodyBlindedBellatrix(),
+			body:          bodyBlindedBellatrix(t),
 		}
 
 		result, err := block.Proto()
@@ -361,7 +361,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			proposerIndex: 128,
 			parentRoot:    f.root,
 			stateRoot:     f.root,
-			body:          bodyCapella(),
+			body:          bodyCapella(t),
 		}
 
 		result, err := block.Proto()
@@ -388,7 +388,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			proposerIndex: 128,
 			parentRoot:    f.root,
 			stateRoot:     f.root,
-			body:          bodyBlindedCapella(),
+			body:          bodyBlindedCapella(t),
 		}
 
 		result, err := block.Proto()
@@ -433,7 +433,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		expectedBody := bodyPbBellatrix()
-		body := bodyBellatrix()
+		body := bodyBellatrix(t)
 		result, err := body.Proto()
 		require.NoError(t, err)
 		resultBlock, ok := result.(*eth.BeaconBlockBodyBellatrix)
@@ -446,7 +446,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
 		expectedBody := bodyPbBlindedBellatrix()
-		body := bodyBlindedBellatrix()
+		body := bodyBlindedBellatrix(t)
 		result, err := body.Proto()
 		require.NoError(t, err)
 		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyBellatrix)
@@ -459,7 +459,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		expectedBody := bodyPbCapella()
-		body := bodyCapella()
+		body := bodyCapella(t)
 		result, err := body.Proto()
 		require.NoError(t, err)
 		resultBlock, ok := result.(*eth.BeaconBlockBodyCapella)
@@ -472,7 +472,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 	t.Run("CapellaBlind", func(t *testing.T) {
 		expectedBody := bodyPbBlindedCapella()
-		body := bodyBlindedCapella()
+		body := bodyBlindedCapella(t)
 		result, err := body.Proto()
 		require.NoError(t, err)
 		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyCapella)
@@ -949,8 +949,10 @@ func bodyAltair() *BeaconBlockBody {
 	}
 }
 
-func bodyBellatrix() *BeaconBlockBody {
+func bodyBellatrix(t *testing.T) *BeaconBlockBody {
 	f := getFields()
+	p, ok := WrappedExecutionPayload(f.execPayload)
+	require.Equal(t, true, ok)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		randaoReveal: f.sig,
@@ -966,12 +968,14 @@ func bodyBellatrix() *BeaconBlockBody {
 		deposits:          f.deposits,
 		voluntaryExits:    f.voluntaryExits,
 		syncAggregate:     f.syncAggregate,
-		executionPayload:  f.execPayload,
+		executionPayload:  p,
 	}
 }
 
-func bodyBlindedBellatrix() *BeaconBlockBody {
+func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 	f := getFields()
+	ph, ok := WrappedExecutionPayloadHeader(f.execPayloadHeader)
+	require.Equal(t, true, ok)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		isBlinded:    true,
@@ -988,12 +992,14 @@ func bodyBlindedBellatrix() *BeaconBlockBody {
 		deposits:               f.deposits,
 		voluntaryExits:         f.voluntaryExits,
 		syncAggregate:          f.syncAggregate,
-		executionPayloadHeader: f.execPayloadHeader,
+		executionPayloadHeader: ph,
 	}
 }
 
-func bodyCapella() *BeaconBlockBody {
+func bodyCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
+	p, ok := WrappedExecutionPayloadCapella(f.execPayloadCapella)
+	require.Equal(t, true, ok)
 	return &BeaconBlockBody{
 		version:      version.Capella,
 		randaoReveal: f.sig,
@@ -1002,20 +1008,22 @@ func bodyCapella() *BeaconBlockBody {
 			DepositCount: 128,
 			BlockHash:    f.root[:],
 		},
-		graffiti:                f.root,
-		proposerSlashings:       f.proposerSlashings,
-		attesterSlashings:       f.attesterSlashings,
-		attestations:            f.atts,
-		deposits:                f.deposits,
-		voluntaryExits:          f.voluntaryExits,
-		syncAggregate:           f.syncAggregate,
-		executionPayloadCapella: f.execPayloadCapella,
-		blsToExecutionChanges:   f.blsToExecutionChanges,
+		graffiti:              f.root,
+		proposerSlashings:     f.proposerSlashings,
+		attesterSlashings:     f.attesterSlashings,
+		attestations:          f.atts,
+		deposits:              f.deposits,
+		voluntaryExits:        f.voluntaryExits,
+		syncAggregate:         f.syncAggregate,
+		executionPayload:      p,
+		blsToExecutionChanges: f.blsToExecutionChanges,
 	}
 }
 
-func bodyBlindedCapella() *BeaconBlockBody {
+func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
+	ph, ok := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella)
+	require.Equal(t, true, ok)
 	return &BeaconBlockBody{
 		version:      version.Capella,
 		isBlinded:    true,
@@ -1025,15 +1033,15 @@ func bodyBlindedCapella() *BeaconBlockBody {
 			DepositCount: 128,
 			BlockHash:    f.root[:],
 		},
-		graffiti:                      f.root,
-		proposerSlashings:             f.proposerSlashings,
-		attesterSlashings:             f.attesterSlashings,
-		attestations:                  f.atts,
-		deposits:                      f.deposits,
-		voluntaryExits:                f.voluntaryExits,
-		syncAggregate:                 f.syncAggregate,
-		executionPayloadHeaderCapella: f.execPayloadHeaderCapella,
-		blsToExecutionChanges:         f.blsToExecutionChanges,
+		graffiti:               f.root,
+		proposerSlashings:      f.proposerSlashings,
+		attesterSlashings:      f.attesterSlashings,
+		attestations:           f.atts,
+		deposits:               f.deposits,
+		voluntaryExits:         f.voluntaryExits,
+		syncAggregate:          f.syncAggregate,
+		executionPayloadHeader: ph,
+		blsToExecutionChanges:  f.blsToExecutionChanges,
 	}
 }
 
