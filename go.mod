@@ -85,6 +85,7 @@ require (
 	golang.org/x/exp v0.0.0-20220426173459-3bcf042a4bf5
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.12
 	google.golang.org/genproto v0.0.0-20210426193834-eac7f76ac494
 	google.golang.org/grpc v1.40.0
@@ -219,7 +220,6 @@ require (
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
-	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
