@@ -911,11 +911,13 @@ func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 		Withdrawals: []*enginev1.Withdrawal{
 			{
 				WithdrawalIndex:  123,
+				ValidatorIndex:   123,
 				ExecutionAddress: bytes(20),
 				Amount:           123,
 			},
 			{
 				WithdrawalIndex:  456,
+				ValidatorIndex:   456,
 				ExecutionAddress: bytes(20),
 				Amount:           456,
 			},
