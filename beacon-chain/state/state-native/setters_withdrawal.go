@@ -105,6 +105,17 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	if b.version < version.Capella {
 		return errNotSupported("WithdrawBalance", b.version)
 	}
+	val, err := b.ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		return errors.Wrapf(err, "could not get validator at index %d", index)
+	}
+
+	// Protection against withdrawing a BLS validator, this should not
+	// happen in runtime!
+	if !val.HasETH1WithdrawalCredential() {
+		return errors.New("could not withdraw balance from validator: invalid withdrawal credentials")
+	}
+
 	balAtIdx, err := b.BalanceAtIndex(index)
 	if err != nil {
 		return errors.Wrapf(err, "could not get balance at index %d", index)
@@ -122,17 +133,6 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	if err != nil {
 		return errors.Wrap(err, "could not get the next withdrawal index")
 	}
-	val, err := b.ValidatorAtIndexReadOnly(index)
-	if err != nil {
-		return errors.Wrapf(err, "could not get validator at index %d", index)
-	}
-
-	// Protection against withdrawing a BLS validator, this should not
-	// happen in runtime!
-	if !val.HasETH1WithdrawalCredential() {
-		return errors.New("could not withdraw balance from validator: invalid withdrawal credentials")
-	}
-
 	withdrawal := &enginev1.Withdrawal{
 		WithdrawalIndex:  nextWithdrawalIndex,
 		ValidatorIndex:   index,
