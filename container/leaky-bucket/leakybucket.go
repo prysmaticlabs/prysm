@@ -18,7 +18,6 @@ This means it is the exact mirror of a token bucket.
 	n := b.Add(1)
 	// n == 0
 
-
 A Collector is a convenient way to keep track of multiple LeakyBucket's.
 Buckets are associated with string keys for fast lookup. It can dynamically
 add new buckets and automatically remove them as they become empty, freeing
@@ -47,26 +46,21 @@ var now = time.Now
 
 // LeakyBucket represents a bucket that leaks at a constant rate.
 type LeakyBucket struct {
-	// The identifying key, used for map lookups.
-	key string
-
-	// How large the bucket is.
-	capacity int64
-
-	// Amount the bucket leaks per time duration.
-	rate float64
-
 	// The priority of the bucket in a min-heap priority queue, where p is the
 	// exact time the bucket will have leaked enough to be empty. Buckets that
 	// are empty or will be the soonest are at the top of the heap. This allows
 	// for quick pruning of empty buckets that scales very well. p is adjusted
 	// any time an amount is added to the Queue().
 	p time.Time
-
+	// The identifying key, used for map lookups.
+	key string
+	// How large the bucket is.
+	capacity int64
+	// Amount the bucket leaks per time duration.
+	rate float64
 	// The time duration through which the leaky bucket is
 	// assessed.
 	period time.Duration
-
 	// The index is maintained by the heap.Interface methods.
 	index int
 }
