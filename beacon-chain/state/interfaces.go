@@ -87,7 +87,6 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetWithdrawalQueue(val []*enginev1.Withdrawal) error
-	AppendWithdrawal(val *enginev1.Withdrawal) error
 	SetNextWithdrawalIndex(i uint64) error
 	IncreaseNextWithdrawalIndex() error
 	SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error

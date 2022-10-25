@@ -92,15 +92,15 @@ func TestAppendWithdrawal(t *testing.T) {
 			Amount:           3,
 			ValidatorIndex:   4,
 		}
-		err := s.AppendWithdrawal(newWithdrawal)
+		err := s.appendWithdrawal(newWithdrawal)
 		require.NoError(t, err)
 		expectedQ := []*enginev1.Withdrawal{oldWithdrawal1, oldWithdrawal2, newWithdrawal}
 		assert.DeepEqual(t, expectedQ, s.withdrawalQueue)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
 		s := BeaconState{version: version.Bellatrix}
-		err := s.AppendWithdrawal(&enginev1.Withdrawal{})
-		assert.ErrorContains(t, "AppendWithdrawal is not supported", err)
+		err := s.appendWithdrawal(&enginev1.Withdrawal{})
+		assert.ErrorContains(t, "appendWithdrawal is not supported", err)
 	})
 }
 
@@ -129,6 +129,7 @@ func TestWithdrawBalance(t *testing.T) {
 	s := BeaconState{
 		version:             version.Capella,
 		nextWithdrawalIndex: 2,
+		withdrawalQueue:     make([]*enginev1.Withdrawal, 2),
 		validators:          vals,
 		balances: []uint64{
 			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
@@ -145,8 +146,8 @@ func TestWithdrawBalance(t *testing.T) {
 	require.NoError(t, s.WithdrawBalance(0, params.BeaconConfig().MinDepositAmount))
 	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, s.balances[0])
 	require.Equal(t, uint64(3), s.nextWithdrawalIndex)
-	require.Equal(t, 1, len(s.withdrawalQueue))
-	withdrawal := s.withdrawalQueue[0]
+	require.Equal(t, 3, len(s.withdrawalQueue))
+	withdrawal := s.withdrawalQueue[2]
 	require.Equal(t, uint64(2), withdrawal.WithdrawalIndex)
 	require.Equal(t, params.BeaconConfig().MinDepositAmount, withdrawal.Amount)
 	require.Equal(t, types.ValidatorIndex(0), withdrawal.ValidatorIndex)
@@ -162,7 +163,7 @@ func TestWithdrawBalance(t *testing.T) {
 	// Underflow produces wrong amount (Spec Repo #3054)
 	err = s.WithdrawBalance(0, params.BeaconConfig().MaxEffectiveBalance)
 	require.NoError(t, err)
-	require.Equal(t, 3, len(s.withdrawalQueue))
-	withdrawal = s.withdrawalQueue[2]
+	require.Equal(t, 5, len(s.withdrawalQueue))
+	withdrawal = s.withdrawalQueue[4]
 	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, withdrawal.Amount)
 }

@@ -31,15 +31,16 @@ func (b *BeaconState) SetWithdrawalQueue(val []*enginev1.Withdrawal) error {
 }
 
 // AppendWithdrawal adds a new withdrawal to the end of withdrawal queue.
-func (b *BeaconState) AppendWithdrawal(val *enginev1.Withdrawal) error {
+// This function assumes that the caller holds a lock on b.
+func (b *BeaconState) appendWithdrawal(wal *enginev1.Withdrawal) error {
 	if b.version < version.Capella {
-		return errNotSupported("AppendWithdrawal", b.version)
+		return errNotSupported("appendWithdrawal", b.version)
 	}
 
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	q := b.withdrawalQueue
+	if wal == nil || wal.WithdrawalIndex != uint64(len(q)) {
+		return errors.New("invalid withdrawal index")
+	}
 	max := uint64(fieldparams.ValidatorRegistryLimit)
 	if uint64(len(q)) == max {
 		return fmt.Errorf("withdrawal queue has max length %d", max)
@@ -53,7 +54,7 @@ func (b *BeaconState) AppendWithdrawal(val *enginev1.Withdrawal) error {
 		b.sharedFieldReferences[nativetypes.WithdrawalQueue] = stateutil.NewRef(1)
 	}
 
-	b.withdrawalQueue = append(q, val)
+	b.withdrawalQueue = append(q, wal)
 	b.markFieldAsDirty(nativetypes.WithdrawalQueue)
 	b.addDirtyIndices(nativetypes.WithdrawalQueue, []uint64{uint64(len(b.withdrawalQueue) - 1)})
 	return nil
@@ -105,6 +106,7 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 	if b.version < version.Capella {
 		return errNotSupported("WithdrawBalance", b.version)
 	}
+
 	val, err := b.ValidatorAtIndexReadOnly(index)
 	if err != nil {
 		return errors.Wrapf(err, "could not get validator at index %d", index)
@@ -116,32 +118,30 @@ func (b *BeaconState) WithdrawBalance(index types.ValidatorIndex, amount uint64)
 		return errors.New("could not withdraw balance from validator: invalid withdrawal credentials")
 	}
 
-	balAtIdx, err := b.BalanceAtIndex(index)
-	if err != nil {
-		return errors.Wrapf(err, "could not get balance at index %d", index)
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if uint64(index) >= uint64(len(b.balances)) {
+		return errors.New("could not withdraw balance from validator: invalid index")
 	}
+	balAtIdx := b.balances[index]
+
 	if amount > balAtIdx {
 		balAtIdx = 0
 	} else {
 		balAtIdx -= amount
 	}
 
-	if err := b.UpdateBalancesAtIndex(index, balAtIdx); err != nil {
-		return errors.Wrapf(err, "could not update balance of validator index %d", index)
-	}
-	nextWithdrawalIndex, err := b.NextWithdrawalIndex()
-	if err != nil {
-		return errors.Wrap(err, "could not get the next withdrawal index")
-	}
+	b.balances[index] = balAtIdx
+	b.markFieldAsDirty(nativetypes.Balances)
+	b.addDirtyIndices(nativetypes.Balances, []uint64{uint64(index)})
+
 	withdrawal := &enginev1.Withdrawal{
-		WithdrawalIndex:  nextWithdrawalIndex,
+		WithdrawalIndex:  b.nextWithdrawalIndex,
 		ValidatorIndex:   index,
 		ExecutionAddress: val.WithdrawalCredentials()[12:],
 		Amount:           amount,
 	}
 
-	if err := b.IncreaseNextWithdrawalIndex(); err != nil {
-		return errors.Wrap(err, "could not increase next withdrawal index")
-	}
-	return b.AppendWithdrawal(withdrawal)
+	b.nextWithdrawalIndex += 1
+	return b.appendWithdrawal(withdrawal)
 }
