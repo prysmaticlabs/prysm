@@ -80,19 +80,13 @@ func (s *Store) BlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte) (*et
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
-		for {
-			k, v := c.Next()
-			if k == nil {
-				return nil
-			}
-			if len(k) != blobSidecarKeyLength {
-				continue
-			}
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
 				enc = v
-				return nil
+				break
 			}
 		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}
@@ -114,11 +108,8 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
-		for {
-			k, v := c.Next()
-			if len(k) == 0 {
-				return nil
-			}
+		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if len(k) != blobSidecarKeyLength {
 				continue
 			}
@@ -127,6 +118,7 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 				encodedBlobs = append(encodedBlobs, v)
 			}
 		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}
@@ -186,6 +178,6 @@ func blobSidecarKey(blob *ethpb.BlobsSidecar) []byte {
 	slotInRotatingBuffer := blob.BeaconBlockSlot.ModSlot(maxSlotsToPersistBlobs)
 	key := bytesutil.SlotToBytesBigEndian(slotInRotatingBuffer)
 	key = append(key, bytesutil.SlotToBytesBigEndian(blob.BeaconBlockSlot)...)
-	key = append(key, blob.BeaconBlockRoot[:]...)
+	key = append(key, blob.BeaconBlockRoot...)
 	return key
 }

@@ -16,9 +16,9 @@ import (
 func TestBlobsSidecar_Overwriting(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconNetworkConfig()
-	// For purposes of testing, we only keep blobs around for 3 epochs. At fourth epoch, we will
+	// For purposes of testing, we only keep blobs around for 2 epochs. At third epoch, we will
 	// wrap around and overwrite the oldest epoch's elements as the keys for blobs work as a rotating buffer.
-	cfg.MinEpochsForBlobsSidecarsRequest = 3
+	cfg.MinEpochsForBlobsSidecarsRequest = 2
 	params.OverrideBeaconNetworkConfig(cfg)
 	db := setupDB(t)
 
