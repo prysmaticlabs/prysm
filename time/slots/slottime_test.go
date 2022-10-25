@@ -17,8 +17,8 @@ func TestSlotsSinceGenesis(t *testing.T) {
 		genesis time.Time
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 		want types.Slot
 	}{
 		{
@@ -269,10 +269,10 @@ func TestSlotToTime(t *testing.T) {
 		slot           types.Slot
 	}
 	tests := []struct {
-		name      string
-		args      args
 		want      time.Time
+		name      string
 		wantedErr string
+		args      args
 	}{
 		{
 			name: "slot_0",
@@ -328,8 +328,8 @@ func TestVerifySlotTime(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
-		args      args
 		wantedErr string
+		args      args
 	}{
 		{
 			name: "Past slot",

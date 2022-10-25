@@ -78,9 +78,9 @@ func TestKeymanager_Sign(t *testing.T) {
 		request *validatorpb.SignRequest
 	}
 	tests := []struct {
-		name    string
-		args    args
 		want    bls.Signature
+		args    args
+		name    string
 		wantErr bool
 	}{
 		{

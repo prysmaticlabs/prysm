@@ -55,7 +55,7 @@ func ExampleFeed_acknowledgedEvents() {
 	// It waits for all consumers to acknowledge before sending the next event.
 	for i := 0; i < 3; i++ {
 		acksignal := make(chan struct{})
-		n := feed.Send(ackedEvent{i, acksignal})
+		n := feed.Send(ackedEvent{i: i, ack: acksignal})
 		for ack := 0; ack < n; ack++ {
 			<-acksignal
 		}

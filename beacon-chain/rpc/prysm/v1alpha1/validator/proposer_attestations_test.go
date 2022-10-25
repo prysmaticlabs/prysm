@@ -63,10 +63,10 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("single att", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		atts, err := atts.sortByProfitability()
 		if err != nil {
@@ -77,12 +77,12 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("single att per slot", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sortByProfitability()
 		if err != nil {
@@ -93,14 +93,14 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("two atts on one of the slots", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11110000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11110000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sortByProfitability()
 		if err != nil {
@@ -114,14 +114,14 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		// (since it has two new/unknown bits).
 		t.Run("max-cover", func(t *testing.T) {
 			atts := getAtts([]testData{
-				{1, bitfield.Bitlist{0b11000011, 0b1}},
-				{1, bitfield.Bitlist{0b11001000, 0b1}},
-				{1, bitfield.Bitlist{0b00001100, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b11000011, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b11001000, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b00001100, 0b1}},
 			})
 			want := getAtts([]testData{
-				{1, bitfield.Bitlist{0b11000011, 0b1}},
-				{1, bitfield.Bitlist{0b00001100, 0b1}},
-				{1, bitfield.Bitlist{0b11001000, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b11000011, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b00001100, 0b1}},
+				{slot: 1, bits: bitfield.Bitlist{0b11001000, 0b1}},
 			})
 			atts, err := atts.sortByProfitability()
 			if err != nil {
@@ -133,20 +133,20 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 
 	t.Run("multiple slots", func(t *testing.T) {
 		atts := getAtts([]testData{
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 2, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11110000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 3, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11110000, 0b1}},
-			{4, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11110000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 3, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 2, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sortByProfitability()
 		if err != nil {
@@ -161,24 +161,24 @@ func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
 		// both selected and non-selected attestations must be additionally sorted by bit count.
 		atts := getAtts([]testData{
-			{4, bitfield.Bitlist{0b00000001, 0b1}},
-			{4, bitfield.Bitlist{0b11100001, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{4, bitfield.Bitlist{0b10000011, 0b1}},
-			{4, bitfield.Bitlist{0b11111000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b00000001, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100001, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 2, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b10000011, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11111000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 3, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		want := getAtts([]testData{
-			{4, bitfield.Bitlist{0b11111000, 0b1}},
-			{4, bitfield.Bitlist{0b10000011, 0b1}},
-			{4, bitfield.Bitlist{0b11100001, 0b1}},
-			{4, bitfield.Bitlist{0b00000001, 0b1}},
-			{3, bitfield.Bitlist{0b11000000, 0b1}},
-			{2, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11100000, 0b1}},
-			{1, bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11111000, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b10000011, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b11100001, 0b1}},
+			{slot: 4, bits: bitfield.Bitlist{0b00000001, 0b1}},
+			{slot: 3, bits: bitfield.Bitlist{0b11000000, 0b1}},
+			{slot: 2, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11100000, 0b1}},
+			{slot: 1, bits: bitfield.Bitlist{0b11000000, 0b1}},
 		})
 		atts, err := atts.sortByProfitability()
 		if err != nil {

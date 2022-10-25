@@ -619,15 +619,30 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 		name      string
 		want      bool
 	}{
-		{"Eligible",
-			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-			true},
-		{"Incorrect activation eligibility epoch",
-			&ethpb.Validator{ActivationEligibilityEpoch: 1, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-			false},
-		{"Not enough balance",
-			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: 1},
-			false},
+		{
+			name: "Eligible",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			},
+			want: true,
+		},
+		{
+			name: "Incorrect activation eligibility epoch",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: 1,
+				EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			},
+			want: false,
+		},
+		{
+			name: "Not enough balance",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance:           1,
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -643,18 +658,37 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 		name      string
 		want      bool
 	}{
-		{"Eligible",
-			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
-			true},
-		{"Not yet finalized",
-			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
-			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}},
-			false},
-		{"Incorrect activation epoch",
-			&ethpb.Validator{ActivationEligibilityEpoch: 1},
-			&ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
-			false},
+		{
+			name: "Eligible",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: 1,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+			},
+			state: &ethpb.BeaconState{
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2},
+			},
+			want: true,
+		},
+		{
+			name: "Not yet finalized",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: 1,
+				ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
+			},
+			state: &ethpb.BeaconState{
+				FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)},
+			},
+			want: false,
+		},
+		{
+			name: "Incorrect activation epoch",
+			validator: &ethpb.Validator{
+				ActivationEligibilityEpoch: 1,
+			},
+			state: &ethpb.BeaconState{
+				FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

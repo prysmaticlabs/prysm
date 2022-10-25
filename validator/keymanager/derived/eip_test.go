@@ -50,9 +50,9 @@ func TestDerivationFromSeed(t *testing.T) {
 		childSK  string
 	}
 	tests := []struct {
+		want   want
 		name   string
 		fields fields
-		want   want
 	}{
 		{
 			name: "Case 1",
