@@ -96,10 +96,8 @@ func setBip39Lang(lang string) {
 		"spanish":             wordlists.Spanish,
 	}
 
-	for k, v := range allowedLanguages {
-		if k == lang {
-			wordlist = v
-		}
+	if wl, ok := allowedLanguages[lang]; ok {
+		wordlist = wl
 	}
 	bip39.SetWordList(wordlist)
 }
