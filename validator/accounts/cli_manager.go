@@ -37,7 +37,6 @@ type AccountsCLIManager struct {
 	deletePublicKeys     bool
 	importPrivateKeys    bool
 	readPasswordFile     bool
-	mnemonicLanguage     string
 	skipMnemonicConfirm  bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
@@ -46,6 +45,7 @@ type AccountsCLIManager struct {
 	privateKeyFile       string
 	passwordFilePath     string
 	keysDir              string
+	mnemonicLanguage     string
 	backupsDir           string
 	backupsPassword      string
 	filteredPubKeys      []bls.PublicKey
