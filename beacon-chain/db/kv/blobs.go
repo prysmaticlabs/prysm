@@ -110,7 +110,6 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
-		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if len(k) != blobSidecarKeyLength {
 				continue
