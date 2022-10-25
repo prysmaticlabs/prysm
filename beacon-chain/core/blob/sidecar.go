@@ -44,7 +44,7 @@ func init() {
 	rootOfUnity.Exp(&rootOfUnity, &divisor, &blsModulus)
 
 	current := one
-	rootsOfUnity := make([]bls.Fr, params.FieldElementsPerBlob)
+	rootsOfUnity = make([]bls.Fr, params.FieldElementsPerBlob)
 	for i := 0; i < params.FieldElementsPerBlob; i++ {
 		bigToFr(&rootsOfUnity[i], &current)
 		current.Mul(&current, &rootOfUnity).
