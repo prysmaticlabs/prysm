@@ -60,7 +60,7 @@ func (s *Store) SaveBlobsSidecar(ctx context.Context, blobSidecar *ethpb.BlobsSi
 			)
 		}
 		slotOfFirstElement := firstElementKey[8:16]
-		// If we should overwrite old blobs at the spot in the rotating buffer, we clear at data at that spot.
+		// If we should overwrite old blobs at the spot in the rotating buffer, we clear data at that spot.
 		shouldOverwrite := blobSidecar.BeaconBlockSlot > bytesutil.BytesToSlotBigEndian(slotOfFirstElement)
 		if shouldOverwrite {
 			for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
