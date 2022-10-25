@@ -16,11 +16,10 @@ import (
 const blobSidecarKeyLength = 48 // slot_to_rotating_buffer(blob.slot) ++ blob.slot ++ blob.block_root
 
 // SaveBlobsSidecar saves the blobs for a given epoch in the sidecar bucket. When we receive a blob:
-// 1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = (MAX_BLOB_EPOCHS+1)*SLOTS_PER_EPOCH
+// 1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = MAX_BLOB_EPOCHS*SLOTS_PER_EPOCH
 // 2. Compute key for blob as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
-// 3. Begin the save algorithm:
-//    - If the incoming blob has a slot bigger than the last saved slot at that slot
-//    - in the rotating buffer, we overwrite all elements.
+// 3. Begin the save algorithm:  If the incoming blob has a slot bigger than the last saved slot at the spot
+//    in the rotating keys buffer, we overwrite all elements.
 //
 //    firstElemKey = getFirstElement(bucket)
 //    shouldOverwrite = blob.slot > bytes_to_slot(firstElemKey[8:16])
