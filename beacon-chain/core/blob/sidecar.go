@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	blsModulus.SetString(bls.MODULUS_STR, 10)
+	blsModulus.SetString(bls.ModulusStr, 10)
 
 	// Initialize rootsOfUnity which are used by EvaluatePolyInEvaluationForm
 	var one big.Int
