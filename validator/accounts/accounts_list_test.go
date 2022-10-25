@@ -44,22 +44,22 @@ const (
 )
 
 type testWalletConfig struct {
-	exitAll                 bool
-	skipDepositConfirm      bool
-	keymanagerKind          keymanager.Kind
-	numAccounts             int64
-	grpcHeaders             string
-	privateKeyFile          string
-	accountPasswordFile     string
-	walletPasswordFile      string
 	backupPasswordFile      string
-	backupPublicKeys        string
 	voluntaryExitPublicKeys string
-	deletePublicKeys        string
-	keysDir                 string
-	backupDir               string
-	passwordsDir            string
 	walletDir               string
+	passwordsDir            string
+	backupDir               string
+	privateKeyFile          string
+	keysDir                 string
+	accountPasswordFile     string
+	grpcHeaders             string
+	backupPublicKeys        string
+	walletPasswordFile      string
+	deletePublicKeys        string
+	numAccounts             int64
+	keymanagerKind          keymanager.Kind
+	skipDepositConfirm      bool
+	exitAll                 bool
 }
 
 func setupWalletCtx(
@@ -117,8 +117,8 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 }
 
 type mockRemoteKeymanager struct {
-	publicKeys [][fieldparams.BLSPubkeyLength]byte
 	opts       *remote.KeymanagerOpts
+	publicKeys [][fieldparams.BLSPubkeyLength]byte
 }
 
 func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {

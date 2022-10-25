@@ -8,10 +8,10 @@ import (
 
 func TestValidateMnemonic(t *testing.T) {
 	tests := []struct {
+		err      error
 		name     string
 		mnemonic string
 		wantErr  bool
-		err      error
 	}{
 		{
 			name:     "Valid Mnemonic",

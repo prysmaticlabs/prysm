@@ -12,8 +12,8 @@ func TestHandler(t *testing.T) {
 	tests := []struct {
 		name            string
 		requestURI      string
-		wantStatus      int
 		wantContentType string
+		wantStatus      int
 	}{
 		{
 			name:            "base route",

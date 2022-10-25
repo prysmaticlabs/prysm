@@ -18,6 +18,7 @@ import (
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
+	lock                                sync.RWMutex
 	version                             int
 	genesisTime                         uint64                      `ssz-gen:"true"`
 	eth1DepositIndex                    uint64                      `ssz-gen:"true"`
@@ -51,7 +52,6 @@ type BeaconState struct {
 	nextPartialWithdrawalValidatorIndex eth2types.ValidatorIndex                `ssz-gen:"true"`
 	historicalRoots                     customtypes.HistoricalRoots             `ssz-gen:"true" ssz-size:"?,32" ssz-max:"16777216"`
 	justificationBits                   bitfield.Bitvector4                     `ssz-gen:"true" ssz-size:"1"`
-	lock                                sync.RWMutex
 	dirtyFields                         map[nativetypes.FieldIndex]bool
 	sharedFieldReferences               map[nativetypes.FieldIndex]*stateutil.Reference
 	dirtyIndices                        map[nativetypes.FieldIndex][]uint64

@@ -192,8 +192,8 @@ func Test_rootToHexString(t *testing.T) {
 	mockRoot := [32]byte{1}
 	tests := []struct {
 		name    string
-		root    []byte
 		want    string
+		root    []byte
 		wantErr bool
 	}{
 		{
@@ -239,8 +239,8 @@ func Test_pubKeyToHexString(t *testing.T) {
 	mockPubKey := [fieldparams.BLSPubkeyLength]byte{1}
 	tests := []struct {
 		name    string
-		pubKey  []byte
 		want    string
+		pubKey  []byte
 		wantErr bool
 	}{
 		{

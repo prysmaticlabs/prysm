@@ -32,8 +32,8 @@ var c = `
 
 type testCase struct {
 	selector   string
-	expectedOk bool
 	expected   []string
+	expectedOk bool
 }
 
 func TestWalkThroughEmbeddedInterfaces(t *testing.T) {

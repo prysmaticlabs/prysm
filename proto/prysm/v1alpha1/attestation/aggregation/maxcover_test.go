@@ -17,10 +17,10 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 	}
 	var problem MaxCoverCandidates
 	tests := []struct {
+		want *MaxCoverCandidates
 		name string
 		cl   MaxCoverCandidates
 		args args
-		want *MaxCoverCandidates
 	}{
 		{
 			name: "nil list",
@@ -150,9 +150,9 @@ func TestMaxCover_MaxCoverCandidates_filter(t *testing.T) {
 func TestMaxCover_MaxCoverCandidates_sort(t *testing.T) {
 	var problem MaxCoverCandidates
 	tests := []struct {
+		want *MaxCoverCandidates
 		name string
 		cl   MaxCoverCandidates
-		want *MaxCoverCandidates
 	}{
 		{
 			name: "nil list",
@@ -285,10 +285,10 @@ func TestMaxCover_MaxCoverCandidates_union(t *testing.T) {
 func TestMaxCover_MaxCoverCandidates_score(t *testing.T) {
 	var problem MaxCoverCandidates
 	tests := []struct {
+		want      *MaxCoverCandidates
 		name      string
 		cl        MaxCoverCandidates
 		uncovered bitfield.Bitlist
-		want      *MaxCoverCandidates
 	}{
 		{
 			name: "nil",
@@ -372,15 +372,15 @@ func TestMaxCover_MaxCoverProblem_Cover(t *testing.T) {
 		}
 	}
 	type args struct {
-		k             int
 		candidates    MaxCoverCandidates
+		k             int
 		allowOverlaps bool
 	}
 	tests := []struct {
-		name      string
-		args      args
 		want      *Aggregation
+		name      string
 		wantedErr string
+		args      args
 	}{
 		{
 			name:      "nil problem",
@@ -532,8 +532,8 @@ func TestMaxCover_MaxCover(t *testing.T) {
 		}
 	}
 	type args struct {
-		k             int
 		candidates    []*bitfield.Bitlist64
+		k             int
 		allowOverlaps bool
 	}
 	type BitSetAggregation struct {
@@ -541,10 +541,10 @@ func TestMaxCover_MaxCover(t *testing.T) {
 		Keys     []int
 	}
 	tests := []struct {
-		name      string
-		args      args
 		want      *BitSetAggregation
+		name      string
 		wantedErr string
+		args      args
 	}{
 		{
 			name:      "nil problem",
