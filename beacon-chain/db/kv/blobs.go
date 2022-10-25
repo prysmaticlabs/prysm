@@ -65,7 +65,7 @@ func (s *Store) SaveBlobsSidecar(ctx context.Context, blobSidecar *ethpb.BlobsSi
 		if shouldOverwrite {
 			for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
 				if err := bkt.Delete(k); err != nil {
-					return err
+					log.Warnf("Could not delete blob with key %#x: %v", k, err)
 				}
 			}
 		}
@@ -106,7 +106,7 @@ func (s *Store) BlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte) (*et
 func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobsSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobsSidecarsBySlot")
 	defer span.End()
-	encodedBlobs := make([][]byte, 0)
+	encodedItems := make([][]byte, 0)
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
@@ -116,25 +116,25 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 			}
 			slotInKey := bytesutil.BytesToSlotBigEndian(k[8:16])
 			if slotInKey == slot {
-				encodedBlobs = append(encodedBlobs, v)
+				encodedItems = append(encodedItems, v)
 			}
 		}
 		return nil
 	}); err != nil {
 		return nil, err
 	}
-	if len(encodedBlobs) == 0 {
-		return nil, nil
+	sidecars := make([]*ethpb.BlobsSidecar, len(encodedItems))
+	if len(encodedItems) == 0 {
+		return sidecars, nil
 	}
-	blobs := make([]*ethpb.BlobsSidecar, len(encodedBlobs))
-	for i, enc := range encodedBlobs {
+	for i, enc := range encodedItems {
 		blob := &ethpb.BlobsSidecar{}
 		if err := decode(ctx, enc, blob); err != nil {
 			return nil, err
 		}
-		blobs[i] = blob
+		sidecars[i] = blob
 	}
-	return blobs, nil
+	return sidecars, nil
 }
 
 // HasBlobsSidecar returns true if the blobs are in the db.
@@ -158,7 +158,7 @@ func (s *Store) DeleteBlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
 				if err := bkt.Delete(k); err != nil {
-					return nil
+					return err
 				}
 			}
 		}
