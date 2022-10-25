@@ -42,7 +42,10 @@ func (s *Store) SaveBlobsSidecar(ctx context.Context, blobSidecar *ethpb.BlobsSi
 		rotatingBufferPrefix := key[0:8]
 		var firstElementKey []byte
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
-			firstElementKey = k
+			if len(k) != 0 {
+				firstElementKey = k
+				break
+			}
 		}
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
@@ -154,17 +157,14 @@ func (s *Store) DeleteBlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
-		for {
-			k, _ := c.Next()
-			if len(k) == 0 {
-				return nil
-			}
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
 				if err := bkt.Delete(k); err != nil {
 					return nil
 				}
 			}
 		}
+		return nil
 	})
 }
 
@@ -172,8 +172,7 @@ func (s *Store) DeleteBlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
 func blobSidecarKey(blob *ethpb.BlobsSidecar) []byte {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	// We store blobs for one more epoch than the spec requires.
-	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1
+	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
 	slotInRotatingBuffer := blob.BeaconBlockSlot.ModSlot(maxSlotsToPersistBlobs)
 	key := bytesutil.SlotToBytesBigEndian(slotInRotatingBuffer)
