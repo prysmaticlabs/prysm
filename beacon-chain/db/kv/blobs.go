@@ -1,59 +1,98 @@
 package kv
 
 import (
+	"bytes"
 	"context"
-	"time"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
 
-// DeleteBlobsSidecar removes the blobs from the db.
-func (s *Store) DeleteBlobsSidecar(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobsSidecar")
-	defer span.End()
-	return s.db.Update(func(tx *bolt.Tx) error {
-		if err := tx.Bucket(blobsBucket).Delete(root[:]); err != nil {
-			return err
-		}
-		return tx.Bucket(blobsAgesBucket).Delete(root[:])
-	})
-}
+const blobSidecarKeyLength = 48 // slot_to_rotating_buffer(blob.slot) ++ blob.slot ++ blob.block_root
 
-// SaveBlobsSidecar saves the blobs for a given epoch in the sidecar bucket.
-func (s *Store) SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error {
+// SaveBlobsSidecar saves the blobs for a given epoch in the sidecar bucket. When we receive a blob:
+// 1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = (MAX_BLOB_EPOCHS+1)*SLOTS_PER_EPOCH
+// 2. Compute key for blob as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
+// 3. Begin the save algorithm:
+//    - If the incoming blob has a slot bigger than the last saved slot at that slot
+//    - in the rotating buffer, we overwrite all elements.
+//
+//    firstElemKey = getFirstElement(bucket)
+//    shouldOverwrite = blob.slot > bytes_to_slot(firstElemKey[8:16])
+//    if shouldOverwrite:
+// 	    for existingKey := seek prefix bytes(slot_to_rotating_buffer(blob.slot))
+//        bucket.delete(existingKey)
+//    bucket.put(key, blob)
+func (s *Store) SaveBlobsSidecar(ctx context.Context, blobSidecar *ethpb.BlobsSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobsSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
-		blobKey := blob.BeaconBlockRoot
-		insertTime := time.Now().Format(time.RFC3339)
-		ageBkt := tx.Bucket(blobsAgesBucket)
-		if err := ageBkt.Put(blobKey, []byte(insertTime)); err != nil {
-			return err
-		}
-
-		bkt := tx.Bucket(blobsBucket)
-		enc, err := encode(ctx, blob)
+		encodedBlobSidecar, err := encode(ctx, blobSidecar)
 		if err != nil {
 			return err
 		}
-		return bkt.Put(blobKey, enc)
+		bkt := tx.Bucket(blobsBucket)
+		c := bkt.Cursor()
+		key := blobSidecarKey(blobSidecar)
+		rotatingBufferPrefix := key[0:8]
+		var firstElementKey []byte
+		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
+			firstElementKey = k
+		}
+		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
+		// store the blob by key and exit early.
+		if len(firstElementKey) == 0 {
+			return bkt.Put(key, encodedBlobSidecar)
+		} else if len(firstElementKey) != len(key) {
+			return fmt.Errorf(
+				"key length %d (%#x) != existing key length %d (%#x)",
+				len(key),
+				key,
+				len(firstElementKey),
+				firstElementKey,
+			)
+		}
+		slotOfFirstElement := firstElementKey[8:16]
+		// If we should overwrite old blobs at the spot in the rotating buffer, we clear at data at that spot.
+		shouldOverwrite := blobSidecar.BeaconBlockSlot > bytesutil.BytesToSlotBigEndian(slotOfFirstElement)
+		if shouldOverwrite {
+			for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
+				if err := bkt.Delete(k); err != nil {
+					return err
+				}
+			}
+		}
+		return bkt.Put(key, encodedBlobSidecar)
 	})
 }
 
-// BlobsSidecar retrieves the blobs given a block root.
-func (s *Store) BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error) {
+// BlobsSidecar retrieves the blobs given a beacon block root.
+func (s *Store) BlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte) (*ethpb.BlobsSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobsSidecar")
 	defer span.End()
 
 	var enc []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
-		enc = tx.Bucket(blobsBucket).Get(blockRoot[:])
-		return nil
+		c := tx.Bucket(blobsBucket).Cursor()
+		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
+		for {
+			k, v := c.Next()
+			if k == nil {
+				return nil
+			}
+			if len(k) != blobSidecarKeyLength {
+				continue
+			}
+			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
+				enc = v
+				return nil
+			}
+		}
 	}); err != nil {
 		return nil, err
 	}
@@ -71,91 +110,82 @@ func (s *Store) BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.Bl
 func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobsSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobsSidecarsBySlot")
 	defer span.End()
-
-	var blobsSidecars []*ethpb.BlobsSidecar
-	err := s.db.View(func(tx *bolt.Tx) error {
-		blockRoots, err := blockRootsBySlot(ctx, tx, slot)
-		if err != nil {
-			return err
-		}
-
-		for _, blockRoot := range blockRoots {
-			enc := tx.Bucket(blobsBucket).Get(blockRoot[:])
-			if len(enc) == 0 {
+	encodedBlobs := make([][]byte, 0)
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(blobsBucket).Cursor()
+		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
+		for {
+			k, v := c.Next()
+			if len(k) == 0 {
+				return nil
+			}
+			if len(k) != blobSidecarKeyLength {
 				continue
 			}
-			blobs := &ethpb.BlobsSidecar{}
-			if err := decode(ctx, enc, blobs); err != nil {
-				return err
+			slotInKey := bytesutil.BytesToSlotBigEndian(k[8:16])
+			if slotInKey == slot {
+				encodedBlobs = append(encodedBlobs, v)
 			}
-			blobsSidecars = append(blobsSidecars, blobs)
 		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve blobs")
+	}); err != nil {
+		return nil, err
 	}
-	return blobsSidecars, nil
+	if len(encodedBlobs) == 0 {
+		return nil, nil
+	}
+	blobs := make([]*ethpb.BlobsSidecar, len(encodedBlobs))
+	for i, enc := range encodedBlobs {
+		blob := &ethpb.BlobsSidecar{}
+		if err := decode(ctx, enc, blob); err != nil {
+			return nil, err
+		}
+		blobs[i] = blob
+	}
+	return blobs, nil
 }
 
 // HasBlobsSidecar returns true if the blobs are in the db.
-func (s *Store) HasBlobsSidecar(ctx context.Context, root [32]byte) bool {
+func (s *Store) HasBlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlobsSidecar")
 	defer span.End()
-
-	exists := false
-	if err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blobsBucket)
-		exists = bkt.Get(root[:]) != nil
-		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
-		panic(err)
+	blobSidecar, err := s.BlobsSidecar(ctx, beaconBlockRoot)
+	if err != nil {
+		return false
 	}
-	return exists
+	return blobSidecar != nil
 }
 
-// CleanupBlobs removes blobs that are older than the cutoff time.
-func (s *Store) CleanupBlobs(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.CleanupBlobs")
+// DeleteBlobsSidecar returns true if the blobs are in the db.
+func (s *Store) DeleteBlobsSidecar(ctx context.Context, beaconBlockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobsSidecar")
 	defer span.End()
-
-	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-	ttl := secsInEpoch * (time.Duration(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest) + 1) // add one more epoch as slack
-
-	var expiredBlobs [][]byte
-	now := time.Now()
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blobsAgesBucket)
-		c := bkt.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			insertTime, err := time.Parse(time.RFC3339, string(v))
-			if err != nil {
-				return err
-			}
-			if now.Sub(insertTime) > ttl {
-				expiredBlobs = append(expiredBlobs, k)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	log.WithField("count", len(expiredBlobs)).Info("Cleaning up blobs")
-
 	return s.db.Update(func(tx *bolt.Tx) error {
-		agesBkt := tx.Bucket(blobsAgesBucket)
 		bkt := tx.Bucket(blobsBucket)
-		for _, root := range expiredBlobs {
-			if err := bkt.Delete(root); err != nil {
-				return err
+		c := bkt.Cursor()
+		for {
+			k, _ := c.Next()
+			if len(k) == 0 {
+				return nil
 			}
-			if err := agesBkt.Delete(root); err != nil {
-				return err
+			if bytes.HasSuffix(k, beaconBlockRoot[:]) {
+				if err := bkt.Delete(k); err != nil {
+					return nil
+				}
 			}
 		}
-		return nil
 	})
+}
+
+// We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
+// where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
+func blobSidecarKey(blob *ethpb.BlobsSidecar) []byte {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	// We store blobs for one more epoch than the spec requires.
+	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1
+	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
+	slotInRotatingBuffer := blob.BeaconBlockSlot.ModSlot(maxSlotsToPersistBlobs)
+	key := bytesutil.SlotToBytesBigEndian(slotInRotatingBuffer)
+	key = append(key, bytesutil.SlotToBytesBigEndian(blob.BeaconBlockSlot)...)
+	key = append(key, blob.BeaconBlockRoot[:]...)
+	return key
 }

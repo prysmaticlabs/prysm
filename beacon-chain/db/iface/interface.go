@@ -73,9 +73,8 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// Blob related methods.
-	DeleteBlobsSidecar(ctx context.Context, root [32]byte) error
 	SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error
-	CleanupBlobs(ctx context.Context) error
+	DeleteBlobsSidecar(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
