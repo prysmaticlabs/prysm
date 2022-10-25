@@ -253,9 +253,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Bellatrix:
 		if b.isBlinded {
-			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
-			if !ok {
-				return nil, errPayloadHeaderWrongType
+			var ph *enginev1.ExecutionPayloadHeader
+			var ok bool
+			if b.executionPayloadHeader != nil {
+				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
+				if !ok {
+					return nil, errPayloadHeaderWrongType
+				}
 			}
 			return &eth.BlindedBeaconBlockBodyBellatrix{
 				RandaoReveal:           b.randaoReveal[:],
@@ -270,9 +274,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				ExecutionPayloadHeader: ph,
 			}, nil
 		}
-		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayload)
-		if !ok {
-			return nil, errPayloadWrongType
+		var p *enginev1.ExecutionPayload
+		var ok bool
+		if b.executionPayload != nil {
+			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayload)
+			if !ok {
+				return nil, errPayloadWrongType
+			}
 		}
 		return &eth.BeaconBlockBodyBellatrix{
 			RandaoReveal:      b.randaoReveal[:],
@@ -288,9 +296,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Capella:
 		if b.isBlinded {
-			ph, ok := b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
-			if !ok {
-				return nil, errPayloadHeaderWrongType
+			var ph *enginev1.ExecutionPayloadHeaderCapella
+			var ok bool
+			if b.executionPayloadHeader != nil {
+				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+				if !ok {
+					return nil, errPayloadHeaderWrongType
+				}
 			}
 			return &eth.BlindedBeaconBlockBodyCapella{
 				RandaoReveal:           b.randaoReveal[:],
@@ -306,9 +318,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
 			}, nil
 		}
-		p, ok := b.executionPayload.Proto().(*enginev1.ExecutionPayloadCapella)
-		if !ok {
-			return nil, errPayloadWrongType
+		var p *enginev1.ExecutionPayloadCapella
+		var ok bool
+		if b.executionPayload != nil {
+			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadCapella)
+			if !ok {
+				return nil, errPayloadWrongType
+			}
 		}
 		return &eth.BeaconBlockBodyCapella{
 			RandaoReveal:          b.randaoReveal[:],
