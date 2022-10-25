@@ -951,8 +951,8 @@ func bodyAltair() *BeaconBlockBody {
 
 func bodyBellatrix(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, ok := WrappedExecutionPayload(f.execPayload)
-	require.Equal(t, true, ok)
+	p, err := WrappedExecutionPayload(f.execPayload)
+	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		randaoReveal: f.sig,
@@ -974,8 +974,8 @@ func bodyBellatrix(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, ok := WrappedExecutionPayloadHeader(f.execPayloadHeader)
-	require.Equal(t, true, ok)
+	ph, err := WrappedExecutionPayloadHeader(f.execPayloadHeader)
+	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		isBlinded:    true,
@@ -998,8 +998,8 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 
 func bodyCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	p, ok := WrappedExecutionPayloadCapella(f.execPayloadCapella)
-	require.Equal(t, true, ok)
+	p, err := WrappedExecutionPayloadCapella(f.execPayloadCapella)
+	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
 		randaoReveal: f.sig,
@@ -1022,8 +1022,8 @@ func bodyCapella(t *testing.T) *BeaconBlockBody {
 
 func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	f := getFields()
-	ph, ok := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella)
-	require.Equal(t, true, ok)
+	ph, err := WrappedExecutionPayloadHeaderCapella(f.execPayloadHeaderCapella)
+	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
 		isBlinded:    true,
