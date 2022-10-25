@@ -22,4 +22,5 @@ java_runtime(
     name = "jdk",
     srcs = [],
     java_home = "/usr/lib/jvm/java-8-openjdk-amd64",
+    tags = ["manual"],
 )
