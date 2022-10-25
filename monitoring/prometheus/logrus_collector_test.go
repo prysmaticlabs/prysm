@@ -40,12 +40,12 @@ func TestLogrusCollector(t *testing.T) {
 		count  int
 		level  log.Level
 	}{
-		{"info message with empty prefix", 3, 3, "", log.InfoLevel},
-		{"warn message with empty prefix", 2, 2, "", log.WarnLevel},
-		{"error message with empty prefix", 1, 1, "", log.ErrorLevel},
-		{"error message with prefix", 1, 1, "foo", log.ErrorLevel},
-		{"info message with prefix", 3, 3, "foo", log.InfoLevel},
-		{"warn message with prefix", 2, 2, "foo", log.WarnLevel},
+		{name: "info message with empty prefix", want: 3, count: 3, prefix: "", level: log.InfoLevel},
+		{name: "warn message with empty prefix", want: 2, count: 2, prefix: "", level: log.WarnLevel},
+		{name: "error message with empty prefix", want: 1, count: 1, prefix: "", level: log.ErrorLevel},
+		{name: "error message with prefix", want: 1, count: 1, prefix: "foo", level: log.ErrorLevel},
+		{name: "info message with prefix", want: 3, count: 3, prefix: "foo", level: log.InfoLevel},
+		{name: "warn message with prefix", want: 2, count: 2, prefix: "foo", level: log.WarnLevel},
 	}
 
 	for _, tt := range tests {

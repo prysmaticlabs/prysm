@@ -23,8 +23,8 @@ func TestVerifyConnectivity(t *testing.T) {
 		port                 uint
 		expectedConnectivity bool
 	}{
-		{"142.250.68.46", 80, true, "Dialing a reachable IP: 142.250.68.46:80"}, // google.com
-		{"123.123.123.123", 19000, false, "Dialing an unreachable IP: 123.123.123.123:19000"},
+		{address: "142.250.68.46", port: 80, expectedConnectivity: true, name: "Dialing a reachable IP: 142.250.68.46:80"}, // google.com
+		{address: "123.123.123.123", port: 19000, expectedConnectivity: false, name: "Dialing an unreachable IP: 123.123.123.123:19000"},
 	}
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf(tc.name),
