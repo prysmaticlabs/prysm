@@ -160,7 +160,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 
 func scenarioEvals() []types.Evaluator {
 	return []types.Evaluator{
-		ev.PeersConnect,
+		//ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
@@ -181,7 +181,7 @@ func scenarioEvals() []types.Evaluator {
 
 func scenarioEvalsMulti() []types.Evaluator {
 	return []types.Evaluator{
-		ev.PeersConnect,
+		//ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
