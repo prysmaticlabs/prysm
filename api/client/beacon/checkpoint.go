@@ -197,7 +197,7 @@ func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubje
 		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
 	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
-
+	log.Print("test")
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
