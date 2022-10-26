@@ -38,12 +38,12 @@ type testCase struct {
 
 func TestWalkThroughEmbeddedInterfaces(t *testing.T) {
 	cases := []testCase{
-		{"Inner{}.Method", false, nil},
-		{"(&Inner{}).Method", false, nil},
-		{"Outer{}.Method", false, nil},
-		{"InnerInterface.Method", true, []string{"test.InnerInterface"}},
-		{"OuterInterface.Method", true, []string{"test.OuterInterface", "test.InnerInterface"}},
-		{"OuterInterfaceStruct.Method", true, []string{"test.OuterInterface", "test.InnerInterface"}},
+		{selector: "Inner{}.Method", expectedOk: false, expected: nil},
+		{selector: "(&Inner{}).Method", expectedOk: false, expected: nil},
+		{selector: "Outer{}.Method", expectedOk: false, expected: nil},
+		{selector: "InnerInterface.Method", expectedOk: true, expected: []string{"test.InnerInterface"}},
+		{selector: "OuterInterface.Method", expectedOk: true, expected: []string{"test.OuterInterface", "test.InnerInterface"}},
+		{selector: "OuterInterfaceStruct.Method", expectedOk: true, expected: []string{"test.OuterInterface", "test.InnerInterface"}},
 	}
 
 	for _, c := range cases {
