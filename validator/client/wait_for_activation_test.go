@@ -345,7 +345,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			ListenForChanges: true,
 		})
 		require.NoError(t, err)
-		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 1)
+		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", "", 1)
 		require.NoError(t, err)
 		validatorClient := mock.NewMockBeaconNodeValidatorClient(ctrl)
 		beaconClient := mock.NewMockBeaconChainClient(ctrl)
@@ -390,7 +390,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
-			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
+			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", "", 2)
 			require.NoError(t, err)
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
