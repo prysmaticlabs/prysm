@@ -117,6 +117,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
+	if hasNetworkFlag(cliCtx) && cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		return nil, fmt.Errorf("%s cannot be passed concurrently with network flag", cmd.ChainConfigFileFlag.Name)
+	}
 	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
 		return nil, err
 	}
@@ -969,4 +972,15 @@ func (b *BeaconNode) registerBuilderService() error {
 		return err
 	}
 	return b.services.RegisterService(svc)
+}
+
+func hasNetworkFlag(cliCtx *cli.Context) bool {
+	for _, flag := range features.NetworkFlags {
+		for _, name := range flag.Names() {
+			if cliCtx.IsSet(name) {
+				return true
+			}
+		}
+	}
+	return false
 }
