@@ -9,7 +9,7 @@ import (
 )
 
 // DefaultRPCHTTPTimeout for HTTP requests via an RPC connection to an execution node.
-const DefaultRPCHTTPTimeout = time.Second * 6
+const DefaultRPCHTTPTimeout = time.Second * 30
 
 // This creates a custom HTTP transport which we can attach to our HTTP client
 // in order to inject JWT auth strings into our HTTP request headers. Authentication

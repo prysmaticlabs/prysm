@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
@@ -69,7 +69,7 @@ func (s *Service) Start() {
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.WithError(err).Fatal("Could not unmarshal pre-loaded state")
 		}
-		genesisTrie, err := v1.InitializeFromProto(genesisState)
+		genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
 		if err != nil {
 			log.WithError(err).Fatal("Could not get state trie")
 		}
@@ -84,7 +84,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.WithError(err).Fatal("Could not generate interop genesis state")
 	}
-	genesisTrie, err := v1.InitializeFromProto(genesisState)
+	genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
 	if err != nil {
 		log.WithError(err).Fatal("Could not get state trie")
 	}
@@ -125,7 +125,7 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns an empty beacon state.
 func (_ *Service) PreGenesisState() state.BeaconState {
-	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	if err != nil {
 		panic("could not initialize state")
 	}

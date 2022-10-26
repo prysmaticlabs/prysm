@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	testingdb "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
@@ -63,7 +64,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -91,7 +92,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -119,7 +120,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
@@ -146,7 +147,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 
@@ -175,7 +176,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -209,7 +210,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -257,7 +258,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -304,7 +305,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -359,7 +360,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]

@@ -32,16 +32,10 @@ const (
 
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
+var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
-
-// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
-func WithTimeout(timeout time.Duration) ClientOpt {
-	return func(c *Client) {
-		c.hc.Timeout = timeout
-	}
-}
 
 type observer interface {
 	observe(r *http.Request) error
@@ -260,7 +254,11 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlinded
 	if err != nil {
 		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
+	defer cancel()
 	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+
 	if err != nil {
 		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
 	}

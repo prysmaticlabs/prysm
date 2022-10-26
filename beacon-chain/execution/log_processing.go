@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -51,7 +49,7 @@ func clientTimedOutError(err error) bool {
 	return strings.Contains(err.Error(), errTimedOut.Error())
 }
 
-// Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
+// GenesisExecutionChainInfo retrieves the genesis time and execution block number of the beacon chain
 // from the deposit contract.
 func (s *Service) GenesisExecutionChainInfo() (uint64, *big.Int) {
 	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))
@@ -552,13 +550,7 @@ func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]by
 
 // savePowchainData saves all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	var pbState *ethpb.BeaconState
-	var err error
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-	} else {
-		pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
-	}
+	pbState, err := statenative.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
 	if err != nil {
 		return err
 	}

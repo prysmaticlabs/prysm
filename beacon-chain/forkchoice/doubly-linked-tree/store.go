@@ -23,25 +23,23 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			s.previousProposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
-			return nil
+		} else {
+			previousNode.balance -= s.previousProposerBoostScore
 		}
-		previousNode.balance -= s.previousProposerBoostScore
 	}
 
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			s.proposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
-			return nil
+		} else {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				return err
+			}
+			currentNode.balance += proposerScore
 		}
-		proposerScore, err = computeProposerBoostScore(newBalances)
-		if err != nil {
-			return err
-		}
-		currentNode.balance += proposerScore
 	}
 	s.previousProposerBoostRoot = s.proposerBoostRoot
 	s.previousProposerBoostScore = proposerScore
@@ -142,6 +140,7 @@ func (s *Store) insert(ctx context.Context,
 		if s.treeRootNode == nil {
 			s.treeRootNode = n
 			s.headNode = n
+			s.highestReceivedNode = n
 		} else {
 			return n, errInvalidParentRoot
 		}
@@ -179,8 +178,8 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if slot > s.highestReceivedSlot {
-		s.highestReceivedSlot = slot
+	if slot > s.highestReceivedNode.slot {
+		s.highestReceivedNode = n
 	}
 
 	return n, nil
@@ -262,7 +261,20 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedSlot
+	if f.store.highestReceivedNode == nil {
+		return 0
+	}
+	return f.store.highestReceivedNode.slot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return [32]byte{}
+	}
+	return f.store.highestReceivedNode.root
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

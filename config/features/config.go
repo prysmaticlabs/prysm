@@ -49,6 +49,7 @@ type Flags struct {
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
+	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
 
 	// Slasher toggles.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
@@ -60,7 +61,6 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	EnableNativeState                 bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	DisablePullTips                   bool // DisablePullTips disables experimental disabling of boundary checks.
 	EnableDefensivePull               bool // EnableDefensivePull enables exerimental back boundary checks.
 	EnableVectorizedHTR               bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
@@ -202,12 +202,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
 	}
-	cfg.EnableNativeState = true
-	if ctx.Bool(disableNativeState.Name) {
-		logDisabled(disableNativeState)
-		cfg.EnableNativeState = false
-	}
-
 	if ctx.Bool(disablePullTips.Name) {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
@@ -257,6 +251,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableStartupOptimistic.Name) {
 		logEnabled(enableStartupOptimistic)
 		cfg.EnableStartOptimistic = true
+	}
+	if ctx.IsSet(enableFullSSZDataLogging.Name) {
+		logEnabled(enableFullSSZDataLogging)
+		cfg.EnableFullSSZDataLogging = true
 	}
 	Init(cfg)
 	return nil

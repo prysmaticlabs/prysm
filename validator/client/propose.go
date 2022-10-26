@@ -21,6 +21,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -206,9 +207,9 @@ func ProposeExit(
 	}
 	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign voluntary exit")
 	}
@@ -294,6 +295,7 @@ func signVoluntaryExit(
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
+	slot types.Slot,
 ) ([]byte, error) {
 	req := &ethpb.DomainRequest{
 		Epoch:  exit.Epoch,
@@ -318,6 +320,7 @@ func signVoluntaryExit(
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, signExitErr)

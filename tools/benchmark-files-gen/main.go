@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -234,5 +234,5 @@ func genesisBeaconState() (state.BeaconState, error) {
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return v1.InitializeFromProtoUnsafe(genesisState)
+	return state_native.InitializeFromProtoUnsafePhase0(genesisState)
 }

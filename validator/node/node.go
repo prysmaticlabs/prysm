@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -400,7 +401,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
-	wsc, err := web3SignerConfig(c.cliCtx)
+	wsc, err := Web3SignerConfig(c.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -437,7 +438,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(v)
 }
 
-func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
 	var web3signerConfig *remoteweb3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
@@ -497,26 +498,15 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		var vr *validatorServiceConfig.BuilderConfig
-		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
-			vr = &validatorServiceConfig.BuilderConfig{
-				Enabled:  true,
-				GasLimit: validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-			}
-			if sgl != "" {
-				gl, err := strconv.ParseUint(sgl, 10, 64)
-				if err != nil {
-					return nil, errors.New("Gas Limit is not a uint64")
-				}
-				vr.GasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
-			}
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient:  suggestedFee,
-				BuilderConfig: vr,
+				BuilderConfig: builderConfig,
 			},
 		}
 	}
@@ -536,7 +526,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if fileConfig == nil {
 		return nil, nil
 	}
-	//convert file config to proposer config for internal use
+	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
 	// default fileConfig is mandatory
@@ -553,6 +543,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
+	if vpSettings.DefaultConfig.BuilderConfig == nil {
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		vpSettings.DefaultConfig.BuilderConfig = builderConfig
+	}
+
 	if vpSettings.DefaultConfig.BuilderConfig != nil {
 		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
@@ -578,6 +576,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			}
 			if option.BuilderConfig != nil {
 				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
+			} else {
+				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+				if err != nil {
+					return nil, err
+				}
+				option.BuilderConfig = builderConfig
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
 				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
@@ -588,6 +592,26 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	}
 
 	return vpSettings, nil
+}
+
+func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		gasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
+
+		if sgl != "" {
+			gl, err := strconv.ParseUint(sgl, 10, 64)
+			if err != nil {
+				return nil, errors.New("Gas Limit is not a uint64")
+			}
+			gasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
+		}
+		return &validatorServiceConfig.BuilderConfig{
+			Enabled:  true,
+			GasLimit: gasLimit,
+		}, nil
+	}
+	return nil, nil
 }
 
 func warnNonChecksummedAddress(feeRecipient string) error {
@@ -609,7 +633,7 @@ func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConf
 	if gasLimit == 0 {
 		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 	}
-	//TODO(10810): add in warning for ranges
+	// TODO(10810): add in warning for ranges
 	return gasLimit
 }
 
@@ -668,8 +692,8 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
+	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {

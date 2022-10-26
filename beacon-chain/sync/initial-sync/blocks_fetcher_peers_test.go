@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -237,7 +237,7 @@ func TestBlocksFetcher_filterPeers(t *testing.T) {
 				peerFilterCapacityWeight: tt.args.capacityWeight,
 			})
 			// Non-leaking bucket, with initial capacity of 10000.
-			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 10000, false)
+			fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 10000, 1*time.Second, false)
 			peerIDs := make([]peer.ID, 0)
 			for _, pid := range tt.args.peers {
 				peerIDs = append(peerIDs, pid.ID)

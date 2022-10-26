@@ -137,7 +137,7 @@ func GenerateFullBlock(
 	if numToGen > 0 {
 		exits, err = generateVoluntaryExits(bState, privs, numToGen)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+			return nil, errors.Wrapf(err, "failed generating %d voluntary exits:", numToGen)
 		}
 	}
 
@@ -735,7 +735,7 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
@@ -802,7 +802,7 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
-			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}

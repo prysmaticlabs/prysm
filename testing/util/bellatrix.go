@@ -117,7 +117,7 @@ func GenerateFullBlockBellatrix(
 	}
 	blockHash := indexToHash(uint64(slot))
 	newExecutionPayload := &enginev1.ExecutionPayload{
-		ParentHash:    parentExecution.BlockHash,
+		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
 		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],

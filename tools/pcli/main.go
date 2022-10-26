@@ -11,7 +11,7 @@ import (
 	"github.com/kr/pretty"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -161,7 +161,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := v1.InitializeFromProto(preState)
+				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -197,8 +197,8 @@ func main() {
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
-					if !equality.DeepEqual(expectedState, postState.InnerStateUnsafe()) {
-						diff, _ := messagediff.PrettyDiff(expectedState, postState.InnerStateUnsafe())
+					if !equality.DeepEqual(expectedState, postState.ToProtoUnsafe()) {
+						diff, _ := messagediff.PrettyDiff(expectedState, postState.ToProtoUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
 				}

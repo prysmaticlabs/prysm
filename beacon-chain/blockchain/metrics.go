@@ -199,6 +199,20 @@ var (
 			Buckets: []float64{1, 5, 20, 100, 500, 1000},
 		},
 	)
+	reorgDistance = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_distance",
+			Help:    "Captures distance of reorgs. Distance is defined as the number of blocks between the old head and the new head",
+			Buckets: []float64{1, 2, 4, 8, 16, 32, 64},
+		},
+	)
+	reorgDepth = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "reorg_depth",
+			Help:    "Captures depth of reorgs. Depth is defined as the number of blocks between the head and the common ancestor",
+			Buckets: []float64{1, 2, 4, 8, 16, 32},
+		},
+	)
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -324,7 +338,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 			return err
 		}
 	default:
-		return errors.Errorf("invalid state type provided: %T", headState.InnerStateUnsafe())
+		return errors.Errorf("invalid state type provided: %T", headState.ToProtoUnsafe())
 	}
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))

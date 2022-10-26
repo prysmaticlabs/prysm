@@ -195,7 +195,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 				require.NoError(t, set.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, key))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := web3SignerConfig(cliCtx)
+			got, err := Web3SignerConfig(cliCtx)
 			if tt.wantErrMsg != "" {
 				require.ErrorContains(t, tt.wantErrMsg, err)
 				return
@@ -462,14 +462,88 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:  true,
+								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
 					},
 				}
 			},
 			wantErr:                      "",
+			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "Enable Builder flag overrides empty config",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:  true,
+								GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+							},
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  true,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
+			validatorRegistrationEnabled: true,
+		},
+		{
+			name: "Enable Builder flag does not override completed builder config",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:  true,
+								GasLimit: validatorserviceconfig.Uint64(40000000),
+							},
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{
+							Enabled:  false,
+							GasLimit: validatorserviceconfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+						},
+					},
+				}
+			},
 			validatorRegistrationEnabled: true,
 		},
 		{
@@ -543,7 +617,7 @@ func TestProposerSettings(t *testing.T) {
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
 					w.Header().Set("Content-Type", "application/json")
-					_, err := fmt.Fprintf(w, string(content))
+					_, err := fmt.Fprintf(w, "%s", content)
 					require.NoError(t, err)
 				}))
 				defer srv.Close()

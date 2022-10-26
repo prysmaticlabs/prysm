@@ -3,6 +3,7 @@ package doublylinkedtree
 import (
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -10,10 +11,11 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store     *Store
-	votes     []Vote // tracks individual validator's last vote.
-	votesLock sync.RWMutex
-	balances  []uint64 // tracks individual validator's last justified balances.
+	store          *Store
+	votes          []Vote // tracks individual validator's last vote.
+	votesLock      sync.RWMutex
+	balances       []uint64                    // tracks individual validator's last justified balances.
+	balancesByRoot forkchoice.BalancesByRooter // handler to obtain balances for the state with a given root
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
@@ -37,9 +39,10 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
-	highestReceivedSlot           types.Slot                            // The highest received slot in the chain.
+	highestReceivedNode           *Node                                 // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
 	allTipsAreInvalid             bool                                  // tracks if all tips are not viable for head
+	committeeBalance              uint64                                // tracks the total active validator balance divided by slots per epoch. Requires a lock on nodes to read/write
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
