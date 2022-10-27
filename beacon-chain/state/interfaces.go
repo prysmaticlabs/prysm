@@ -64,6 +64,7 @@ type ReadOnlyBeaconState interface {
 	Version() int
 	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
 	NextWithdrawalIndex() (uint64, error)
+	NextWithdrawalValidatorIndex() (types.ValidatorIndex, error)
 	WithdrawalQueue() ([]*enginev1.Withdrawal, error)
 }
 

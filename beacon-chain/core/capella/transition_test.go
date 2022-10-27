@@ -73,3 +73,59 @@ func TestWithdrawBalance(t *testing.T) {
 	withdrawal = queue[4]
 	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, withdrawal.Amount)
 }
+
+func TestProcessWithdrawalsIntoQueue(t *testing.T) {
+	t.Run("process all withrawals", func(t *testing.T) {
+		// Validators 0, 2, 5, are partially withdrawable, validator 3 is fully
+		// withdrawable. Validators 1 and 4 are not withdrawable
+		creds1 := make([]byte, fieldparams.RootLength)
+		creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		val0 := &ethpb.Validator{
+			WithdrawalCredentials: creds1,
+		}
+		val1 := &ethpb.Validator{
+			WithdrawalCredentials: creds1,
+		}
+		val2 := &ethpb.Validator{
+			WithdrawalCredentials: creds1,
+		}
+		val3 := &ethpb.Validator{
+			WithdrawalCredentials: creds1,
+		}
+		val5 := &ethpb.Validator{
+			WithdrawalCredentials: creds1,
+			WithdrawableEpoch:     12,
+		}
+
+		creds2 := make([]byte, fieldparams.RootLength)
+		val4 := &ethpb.Validator{
+			WithdrawalCredentials: creds2,
+		}
+		vals := []*ethpb.Validator{val0, val1, val2, val3, val4, val5}
+		balances := []uint64{
+			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
+			params.BeaconConfig().MaxEffectiveBalance - params.BeaconConfig().MinDepositAmount, // not partially withdrawable
+			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
+			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
+			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount, // BLS credentials
+			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
+		}
+
+		base := &ethpb.BeaconStateCapella{
+			Slot:                10 * params.BeaconConfig().SlotsPerEpoch,
+			NextWithdrawalIndex: 2,
+			WithdrawalQueue:     make([]*enginev1.Withdrawal, 2),
+			Validators:          vals,
+			Balances:            balances,
+		}
+
+		s, err := state_native.InitializeFromProtoCapella(base)
+		require.NoError(t, err)
+		pos, err := processWithdrawalsIntoQueue(s)
+		require.NoError(t, err)
+		queue, err := pos.WithdrawalQueue()
+		require.NoError(t, err)
+		require.Equal(t, 4, len(queue))
+	})
+
+}

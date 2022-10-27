@@ -86,6 +86,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	HysteresisQuotient:             4,
 	HysteresisDownwardMultiplier:   1,
 	HysteresisUpwardMultiplier:     5,
+	MaxWithdrawalsPerEpoch:         256,
 
 	// Gwei value constants.
 	MinDepositAmount:          1 * 1e9,
