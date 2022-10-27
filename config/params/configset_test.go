@@ -3,8 +3,8 @@ package params
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestConfigset_Add(t *testing.T) {
@@ -113,7 +113,6 @@ func compareConfigs(t *testing.T, expected, actual *BeaconChainConfig) {
 	require.DeepEqual(t, expected.MinEpochsToInactivityPenalty, actual.MinEpochsToInactivityPenalty)
 	require.DeepEqual(t, expected.Eth1FollowDistance, actual.Eth1FollowDistance)
 	require.DeepEqual(t, expected.SafeSlotsToUpdateJustified, actual.SafeSlotsToUpdateJustified)
-	require.DeepEqual(t, expected.SafeSlotsToImportOptimistically, actual.SafeSlotsToImportOptimistically)
 	require.DeepEqual(t, expected.SecondsPerETH1Block, actual.SecondsPerETH1Block)
 	require.DeepEqual(t, expected.ProposerScoreBoost, actual.ProposerScoreBoost)
 	require.DeepEqual(t, expected.IntervalsPerSlot, actual.IntervalsPerSlot)
@@ -162,6 +161,7 @@ func compareConfigs(t *testing.T, expected, actual *BeaconChainConfig) {
 	require.DeepEqual(t, expected.BeaconStateFieldCount, actual.BeaconStateFieldCount)
 	require.DeepEqual(t, expected.BeaconStateAltairFieldCount, actual.BeaconStateAltairFieldCount)
 	require.DeepEqual(t, expected.BeaconStateBellatrixFieldCount, actual.BeaconStateBellatrixFieldCount)
+	require.DeepEqual(t, expected.BeaconStateCapellaFieldCount, actual.BeaconStateCapellaFieldCount)
 	require.DeepEqual(t, expected.WeakSubjectivityPeriod, actual.WeakSubjectivityPeriod)
 	require.DeepEqual(t, expected.PruneSlasherStoragePeriod, actual.PruneSlasherStoragePeriod)
 	require.DeepEqual(t, expected.SlashingProtectionPruningEpochs, actual.SlashingProtectionPruningEpochs)

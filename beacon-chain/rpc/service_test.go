@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -46,11 +46,21 @@ func TestLifecycle_OK(t *testing.T) {
 func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{
-		cfg:             &Config{SyncService: &mockSync.Sync{IsSyncing: false}},
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false}},
 		credentialError: credentialErr,
 	}
 
 	assert.ErrorContains(t, s.credentialError.Error(), s.Status())
+}
+
+func TestStatus_Optimistic(t *testing.T) {
+	s := &Service{
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: true}},
+	}
+
+	assert.ErrorContains(t, "service is optimistic", s.Status())
 }
 
 func TestRPC_InsecureEndpoint(t *testing.T) {

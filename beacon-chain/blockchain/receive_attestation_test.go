@@ -5,21 +5,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -137,7 +137,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
 	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
@@ -152,7 +152,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
 	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
@@ -182,11 +182,11 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
 	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
+	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
 	require.Equal(t, true, has)
 	require.Equal(t, types.ValidatorIndex(1), vId)
 	require.Equal(t, [8]byte{1}, payloadID)
@@ -200,7 +200,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts = append(opts,
 		WithAttestationPool(attestations.NewPool()),
 		WithStateNotifier(&mockBeaconNode{}),
@@ -218,7 +218,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, err)
 	tRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
 	copied, err = service.cfg.StateGen.StateByRoot(ctx, tRoot)
@@ -252,4 +252,53 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
 	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
+}
+
+func TestService_UpdateHead_NoAtts(t *testing.T) {
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+	fcs := doublylinkedtree.New()
+	opts = append(opts,
+		WithAttestationPool(attestations.NewPool()),
+		WithStateNotifier(&mockBeaconNode{}),
+		WithForkChoiceStore(fcs),
+	)
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	genesisState, pks := util.DeterministicGenesisState(t, 64)
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	copied := genesisState.Copy()
+	// Generate a new block
+	blk, err := util.GenerateFullBlock(copied, pks, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	tRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
+	require.Equal(t, 2, fcs.NodeCount())
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	require.Equal(t, tRoot, service.head.root)
+
+	// Insert a new block to forkchoice
+	ojc := &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}
+	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
+	require.NoError(t, err)
+	b.Block.ParentRoot = service.originBlockRoot[:]
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.Equal(t, 3, fcs.NodeCount())
+
+	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
+	require.NoError(t, err, service.UpdateHead(ctx))
+
+	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
+	require.Equal(t, r, service.head.root)                                 // Validate head is the new one
+
 }

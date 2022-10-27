@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
@@ -24,16 +25,19 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 }
 
 // AccountsCLIManager defines a struct capable of performing various validator
-// wallet account operations via the command line.
+// wallet & account operations via the command line.
 type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
+	keymanagerKind       keymanager.Kind
+	keymanagerOpts       *remote.KeymanagerOpts
 	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool
 	importPrivateKeys    bool
 	readPasswordFile     bool
+	skipMnemonicConfirm  bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
@@ -41,11 +45,17 @@ type AccountsCLIManager struct {
 	privateKeyFile       string
 	passwordFilePath     string
 	keysDir              string
+	mnemonicLanguage     string
 	backupsDir           string
 	backupsPassword      string
 	filteredPubKeys      []bls.PublicKey
 	rawPubKeys           [][]byte
 	formattedPubKeys     []string
+	walletDir            string
+	walletPassword       string
+	mnemonic             string
+	numAccounts          int
+	mnemonic25thWord     string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

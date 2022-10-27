@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
 
@@ -54,10 +53,17 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 	return nil
 }
 
-func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
-	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
+func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
+		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -90,6 +96,12 @@ func configureEth1Config(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if cliCtx.IsSet(flags.EngineEndpointTimeoutSeconds.Name) {
+		c.ExecutionEngineTimeoutValue = cliCtx.Uint64(flags.EngineEndpointTimeoutSeconds.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
 	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
 		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
 		if err := params.SetActive(c); err != nil {
@@ -100,7 +112,7 @@ func configureEth1Config(cliCtx *cli.Context) error {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+	if len(cliCtx.StringSlice(cmd.BootstrapNode.Name)) > 0 {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
@@ -151,17 +163,22 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
+		log.Warnf("In order to receive transaction fees from proposing blocks, " +
+			"you must provide flag --" + flags.SuggestedFeeRecipient.Name + " with a valid ethereum address when starting your beacon node. " +
+			"Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
 		return nil
 	}
 
 	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
-		return fmt.Errorf("%s is not a valid fee recipient address", ha)
+		log.Warnf("%s is not a valid fee recipient address, setting suggested-fee-recipient failed", ha)
+		return nil
 	}
 	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
 	if err != nil {
-		return errors.Wrapf(err, "could not decode fee recipient %s", ha)
+		log.WithError(err).Error(fmt.Sprintf("Could not decode fee recipient %s, setting suggested-fee-recipient failed", ha))
+		return nil
 	}
 	checksumAddress := common.HexToAddress(ha)
 	if !mixedcaseAddress.ValidChecksum() {
@@ -171,6 +188,8 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
+	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+
+		" Default fee recipient will be used as a fall back", checksumAddress.Hex())
 	return params.SetActive(c)
 }
 

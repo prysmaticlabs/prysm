@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators"
+	e2eParams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
@@ -58,7 +58,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
 		ev.FeeRecipientIsPresent,
-		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
+		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -128,7 +128,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.FeeRecipientIsPresent,
-		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
+		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{

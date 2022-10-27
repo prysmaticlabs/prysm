@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -131,13 +131,16 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 			sub := msn.feed.Subscribe(msn.recvCh)
 
 			go func() {
-				select {
-				case evt := <-msn.recvCh:
-					msn.recvLock.Lock()
-					msn.recv = append(msn.recv, evt)
-					msn.recvLock.Unlock()
-				case <-sub.Err():
-					sub.Unsubscribe()
+				for {
+					select {
+					case evt := <-msn.recvCh:
+						msn.recvLock.Lock()
+						msn.recv = append(msn.recv, evt)
+						msn.recvLock.Unlock()
+					case <-sub.Err():
+						sub.Unsubscribe()
+						return
+					}
 				}
 			}()
 		}
@@ -171,7 +174,8 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 	if s.State == nil {
 		return ErrNilState
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+	parentRoot := block.Block().ParentRoot()
+	if !bytes.Equal(s.Root, parentRoot[:]) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {
@@ -199,7 +203,8 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 		return ErrNilState
 	}
 	for _, b := range blks {
-		if !bytes.Equal(s.Root, b.Block().ParentRoot()) {
+		parentRoot := b.Block().ParentRoot()
+		if !bytes.Equal(s.Root, parentRoot[:]) {
 			return errors.Errorf("wanted %#x but got %#x", s.Root, b.Block().ParentRoot())
 		}
 		if err := s.State.SetSlot(b.Block().Slot()); err != nil {
@@ -230,7 +235,8 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 	if s.State == nil {
 		return ErrNilState
 	}
-	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
+	parentRoot := block.Block().ParentRoot()
+	if !bytes.Equal(s.Root, parentRoot[:]) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
 	}
 	if err := s.State.SetSlot(block.Block().Slot()); err != nil {

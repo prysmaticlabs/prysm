@@ -6,22 +6,27 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
-	"github.com/prysmaticlabs/prysm/async/abool"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/async/abool"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_roundRobinSync(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		currentSlot         types.Slot
@@ -357,7 +362,7 @@ func TestService_processBlock(t *testing.T) {
 		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+		wsb, err := blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
@@ -367,7 +372,7 @@ func TestService_processBlock(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		wsb, err = wrapper.WrappedSignedBeaconBlock(blk1)
+		wsb, err = blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
@@ -376,7 +381,7 @@ func TestService_processBlock(t *testing.T) {
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
-		wsb, err = wrapper.WrappedSignedBeaconBlock(blk2)
+		wsb, err = blocks.NewSignedBeaconBlock(blk2)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
@@ -423,7 +428,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
 			batch = append(batch, wsb)
 			currBlockRoot = blk1Root
@@ -438,7 +443,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
 			batch2 = append(batch2, wsb)
 			currBlockRoot = blk1Root
@@ -457,7 +462,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			ctx context.Context, blocks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
 			return nil
 		})
-		assert.ErrorContains(t, "no good blocks in batch", err)
+		assert.ErrorContains(t, "block is already processed", err)
 
 		var badBatch2 []interfaces.SignedBeaconBlock
 		for i, b := range batch2 {
@@ -488,6 +493,11 @@ func TestService_processBlockBatch(t *testing.T) {
 }
 
 func TestService_blockProviderScoring(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)

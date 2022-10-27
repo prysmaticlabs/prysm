@@ -12,14 +12,13 @@ go_library(
         "participation_bit_root.go",
         "pending_attestation_root.go",
         "reference.go",
-        "state_hasher.go",
         "sync_committee.root.go",
         "trie_helpers.go",
         "unrealized_justification.go",
         "validator_map_handler.go",
         "validator_root.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",
@@ -45,7 +44,6 @@ go_library(
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 

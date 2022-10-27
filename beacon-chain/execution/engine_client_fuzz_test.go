@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/beacon"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func FuzzForkChoiceResponse(f *testing.F) {
@@ -310,7 +310,7 @@ func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]i
 			continue
 		}
 		if !reflect.DeepEqual(jsonVal, bVal) {
-			return errors.Errorf("fields dont match, %v and %v are not equal for field %s", jsonVal, bVal, field.Name)
+			return errors.Errorf("fields don't match, %v and %v are not equal for field %s", jsonVal, bVal, field.Name)
 		}
 	}
 	return nil

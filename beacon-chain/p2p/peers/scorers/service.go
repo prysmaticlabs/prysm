@@ -5,9 +5,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
-	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 )
 
 var _ Scorer = (*Service)(nil)

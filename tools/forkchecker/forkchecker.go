@@ -16,9 +16,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -49,7 +49,7 @@ func main() {
 	for _, endpt := range endpts {
 		conn, err := grpc.Dial(endpt, grpc.WithInsecure())
 		if err != nil {
-			log.Fatalf("fail to dial: %v", err)
+			log.WithError(err).Fatal("fail to dial")
 		}
 		clients[endpt] = pb.NewBeaconChainClient(conn)
 	}

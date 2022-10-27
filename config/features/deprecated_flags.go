@@ -12,111 +12,28 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedEnableActiveBalanceCache = &cli.BoolFlag{
-		Name:   "enable-active-balance-cache",
+	deprecatedBackupWebHookFlag = &cli.BoolFlag{
+		Name:   "enable-db-backup-webhook",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name:   "correctly-prune-canonical-atts",
+	deprecatedBoltMmapFlag = &cli.StringFlag{
+		Name:   "bolt-mmap-initial-size",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name:   "correctly-insert-orphaned-atts",
+	deprecatedDisableDiscV5Flag = &cli.BoolFlag{
+		Name:   "disable-discv5",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedNextSlotStateCache = &cli.BoolFlag{
-		Name:   "enable-next-slot-state-cache",
+	deprecatedDisableAttHistoryCacheFlag = &cli.BoolFlag{
+		Name:   "disable-attesting-history-db-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
-	deprecatedEnableBatchGossipVerification = &cli.BoolFlag{
-		Name:   "enable-batch-gossip-verification",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-
-	deprecatedEnableGetBlockOptimizations = &cli.BoolFlag{
-		Name:   "enable-get-block-optimizations",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-
-	deprecatedEnableBalanceTrieComputation = &cli.BoolFlag{
-		Name:   "enable-balance-trie-computation",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-
-	deprecatedDisableNextSlotStateCache = &cli.BoolFlag{
-		Name:   "disable-next-slot-state-cache",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedAttestationAggregationStrategy = &cli.BoolFlag{
-		Name:   "attestation-aggregation-strategy",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedForceOptMaxCoverAggregationStategy = &cli.BoolFlag{
-		Name:   "attestation-aggregation-force-opt-maxcover",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedPyrmontTestnet = &cli.BoolFlag{
-		Name:   "pyrmont",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableGetBlockOptimizations = &cli.BoolFlag{
-		Name:   "disable-get-block-optimizations",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:   "disable-proposer-atts-selection-using-max-cover",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:   "disable-optimized-balance-update",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableActiveBalanceCache = &cli.BoolFlag{
-		Name:   "disable-active-balance-cache",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableBalanceTrieComputation = &cli.BoolFlag{
-		Name:   "disable-balance-trie-computation",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableBatchGossipVerification = &cli.BoolFlag{
-		Name:   "disable-batch-gossip-verification",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name:   "disable-correctly-prune-canonical-atts",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedDisableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name:   "disable-correctly-insert-orphaned-atts",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
-	deprecatedEnableNativeState = &cli.BoolFlag{
-		Name:   "enable-native-state",
+	deprecatedEnableVectorizedHtr = &cli.BoolFlag{
+		Name:   "enable-vectorized-htr",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -125,35 +42,68 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableGossipBatchAggregation = &cli.BoolFlag{
+	deprecatedEnableForkchoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:   "enable-forkchoice-doubly-linked-tree",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableDefensivePull = &cli.BoolFlag{
+		Name:   "enable-back-pull",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDutyCountdown = &cli.BoolFlag{
+		Name:   "enable-duty-count-down",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedHeadSync = &cli.BoolFlag{
+		Name:   "head-sync",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedGossipBatchAggregation = &cli.BoolFlag{
 		Name:   "enable-gossip-batch-aggregation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableLargerGossipHistory = &cli.BoolFlag{
+		Name:   "enable-larger-gossip-history",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedFallbackProvider = &cli.StringFlag{
+		Name:   "fallback-web3provider",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableNativeState = &cli.StringFlag{
+		Name:   "disable-native-state",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
 
+// Deprecated flags for both the beacon node and validator client.
 var deprecatedFlags = []cli.Flag{
 	exampleDeprecatedFeatureFlag,
-	deprecatedEnableActiveBalanceCache,
-	deprecatedCorrectlyPruneCanonicalAtts,
-	deprecatedCorrectlyInsertOrphanedAtts,
-	deprecatedNextSlotStateCache,
-	deprecatedEnableBatchGossipVerification,
-	deprecatedEnableGetBlockOptimizations,
-	deprecatedEnableBalanceTrieComputation,
-	deprecatedDisableNextSlotStateCache,
-	deprecatedAttestationAggregationStrategy,
-	deprecatedForceOptMaxCoverAggregationStategy,
-	deprecatedPyrmontTestnet,
-	deprecatedDisableProposerAttsSelectionUsingMaxCover,
-	deprecatedDisableGetBlockOptimizations,
-	deprecatedDisableOptimizedBalanceUpdate,
-	deprecatedDisableActiveBalanceCache,
-	deprecatedDisableBalanceTrieComputation,
-	deprecatedDisableBatchGossipVerification,
-	deprecatedDisableCorrectlyInsertOrphanedAtts,
-	deprecatedDisableCorrectlyPruneCanonicalAtts,
-	deprecatedEnableNativeState,
+	deprecatedBoltMmapFlag,
+	deprecatedDisableDiscV5Flag,
+	deprecatedDisableAttHistoryCacheFlag,
+	deprecatedEnableVectorizedHtr,
 	deprecatedEnablePeerScorer,
-	deprecatedEnableGossipBatchAggregation,
+	deprecatedEnableForkchoiceDoublyLinkedTree,
+	deprecatedDutyCountdown,
+	deprecatedHeadSync,
+	deprecatedGossipBatchAggregation,
+	deprecatedEnableLargerGossipHistory,
+	deprecatedFallbackProvider,
+	deprecatedEnableDefensivePull,
+	deprecatedDisableNativeState,
+}
+
+// deprecatedBeaconFlags contains flags that are still used by other components
+// and therefore cannot be added to deprecatedFlags
+var deprecatedBeaconFlags = []cli.Flag{
+	deprecatedBackupWebHookFlag,
 }

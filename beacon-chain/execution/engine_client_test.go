@@ -17,14 +17,15 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	mocks "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -66,7 +67,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(req)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(req)
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -233,7 +234,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
@@ -247,7 +248,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -261,7 +262,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -275,7 +276,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -289,7 +290,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrUnknownPayloadStatus, err)
@@ -415,10 +416,26 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		want := "can only reconstruct block from blinded block format"
 		service := &Service{}
 		bellatrixBlock := util.NewBeaconBlockBellatrix()
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlock)
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
 		require.NoError(t, err)
 		_, err = service.ReconstructFullBellatrixBlock(ctx, wrapped)
 		require.ErrorContains(t, want, err)
+	})
+	t.Run("pre-merge execution payload", func(t *testing.T) {
+		service := &Service{}
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.NoError(t, err)
+		require.DeepEqual(t, wantedWrapped, reconstructed)
 	})
 	t.Run("properly reconstructs block with correct payload", func(t *testing.T) {
 		fix := fixtures()
@@ -459,9 +476,9 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		jsonPayload["size"] = encodedNum
 		jsonPayload["baseFeePerGas"] = encodedNum
 
-		wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
-		header, err := wrapper.PayloadToHeader(wrappedPayload)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
 		require.NoError(t, err)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -487,12 +504,155 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
 
 		blindedBlock.Block.Body.ExecutionPayloadHeader = header
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(blindedBlock)
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
 		require.NoError(t, err)
 		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
 		require.NoError(t, err)
 
 		got, err := reconstructed.Block().Body().Execution()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got.Proto())
+	})
+}
+
+func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
+	ctx := context.Background()
+	t.Run("nil block", func(t *testing.T) {
+		service := &Service{}
+
+		_, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{nil})
+		require.ErrorContains(t, "nil data", err)
+	})
+	t.Run("only blinded block", func(t *testing.T) {
+		want := "can only reconstruct block from blinded block format"
+		service := &Service{}
+		bellatrixBlock := util.NewBeaconBlockBellatrix()
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		require.ErrorContains(t, want, err)
+	})
+	t.Run("pre-merge execution payload", func(t *testing.T) {
+		service := &Service{}
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		require.NoError(t, err)
+		require.DeepEqual(t, []interfaces.SignedBeaconBlock{wantedWrapped}, reconstructed)
+	})
+	t.Run("properly reconstructs block batch with correct payload", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = txs
+		num := big.NewInt(1)
+		encodedNum := hexutil.EncodeBig(num)
+		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
+		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
+		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
+		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
+		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
+		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
+		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
+		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
+		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
+		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
+		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
+		jsonPayload["number"] = encodedNum
+		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
+		jsonPayload["totalDifficulty"] = "0x123456"
+		jsonPayload["difficulty"] = encodedNum
+		jsonPayload["size"] = encodedNum
+		jsonPayload["baseFeePerGas"] = encodedNum
+
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrappedEmpty, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrappedEmpty, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			respJSON := []map[string]interface{}{
+				{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"result":  jsonPayload,
+				},
+				{
+					"jsonrpc": "2.0",
+					"id":      2,
+					"result":  jsonPayload,
+				},
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		copiedWrapped, err := wrapped.Copy()
+		require.NoError(t, err)
+
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		require.NoError(t, err)
+
+		// Make sure empty blocks are handled correctly
+		require.DeepEqual(t, wantedWrappedEmpty, reconstructed[0])
+
+		// Handle normal execution blocks correctly
+		got, err := reconstructed[1].Block().Body().Execution()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got.Proto())
+
+		got, err = reconstructed[2].Block().Body().Execution()
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
 	})
@@ -1045,7 +1205,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := wrapper.WrappedExecutionPayloadHeader(tt.args.header)
+			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
 			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
 			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
 				t.Fatalf("Wanted err %s got %v", tt.err, err)

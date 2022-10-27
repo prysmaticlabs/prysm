@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
@@ -46,7 +46,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	var registry []*ethpb.Validator
 	currentSlot := types.Slot(0)
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -65,7 +65,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	var registry []*ethpb.Validator
 	currentSlot := types.Slot(0)
 
-	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})

@@ -6,10 +6,10 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -74,7 +74,7 @@ func (vs *Server) deposits(
 		return []*ethpb.Deposit{}, nil
 	}
 
-	if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
 	}
@@ -160,7 +160,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
-		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
+		log.WithError(err).Warn("Cached deposit trie is invalid, rebuilding it now")
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 
@@ -190,7 +190,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
-		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
+		log.WithError(err).Error("Rebuilt deposit trie is invalid")
 	}
 	return depositTrie, nil
 }

@@ -6,13 +6,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	dbIface "github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
@@ -26,7 +26,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesisBlk)
 	if err != nil {
 		return errors.Wrap(err, "could not wrap genesis block")
 	}
@@ -58,7 +58,7 @@ func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 	if err := st.UnmarshalSSZ(sb); err != nil {
 		return err
 	}
-	gs, err := statev1.InitializeFromProtoUnsafe(st)
+	gs, err := state_native.InitializeFromProtoUnsafePhase0(st)
 	if err != nil {
 		return err
 	}

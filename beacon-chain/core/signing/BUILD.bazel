@@ -7,7 +7,7 @@ go_library(
         "signature.go",
         "signing_root.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/signing",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/state:go_default_library",
@@ -42,6 +42,7 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
     ],
 )

@@ -5,11 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/config/features"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 var (
@@ -24,7 +23,7 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
+	d, err := db.NewDB(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}

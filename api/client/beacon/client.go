@@ -16,14 +16,14 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -95,8 +95,6 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
 	hc      *http.Client
-	host    string
-	scheme  string
 	baseURL *url.URL
 }
 

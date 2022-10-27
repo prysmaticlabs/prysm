@@ -3,16 +3,18 @@ package node
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -35,20 +37,6 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 			params.BeaconConfig().SlotsPerArchivedPoint,
 			int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))),
 	)
-}
-
-func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
-	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
-	cliCtx := cli.NewContext(&app, set, nil)
-
-	require.NoError(t, configureSafeSlotsToImportOptimistically(cliCtx))
-
-	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
 }
 
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
@@ -102,7 +90,8 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
-	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
+	assert.LogsContain(t, hook, "0xB is not a valid fee recipient address")
+	require.NoError(t, err)
 
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)
@@ -142,6 +131,42 @@ func TestConfigureNetwork(t *testing.T) {
 
 	assert.DeepEqual(t, []string{"node1", "node2"}, params.BeaconNetworkConfig().BootstrapNodes)
 	assert.Equal(t, uint64(100), params.BeaconNetworkConfig().ContractDeploymentBlock)
+}
+
+func TestConfigureNetwork_ConfigFile(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	context := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, os.WriteFile("flags_test.yaml", []byte(fmt.Sprintf("%s:\n - %s\n - %s\n", cmd.BootstrapNode.Name,
+		"node1",
+		"node2")), 0666))
+
+	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	command := &cli.Command{
+		Name: "test-command",
+		Flags: cmd.WrapFlags([]cli.Flag{
+			&cli.StringFlag{
+				Name: cmd.ConfigFileFlag.Name,
+			},
+			&cli.StringSliceFlag{
+				Name: cmd.BootstrapNode.Name,
+			},
+		}),
+		Before: func(cliCtx *cli.Context) error {
+			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+		},
+		Action: func(cliCtx *cli.Context) error {
+			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
+			require.Equal(t, false, cliCtx.IsSet(cmd.BootstrapNode.Name))
+
+			require.Equal(t, strings.Join([]string{"node1", "node2"}, ","),
+				strings.Join(cliCtx.StringSlice(cmd.BootstrapNode.Name), ","))
+			return nil
+		},
+	}
+	require.NoError(t, command.Run(context))
+	require.NoError(t, os.Remove("flags_test.yaml"))
 }
 
 func TestConfigureInterop(t *testing.T) {

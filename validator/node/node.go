@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -22,36 +24,37 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/api/gateway"
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/monitoring/backup"
-	"github.com/prysmaticlabs/prysm/monitoring/prometheus"
-	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/runtime/debug"
-	"github.com/prysmaticlabs/prysm/runtime/prereqs"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/db/kv"
-	g "github.com/prysmaticlabs/prysm/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
-	"github.com/prysmaticlabs/prysm/validator/rpc"
-	validatormiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/validator/web"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
+	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
+	"github.com/prysmaticlabs/prysm/v3/runtime/prereqs"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
+	g "github.com/prysmaticlabs/prysm/v3/validator/graffiti"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v3/validator/rpc"
+	validatormiddleware "github.com/prysmaticlabs/prysm/v3/validator/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -240,8 +243,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -317,8 +319,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -400,7 +401,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
-	wsc, err := web3SignerConfig(c.cliCtx)
+	wsc, err := Web3SignerConfig(c.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -427,7 +428,6 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
-		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
 	})
@@ -438,7 +438,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(v)
 }
 
-func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
 	var web3signerConfig *remoteweb3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
@@ -456,8 +456,8 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
 		}
-		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+
+		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
 			pks := make([]string, 0)
 			if len(publicKeysSlice) == 1 {
 				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
@@ -470,6 +470,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
+				pks = slice.Unique[string](pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
@@ -497,18 +498,15 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		var vr *validatorServiceConfig.BuilderConfig
-		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
-			vr = &validatorServiceConfig.BuilderConfig{
-				Enabled:  true,
-				GasLimit: reviewGasLimit(uint64(cliCtx.Int(flags.BuilderGasLimitFlag.Name))),
-			}
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient:  suggestedFee,
-				BuilderConfig: vr,
+				BuilderConfig: builderConfig,
 			},
 		}
 	}
@@ -528,7 +526,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if fileConfig == nil {
 		return nil, nil
 	}
-	//convert file config to proposer config for internal use
+	// convert file config to proposer config for internal use
 	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
 	// default fileConfig is mandatory
@@ -545,6 +543,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
+	if vpSettings.DefaultConfig.BuilderConfig == nil {
+		builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+		if err != nil {
+			return nil, err
+		}
+		vpSettings.DefaultConfig.BuilderConfig = builderConfig
+	}
+
 	if vpSettings.DefaultConfig.BuilderConfig != nil {
 		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
@@ -570,6 +576,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			}
 			if option.BuilderConfig != nil {
 				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
+			} else {
+				builderConfig, err := BuilderSettingsFromFlags(cliCtx)
+				if err != nil {
+					return nil, err
+				}
+				option.BuilderConfig = builderConfig
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
 				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
@@ -580,6 +592,26 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	}
 
 	return vpSettings, nil
+}
+
+func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.BuilderConfig, error) {
+	if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+		gasLimit := validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
+		sgl := cliCtx.String(flags.BuilderGasLimitFlag.Name)
+
+		if sgl != "" {
+			gl, err := strconv.ParseUint(sgl, 10, 64)
+			if err != nil {
+				return nil, errors.New("Gas Limit is not a uint64")
+			}
+			gasLimit = reviewGasLimit(validatorServiceConfig.Uint64(gl))
+		}
+		return &validatorServiceConfig.BuilderConfig{
+			Enabled:  true,
+			GasLimit: gasLimit,
+		}, nil
+	}
+	return nil, nil
 }
 
 func warnNonChecksummedAddress(feeRecipient string) error {
@@ -596,12 +628,12 @@ func warnNonChecksummedAddress(feeRecipient string) error {
 	return nil
 }
 
-func reviewGasLimit(gasLimit uint64) uint64 {
+func reviewGasLimit(gasLimit validatorServiceConfig.Uint64) validatorServiceConfig.Uint64 {
 	// sets gas limit to default if not defined or set to 0
 	if gasLimit == 0 {
-		return params.BeaconConfig().DefaultBuilderGasLimit
+		return validatorServiceConfig.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
 	}
-	//TODO(10810): add in warning for ranges
+	// TODO(10810): add in warning for ranges
 	return gasLimit
 }
 
@@ -660,8 +692,8 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 	rpcHost := cliCtx.String(flags.RPCHost.Name)
 	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := fmt.Sprintf("%s:%d", rpcHost, rpcPort)
-	gatewayAddress := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
+	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
+	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
 	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {

@@ -6,13 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 	gossipSubHeartbeatInterval = 700 * time.Millisecond // frequency of heartbeat, milliseconds
 
 	// misc
-	randomSubD = 6 // random gossip target
+	rSubD = 8 // random gossip target
 )
 
 var errInvalidTopic = errors.New("invalid topic format")
@@ -129,6 +130,25 @@ func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	}
 }
 
+// Creates a list of pubsub options to configure out router with.
+func (s *Service) pubsubOptions() []pubsub.Option {
+	psOpts := []pubsub.Option{
+		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
+		pubsub.WithNoAuthor(),
+		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
+			return MsgID(s.genesisValidatorsRoot, pmsg)
+		}),
+		pubsub.WithSubscriptionFilter(s),
+		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
+		pubsub.WithMaxMessageSize(int(params.BeaconNetworkConfig().GossipMaxSizeBellatrix)),
+		pubsub.WithValidateQueueSize(pubsubQueueSize),
+		pubsub.WithPeerScore(peerScoringParams()),
+		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
+		pubsub.WithGossipSubParams(pubsubGossipParam()),
+	}
+	return psOpts
+}
+
 // creates a custom gossipsub parameter set.
 func pubsubGossipParam() pubsub.GossipSubParams {
 	gParams := pubsub.DefaultGossipSubParams()
@@ -137,15 +157,6 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 	gParams.HeartbeatInterval = gossipSubHeartbeatInterval
 	gParams.HistoryLength = gossipSubMcacheLen
 	gParams.HistoryGossip = gossipSubMcacheGossip
-
-	// Set a larger gossip history to ensure that slower
-	// messages have a longer time to be propagated. This
-	// comes with the tradeoff of larger memory usage and
-	// size of the seen message cache.
-	if features.Get().EnableLargerGossipHistory {
-		gParams.HistoryLength = 12
-		gParams.HistoryGossip = 5
-	}
 	return gParams
 }
 

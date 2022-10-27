@@ -3,10 +3,10 @@ package stategen
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestEpochBoundaryStateCache_BadSlotKey(t *testing.T) {
@@ -35,7 +35,7 @@ func TestEpochBoundaryStateCache_CanSaveAndDelete(t *testing.T) {
 	got, exists, err = e.getByBlockRoot([32]byte{'a'})
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
-	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
+	assert.DeepSSZEqual(t, s.ToProtoUnsafe(), got.state.ToProtoUnsafe(), "Should have the same state")
 
 	got, exists, err = e.getBySlot(2)
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestEpochBoundaryStateCache_CanSaveAndDelete(t *testing.T) {
 	got, exists, err = e.getBySlot(1)
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
-	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
+	assert.DeepSSZEqual(t, s.ToProtoUnsafe(), got.state.ToProtoUnsafe(), "Should have the same state")
 
 	require.NoError(t, e.delete(r))
 	got, exists, err = e.getByBlockRoot([32]byte{'b'})

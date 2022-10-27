@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -21,8 +21,8 @@ const (
 	genesisForkEpoch = 0
 	// Altair Fork Epoch for mainnet config.
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
-	// Placeholder for the merge epoch until it is decided
-	mainnetBellatrixForkEpoch = math.MaxUint64
+	// Bellatrix Fork Epoch for mainnet config.
+	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -112,7 +112,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
-	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost: 40,
@@ -189,6 +188,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,
+	BeaconStateCapellaFieldCount:   28,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -248,9 +248,16 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Bellatrix
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
-	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+	TerminalTotalDifficulty:          "58750000000000000000000", // Estimated: Sept 15, 2022
 	EthBurnAddressHex:                "0x0000000000000000000000000000000000000000",
 	DefaultBuilderGasLimit:           uint64(30000000),
+
+	// Mevboost circuit breaker
+	MaxBuilderConsecutiveMissedSlots: 3,
+	MaxBuilderEpochMissedSlots:       8,
+
+	// Execution engine timeout value
+	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

@@ -2,19 +2,21 @@ package forkchoice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type Builder struct {
@@ -37,12 +39,43 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
 	bb.service.SetGenesisTime(time.Unix(time.Now().Unix()-tick, 0))
-	bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
-	if tick > bb.lastTick {
-		slot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
-		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), types.Slot(slot)))
-		bb.lastTick = tick
+	lastSlot := uint64(bb.lastTick) / params.BeaconConfig().SecondsPerSlot
+	currentSlot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
+	for lastSlot < currentSlot {
+		lastSlot++
+		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
+		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), types.Slot(lastSlot)))
 	}
+	if tick > int64(params.BeaconConfig().SecondsPerSlot*lastSlot) {
+		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
+	}
+	bb.lastTick = tick
+}
+
+// SetPayloadStatus sets the payload status that the engine will return
+func (bb *Builder) SetPayloadStatus(resp *MockEngineResp) error {
+	if resp == nil {
+		return errors.New("invalid nil payload status")
+	}
+	if resp.LatestValidHash == nil {
+		bb.execMock.latestValidHash = common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000")
+	} else {
+		bb.execMock.latestValidHash = common.FromHex(*resp.LatestValidHash)
+	}
+	if resp.Status == nil {
+		return errors.New("invalid nil status")
+	}
+	switch *resp.Status {
+	case "SYNCING":
+		bb.execMock.payloadStatus = execution.ErrAcceptedSyncingPayloadStatus
+	case "VALID":
+		bb.execMock.payloadStatus = nil
+	case "INVALID":
+		bb.execMock.payloadStatus = execution.ErrInvalidPayloadStatus
+	default:
+		return errors.New("unknown payload status")
+	}
+	return nil
 }
 
 // block returns the block root.

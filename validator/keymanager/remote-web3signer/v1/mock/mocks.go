@@ -5,11 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	v1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,13 +210,13 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			},
 			SigningSlot: 0,
 		}
-	case "BLOCK_V2":
+	case "BLOCK_V2", "BLOCK_V2_ALTAIR":
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
-			Object: &validatorpb.SignRequest_BlockV2{
-				BlockV2: &eth.BeaconBlockAltair{
+			Object: &validatorpb.SignRequest_BlockAltair{
+				BlockAltair: &eth.BeaconBlockAltair{
 					Slot:          0,
 					ProposerIndex: 0,
 					ParentRoot:    make([]byte, fieldparams.RootLength),
@@ -332,8 +332,8 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
-			Object: &validatorpb.SignRequest_BlockV3{
-				BlockV3: util.HydrateBeaconBlockBellatrix(&eth.BeaconBlockBellatrix{}),
+			Object: &validatorpb.SignRequest_BlockBellatrix{
+				BlockBellatrix: util.HydrateBeaconBlockBellatrix(&eth.BeaconBlockBellatrix{}),
 			},
 		}
 	case "BLOCK_V2_BLINDED_BELLATRIX":
@@ -341,8 +341,8 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
-			Object: &validatorpb.SignRequest_BlindedBlockV3{
-				BlindedBlockV3: util.HydrateBlindedBeaconBlockBellatrix(&eth.BlindedBeaconBlockBellatrix{}),
+			Object: &validatorpb.SignRequest_BlindedBlockBellatrix{
+				BlindedBlockBellatrix: util.HydrateBlindedBeaconBlockBellatrix(&eth.BlindedBeaconBlockBellatrix{}),
 			},
 		}
 	case "RANDAO_REVEAL":
@@ -482,9 +482,9 @@ func MockBlockSignRequest() *v1.BlockSignRequest {
 	}
 }
 
-// MockBlockV2AltairSignRequest is a mock implementation of the BlockV2AltairSignRequest.
-func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
-	return &v1.BlockV2AltairSignRequest{
+// MockBlockV2AltairSignRequest is a mock implementation of the BlockAltairSignRequest.
+func MockBlockV2AltairSignRequest() *v1.BlockAltairSignRequest {
+	return &v1.BlockAltairSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
@@ -495,8 +495,8 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 	}
 }
 
-func MockBlockV2BellatrixSignRequest(bodyRoot []byte) *v1.BlockV2BellatrixSignRequest {
-	return &v1.BlockV2BellatrixSignRequest{
+func MockBlockV2BellatrixSignRequest(bodyRoot []byte) *v1.BlockBellatrixSignRequest {
+	return &v1.BlockBellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),

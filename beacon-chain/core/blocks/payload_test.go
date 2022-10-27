@@ -3,145 +3,188 @@ package blocks_test
 import (
 	"testing"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func Test_IsMergeComplete(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *enginev1.ExecutionPayloadHeader
+		payload interfaces.ExecutionData
 		want    bool
 	}{
 		{
-			name:    "empty payload header",
-			payload: emptyPayloadHeader(),
-			want:    false,
+			name: "empty payload header",
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			want: false,
 		},
 		{
 			name: "has parent hash",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has fee recipient",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has state root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has receipt root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has logs bloom",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has random",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has base fee",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has block hash",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has extra data",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has block number",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockNumber = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockNumber = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has gas limit",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.GasLimit = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.GasLimit = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has gas used",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.GasUsed = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.GasUsed = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has time stamp",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.Timestamp = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.Timestamp = 1
 				return h
 			}(),
 			want: true,
@@ -150,9 +193,7 @@ func Test_IsMergeComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.payload)
-			require.NoError(t, err)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
 			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
@@ -187,7 +228,7 @@ func Test_IsExecutionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			wrappedBlock, err := wrapper.WrappedBeaconBlock(blk.Block)
+			wrappedBlock, err := consensusblocks.NewBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 			require.NoError(t, err)
@@ -200,36 +241,51 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	tests := []struct {
 		name        string
 		payload     *enginev1.ExecutionPayload
-		header      *enginev1.ExecutionPayloadHeader
+		header      interfaces.ExecutionData
 		useAltairSt bool
 		want        bool
 	}{
 		{
-			name:        "use older than bellatrix state",
-			payload:     emptyPayload(),
-			header:      emptyPayloadHeader(),
+			name:    "use older than bellatrix state",
+			payload: emptyPayload(),
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
 			useAltairSt: true,
 			want:        false,
 		},
 		{
 			name:    "empty header, empty payload",
 			payload: emptyPayload(),
-			header:  emptyPayloadHeader(),
-			want:    false,
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			want: false,
 		},
 		{
 			name:    "non-empty header, empty payload",
 			payload: emptyPayload(),
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
-			name:   "empty header, non-empty payload",
-			header: emptyPayloadHeader(),
+			name: "empty header, non-empty payload",
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
 			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Timestamp = 1
@@ -239,9 +295,12 @@ func Test_IsExecutionEnabled(t *testing.T) {
 		},
 		{
 			name: "non-empty header, non-empty payload",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			payload: func() *enginev1.ExecutionPayload {
@@ -255,12 +314,10 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
@@ -278,28 +335,39 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *enginev1.ExecutionPayload
-		header  *enginev1.ExecutionPayloadHeader
+		header  interfaces.ExecutionData
 		want    bool
 	}{
 		{
 			name:    "empty header, empty payload",
 			payload: emptyPayload(),
-			header:  emptyPayloadHeader(),
-			want:    false,
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			want: false,
 		},
 		{
 			name:    "non-empty header, empty payload",
 			payload: emptyPayload(),
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
-			name:   "empty header, non-empty payload",
-			header: emptyPayloadHeader(),
+			name: "empty header, non-empty payload",
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
 			payload: func() *enginev1.ExecutionPayload {
 				p := emptyPayload()
 				p.Timestamp = 1
@@ -309,9 +377,12 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		},
 		{
 			name: "non-empty header, non-empty payload",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			payload: func() *enginev1.ExecutionPayload {
@@ -326,7 +397,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
@@ -341,14 +412,18 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *enginev1.ExecutionPayload
-		header  *enginev1.ExecutionPayloadHeader
+		header  interfaces.ExecutionData
 		err     error
 	}{
 		{
 			name:    "merge incomplete",
 			payload: emptyPayload(),
-			header:  emptyPayloadHeader(),
-			err:     nil,
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			err: nil,
 		},
 		{
 			name: "validate passes",
@@ -357,9 +432,12 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			err: nil,
@@ -371,21 +449,22 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
 				return h
 			}(),
-			err: errors.New("incorrect block hash"),
+			err: blocks.ErrInvalidPayloadBlockHash,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
 			if err != nil {
@@ -435,7 +514,7 @@ func Test_ValidatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			err = blocks.ValidatePayload(st, wrappedPayload)
 			if err != nil {
@@ -485,17 +564,19 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			wrappedPayload, err := consensusblocks.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			st, err := blocks.ProcessPayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := wrapper.PayloadToHeader(wrappedPayload)
+				want, err := consensusblocks.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
-				got, err := st.LatestExecutionPayloadHeader()
+				h, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
+				got, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
 				require.DeepSSZEqual(t, want, got)
 			}
 		})
@@ -510,29 +591,39 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name   string
-		header *enginev1.ExecutionPayloadHeader
+		header interfaces.ExecutionData
 		err    error
 	}{
 		{
 			name: "process passes",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = uint64(ts.Unix())
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = random
+				p.Timestamp = uint64(ts.Unix())
 				return h
 			}(), err: nil,
 		},
 		{
-			name:   "incorrect prev randao",
-			header: emptyPayloadHeader(),
-			err:    blocks.ErrInvalidPayloadPrevRandao,
+			name: "incorrect prev randao",
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = 1
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = random
+				p.Timestamp = 1
 				return h
 			}(),
 			err: blocks.ErrInvalidPayloadTimeStamp,
@@ -540,16 +631,18 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			st, err := blocks.ProcessPayloadHeader(st, wrappedHeader)
+			st, err := blocks.ProcessPayloadHeader(st, tt.header)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				got, err := st.LatestExecutionPayloadHeader()
+				want, ok := tt.header.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				h, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
-				require.DeepSSZEqual(t, tt.header, got)
+				got, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				require.DeepSSZEqual(t, want, got)
 			}
 		})
 	}
@@ -563,29 +656,39 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name   string
-		header *enginev1.ExecutionPayloadHeader
+		header interfaces.ExecutionData
 		err    error
 	}{
 		{
 			name: "process passes",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = uint64(ts.Unix())
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = random
+				p.Timestamp = uint64(ts.Unix())
 				return h
 			}(), err: nil,
 		},
 		{
-			name:   "incorrect prev randao",
-			header: emptyPayloadHeader(),
-			err:    blocks.ErrInvalidPayloadPrevRandao,
+			name: "incorrect prev randao",
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = 1
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = random
+				p.Timestamp = 1
 				return h
 			}(),
 			err: blocks.ErrInvalidPayloadTimeStamp,
@@ -593,9 +696,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			err = blocks.ValidatePayloadHeader(st, wrappedHeader)
+			err = blocks.ValidatePayloadHeader(st, tt.header)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -604,19 +705,20 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
+	wrappedHeader, err := consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
 	require.NoError(t, err)
 	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
 		name   string
 		state  state.BeaconState
-		header *enginev1.ExecutionPayloadHeader
+		header interfaces.ExecutionData
 		err    error
 	}{
 		{
 			name: "no merge",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
 				return h
 			}(),
 			state: emptySt,
@@ -624,9 +726,12 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "process passes",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = []byte{'a'}
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = []byte{'a'}
 				return h
 			}(),
 			state: st,
@@ -634,9 +739,12 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "invalid block hash",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = []byte{'b'}
+			header: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = []byte{'b'}
 				return h
 			}(),
 			state: st,
@@ -645,9 +753,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, wrappedHeader)
+			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -655,9 +761,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
+	wrappedPayload, err := consensusblocks.WrappedExecutionPayload(p)
 	require.NoError(t, err)
-	h, err := wrapper.PayloadToHeader(wrappedPayload)
+	h, err := consensusblocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -696,9 +802,9 @@ func Test_PayloadToHeader(t *testing.T) {
 
 func BenchmarkBellatrixComplete(b *testing.B) {
 	st, _ := util.DeterministicGenesisStateBellatrix(b, 1)
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(emptyPayloadHeader())
+	h, err := emptyPayloadHeader()
 	require.NoError(b, err)
-	require.NoError(b, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+	require.NoError(b, st.SetLatestExecutionPayloadHeader(h))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -707,8 +813,8 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 	}
 }
 
-func emptyPayloadHeader() *enginev1.ExecutionPayloadHeader {
-	return &enginev1.ExecutionPayloadHeader{
+func emptyPayloadHeader() (interfaces.ExecutionData, error) {
+	return consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
@@ -719,7 +825,7 @@ func emptyPayloadHeader() *enginev1.ExecutionPayloadHeader {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
-	}
+	})
 }
 
 func emptyPayload() *enginev1.ExecutionPayload {

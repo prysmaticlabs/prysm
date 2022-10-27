@@ -1,21 +1,22 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -24,10 +25,8 @@ import (
 type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
-	GenesisFetcher
 	CanonicalFetcher
 	ForkFetcher
-	TimeFetcher
 	HeadDomainFetcher
 }
 
@@ -69,6 +68,8 @@ type HeadFetcher interface {
 type ForkFetcher interface {
 	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
+	GenesisFetcher
+	TimeFetcher
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
@@ -161,7 +162,7 @@ func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, 
 	defer s.headLock.RUnlock()
 
 	if s.hasHeadState() {
-		return s.headBlock(), nil
+		return s.headBlock()
 	}
 
 	return s.cfg.BeaconDB.HeadBlock(ctx)
@@ -299,13 +300,26 @@ func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
+	s.headLock.RLock()
+	headRoot := s.head.root
+	s.headLock.RUnlock()
 
-	return s.IsOptimisticForRoot(ctx, s.head.root)
+	if s.cfg.ForkChoiceStore.AllTipsAreInvalid() {
+		return true, nil
+	}
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
+	if err == nil {
+		return optimistic, nil
+	}
+	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
+		return true, err
+	}
+	// If fockchoice does not have the headroot, then the node is considered
+	// optimistic
+	return true, nil
 }
 
 // IsFinalized returns true if the input root is finalized.
@@ -324,17 +338,27 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err == nil {
 		return optimistic, nil
 	}
-	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return false, err
 	}
+	// if the requested root is the headroot and the root is not found in
+	// forkchoice, the node should respond that it is optimistic
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return true, err
+	}
+	if bytes.Equal(headRoot, root[:]) {
+		return true, nil
+	}
+
 	ss, err := s.cfg.BeaconDB.StateSummary(ctx, root)
 	if err != nil {
 		return false, err
 	}
-	if ss == nil {
-		return false, errInvalidNilSummary
-	}
 
+	if ss == nil {
+		return true, errInvalidNilSummary
+	}
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	if err != nil {
 		return false, err

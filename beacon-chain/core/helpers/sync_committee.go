@@ -6,14 +6,14 @@ import (
 	"bytes"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,7 +46,7 @@ func IsCurrentPeriodSyncCommittee(
 		// Fill in the cache on miss.
 		go func() {
 			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
 
@@ -110,7 +110,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 		// Fill in the cache on miss.
 		go func() {
 			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
 

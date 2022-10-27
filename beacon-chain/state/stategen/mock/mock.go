@@ -3,10 +3,8 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // MockStateManager is a fake implementation of StateManager.
@@ -43,38 +41,19 @@ func (_ *MockStateManager) MigrateToCold(_ context.Context, _ [32]byte) error {
 	panic("implement me")
 }
 
-// ReplayBlocks --
-func (_ *MockStateManager) ReplayBlocks(
-	_ context.Context,
-	_ state.BeaconState,
-	_ []interfaces.SignedBeaconBlock,
-	_ types.Slot,
-) (state.BeaconState, error) {
-	panic("implement me")
-}
-
-// LoadBlocks --
-func (_ *MockStateManager) LoadBlocks(
-	_ context.Context,
-	_, _ types.Slot,
-	_ [32]byte,
-) ([]interfaces.SignedBeaconBlock, error) {
-	panic("implement me")
-}
-
 // HasState --
 func (_ *MockStateManager) HasState(_ context.Context, _ [32]byte) (bool, error) {
-	panic("implement me")
-}
-
-// HasStateInCache --
-func (_ *MockStateManager) HasStateInCache(_ context.Context, _ [32]byte) (bool, error) {
 	panic("implement me")
 }
 
 // StateByRoot --
 func (m *MockStateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	return m.StatesByRoot[blockRoot], nil
+}
+
+// BalancesByRoot --
+func (*MockStateManager) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+	return []uint64{}, nil
 }
 
 // StateByRootInitialSync --
@@ -85,14 +64,6 @@ func (_ *MockStateManager) StateByRootInitialSync(_ context.Context, _ [32]byte)
 // StateBySlot --
 func (m *MockStateManager) StateBySlot(_ context.Context, slot types.Slot) (state.BeaconState, error) {
 	return m.StatesBySlot[slot], nil
-}
-
-// RecoverStateSummary --
-func (_ *MockStateManager) RecoverStateSummary(
-	_ context.Context,
-	_ [32]byte,
-) (*ethpb.StateSummary, error) {
-	panic("implement me")
 }
 
 // SaveState --

@@ -4,14 +4,15 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/userprompt"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/urfave/cli/v2"
 )
 
@@ -93,21 +94,51 @@ func walletImport(c *cli.Context) (*wallet.Wallet, error) {
 			})
 		}
 
-		cfg, err := accounts.ExtractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
+		wCfg, err := ExtractWalletDirPassword(cliCtx)
 		if err != nil {
 			return nil, err
 		}
 		w := wallet.New(&wallet.Config{
-			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-			WalletDir:      cfg.WalletCfg.WalletDir,
-			WalletPassword: cfg.WalletCfg.WalletPassword,
+			KeymanagerKind: keymanager.Local,
+			WalletDir:      wCfg.Dir,
+			WalletPassword: wCfg.Password,
 		})
 		if err = accounts.CreateLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
-		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
+		log.WithField("wallet-path", wCfg.Dir).Info(
 			"Successfully created new wallet",
 		)
 		return w, nil
 	})
+}
+
+// WalletDirPassword holds the directory and password of a wallet.
+type WalletDirPassword struct {
+	Dir      string
+	Password string
+}
+
+// ExtractWalletDirPassword prompts the user for wallet directory and password.
+func ExtractWalletDirPassword(cliCtx *cli.Context) (WalletDirPassword, error) {
+	// Get wallet dir and check that no wallet exists at the location.
+	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return WalletDirPassword{}, err
+	}
+	walletPassword, err := prompt.InputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		wallet.NewWalletPasswordPromptText,
+		wallet.ConfirmPasswordPromptText,
+		true, /* Should confirm password */
+		prompt.ValidatePasswordInput,
+	)
+	if err != nil {
+		return WalletDirPassword{}, err
+	}
+	return WalletDirPassword{
+		Dir:      walletDir,
+		Password: walletPassword,
+	}, nil
 }

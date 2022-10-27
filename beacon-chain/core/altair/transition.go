@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	e "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"go.opencensus.io/trace"
 )
 
@@ -68,11 +68,11 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	}
 
 	// Modified in Altair and Bellatrix.
-	proportionalSlashingMultipler, err := state.ProportionalSlashingMultiplier()
+	proportionalSlashingMultiplier, err := state.ProportionalSlashingMultiplier()
 	if err != nil {
 		return nil, err
 	}
-	state, err = e.ProcessSlashings(state, proportionalSlashingMultipler)
+	state, err = e.ProcessSlashings(state, proportionalSlashingMultiplier)
 	if err != nil {
 		return nil, err
 	}

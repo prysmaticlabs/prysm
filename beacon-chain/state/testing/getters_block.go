@@ -3,11 +3,11 @@ package testing
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type getStateWithLatestBlockHeader func(*ethpb.BeaconBlockHeader) (state.BeaconState, error)
@@ -34,27 +34,6 @@ func VerifyBeaconStateLatestBlockHeader(
 }
 
 type getStateWithLBlockRoots func([][]byte) (state.BeaconState, error)
-
-func VerifyBeaconStateBlockRoots(
-	t *testing.T,
-	factory getState,
-	factoryBR getStateWithLBlockRoots,
-) {
-	s, err := factory()
-	require.NoError(t, err)
-	got := s.BlockRoots()
-	require.DeepEqual(t, ([][]byte)(nil), got)
-
-	want := [][]byte{{'a'}}
-	s, err = factoryBR(want)
-	require.NoError(t, err)
-	got = s.BlockRoots()
-	require.DeepEqual(t, want, got)
-
-	// Test copy does not mutate.
-	got[0][0] = 'b'
-	require.DeepNotEqual(t, want, got)
-}
 
 func VerifyBeaconStateBlockRootsNative(
 	t *testing.T,
@@ -87,26 +66,6 @@ func VerifyBeaconStateBlockRootsNative(
 	// Test copy does not mutate.
 	got[0][0] = 'b'
 	require.DeepNotEqual(t, want, got)
-}
-
-func VerifyBeaconStateBlockRootAtIndex(
-	t *testing.T,
-	factory getState,
-	factoryBR getStateWithLBlockRoots,
-) {
-	s, err := factory()
-	require.NoError(t, err)
-	got, err := s.BlockRootAtIndex(0)
-	require.NoError(t, err)
-	require.DeepEqual(t, ([]byte)(nil), got)
-
-	r := [][]byte{{'a'}}
-	s, err = factoryBR(r)
-	require.NoError(t, err)
-	got, err = s.BlockRootAtIndex(0)
-	require.NoError(t, err)
-	want := bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-	require.DeepSSZEqual(t, want, got)
 }
 
 func VerifyBeaconStateBlockRootAtIndexNative(

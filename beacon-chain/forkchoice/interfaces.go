@@ -3,12 +3,16 @@ package forkchoice
 import (
 	"context"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
+
+// BalanceByRooter is a handler to obtain the effective balances of the state
+// with the given block root
+type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
@@ -26,6 +30,7 @@ type HeadRetriever interface {
 	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
+	AllTipsAreInvalid() bool
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
@@ -51,7 +56,7 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
-	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
+	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, types.Slot, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 	FinalizedPayloadBlockHash() [32]byte
@@ -59,8 +64,12 @@ type Getter interface {
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	JustifiedPayloadBlockHash() [32]byte
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
-	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
+	HighestReceivedBlockSlot() types.Slot
+	HighestReceivedBlockRoot() [32]byte
+	ReceivedBlocksLastEpoch() (uint64, error)
+	ForkChoiceDump(context.Context) (*v1.ForkChoiceResponse, error)
+	VotedFraction(root [32]byte) (uint64, error)
 }
 
 // Setter allows to set forkchoice information
@@ -72,4 +81,5 @@ type Setter interface {
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
 	NewSlot(context.Context, types.Slot) error
+	SetBalancesByRooter(BalancesByRooter)
 }

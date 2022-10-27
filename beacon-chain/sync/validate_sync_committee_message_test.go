@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -9,25 +8,26 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	testingdb "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	testingdb "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
@@ -64,7 +64,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -92,7 +92,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				msg.BlockRoot = headRoot[:]
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
@@ -120,7 +120,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				return s, topic
@@ -147,7 +147,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 
@@ -176,7 +176,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
@@ -210,7 +210,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -258,7 +258,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -305,7 +305,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -360,7 +360,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string) {
-				s.cfg.stateGen = stategen.New(beaconDB)
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
 				msg.BlockRoot = headRoot[:]
@@ -561,35 +561,4 @@ func Test_ignoreEmptyCommittee(t *testing.T) {
 			require.Equal(t, tt.want, result)
 		})
 	}
-}
-
-func TestValidateSyncCommitteeMessage_Optimistic(t *testing.T) {
-	p := mockp2p.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidAttesterSlashing(t)
-
-	r := &Service{
-		cfg: &config{
-			p2p:         p,
-			chain:       &mockChain.ChainService{State: s, Optimistic: true},
-			initialSync: &mockSync.Sync{IsSyncing: false},
-		},
-	}
-
-	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, slashing)
-	require.NoError(t, err)
-
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
-	msg := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-	res, err := r.validateCommitteeIndexBeaconAttestation(ctx, "foobar", msg)
-	assert.NoError(t, err)
-	valid := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, valid, "Should have ignore this message")
 }

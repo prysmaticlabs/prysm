@@ -4,12 +4,11 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block_roots.go",
-        "byte32.go",
         "historical_roots.go",
         "randao_mixes.go",
         "state_roots.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
@@ -21,7 +20,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "block_roots_test.go",
-        "byte32_test.go",
         "historical_roots_test.go",
         "randao_mixes_test.go",
         "state_roots_test.go",

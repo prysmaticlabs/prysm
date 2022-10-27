@@ -19,9 +19,10 @@ go_library(
         "testnet_ropsten_config.go",
         "testnet_sepolia_config.go",
         "testutils.go",
+        "testutils_develop.go",  # keep
         "values.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/config/params",
+    importpath = "github.com/prysmaticlabs/prysm/v3/config/params",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",

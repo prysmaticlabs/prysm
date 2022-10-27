@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,8 +39,44 @@ func TestLoadFlagsFromConfig_PreProcessing_Web3signer(t *testing.T) {
 			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 		},
 		Action: func(cliCtx *cli.Context) error {
+			//TODO: https://github.com/urfave/cli/issues/1197 right now does not set flag
+			require.Equal(t, false, cliCtx.IsSet(Web3SignerPublicValidatorKeysFlag.Name))
+
 			require.Equal(t, strings.Join([]string{pubkey1, pubkey2}, ","),
 				strings.Join(cliCtx.StringSlice(Web3SignerPublicValidatorKeysFlag.Name), ","))
+			return nil
+		},
+	}
+	require.NoError(t, command.Run(context))
+	require.NoError(t, os.Remove("flags_test.yaml"))
+}
+
+func TestLoadFlagsFromConfig_EnableBuilderHasDefaultValue(t *testing.T) {
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	context := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, os.WriteFile("flags_test.yaml", []byte("---\nenable-builder: true"), 0666))
+
+	require.NoError(t, set.Parse([]string{"test-command", "--" + cmd.ConfigFileFlag.Name, "flags_test.yaml"}))
+	command := &cli.Command{
+		Name: "test-command",
+		Flags: cmd.WrapFlags([]cli.Flag{
+			&cli.StringFlag{
+				Name: cmd.ConfigFileFlag.Name,
+			},
+			&cli.BoolFlag{
+				Name:  EnableBuilderFlag.Name,
+				Value: false,
+			},
+		}),
+		Before: func(cliCtx *cli.Context) error {
+			return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+		},
+		Action: func(cliCtx *cli.Context) error {
+
+			require.Equal(t, true,
+				cliCtx.Bool(EnableBuilderFlag.Name))
 			return nil
 		},
 	}

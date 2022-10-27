@@ -1,13 +1,14 @@
 package validator
 
 import (
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -56,21 +57,33 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 	b := &ethpb.StreamBlocksResponse{}
 	switch data.SignedBlock.Version() {
 	case version.Phase0:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlock)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlock")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 	case version.Altair:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockAltair)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockAltair")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
 	case version.Bellatrix:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockBellatrix)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockBellatrix)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockBellatrix")
 			return nil
@@ -106,12 +119,17 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	signed := data.SignedBlock
-	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), signed.Signature(), signed.Block().HashTreeRoot); err != nil {
+	sig := signed.Signature()
+	if err := blocks.VerifyBlockSignature(headState, signed.Block().ProposerIndex(), sig[:], signed.Block().HashTreeRoot); err != nil {
 		log.WithError(err).Error("Could not verify block signature")
 		return nil
 	}
 	b := &ethpb.StreamBlocksResponse{}
-	switch p := data.SignedBlock.Proto().(type) {
+	pb, err := data.SignedBlock.Proto()
+	if err != nil {
+		return errors.Wrap(err, "could not get protobuf block")
+	}
+	switch p := pb.(type) {
 	case *ethpb.SignedBeaconBlock:
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: p}
 	case *ethpb.SignedBeaconBlockAltair:

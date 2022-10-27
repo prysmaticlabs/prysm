@@ -7,21 +7,20 @@ import (
 	"math"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	attv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -70,21 +69,31 @@ func GenerateAttestations(
 		var headState state.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := v1.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v1.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafePhase0(pbState)
 			if err != nil {
 				return nil, err
 			}
 			headState = genState
 		case version.Altair:
-			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v2.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafeAltair(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
+		case version.Bellatrix:
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeBellatrix(pbState)
 			if err != nil {
 				return nil, err
 			}

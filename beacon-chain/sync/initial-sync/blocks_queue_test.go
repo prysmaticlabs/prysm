@@ -6,25 +6,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/peer"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
-	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/libp2p/go-libp2p/core/peer"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
+	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	beaconsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -134,6 +134,11 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 }
 
 func TestBlocksQueue_Loop(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		highestExpectedSlot types.Slot
@@ -255,7 +260,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block interfaces.SignedBeaconBlock) error {
-				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
+				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
 				root, err := block.Block().HashTreeRoot()
@@ -521,14 +526,16 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		handlerFn := queue.onDataReceivedEvent(ctx)
+		wsbCopy, err := wsb.Copy()
+		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
 			blocks: []interfaces.SignedBeaconBlock{
 				wsb,
-				wsb.Copy(),
+				wsbCopy,
 			},
 		}
 		fsm := &stateMachine{
@@ -618,7 +625,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
@@ -645,7 +652,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(128)
 		queue.smm.machines[128].state = stateNew
@@ -678,7 +685,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.machines[256].state = stateSkipped
@@ -1073,7 +1080,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
@@ -1293,7 +1300,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	// Connect peer that has all the blocks available.
 	allBlocksPeer := connectPeerHavingBlocks(t, p2p, chain, finalizedSlot, p2p.Peers())
@@ -1334,7 +1341,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 				continue
 			}
 
-			parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
+			parentRoot := blk.Block().ParentRoot()
 			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasBlock(ctx, parentRoot) {
 				log.Errorf("%v: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 				continue

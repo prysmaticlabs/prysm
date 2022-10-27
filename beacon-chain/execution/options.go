@@ -2,60 +2,44 @@ package execution
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/network"
-	"github.com/prysmaticlabs/prysm/network/authorization"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 )
 
 type Option func(s *Service) error
 
-// WithHttpEndpoints deduplicates and parses http endpoints for the execution chain service to use,
-// and sets the "current" endpoint that will be used first.
-func WithHttpEndpoints(endpointStrings []string) Option {
+// WithHttpEndpoint parse http endpoint for the powchain service to use.
+func WithHttpEndpoint(endpointString string) Option {
 	return func(s *Service) error {
-		stringEndpoints := dedupEndpoints(endpointStrings)
-		endpoints := make([]network.Endpoint, len(stringEndpoints))
-		for i, e := range stringEndpoints {
-			endpoints[i] = HttpEndpoint(e)
-		}
-		// Select first http endpoint in the provided list.
-		var currEndpoint network.Endpoint
-		if len(endpointStrings) > 0 {
-			currEndpoint = endpoints[0]
-		}
-		s.cfg.httpEndpoints = endpoints
-		s.cfg.currHttpEndpoint = currEndpoint
+		s.cfg.currHttpEndpoint = HttpEndpoint(endpointString)
 		return nil
 	}
 }
 
-// WithHttpEndpointsAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
-func WithHttpEndpointsAndJWTSecret(endpointStrings []string, secret []byte) Option {
+// WithHttpEndpointAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
+func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 	return func(s *Service) error {
 		if len(secret) == 0 {
 			return nil
 		}
-		stringEndpoints := dedupEndpoints(endpointStrings)
-		endpoints := make([]network.Endpoint, len(stringEndpoints))
-		// Overwrite authorization type for all endpoints to be of a bearer
-		// type.
-		for i, e := range stringEndpoints {
-			hEndpoint := HttpEndpoint(e)
-			hEndpoint.Auth.Method = authorization.Bearer
-			hEndpoint.Auth.Value = string(secret)
-			endpoints[i] = hEndpoint
-		}
-		// Select first http endpoint in the provided list.
-		var currEndpoint network.Endpoint
-		if len(endpointStrings) > 0 {
-			currEndpoint = endpoints[0]
-		}
-		s.cfg.httpEndpoints = endpoints
-		s.cfg.currHttpEndpoint = currEndpoint
+		// Overwrite authorization type for all endpoints to be of a bearer type.
+		hEndpoint := HttpEndpoint(endpointString)
+		hEndpoint.Auth.Method = authorization.Bearer
+		hEndpoint.Auth.Value = string(secret)
+
+		s.cfg.currHttpEndpoint = hEndpoint
+		return nil
+	}
+}
+
+// WithHeaders adds headers to the execution node JSON-RPC requests.
+func WithHeaders(headers []string) Option {
+	return func(s *Service) error {
+		s.cfg.headers = headers
 		return nil
 	}
 }

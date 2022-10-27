@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,12 +12,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)
@@ -58,9 +59,15 @@ func TestClient_Status(t *testing.T) {
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)
+			message := ErrorMessage{
+				Code:    500,
+				Message: "Internal server error",
+			}
+			resp, err := json.Marshal(message)
+			require.NoError(t, err)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Body:       io.NopCloser(bytes.NewBuffer(resp)),
 				Request:    r.Clone(ctx),
 			}, nil
 		}),
@@ -114,9 +121,15 @@ func TestClient_GetHeader(t *testing.T) {
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			require.Equal(t, expectedPath, r.URL.Path)
+			message := ErrorMessage{
+				Code:    500,
+				Message: "Internal server error",
+			}
+			resp, err := json.Marshal(message)
+			require.NoError(t, err)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Body:       io.NopCloser(bytes.NewBuffer(resp)),
 				Request:    r.Clone(ctx),
 			}, nil
 		}),
@@ -130,6 +143,23 @@ func TestClient_GetHeader(t *testing.T) {
 	pubkey := ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
 	_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
 	require.ErrorIs(t, err, ErrNotOK)
+
+	hc = &http.Client{
+		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+			require.Equal(t, expectedPath, r.URL.Path)
+			return &http.Response{
+				StatusCode: http.StatusNoContent,
+				Body:       io.NopCloser(bytes.NewBuffer([]byte("No header is available."))),
+				Request:    r.Clone(ctx),
+			}, nil
+		}),
+	}
+	c = &Client{
+		hc:      hc,
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+	}
+	_, err = c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+	require.ErrorIs(t, err, ErrNoContent)
 
 	hc = &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
@@ -152,7 +182,8 @@ func TestClient_GetHeader(t *testing.T) {
 	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.Equal(t, true, bytes.Equal(expectedTxRoot, h.Message.Header.TransactionsRoot))
 	require.Equal(t, uint64(1), h.Message.Header.GasUsed)
-	value := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", h.Message.Value))
 }
 
@@ -176,7 +207,8 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	ep, err := c.SubmitBlindedBlock(ctx, sbbb)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash))
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas))
 	require.Equal(t, uint64(1), ep.GasLimit)
 }

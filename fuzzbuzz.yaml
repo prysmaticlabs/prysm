@@ -1,4 +1,6 @@
 base:
   language: go
+  version: 1.18
   build_tags:
     - fuzz
+    - develop

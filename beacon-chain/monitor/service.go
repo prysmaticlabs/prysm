@@ -6,16 +6,16 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,18 +41,18 @@ type ValidatorLatestPerformance struct {
 // ValidatorAggregatedPerformance keeps track of the accumulated performance of
 // the tracked validator since start of monitor service.
 type ValidatorAggregatedPerformance struct {
-	startEpoch                     types.Epoch
-	startBalance                   uint64
-	totalAttestedCount             uint64
-	totalRequestedCount            uint64
-	totalDistance                  uint64
-	totalCorrectSource             uint64
-	totalCorrectTarget             uint64
-	totalCorrectHead               uint64
-	totalProposedCount             uint64
-	totalAggregations              uint64
-	totalSyncComitteeContributions uint64
-	totalSyncComitteeAggregations  uint64
+	startEpoch                      types.Epoch
+	startBalance                    uint64
+	totalAttestedCount              uint64
+	totalRequestedCount             uint64
+	totalDistance                   uint64
+	totalCorrectSource              uint64
+	totalCorrectTarget              uint64
+	totalCorrectHead                uint64
+	totalProposedCount              uint64
+	totalAggregations               uint64
+	totalSyncCommitteeContributions uint64
+	totalSyncCommitteeAggregations  uint64
 }
 
 // ValidatorMonitorConfig contains the list of validator indices that the

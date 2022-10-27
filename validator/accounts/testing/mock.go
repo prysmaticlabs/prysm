@@ -7,11 +7,12 @@ import (
 	"sync"
 	"time"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	iface2 "github.com/prysmaticlabs/prysm/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	iface2 "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 )
 
 // Wallet contains an in-memory, simulated wallet implementation.
@@ -81,7 +82,8 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 }
 
 type MockValidator struct {
-	Km keymanager.IKeymanager
+	Km               keymanager.IKeymanager
+	proposerSettings *validatorserviceconfig.ProposerSettings
 }
 
 func (_ MockValidator) LogSyncCommitteeMessagesSubmitted() {}
@@ -150,10 +152,6 @@ func (_ MockValidator) LogAttestationsSubmitted() {
 	panic("implement me")
 }
 
-func (_ MockValidator) LogNextDutyTimeLeft(_ types.Slot) error {
-	panic("implement me")
-}
-
 func (_ MockValidator) UpdateDomainDataCaches(_ context.Context, _ types.Slot) {
 	panic("implement me")
 }
@@ -182,6 +180,11 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 	panic("implement me")
 }
 
+// HasProposerSettings for mocking
+func (MockValidator) HasProposerSettings() bool {
+	panic("implement me")
+}
+
 // PushProposerSettings for mocking
 func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
@@ -195,4 +198,14 @@ func (_ MockValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymana
 // SignValidatorRegistrationRequest for mocking
 func (_ MockValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	panic("implement me")
+}
+
+// ProposerSettings for mocking
+func (m *MockValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return m.proposerSettings
+}
+
+// SetProposerSettings for mocking
+func (m *MockValidator) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	m.proposerSettings = settings
 }

@@ -8,9 +8,10 @@ go_library(
         "ssz.go",
         "varint.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
     ],
     deps = [
         "//config/params:go_default_library",

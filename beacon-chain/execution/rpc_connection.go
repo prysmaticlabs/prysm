@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/network"
-	"github.com/prysmaticlabs/prysm/network/authorization"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
@@ -37,7 +38,13 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	// Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
-		return errors.Wrap(err, "could not make initial request to verify execution chain ID")
+		errStr := err.Error()
+		if strings.Contains(errStr, "401 Unauthorized") {
+			errStr = "could not verify execution chain ID as your connection is not authenticated. " +
+				"If connecting to your execution client via HTTP, you will need to set up JWT authentication. " +
+				"See our documentation here https://docs.prylabs.network/docs/execution-node/authentication"
+		}
+		return errors.Wrap(err, errStr)
 	}
 	s.updateConnectedETH1(true)
 	s.runError = nil
@@ -51,7 +58,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
+			log.WithError(err).Error(msg)
 			logCounter = 0
 		}
 		logCounter++
@@ -65,8 +72,6 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			currClient := s.rpcClient
 			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 				errorLogger(err, "Could not connect to execution client endpoint")
-				s.runError = err
-				s.fallbackToNextEndpoint()
 				continue
 			}
 			// Close previous client, if connection was successful.
@@ -101,52 +106,6 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 	s.runError = nil
 }
 
-// This performs a health check on our primary endpoint, and if it
-// is ready to serve we connect to it again. This method is only
-// relevant if we are on our backup endpoint.
-func (s *Service) checkDefaultEndpoint(ctx context.Context) {
-	primaryEndpoint := s.cfg.httpEndpoints[0]
-	// Return early if we are running on our primary
-	// endpoint.
-	if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
-		return
-	}
-
-	currClient := s.rpcClient
-	if err := s.setupExecutionClientConnections(ctx, primaryEndpoint); err != nil {
-		log.Debugf("Primary endpoint not ready: %v", err)
-		return
-	}
-	// Close previous client, if connection was successful.
-	if currClient != nil {
-		currClient.Close()
-	}
-	s.updateCurrHttpEndpoint(primaryEndpoint)
-}
-
-// This is an inefficient way to search for the next endpoint, but given N is
-// expected to be small, it is fine to search this way.
-func (s *Service) fallbackToNextEndpoint() {
-	currEndpoint := s.cfg.currHttpEndpoint
-	currIndex := 0
-	totalEndpoints := len(s.cfg.httpEndpoints)
-
-	for i, endpoint := range s.cfg.httpEndpoints {
-		if endpoint.Equals(currEndpoint) {
-			currIndex = i
-			break
-		}
-	}
-	nextIndex := currIndex + 1
-	if nextIndex >= totalEndpoints {
-		nextIndex = 0
-	}
-	s.updateCurrHttpEndpoint(s.cfg.httpEndpoints[nextIndex])
-	if nextIndex != currIndex {
-		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-	}
-}
-
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
 	// Need to handle ipc and http
@@ -161,7 +120,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 		if err != nil {
 			return nil, err
 		}
-	case "":
+	case "", "ipc":
 		client, err = gethRPC.DialIPC(ctx, endpoint.Url)
 		if err != nil {
 			return nil, err
@@ -175,6 +134,16 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 			return nil, err
 		}
 		client.SetHeader("Authorization", header)
+	}
+	for _, h := range s.cfg.headers {
+		if h != "" {
+			keyValue := strings.Split(h, "=")
+			if len(keyValue) < 2 {
+				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+				continue
+			}
+			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		}
 	}
 	return client, nil
 }

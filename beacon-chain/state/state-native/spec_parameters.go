@@ -1,13 +1,13 @@
 package state_native
 
 import (
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {
 	switch b.version {
-	case version.Bellatrix:
+	case version.Bellatrix, version.Capella:
 		return params.BeaconConfig().ProportionalSlashingMultiplierBellatrix, nil
 	case version.Altair:
 		return params.BeaconConfig().ProportionalSlashingMultiplierAltair, nil
@@ -19,7 +19,7 @@ func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {
 
 func (b *BeaconState) InactivityPenaltyQuotient() (uint64, error) {
 	switch b.version {
-	case version.Bellatrix:
+	case version.Bellatrix, version.Capella:
 		return params.BeaconConfig().InactivityPenaltyQuotientBellatrix, nil
 	case version.Altair:
 		return params.BeaconConfig().InactivityPenaltyQuotientAltair, nil

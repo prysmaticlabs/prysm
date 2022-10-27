@@ -17,7 +17,7 @@ go_library(
         "rpc.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/slasher",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/slasher/simulator:__subpackages__",
@@ -74,6 +74,7 @@ go_test(
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/operations/slashings/mock:go_default_library",
         "//beacon-chain/slasher/mock:go_default_library",
         "//beacon-chain/slasher/types:go_default_library",

@@ -1,15 +1,16 @@
 package interop_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-yaml/yaml"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type TestCase struct {
@@ -27,7 +28,7 @@ func TestKeyGenerator(t *testing.T) {
 	require.NoError(t, err)
 	testCases := &KeyTest{}
 	require.NoError(t, yaml.Unmarshal(file, testCases))
-	priv, _, err := interop.DeterministicallyGenerateKeys(0, 1000)
+	priv, pubkeys, err := interop.DeterministicallyGenerateKeys(0, 1000)
 	require.NoError(t, err)
 	// cross-check with the first 1000 keys generated from the python spec
 	for i, key := range priv {
@@ -38,5 +39,6 @@ func TestKeyGenerator(t *testing.T) {
 			continue
 		}
 		assert.DeepEqual(t, key.Marshal(), nKey)
+		fmt.Println(fmt.Sprintf("pubkey: %s privkey: %s ", hexutil.Encode(pubkeys[i].Marshal()), hexutil.Encode(key.Marshal())))
 	}
 }

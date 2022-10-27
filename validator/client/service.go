@@ -11,22 +11,22 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
-	"github.com/prysmaticlabs/prysm/async/event"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/graffiti"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -51,7 +51,6 @@ type ValidatorService struct {
 	useWeb                bool
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
-	logDutyCountDown      bool
 	interopKeysConfig     *local.InteropKeymanagerConfig
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
@@ -70,7 +69,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	ProposerSettings      *validatorserviceconfig.ProposerSettings
+	proposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -78,7 +77,6 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
-	LogDutyCountDown           bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -121,9 +119,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		useWeb:                cfg.UseWeb,
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
-		logDutyCountDown:      cfg.LogDutyCountDown,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
-		ProposerSettings:      cfg.ProposerSettings,
+		proposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -166,7 +163,7 @@ func (v *ValidatorService) Start() {
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
-		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		log.WithError(err).Error("Could not read slashable public keys from disk")
 		return
 	}
 	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
@@ -176,7 +173,7 @@ func (v *ValidatorService) Start() {
 
 	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
 	if err != nil {
-		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		log.WithError(err).Error("Could not read graffiti ordered index from disk")
 		return
 	}
 
@@ -206,9 +203,8 @@ func (v *ValidatorService) Start() {
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
-		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		ProposerSettings:               v.ProposerSettings,
+		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
@@ -252,6 +248,15 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
 }
 
+func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return v.validator.ProposerSettings()
+}
+
+func (v *ValidatorService) SetProposerSettings(settings *validatorserviceconfig.ProposerSettings) {
+	v.proposerSettings = settings
+	v.validator.SetProposerSettings(settings)
+}
+
 // ConstructDialOptions constructs a list of grpc dial options
 func ConstructDialOptions(
 	maxCallRecvMsgSize int,
@@ -264,7 +269,7 @@ func ConstructDialOptions(
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
+			log.WithError(err).Error("Could not get valid credentials")
 			return nil
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)

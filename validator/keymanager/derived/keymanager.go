@@ -6,14 +6,14 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
 	util "github.com/wealdtech/go-eth2-util"
 )
 
@@ -59,9 +59,9 @@ func NewKeymanager(
 // from a derived seed, encrypt them according to the EIP-2334 JSON standard, and write them
 // to disk. Then, the mnemonic is never stored nor used by the validator.
 func (km *Keymanager) RecoverAccountsFromMnemonic(
-	ctx context.Context, mnemonic, mnemonicPassphrase string, numAccounts int,
+	ctx context.Context, mnemonic, mnemonicLanguage, mnemonicPassphrase string, numAccounts int,
 ) error {
-	seed, err := seedFromMnemonic(mnemonic, mnemonicPassphrase)
+	seed, err := seedFromMnemonic(mnemonic, mnemonicLanguage, mnemonicPassphrase)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize new wallet seed file")
 	}

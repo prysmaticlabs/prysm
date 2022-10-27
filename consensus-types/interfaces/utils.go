@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // SignedBeaconBlockHeaderFromBlock function to retrieve signed block header from block.
@@ -38,9 +38,10 @@ func SignedBeaconBlockHeaderFromBlockInterface(sb SignedBeaconBlock) (*ethpb.Sig
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get block header of block")
 	}
+	sig := sb.Signature()
 	return &ethpb.SignedBeaconBlockHeader{
 		Header:    h,
-		Signature: sb.Signature(),
+		Signature: sig[:],
 	}, nil
 }
 
@@ -73,11 +74,13 @@ func BeaconBlockHeaderFromBlockInterface(block BeaconBlock) (*ethpb.BeaconBlockH
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
 	}
+	parentRoot := block.ParentRoot()
+	stateRoot := block.StateRoot()
 	return &ethpb.BeaconBlockHeader{
 		Slot:          block.Slot(),
 		ProposerIndex: block.ProposerIndex(),
-		ParentRoot:    block.ParentRoot(),
-		StateRoot:     block.StateRoot(),
+		ParentRoot:    parentRoot[:],
+		StateRoot:     stateRoot[:],
 		BodyRoot:      bodyRoot[:],
 	}, nil
 }

@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // We test the algorithm to update a node from SYNCING to INVALID
@@ -388,4 +388,15 @@ func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
 		return bytesutil.BytesToUint64BigEndian(roots[i][:]) < bytesutil.BytesToUint64BigEndian(roots[j][:])
 	})
 	require.DeepEqual(t, roots, [][32]byte{{'b'}, {'c'}, {'d'}, {'e'}})
+}
+
+func TestSetOptimisticToValid(t *testing.T) {
+	f := setup(1, 1)
+	op, err := f.IsOptimistic([32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, true, op)
+	require.NoError(t, f.SetOptimisticToValid(context.Background(), [32]byte{}))
+	op, err = f.IsOptimistic([32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, false, op)
 }

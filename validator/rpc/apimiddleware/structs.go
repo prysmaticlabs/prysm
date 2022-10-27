@@ -1,81 +1,98 @@
 package apimiddleware
 
-type listKeystoresResponseJson struct {
-	Keystores []*keystoreJson `json:"data"`
+type ListKeystoresResponseJson struct {
+	Keystores []*KeystoreJson `json:"data"`
 }
 
-type keystoreJson struct {
+type KeystoreJson struct {
 	ValidatingPubkey string `json:"validating_pubkey" hex:"true"`
 	DerivationPath   string `json:"derivation_path"`
 }
 
-type importKeystoresRequestJson struct {
+type ImportKeystoresRequestJson struct {
 	Keystores          []string `json:"keystores"`
 	Passwords          []string `json:"passwords"`
 	SlashingProtection string   `json:"slashing_protection"`
 }
 
-type importKeystoresResponseJson struct {
-	Statuses []*statusJson `json:"data"`
+type ImportKeystoresResponseJson struct {
+	Statuses []*StatusJson `json:"data"`
 }
 
-type deleteKeystoresRequestJson struct {
+type DeleteKeystoresRequestJson struct {
 	PublicKeys []string `json:"pubkeys" hex:"true"`
 }
 
-type statusJson struct {
-	Status  string `json:"status"`
+type StatusJson struct {
+	Status  string `json:"status" enum:"true"`
 	Message string `json:"message"`
 }
 
-type deleteKeystoresResponseJson struct {
-	Statuses           []*statusJson `json:"data"`
+type DeleteKeystoresResponseJson struct {
+	Statuses           []*StatusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
 }
 
 //remote keymanager api
 
-type listRemoteKeysResponseJson struct {
-	Keystores []*remoteKeysListJson `json:"data"`
+type ListRemoteKeysResponseJson struct {
+	Keystores []*RemoteKeysListJson `json:"data"`
 }
 
-type remoteKeysListJson struct {
+type RemoteKeysListJson struct {
 	Pubkey   string `json:"pubkey" hex:"true"`
 	Url      string `json:"url"`
 	Readonly bool   `json:"readonly"`
 }
 
-type remoteKeysJson struct {
+type RemoteKeysJson struct {
 	Pubkey   string `json:"pubkey" hex:"true"`
 	Url      string `json:"url"`
 	Readonly bool   `json:"readonly"`
 }
 
-type importRemoteKeysRequestJson struct {
-	Keystores []*remoteKeysJson `json:"remote_keys"`
+type ImportRemoteKeysRequestJson struct {
+	Keystores []*RemoteKeysJson `json:"remote_keys"`
 }
 
-type importRemoteKeysResponseJson struct {
-	Statuses []*statusJson `json:"data"`
+type ImportRemoteKeysResponseJson struct {
+	Statuses []*StatusJson `json:"data"`
 }
 
-type deleteRemoteKeysRequestJson struct {
+type DeleteRemoteKeysRequestJson struct {
 	PublicKeys []string `json:"pubkeys" hex:"true"`
 }
 
-type deleteRemoteKeysResponseJson struct {
-	Statuses []*statusJson `json:"data"`
+type DeleteRemoteKeysResponseJson struct {
+	Statuses []*StatusJson `json:"data"`
 }
 
-type feeRecipientJson struct {
+type FeeRecipientJson struct {
 	Pubkey     string `json:"pubkey" hex:"true"`
 	Ethaddress string `json:"ethaddress" address:"true"`
 }
 
-type getFeeRecipientByPubkeyResponseJson struct {
-	Data *feeRecipientJson `json:"data"`
+type GasLimitJson struct {
+	Pubkey   string `json:"pubkey" hex:"true"`
+	GasLimit string `json:"gas_limit"`
 }
 
-type setFeeRecipientByPubkeyRequestJson struct {
+type GetFeeRecipientByPubkeyResponseJson struct {
+	Data *FeeRecipientJson `json:"data"`
+}
+
+type SetFeeRecipientByPubkeyRequestJson struct {
 	Ethaddress string `json:"ethaddress" hex:"true"`
+}
+
+type GetGasLimitResponseJson struct {
+	Data *GasLimitJson `json:"data"`
+}
+
+type SetGasLimitRequestJson struct {
+	GasLimit string `json:"gas_limit"`
+}
+
+type DeleteGasLimitRequestJson struct {
+	Pubkey string `json:"pubkey" hex:"true"`
 }

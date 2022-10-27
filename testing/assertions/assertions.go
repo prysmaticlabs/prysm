@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/d4l3k/messagediff"
-	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	"github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
 )
@@ -99,6 +99,9 @@ func ErrorIs(loggerFn assertionLoggerFn, err, target error, msg ...interface{}) 
 
 // ErrorContains asserts that actual error contains wanted message.
 func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...interface{}) {
+	if want == "" {
+		loggerFn("Want string can't be empty")
+	}
 	if err == nil || !strings.Contains(err.Error(), want) {
 		errMsg := parseMsg("Expected error not returned", msg...)
 		_, file, line, _ := runtime.Caller(2)
@@ -132,7 +135,7 @@ func isNil(obj interface{}) bool {
 func LogsContain(loggerFn assertionLoggerFn, hook *test.Hook, want string, flag bool, msg ...interface{}) {
 	_, file, line, _ := runtime.Caller(2)
 	entries := hook.AllEntries()
-	var logs []string
+	logs := make([]string, 0, len(entries))
 	match := false
 	for _, e := range entries {
 		msg, err := e.String()

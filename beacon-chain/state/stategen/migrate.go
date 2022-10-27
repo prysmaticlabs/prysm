@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -17,6 +17,12 @@ import (
 func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
+
+	// When migrating states we choose to acquire the migration lock before
+	// proceeding. This is to prevent multiple migration routines from overwriting each
+	// other.
+	s.migrationLock.Lock()
+	defer s.migrationLock.Unlock()
 
 	s.finalizedInfo.lock.RLock()
 	oldFSlot := s.finalizedInfo.slot

@@ -7,21 +7,22 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/async"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -86,7 +87,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := blocks.NewBeaconBlock(b.Block)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -104,7 +105,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		return
 	}
 
-	blk, err := wrapper.BuildSignedBeaconBlock(wb, sig)
+	blk, err := blocks.BuildSignedBeaconBlock(wb, sig)
 	if err != nil {
 		log.WithError(err).Error("Failed to build signed beacon block")
 		return
@@ -150,29 +151,32 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 			log.WithError(err).Error("Failed to get execution payload")
 			return
 		}
-		txs, err := p.Transactions()
-		if err != nil {
-			log.WithError(err).Error("Failed to get execution payload transactions")
-			return
-		}
 		log = log.WithFields(logrus.Fields{
 			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
 			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash())),
 			"blockNumber": p.BlockNumber,
-			"txCount":     len(txs),
 		})
+		if !blk.IsBlinded() {
+			txs, err := p.Transactions()
+			if err != nil {
+				log.WithError(err).Error("Failed to get execution payload transactions")
+				return
+			}
+			log = log.WithField("txCount", len(txs))
+		}
 		if p.GasLimit() != 0 {
 			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
 		}
 	}
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),
 		"blockRoot":       blkRoot,
 		"numAttestations": len(blk.Block().Body().Attestations()),
 		"numDeposits":     len(blk.Block().Body().Deposits()),
-		"graffiti":        string(blk.Block().Body().Graffiti()),
+		"graffiti":        string(graffiti[:]),
 		"fork":            version.String(blk.Block().Version()),
 	}).Info("Submitted new block")
 
@@ -203,9 +207,9 @@ func ProposeExit(
 	}
 	totalSecondsPassed := prysmTime.Now().Unix() - genesisResponse.GenesisTime.Seconds
 	currentEpoch := types.Epoch(uint64(totalSecondsPassed) / uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)))
-
+	currentSlot := slots.CurrentSlot(uint64(genesisResponse.GenesisTime.AsTime().Unix()))
 	exit := &ethpb.VoluntaryExit{Epoch: currentEpoch, ValidatorIndex: indexResponse.Index}
-	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit)
+	sig, err := signVoluntaryExit(ctx, validatorClient, signer, pubKey, exit, currentSlot)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign voluntary exit")
 	}
@@ -267,11 +271,15 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, signingRootErr)
 	}
+	sro, err := b.AsSignRequestObject()
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,
-		Object:          b.AsSignRequestObject(),
+		Object:          sro,
 		SigningSlot:     slot,
 	})
 	if err != nil {
@@ -287,6 +295,7 @@ func signVoluntaryExit(
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
+	slot types.Slot,
 ) ([]byte, error) {
 	req := &ethpb.DomainRequest{
 		Epoch:  exit.Epoch,
@@ -311,6 +320,7 @@ func signVoluntaryExit(
 		SigningRoot:     exitRoot[:],
 		SignatureDomain: domain.SignatureDomain,
 		Object:          &validatorpb.SignRequest_Exit{Exit: exit},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, signExitErr)

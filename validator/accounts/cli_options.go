@@ -1,9 +1,10 @@
 package accounts
 
 import (
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
@@ -22,6 +23,22 @@ func WithWallet(wallet *wallet.Wallet) Option {
 func WithKeymanager(km keymanager.IKeymanager) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.keymanager = km
+		return nil
+	}
+}
+
+// WithKeymanagerType provides a keymanager to the accounts cli manager.
+func WithKeymanagerType(k keymanager.Kind) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keymanagerKind = k
+		return nil
+	}
+}
+
+// WithKeymanagerOpts provides a keymanager configuration to the accounts cli manager.
+func WithKeymanagerOpts(kmo *remote.KeymanagerOpts) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keymanagerOpts = kmo
 		return nil
 	}
 }
@@ -106,6 +123,22 @@ func WithImportPrivateKeys(importPrivateKeys bool) Option {
 	}
 }
 
+// WithSkipMnemonicConfirm indicates whether to skip the mnemonic confirmation.
+func WithSkipMnemonicConfirm(s bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.skipMnemonicConfirm = s
+		return nil
+	}
+}
+
+// WithMnemonicLanguage specifies the language used for the mnemonic passphrase.
+func WithMnemonicLanguage(mnemonicLanguage string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonicLanguage = mnemonicLanguage
+		return nil
+	}
+}
+
 // WithPrivateKeyFile specifies the private key path.
 func WithPrivateKeyFile(privateKeyFile string) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -166,6 +199,46 @@ func WithRawPubKeys(rawPubKeys [][]byte) Option {
 func WithFormattedPubKeys(formattedPubKeys []string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.formattedPubKeys = formattedPubKeys
+		return nil
+	}
+}
+
+// WithWalletDir specifies the password for backups.
+func WithWalletDir(walletDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletDir = walletDir
+		return nil
+	}
+}
+
+// WithWalletPassword specifies the password for backups.
+func WithWalletPassword(walletPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletPassword = walletPassword
+		return nil
+	}
+}
+
+// WithMnemonic specifies the password for backups.
+func WithMnemonic(mnemonic string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic = mnemonic
+		return nil
+	}
+}
+
+// WithMnemonic25thWord specifies the password for backups.
+func WithMnemonic25thWord(mnemonic25thWord string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonic25thWord = mnemonic25thWord
+		return nil
+	}
+}
+
+// WithNumAccounts specifies the number of accounts.
+func WithNumAccounts(numAccounts int) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.numAccounts = numAccounts
 		return nil
 	}
 }

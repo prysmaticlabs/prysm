@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -13,39 +12,40 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/validator"
-	beaconv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/beacon"
-	debugv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/debug"
-	nodev1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/node"
-	validatorv1alpha1 "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	slasherservice "github.com/prysmaticlabs/prysm/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	chainSync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	opfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/validator"
+	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/beacon"
+	debugv1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/debug"
+	nodev1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/node"
+	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
+	slasherservice "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	chainSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -132,7 +132,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
+		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
 	}
 	s.listener = lis
 	log.WithField("address", address).Info("gRPC server listening on port")
@@ -239,7 +239,8 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -336,7 +337,6 @@ func (s *Service) Start() {
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,
 			HeadFetcher:        s.cfg.HeadFetcher,
-			ForkFetcher:        s.cfg.ForkFetcher,
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 			ReplayerBuilder:    ch,
@@ -352,6 +352,7 @@ func (s *Service) Start() {
 				ReplayerBuilder:    ch,
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+			ForkFetcher:           s.cfg.ForkFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
@@ -364,7 +365,7 @@ func (s *Service) Start() {
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.Errorf("Could not serve gRPC: %v", err)
+				log.WithError(err).Errorf("Could not serve gRPC")
 			}
 		}
 	}()
@@ -382,6 +383,14 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if service is optimistic")
+	}
+	if optimistic {
+		return errors.New("service is optimistic, validators can't perform duties " +
+			"please check if execution layer is fully synced")
+	}
 	if s.cfg.SyncService.Syncing() {
 		return errors.New("syncing")
 	}

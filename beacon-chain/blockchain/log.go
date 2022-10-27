@@ -6,14 +6,15 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusBlocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,10 +52,15 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		}
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
 		txs, err := p.Transactions()
-		if err != nil {
+		switch {
+		case errors.Is(err, consensusBlocks.ErrUnsupportedGetter):
+		case err != nil:
 			return err
+		default:
+			log = log.WithField("txCount", len(txs))
+			txsPerSlotCount.Set(float64(len(txs)))
 		}
-		log = log.WithField("txCount", len(txs))
+
 	}
 	log.Info("Finished applying state transition")
 	return nil
@@ -67,6 +73,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 	}
 	level := log.Logger.GetLevel()
 	if level >= logrus.DebugLevel {
+		parentRoot := block.ParentRoot()
 		log.WithFields(logrus.Fields{
 			"slot":                      block.Slot(),
 			"slotInEpoch":               block.Slot() % params.BeaconConfig().SlotsPerEpoch,
@@ -76,7 +83,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"justifiedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(justified.Root)[:8]),
 			"finalizedEpoch":            finalized.Epoch,
 			"finalizedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
-			"parentRoot":                fmt.Sprintf("0x%s...", hex.EncodeToString(block.ParentRoot())[:8]),
+			"parentRoot":                fmt.Sprintf("0x%s...", hex.EncodeToString(parentRoot[:])[:8]),
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
