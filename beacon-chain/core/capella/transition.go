@@ -8,6 +8,10 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
+// ETH1AddressOffset is the offset at which the execution address starts
+// within an ETH1-prefixed withdrawal credential
+const ETH1AddressOffset = 12
+
 // WithdrawBalance withdraws the balance from the validator and creates a
 // withdrawal receipt for the EL to process
 func withdrawBalance(pre state.BeaconState, index types.ValidatorIndex, amount uint64) (state.BeaconState, error) {
@@ -35,7 +39,7 @@ func withdrawBalance(pre state.BeaconState, index types.ValidatorIndex, amount u
 	withdrawal := &enginev1.Withdrawal{
 		WithdrawalIndex:  withdrawalIndex,
 		ValidatorIndex:   index,
-		ExecutionAddress: val.WithdrawalCredentials()[12:],
+		ExecutionAddress: val.WithdrawalCredentials()[ETH1AddressOffset:],
 		Amount:           amount,
 	}
 
