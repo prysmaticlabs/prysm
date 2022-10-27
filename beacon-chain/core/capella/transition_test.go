@@ -75,57 +75,103 @@ func TestWithdrawBalance(t *testing.T) {
 }
 
 func TestProcessWithdrawalsIntoQueue(t *testing.T) {
+	creds1 := make([]byte, fieldparams.RootLength)
+	creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	val0 := &ethpb.Validator{
+		WithdrawableEpoch:     12,
+		WithdrawalCredentials: creds1,
+		EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+	}
 	t.Run("process all withrawals", func(t *testing.T) {
 		// Validators 0, 2, 5, are partially withdrawable, validator 3 is fully
 		// withdrawable. Validators 1 and 4 are not withdrawable
-		creds1 := make([]byte, fieldparams.RootLength)
-		creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-		val0 := &ethpb.Validator{
-			WithdrawalCredentials: creds1,
-		}
 		val1 := &ethpb.Validator{
+			WithdrawableEpoch:     12,
 			WithdrawalCredentials: creds1,
 		}
 		val2 := &ethpb.Validator{
+			WithdrawableEpoch:     12,
 			WithdrawalCredentials: creds1,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}
 		val3 := &ethpb.Validator{
+			WithdrawableEpoch:     9,
 			WithdrawalCredentials: creds1,
 		}
 		val5 := &ethpb.Validator{
-			WithdrawalCredentials: creds1,
 			WithdrawableEpoch:     12,
+			WithdrawalCredentials: creds1,
+			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}
 
 		creds2 := make([]byte, fieldparams.RootLength)
 		val4 := &ethpb.Validator{
+			WithdrawableEpoch:     9,
 			WithdrawalCredentials: creds2,
 		}
-		vals := []*ethpb.Validator{val0, val1, val2, val3, val4, val5}
-		balances := []uint64{
-			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
-			params.BeaconConfig().MaxEffectiveBalance - params.BeaconConfig().MinDepositAmount, // not partially withdrawable
-			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
-			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
-			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount, // BLS credentials
-			params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount,
+		vals := make([]*ethpb.Validator, 2*params.BeaconConfig().MaxWithdrawalsPerEpoch)
+		vals[0] = val0
+		vals[1] = val1
+		vals[2] = val2
+		vals[3] = val3
+		vals[4] = val4
+		vals[5] = val5
+		for idx := 6; idx < len(vals); idx++ {
+			vals[idx] = &ethpb.Validator{}
 		}
 
+		balances := make([]uint64, len(vals))
+		balances[0] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount
+		balances[1] = params.BeaconConfig().MaxEffectiveBalance - params.BeaconConfig().MinDepositAmount // not partially withdrawable
+		balances[2] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount
+		balances[3] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount
+		balances[4] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount // BLS credentials
+		balances[5] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount
+
 		base := &ethpb.BeaconStateCapella{
-			Slot:                10 * params.BeaconConfig().SlotsPerEpoch,
-			NextWithdrawalIndex: 2,
-			WithdrawalQueue:     make([]*enginev1.Withdrawal, 2),
-			Validators:          vals,
-			Balances:            balances,
+			Slot:       10 * params.BeaconConfig().SlotsPerEpoch,
+			Validators: vals,
+			Balances:   balances,
 		}
 
 		s, err := state_native.InitializeFromProtoCapella(base)
 		require.NoError(t, err)
+
 		pos, err := processWithdrawalsIntoQueue(s)
 		require.NoError(t, err)
 		queue, err := pos.WithdrawalQueue()
 		require.NoError(t, err)
 		require.Equal(t, 4, len(queue))
+	})
+
+	t.Run("Stop early when validators are withdrawable", func(t *testing.T) {
+		vals := make([]*ethpb.Validator, 2*params.BeaconConfig().MaxWithdrawalsPerEpoch)
+		balances := make([]uint64, len(vals))
+		for i := range vals {
+			vals[i] = val0
+			balances[i] = params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().MinDepositAmount
+		}
+		base := &ethpb.BeaconStateCapella{
+			Slot:       10 * params.BeaconConfig().SlotsPerEpoch,
+			Validators: vals,
+			Balances:   balances,
+		}
+
+		s, err := state_native.InitializeFromProtoCapella(base)
+		require.NoError(t, err)
+
+		pos, err := processWithdrawalsIntoQueue(s)
+		require.NoError(t, err)
+		queue, err := pos.WithdrawalQueue()
+		require.NoError(t, err)
+		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerEpoch, uint64(len(queue)))
+		expected, err := pos.BalanceAtIndex(types.ValidatorIndex(params.BeaconConfig().MaxWithdrawalsPerEpoch - 1))
+		require.NoError(t, err)
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, expected)
+
+		expected, err = pos.BalanceAtIndex(types.ValidatorIndex(params.BeaconConfig().MaxWithdrawalsPerEpoch))
+		require.NoError(t, err)
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance+params.BeaconConfig().MinDepositAmount, expected)
 	})
 
 }

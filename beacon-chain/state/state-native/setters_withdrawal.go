@@ -88,16 +88,16 @@ func (b *BeaconState) IncreaseNextWithdrawalIndex() error {
 	return nil
 }
 
-// SetNextPartialWithdrawalValidatorIndex sets the index of the validator which is
+// SetNextWithdrawalValidatorIndex sets the index of the validator which is
 // next in line for a partial withdrawal.
-func (b *BeaconState) SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error {
+func (b *BeaconState) SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error {
 	if b.version < version.Capella {
-		return errNotSupported("SetNextPartialWithdrawalValidatorIndex", b.version)
+		return errNotSupported("SetNextWithdrawalValidatorIndex", b.version)
 	}
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.nextPartialWithdrawalValidatorIndex = i
+	b.nextWithdrawalValidatorIndex = i
 	return nil
 }

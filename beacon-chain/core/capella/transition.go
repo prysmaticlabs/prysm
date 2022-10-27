@@ -65,6 +65,7 @@ func processWithdrawalsIntoQueue(pre state.BeaconState) (state.BeaconState, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next withdrawal index")
 	}
+	startIndex := index
 	// protection for invalid next withdrawal validator index
 	// This should not happen in runtime
 	if index >= types.ValidatorIndex(len(validators)) {
@@ -93,11 +94,13 @@ func processWithdrawalsIntoQueue(pre state.BeaconState) (state.BeaconState, erro
 				return nil, errors.Wrap(err, "could not withdraw validator balance")
 			}
 			count++
-		} else {
-			index++
-			if index == types.ValidatorIndex(len(validators)) {
-				index = types.ValidatorIndex(0)
-			}
+		}
+		index++
+		if index == types.ValidatorIndex(len(validators)) {
+			index = types.ValidatorIndex(0)
+		}
+		if index == startIndex {
+			break
 		}
 	}
 	return s, nil

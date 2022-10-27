@@ -82,7 +82,7 @@ var capellaFields = append(
 	nativetypes.LatestExecutionPayloadHeaderCapella,
 	nativetypes.WithdrawalQueue,
 	nativetypes.NextWithdrawalIndex,
-	nativetypes.NextPartialWithdrawalValidatorIndex,
+	nativetypes.NextWithdrawalValidatorIndex,
 )
 
 const (
@@ -434,7 +434,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
 		withdrawalQueue:                     st.WithdrawalQueue,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		nextPartialWithdrawalValidatorIndex: st.NextPartialWithdrawalValidatorIndex,
+		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -497,11 +497,11 @@ func (b *BeaconState) Copy() state.BeaconState {
 		version: b.version,
 
 		// Primitive nativetypes, safe to copy.
-		genesisTime:                         b.genesisTime,
-		slot:                                b.slot,
-		eth1DepositIndex:                    b.eth1DepositIndex,
-		nextWithdrawalIndex:                 b.nextWithdrawalIndex,
-		nextPartialWithdrawalValidatorIndex: b.nextPartialWithdrawalValidatorIndex,
+		genesisTime:                  b.genesisTime,
+		slot:                         b.slot,
+		eth1DepositIndex:             b.eth1DepositIndex,
+		nextWithdrawalIndex:          b.nextWithdrawalIndex,
+		nextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
@@ -837,8 +837,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return ssz.WithdrawalSliceRoot(hasher, b.withdrawalQueue, fieldparams.WithdrawalQueueLimit)
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
-	case nativetypes.NextPartialWithdrawalValidatorIndex:
-		return ssz.Uint64Root(uint64(b.nextPartialWithdrawalValidatorIndex)), nil
+	case nativetypes.NextWithdrawalValidatorIndex:
+		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
