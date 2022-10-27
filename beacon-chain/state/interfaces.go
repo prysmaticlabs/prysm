@@ -90,6 +90,7 @@ type WriteOnlyBeaconState interface {
 	SetNextWithdrawalIndex(i uint64) error
 	IncreaseNextWithdrawalIndex() error
 	SetNextPartialWithdrawalValidatorIndex(i types.ValidatorIndex) error
+	AppendWithdrawal(*enginev1.Withdrawal) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.

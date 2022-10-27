@@ -1,0 +1,28 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "transition.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella",
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//testing/endtoend/evaluators:__subpackages__",
+        "//testing/spectest:__subpackages__",
+        "//testing/util:__pkg__",
+        "//validator/client:__pkg__",
+    ],
+    deps = [
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "transition_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+    ],
+)
