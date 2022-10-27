@@ -114,10 +114,6 @@ var (
 		Name:  "disable-gossip-batch-aggregation",
 		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
 	}
-	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
-		Name:  "enable-only-blinded-beacon-blocks",
-		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
-	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
@@ -125,6 +121,10 @@ var (
 		Hidden: true,
 	}
 	enableFullSSZDataLogging = &cli.BoolFlag{
+		Name:  "enable-full-ssz-data-logging",
+		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
+	}
+	SaveFullExecutionPayloads = &cli.BoolFlag{
 		Name:  "enable-full-ssz-data-logging",
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
@@ -169,7 +169,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableVecHTR,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
-	EnableOnlyBlindedBeaconBlocks,
+	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	disableDefensivePull,
 	enableFullSSZDataLogging,

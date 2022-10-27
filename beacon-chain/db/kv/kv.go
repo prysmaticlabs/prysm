@@ -144,6 +144,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		}
 	}
 	datafile := KVStoreDatafilePath(dirPath)
+	isFreshDatabase := !file.FileExists(datafile)
 	log.Infof("Opening Bolt DB at %s", datafile)
 	boltDB, err := bolt.Open(
 		datafile,
@@ -194,7 +195,8 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	if err = prometheus.Register(createBoltCollector(kv.db)); err != nil {
 		return nil, err
 	}
-	if err = kv.checkNeedsResync(); err != nil {
+	// Setup the type of block storage used depending on whether or not this is a fresh database.
+	if err := kv.setupBlockStorageType(isFreshDatabase); err != nil {
 		return nil, err
 	}
 	return kv, nil
@@ -229,21 +231,37 @@ func (s *Store) DatabasePath() string {
 	return s.databasePath
 }
 
-func (s *Store) checkNeedsResync() error {
-	return s.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(migrationsBucket)
-		hasDisabledFeature := !features.Get().EnableOnlyBlindedBeaconBlocks
-		if hasDisabledFeature && bkt.Get(migrationBlindedBeaconBlocksKey) != nil {
-			return fmt.Errorf(
-				"you have disabled the flag %s, and your node must resync to ensure your "+
-					"database is compatible. If you do not want to resync, please re-enable the %s flag",
-				features.EnableOnlyBlindedBeaconBlocks.Name,
-				features.EnableOnlyBlindedBeaconBlocks.Name,
-			)
+func (s *Store) setupBlockStorageType(isFreshDatabase bool) error {
+	// If we are starting from a fresh database, we store a save blinded beacon blocks key
+	// in the chain metadata bucket unless the user wants to store full execution payloads.
+	if isFreshDatabase {
+		if features.Get().SaveFullExecutionPayloads {
+			return nil
 		}
+		return s.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(chainMetadataBucket)
+			return bkt.Put(saveBlindedBeaconBlocksKey, []byte{1})
+		})
+	}
+	var hasSaveBlindedBeaconBlocksKey bool
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(chainMetadataBucket)
+		hasSaveBlindedBeaconBlocksKey = bkt.Get(saveBlindedBeaconBlocksKey) != nil
 		return nil
-	})
-
+	}); err != nil {
+		return err
+	}
+	// If the user wants to save full execution payloads but their database is saving blinded blocks only,
+	// we then throw an error as the node should not start.
+	if features.Get().SaveFullExecutionPayloads && hasSaveBlindedBeaconBlocksKey {
+		return fmt.Errorf(
+			"cannot use the %s flag with this existing database, as it has already been initialized to only store "+
+				"execution payload headers. If you want to use this flag, you must re-sync your node with a fresh "+
+				"database. We recommend using checkpoint sync https://docs.prylabs.network/docs/prysm-usage/checkpoint-sync/",
+			features.SaveFullExecutionPayloads.Name,
+		)
+	}
+	return nil
 }
 
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {

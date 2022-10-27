@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -282,12 +281,20 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 	blockRoots := make([][]byte, len(blks))
 	encodedBlocks := make([][]byte, len(blks))
 	indicesForBlocks := make([]map[string][]byte, len(blks))
+	var saveBlindedBlocks bool
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(chainMetadataBucket)
+		saveBlindedBlocks = bkt.Get(saveBlindedBeaconBlocksKey) != nil
+		return nil
+	}); err != nil {
+		return err
+	}
 	for i, blk := range blks {
 		blockRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
-		enc, err := marshalBlock(ctx, blk)
+		enc, err := marshalBlock(ctx, blk, saveBlindedBlocks)
 		if err != nil {
 			return err
 		}
@@ -305,7 +312,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if features.Get().EnableOnlyBlindedBeaconBlocks {
+			if saveBlindedBlocks {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
 					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
@@ -800,11 +807,11 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 }
 
 // marshal versioned beacon block from struct type down to bytes.
-func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
+func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock, saveBlindedBlocks bool) ([]byte, error) {
 	var encodedBlock []byte
 	var err error
 	blockToSave := blk
-	if features.Get().EnableOnlyBlindedBeaconBlocks {
+	if saveBlindedBlocks {
 		blindedBlock, err := blk.ToBlinded()
 		switch {
 		case errors.Is(err, blocks.ErrUnsupportedVersion):
