@@ -39,7 +39,6 @@ require (
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/json-iterator/go v1.1.12
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
-	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/kr/pretty v0.3.0
 	github.com/libp2p/go-libp2p v0.22.0
 	github.com/libp2p/go-libp2p-pubsub v0.8.0

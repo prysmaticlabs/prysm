@@ -183,6 +183,12 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
+	slot, err := slots.EpochStart(req.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(slot)
+
 	return &ethpbv1.ProposerDutiesResponse{
 		DependentRoot:       root,
 		Data:                duties,
@@ -673,7 +679,7 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()

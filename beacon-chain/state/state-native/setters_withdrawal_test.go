@@ -18,11 +18,13 @@ func TestSetWithdrawalQueue(t *testing.T) {
 				WithdrawalIndex:  0,
 				ExecutionAddress: []byte("address1"),
 				Amount:           1,
+				ValidatorIndex:   2,
 			},
 			{
 				WithdrawalIndex:  1,
 				ExecutionAddress: []byte("address2"),
 				Amount:           2,
+				ValidatorIndex:   3,
 			},
 		}
 		newQ := []*enginev1.Withdrawal{
@@ -30,11 +32,13 @@ func TestSetWithdrawalQueue(t *testing.T) {
 				WithdrawalIndex:  2,
 				ExecutionAddress: []byte("address3"),
 				Amount:           3,
+				ValidatorIndex:   4,
 			},
 			{
 				WithdrawalIndex:  3,
 				ExecutionAddress: []byte("address4"),
 				Amount:           4,
+				ValidatorIndex:   5,
 			},
 		}
 		s := BeaconState{
@@ -61,11 +65,13 @@ func TestAppendWithdrawal(t *testing.T) {
 			WithdrawalIndex:  0,
 			ExecutionAddress: []byte("address1"),
 			Amount:           1,
+			ValidatorIndex:   2,
 		}
 		oldWithdrawal2 := &enginev1.Withdrawal{
 			WithdrawalIndex:  1,
 			ExecutionAddress: []byte("address2"),
 			Amount:           2,
+			ValidatorIndex:   3,
 		}
 		q := []*enginev1.Withdrawal{oldWithdrawal1, oldWithdrawal2}
 		s := BeaconState{
@@ -80,6 +86,7 @@ func TestAppendWithdrawal(t *testing.T) {
 			WithdrawalIndex:  2,
 			ExecutionAddress: []byte("address3"),
 			Amount:           3,
+			ValidatorIndex:   4,
 		}
 		err := s.AppendWithdrawal(newWithdrawal)
 		require.NoError(t, err)

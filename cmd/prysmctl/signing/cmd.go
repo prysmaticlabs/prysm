@@ -36,6 +36,7 @@ var Commands = []*cli.Command{
 					flags.GrpcRetriesFlag,
 					flags.GrpcRetryDelayFlag,
 					flags.ExitAllFlag,
+					flags.ForceExitFlag,
 					features.Mainnet,
 					features.PraterTestnet,
 					features.RopstenTestnet,

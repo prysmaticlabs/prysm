@@ -1884,13 +1884,6 @@ def prysm_deps():
     )
 
     go_repository(
-        name = "com_github_kevinms_leakybucket_go",
-        importpath = "github.com/kevinms/leakybucket-go",
-        sum = "h1:qNtd6alRqd3qOdPrKXMZImV192ngQ0WSh1briEO33Tk=",
-        version = "v0.0.0-20200115003610-082473db97ca",
-    )
-
-    go_repository(
         name = "com_github_kisielk_errcheck",
         importpath = "github.com/kisielk/errcheck",
         sum = "h1:e8esj/e4R+SAOwFwN+n3zr0nYeCyeweozKfO23MvHzY=",
