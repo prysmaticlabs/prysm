@@ -125,8 +125,8 @@ var (
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
 	SaveFullExecutionPayloads = &cli.BoolFlag{
-		Name:  "enable-full-ssz-data-logging",
-		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
+		Name:  "save-full-execution-payloads",
+		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database",
 	}
 )
 
