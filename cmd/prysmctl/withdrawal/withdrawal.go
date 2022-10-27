@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 	"gopkg.in/yaml.v2"
@@ -21,34 +25,10 @@ var withdrawalFlags = struct {
 	File           string
 }{}
 
-var Commands = []*cli.Command{
-	{
-		Name:    "update-withdrawal-address",
-		Aliases: []string{"swa"},
-		Usage:   "command for setting the withdrawal ethereum address to the associated validator key",
-		Action:  cliActionLatest,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "beacon-node-host",
-				Usage:       "host:port for beacon node to query",
-				Destination: &withdrawalFlags.BeaconNodeHost,
-				Value:       "http://localhost:3500",
-			},
-			&cli.StringFlag{
-				Name:        "file",
-				Usage:       "file location for for the blsToExecutionAddress JSON or Yaml",
-				Destination: &withdrawalFlags.File,
-				Value:       "./blsToExecutionAddress.json",
-			},
-		},
-	},
-}
-
-func cliActionLatest(_ *cli.Context) error {
+func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
 	ctx := context.Background()
 	apiPath := "/blsToExecutionAddress"
 	f := withdrawalFlags
-
 	cleanpath := filepath.Clean(f.File)
 	b, err := os.ReadFile(cleanpath)
 	if err != nil {
@@ -67,6 +47,18 @@ func cliActionLatest(_ *cli.Context) error {
 	}
 	if u.Scheme == "" || u.Host == "" {
 		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", f.BeaconNodeHost)
+	}
+
+	withdrawalConfirmation := to.Message.ToExecutionAddress
+
+	withdraw, err := withdrawalPrompt(withdrawalConfirmation, r)
+	if err != nil {
+		return err
+	}
+
+	if !strings.EqualFold(withdraw, "n") {
+		log.Warn("Did not provide the correct acceptance message")
+		return nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "withdrawal.blsToExecutionAddress")
@@ -92,4 +84,21 @@ func cliActionLatest(_ *cli.Context) error {
 	}
 	log.Info("Successfully published message to update withdrawal address.")
 	return nil
+}
+
+func withdrawalPrompt(confirmationMessage string, r io.Reader) (string, error) {
+
+	au := aurora.NewAurora(true)
+	promptHeader := au.Red("===============IMPORTANT===============")
+	promptDescription := "Withdrawing funds is not yet possible. " +
+		"Please navigate to the following website and make sure you understand the current implications " +
+		"of a voluntary exit before making the final decision:"
+	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
+	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
+		"of the page from the above URL"
+	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
+	return prompt.ValidatePrompt(r, promptText, func(input string) error {
+		return prompt.ValidatePhrase(input, confirmationMessage)
+	})
+
 }
