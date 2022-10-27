@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/cmd/prysmctl/withdrawal"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/checkpointsync"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/db"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/deprecated"
@@ -11,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/signing"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/weaksubjectivity"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/withdrawal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
