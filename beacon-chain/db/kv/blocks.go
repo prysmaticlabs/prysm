@@ -284,7 +284,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 	var saveBlindedBlocks bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(chainMetadataBucket)
-		saveBlindedBlocks = bkt.Get(saveBlindedBeaconBlocksKey) != nil
+		saveBlindedBlocks = len(bkt.Get(saveBlindedBeaconBlocksKey)) > 0
 		return nil
 	}); err != nil {
 		return err
