@@ -2,7 +2,7 @@ package withdrawal
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 )
 
 type BlsToExecutionEngineMessage struct {
