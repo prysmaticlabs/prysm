@@ -37,7 +37,6 @@ build:minimal --@io_bazel_rules_go//go/config:tags=minimal
 
 # Release flags
 build:release --compilation_mode=opt
-build:release --config=llvm
 
 # LLVM compiler for building C/C++ dependencies.
 build:llvm --define compiler=llvm
