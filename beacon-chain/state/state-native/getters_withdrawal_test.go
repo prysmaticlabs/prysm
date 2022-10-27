@@ -52,14 +52,14 @@ func TestNextWithdrawalIndex(t *testing.T) {
 
 func TestNextPartialWithdrawalValidatorIndex(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := BeaconState{version: version.Capella, nextPartialWithdrawalValidatorIndex: 123}
-		i, err := s.NextPartialWithdrawalValidatorIndex()
+		s := BeaconState{version: version.Capella, nextWithdrawalValidatorIndex: 123}
+		i, err := s.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		assert.Equal(t, types.ValidatorIndex(123), i)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
 		s := BeaconState{version: version.Bellatrix}
-		_, err := s.NextPartialWithdrawalValidatorIndex()
-		assert.ErrorContains(t, "NextPartialWithdrawalValidatorIndex is not supported", err)
+		_, err := s.NextWithdrawalValidatorIndex()
+		assert.ErrorContains(t, "NextWithdrawalValidatorIndex is not supported", err)
 	})
 }

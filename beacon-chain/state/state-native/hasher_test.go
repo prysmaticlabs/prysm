@@ -258,7 +258,7 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 	require.NoError(t, beaconState.SetWithdrawalQueue([]*enginev1.Withdrawal{withdrawal()}))
 	require.NoError(t, beaconState.SetNextWithdrawalIndex(123))
-	require.NoError(t, beaconState.SetNextPartialWithdrawalValidatorIndex(123))
+	require.NoError(t, beaconState.SetNextWithdrawalValidatorIndex(123))
 
 	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
