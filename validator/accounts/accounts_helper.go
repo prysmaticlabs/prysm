@@ -141,6 +141,7 @@ func FilterExitAccountsFromUserInput(
 	cliCtx *cli.Context,
 	r io.Reader,
 	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
+	forceExit bool,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
@@ -195,6 +196,10 @@ func FilterExitAccountsFromUserInput(
 	} else {
 		rawPubKeys, formattedPubKeys = prepareAllKeys(validatingPublicKeys)
 		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
+	}
+
+	if forceExit {
+		return rawPubKeys, formattedPubKeys, nil
 	}
 
 	promptHeader := au.Red("===============IMPORTANT===============")
