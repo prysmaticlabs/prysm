@@ -45,6 +45,7 @@ type AccountsCLIManager struct {
 	privateKeyFile       string
 	passwordFilePath     string
 	keysDir              string
+	mnemonicLanguage     string
 	backupsDir           string
 	backupsPassword      string
 	filteredPubKeys      []bls.PublicKey

@@ -349,7 +349,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
