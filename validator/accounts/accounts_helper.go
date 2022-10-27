@@ -141,6 +141,7 @@ func FilterExitAccountsFromUserInput(
 	cliCtx *cli.Context,
 	r io.Reader,
 	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
+	forceExit bool,
 ) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
@@ -197,8 +198,12 @@ func FilterExitAccountsFromUserInput(
 		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
 	}
 
+	if forceExit {
+		return rawPubKeys, formattedPubKeys, nil
+	}
+
 	promptHeader := au.Red("===============IMPORTANT===============")
-	promptDescription := "Withdrawing funds is not possible in Phase 0 of the system. " +
+	promptDescription := "Withdrawing funds is not yet possible. " +
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
 	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
