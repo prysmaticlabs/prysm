@@ -203,7 +203,7 @@ func FilterExitAccountsFromUserInput(
 	}
 
 	promptHeader := au.Red("===============IMPORTANT===============")
-	promptDescription := "Withdrawing funds is not possible in Phase 0 of the system. " +
+	promptDescription := "Withdrawing funds is not yet possible. " +
 		"Please navigate to the following website and make sure you understand the current implications " +
 		"of a voluntary exit before making the final decision:"
 	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
