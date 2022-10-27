@@ -31,16 +31,16 @@ func (b *BeaconState) SetWithdrawalQueue(val []*enginev1.Withdrawal) error {
 }
 
 // AppendWithdrawal adds a new withdrawal to the end of withdrawal queue.
-// This function assumes that the caller holds a lock on b.
-func (b *BeaconState) AppendWithdrawal(wal *enginev1.Withdrawal) error {
+func (b *BeaconState) AppendWithdrawal(val *enginev1.Withdrawal) error {
 	if b.version < version.Capella {
 		return errNotSupported("AppendWithdrawal", b.version)
 	}
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	q := b.withdrawalQueue
-	if wal == nil || wal.WithdrawalIndex != uint64(len(q)) {
+	if val == nil || val.WithdrawalIndex != uint64(len(q)) {
 		return errors.New("invalid withdrawal index")
 	}
 	max := uint64(fieldparams.ValidatorRegistryLimit)
@@ -56,7 +56,7 @@ func (b *BeaconState) AppendWithdrawal(wal *enginev1.Withdrawal) error {
 		b.sharedFieldReferences[nativetypes.WithdrawalQueue] = stateutil.NewRef(1)
 	}
 
-	b.withdrawalQueue = append(q, wal)
+	b.withdrawalQueue = append(q, val)
 	b.markFieldAsDirty(nativetypes.WithdrawalQueue)
 	b.addDirtyIndices(nativetypes.WithdrawalQueue, []uint64{uint64(len(b.withdrawalQueue) - 1)})
 	return nil
