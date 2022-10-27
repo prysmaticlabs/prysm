@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -354,6 +355,24 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	return execBlks, nil
 }
 
+func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	var blk *pb.ExecutionBlock
+	err := s.rpcClient.CallContext(ctx, &blk, "eth_getBlockByHash", hash, false /* no transactions */)
+	if err == nil && blk == nil {
+		err = ethereum.NotFound
+	}
+	return blk, err
+}
+
+func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*pb.ExecutionBlock, error) {
+	var blk *pb.ExecutionBlock
+	err := s.rpcClient.CallContext(ctx, &blk, "eth_getBlockByNumber", toBlockNumArg(number), false /* no transactions */)
+	if err == nil && blk == nil {
+		err = ethereum.NotFound
+	}
+	return blk, err
+}
+
 // ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBellatrixBlock(
@@ -609,4 +628,23 @@ func buildEmptyExecutionPayload() *pb.ExecutionPayload {
 		Transactions:  make([][]byte, 0),
 		ExtraData:     make([]byte, 0),
 	}
+}
+
+func toBlockNumArg(number *big.Int) string {
+	if number == nil {
+		return "latest"
+	}
+	pending := big.NewInt(-1)
+	if number.Cmp(pending) == 0 {
+		return "pending"
+	}
+	finalized := big.NewInt(int64(gethRPC.FinalizedBlockNumber))
+	if number.Cmp(finalized) == 0 {
+		return "finalized"
+	}
+	safe := big.NewInt(int64(gethRPC.SafeBlockNumber))
+	if number.Cmp(safe) == 0 {
+		return "safe"
+	}
+	return hexutil.EncodeBig(number)
 }

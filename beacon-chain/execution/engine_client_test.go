@@ -1358,3 +1358,59 @@ func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.Executi
 	service.rpcClient = rpcClient
 	return service
 }
+
+func TestToBlockNumArg(t *testing.T) {
+	tests := []struct {
+		name   string
+		number *big.Int
+		want   string
+	}{
+		{
+			name:   "genesis",
+			number: big.NewInt(0),
+			want:   "0x0",
+		},
+		{
+			name:   "near genesis block",
+			number: big.NewInt(300),
+			want:   "0x12c",
+		},
+		{
+			name:   "current block",
+			number: big.NewInt(15838075),
+			want:   "0xf1ab7b",
+		},
+		{
+			name:   "far off block",
+			number: big.NewInt(12032894823020),
+			want:   "0xaf1a06bea6c",
+		},
+		{
+			name:   "latest block",
+			number: nil,
+			want:   "latest",
+		},
+		{
+			name:   "pending block",
+			number: big.NewInt(-1),
+			want:   "pending",
+		},
+		{
+			name:   "finalized block",
+			number: big.NewInt(-3),
+			want:   "finalized",
+		},
+		{
+			name:   "safe block",
+			number: big.NewInt(-4),
+			want:   "safe",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := toBlockNumArg(tt.number); got != tt.want {
+				t.Errorf("toBlockNumArg() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

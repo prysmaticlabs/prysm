@@ -7,6 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -44,33 +46,35 @@ func TestHeightKeyFn_InvalidObj(t *testing.T) {
 func TestBlockCache_byHash(t *testing.T) {
 	cache := newHeaderCache()
 
-	header := &gethTypes.Header{
-		ParentHash: common.HexToHash("0x12345"),
-		Number:     big.NewInt(55),
+	header := &pb.ExecutionBlock{
+		Header: gethTypes.Header{
+			ParentHash: common.HexToHash("0x12345"),
+			Number:     big.NewInt(55),
+		},
 	}
-
-	exists, _, err := cache.HeaderInfoByHash(header.Hash())
+	exists, _, err := cache.HeaderInfoByHash(header.Hash)
 	require.NoError(t, err)
 	assert.Equal(t, false, exists, "Expected block info not to exist in empty cache")
 
 	err = cache.AddHeader(header)
 	require.NoError(t, err)
 
-	exists, fetchedInfo, err := cache.HeaderInfoByHash(header.Hash())
+	exists, fetchedInfo, err := cache.HeaderInfoByHash(header.Hash)
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Expected headerInfo to exist")
 	assert.Equal(t, 0, fetchedInfo.Number.Cmp(header.Number), "Expected fetched info number to be equal")
-	assert.Equal(t, header.Hash(), fetchedInfo.Hash, "Expected hash to be equal")
+	assert.Equal(t, header.Hash, fetchedInfo.Hash, "Expected hash to be equal")
 
 }
 
 func TestBlockCache_byHeight(t *testing.T) {
 	cache := newHeaderCache()
 
-	header := &gethTypes.Header{
-		ParentHash: common.HexToHash("0x12345"),
-		Number:     big.NewInt(55),
-	}
+	header := &pb.ExecutionBlock{
+		Header: gethTypes.Header{
+			ParentHash: common.HexToHash("0x12345"),
+			Number:     big.NewInt(55),
+		}}
 
 	exists, _, err := cache.HeaderInfoByHeight(header.Number)
 	require.NoError(t, err)
@@ -84,7 +88,7 @@ func TestBlockCache_byHeight(t *testing.T) {
 	assert.Equal(t, true, exists, "Expected headerInfo to exist")
 
 	assert.Equal(t, 0, fetchedInfo.Number.Cmp(header.Number), "Expected fetched info number to be equal")
-	assert.Equal(t, header.Hash(), fetchedInfo.Hash, "Expected hash to be equal")
+	assert.Equal(t, header.Hash, fetchedInfo.Hash, "Expected hash to be equal")
 
 }
 
@@ -92,8 +96,11 @@ func TestBlockCache_maxSize(t *testing.T) {
 	cache := newHeaderCache()
 
 	for i := int64(0); i < int64(maxCacheSize+10); i++ {
-		header := &gethTypes.Header{
-			Number: big.NewInt(i),
+		header := &pb.ExecutionBlock{
+			Header: gethTypes.Header{
+				Number: big.NewInt(i),
+			},
+			Hash: common.Hash(bytesutil.ToBytes32(bytesutil.Bytes32(uint64(i)))),
 		}
 		err := cache.AddHeader(header)
 		require.NoError(t, err)

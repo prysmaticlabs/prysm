@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -82,7 +83,7 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 
 type goodFetcher struct {
 	backend     *backends.SimulatedBackend
-	blockNumMap map[uint64]*gethTypes.Header
+	blockNumMap map[uint64]*pb.ExecutionBlock
 }
 
 func (_ *goodFetcher) Close() {}
@@ -112,7 +113,7 @@ func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethT
 		}, nil
 	}
 	if g.blockNumMap != nil {
-		return g.blockNumMap[number.Uint64()], nil
+		return &g.blockNumMap[number.Uint64()].Header, nil
 	}
 	var header *gethTypes.Header
 	if number == nil {
@@ -229,7 +230,6 @@ func TestService_Eth1Synced(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 
 	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
 	now := time.Now()
@@ -261,7 +261,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
@@ -330,7 +330,7 @@ func TestHandlePanic_OK(t *testing.T) {
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	// nil eth1DataFetcher would panic if cached value not used
-	web3Service.eth1DataFetcher = nil
+	web3Service.rpcClient = nil
 	web3Service.processBlockHeader(nil)
 	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }
@@ -371,7 +371,6 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
@@ -506,7 +505,6 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
@@ -800,18 +798,19 @@ func TestService_CacheBlockHeaders(t *testing.T) {
 func TestService_FollowBlock(t *testing.T) {
 	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	followTime += 10000
-	bMap := make(map[uint64]*gethTypes.Header)
+	bMap := make(map[uint64]*pb.ExecutionBlock)
 	for i := uint64(3000); i > 0; i-- {
-		bMap[i] = &gethTypes.Header{
+		h := &gethTypes.Header{
 			Number: big.NewInt(int64(i)),
 			Time:   followTime + (i * 40),
 		}
+		bMap[i] = &pb.ExecutionBlock{Header: *h, Hash: h.Hash()}
 	}
 	s := &Service{
-		cfg:             &config{eth1HeaderReqLimit: 1000},
-		eth1DataFetcher: &goodFetcher{blockNumMap: bMap},
-		headerCache:     newHeaderCache(),
-		latestEth1Data:  &ethpb.LatestETH1Data{BlockTime: (3000 * 40) + followTime, BlockHeight: 3000},
+		cfg:            &config{eth1HeaderReqLimit: 1000},
+		rpcClient:      &mockExecution.RPCClient{BlockNumMap: bMap},
+		headerCache:    newHeaderCache(),
+		latestEth1Data: &ethpb.LatestETH1Data{BlockTime: (3000 * 40) + followTime, BlockHeight: 3000},
 	}
 	h, err := s.followedBlockHeight(context.Background())
 	assert.NoError(t, err)
@@ -839,7 +838,7 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 			return err
 		}
 		h := &gethTypes.Header{Number: num}
-		*e.Result.(*gethTypes.Header) = *h
+		*e.Result.(*pb.ExecutionBlock) = pb.ExecutionBlock{Header: *h, Hash: h.Hash()}
 	}
 	return nil
 }
