@@ -14,7 +14,7 @@ var (
 	// errNilFinalizedCheckpoint is returned when a nil finalized checkpt is returned from a state.
 	errNilFinalizedCheckpoint = errors.New("nil finalized checkpoint returned from state")
 	// errNilJustifiedCheckpoint is returned when a nil justified checkpt is returned from a state.
-	errNilJustifiedCheckpoint = errors.New("nil finalized checkpoint returned from state")
+	errNilJustifiedCheckpoint = errors.New("nil justified checkpoint returned from state")
 	// errInvalidNilSummary is returned when a nil summary is returned from the DB.
 	errInvalidNilSummary = errors.New("nil summary returned from the DB")
 	// errWrongBlockCount is returned when the wrong number of blocks or block roots is used

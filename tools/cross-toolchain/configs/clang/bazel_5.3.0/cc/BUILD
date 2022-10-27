@@ -84,7 +84,6 @@ cc_toolchain_config(
     abi_libc_version = "local",
     abi_version = "local",
     compile_flags = [
-        "-U_FORTIFY_SOURCE",
         "-fstack-protector",
         "-Wall",
         "-Wthread-safety",
