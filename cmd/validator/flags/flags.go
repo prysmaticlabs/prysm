@@ -219,6 +219,11 @@ var (
 		Name:  "exit-all",
 		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
 	}
+	// ForceExitFlag to exit without displaying the confirmation prompt.
+	ForceExitFlag = &cli.BoolFlag{
+		Name:  "force-exit",
+		Usage: "Exit without displaying the confirmation prompt",
+	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
 		Name:  "backup-password-file",
