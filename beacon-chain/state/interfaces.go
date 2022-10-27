@@ -64,6 +64,7 @@ type ReadOnlyBeaconState interface {
 	Version() int
 	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
 	NextWithdrawalIndex() (uint64, error)
+	WithdrawalQueue() ([]*enginev1.Withdrawal, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
