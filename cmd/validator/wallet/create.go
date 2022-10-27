@@ -77,6 +77,7 @@ func ConstructCLIManagerOpts(cliCtx *cli.Context, keymanagerKind keymanager.Kind
 	cliOpts = append(cliOpts, accounts.WithWalletPassword(walletPassword))
 	cliOpts = append(cliOpts, accounts.WithKeymanagerType(keymanagerKind))
 	cliOpts = append(cliOpts, accounts.WithSkipMnemonicConfirm(cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name)))
+	cliOpts = append(cliOpts, accounts.WithMnemonicLanguage(cliCtx.String(flags.MnemonicLanguageFlag.Name)))
 
 	skipMnemonic25thWord := cliCtx.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
 	has25thWordFile := cliCtx.IsSet(flags.Mnemonic25thWordFileFlag.Name)

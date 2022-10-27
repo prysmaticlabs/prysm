@@ -131,6 +131,14 @@ func WithSkipMnemonicConfirm(s bool) Option {
 	}
 }
 
+// WithMnemonicLanguage specifies the language used for the mnemonic passphrase.
+func WithMnemonicLanguage(mnemonicLanguage string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonicLanguage = mnemonicLanguage
+		return nil
+	}
+}
+
 // WithPrivateKeyFile specifies the private key path.
 func WithPrivateKeyFile(privateKeyFile string) Option {
 	return func(acc *AccountsCLIManager) error {

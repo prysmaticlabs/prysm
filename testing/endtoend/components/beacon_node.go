@@ -209,6 +209,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", cmdshared.RPCMaxPageSizeFlag.Name, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
+		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,

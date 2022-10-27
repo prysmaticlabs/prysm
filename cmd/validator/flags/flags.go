@@ -162,6 +162,11 @@ var (
 		Name:  "mnemonic-file",
 		Usage: "File to retrieve mnemonic for non-interactively passing a mnemonic phrase into wallet recover.",
 	}
+	// MnemonicLanguageFlag is used to specify the language of the mnemonic.
+	MnemonicLanguageFlag = &cli.StringFlag{
+		Name:  "mnemonic-language",
+		Usage: "Allows specifying mnemonic language. Supported languages are: english|chinese_traditional|chinese_simplified|czech|french|japanese|korean|italian|spanish",
+	}
 	// ShowDepositDataFlag for accounts.
 	ShowDepositDataFlag = &cli.BoolFlag{
 		Name:  "show-deposit-data",
@@ -213,6 +218,11 @@ var (
 	ExitAllFlag = &cli.BoolFlag{
 		Name:  "exit-all",
 		Usage: "Exit all validators. This will still require the staker to confirm a userprompt for the action",
+	}
+	// ForceExitFlag to exit without displaying the confirmation prompt.
+	ForceExitFlag = &cli.BoolFlag{
+		Name:  "force-exit",
+		Usage: "Exit without displaying the confirmation prompt",
 	}
 	// BackupPasswordFile for encrypting accounts a user wishes to back up.
 	BackupPasswordFile = &cli.StringFlag{
