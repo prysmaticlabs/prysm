@@ -67,7 +67,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	// Create 2 accounts
 	derivedKM, ok := km.(*derived.Keymanager)
 	require.Equal(t, true, ok)
-	err = derivedKM.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", 2)
+	err = derivedKM.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", "", 2)
 	require.NoError(t, err)
 
 	// Obtain the public keys of the accounts we created
