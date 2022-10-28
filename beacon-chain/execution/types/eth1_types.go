@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // HeaderInfo specifies the block header information in the ETH 1.0 chain.
@@ -16,20 +15,6 @@ type HeaderInfo struct {
 	Number *big.Int    `json:"number"`
 	Hash   common.Hash `json:"hash"`
 	Time   uint64      `json:"timestamp"`
-}
-
-// HeaderToHeaderInfo converts an eth1 header to a header metadata type.
-func HeaderToHeaderInfo(hdr *pb.ExecutionBlock) (*HeaderInfo, error) {
-	if hdr.Number == nil {
-		// A nil number will panic when calling *big.Int.Set(...)
-		return nil, errors.New("cannot convert block header with nil block number")
-	}
-
-	return &HeaderInfo{
-		Hash:   hdr.Hash,
-		Number: new(big.Int).Set(hdr.Number),
-		Time:   hdr.Time,
-	}, nil
 }
 
 // Copy sends out a copy of the current header info.
