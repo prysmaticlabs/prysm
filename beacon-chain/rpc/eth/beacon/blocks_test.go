@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -1369,6 +1370,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -2094,6 +2099,10 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
+		resetFn := features.InitWithReset(&features.Flags{
+			SaveFullExecutionPayloads: true,
+		})
+		defer resetFn()
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
