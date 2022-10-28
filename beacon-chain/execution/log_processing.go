@@ -17,12 +17,12 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -285,7 +285,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		currentBlockNum = deploymentBlock
 	}
 	// To store all blocks.
-	headersMap := make(map[uint64]*pb.ExecutionBlock)
+	headersMap := make(map[uint64]*types.HeaderInfo)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err
@@ -342,7 +342,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint64, latestFollowHeight uint64, batchSize uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*pb.ExecutionBlock) (uint64, uint64, error) {
+func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint64, latestFollowHeight uint64, batchSize uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*types.HeaderInfo) (uint64, uint64, error) {
 	// Batch request the desired headers and store them in a
 	// map for quick access.
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
@@ -500,11 +500,11 @@ func (s *Service) processChainStartFromBlockNum(ctx context.Context, blkNum *big
 	return nil
 }
 
-func (s *Service) processChainStartFromHeader(ctx context.Context, header *pb.ExecutionBlock) {
+func (s *Service) processChainStartFromHeader(ctx context.Context, header *types.HeaderInfo) {
 	s.processChainStartIfReady(ctx, header.Hash, header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*pb.ExecutionBlock,
+func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*types.HeaderInfo,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {

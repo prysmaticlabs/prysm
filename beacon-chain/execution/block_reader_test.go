@@ -11,9 +11,9 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -187,10 +187,8 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
-	header := &pb.ExecutionBlock{
-		Header: gethTypes.Header{
-			Number: big.NewInt(0),
-		},
+	header := &types.HeaderInfo{
+		Number: big.NewInt(0),
 	}
 
 	err = web3Service.headerCache.AddHeader(header)

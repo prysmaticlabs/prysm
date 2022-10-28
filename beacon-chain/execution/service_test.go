@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -798,13 +799,17 @@ func TestService_CacheBlockHeaders(t *testing.T) {
 func TestService_FollowBlock(t *testing.T) {
 	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	followTime += 10000
-	bMap := make(map[uint64]*pb.ExecutionBlock)
+	bMap := make(map[uint64]*types.HeaderInfo)
 	for i := uint64(3000); i > 0; i-- {
 		h := &gethTypes.Header{
 			Number: big.NewInt(int64(i)),
 			Time:   followTime + (i * 40),
 		}
-		bMap[i] = &pb.ExecutionBlock{Header: *h, Hash: h.Hash()}
+		bMap[i] = &types.HeaderInfo{
+			Number: h.Number,
+			Hash:   h.Hash(),
+			Time:   h.Time,
+		}
 	}
 	s := &Service{
 		cfg:            &config{eth1HeaderReqLimit: 1000},
@@ -838,7 +843,7 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 			return err
 		}
 		h := &gethTypes.Header{Number: num}
-		*e.Result.(*pb.ExecutionBlock) = pb.ExecutionBlock{Header: *h, Hash: h.Hash()}
+		*e.Result.(*types.HeaderInfo) = types.HeaderInfo{Number: h.Number, Hash: h.Hash()}
 	}
 	return nil
 }

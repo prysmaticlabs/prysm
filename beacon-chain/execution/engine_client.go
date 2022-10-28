@@ -14,6 +14,7 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -355,22 +356,22 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	return execBlks, nil
 }
 
-func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
-	var blk *pb.ExecutionBlock
-	err := s.rpcClient.CallContext(ctx, &blk, "eth_getBlockByHash", hash, false /* no transactions */)
-	if err == nil && blk == nil {
+func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
+	var hdr *types.HeaderInfo
+	err := s.rpcClient.CallContext(ctx, &hdr, "eth_getBlockByHash", hash, false /* no transactions */)
+	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
-	return blk, err
+	return hdr, err
 }
 
-func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*pb.ExecutionBlock, error) {
-	var blk *pb.ExecutionBlock
-	err := s.rpcClient.CallContext(ctx, &blk, "eth_getBlockByNumber", toBlockNumArg(number), false /* no transactions */)
-	if err == nil && blk == nil {
+func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
+	var hdr *types.HeaderInfo
+	err := s.rpcClient.CallContext(ctx, &hdr, "eth_getBlockByNumber", toBlockNumArg(number), false /* no transactions */)
+	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
-	return blk, err
+	return hdr, err
 }
 
 // ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs

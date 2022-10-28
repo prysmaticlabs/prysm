@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -143,7 +142,7 @@ func (m *Chain) ETH1ConnectionErrors() []error {
 // RPCClient defines the mock rpc client.
 type RPCClient struct {
 	Backend     *backends.SimulatedBackend
-	BlockNumMap map[uint64]*pb.ExecutionBlock
+	BlockNumMap map[uint64]*types.HeaderInfo
 }
 
 func (*RPCClient) Close() {}
@@ -159,7 +158,7 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 			return err
 		}
 		b := r.BlockNumMap[num.Uint64()]
-		assertedObj, ok := obj.(**pb.ExecutionBlock)
+		assertedObj, ok := obj.(**types.HeaderInfo)
 		if !ok {
 			return errors.Errorf("wrong argument type provided: %T", obj)
 		}
@@ -171,13 +170,14 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 			Number: big.NewInt(15),
 			Time:   150,
 		}
-		assertedObj, ok := obj.(**pb.ExecutionBlock)
+		assertedObj, ok := obj.(**types.HeaderInfo)
 		if !ok {
 			return errors.Errorf("wrong argument type provided: %T", obj)
 		}
-		*assertedObj = &pb.ExecutionBlock{
-			Header: *h,
+		*assertedObj = &types.HeaderInfo{
 			Hash:   h.Hash(),
+			Number: h.Number,
+			Time:   h.Time,
 		}
 		return nil
 	}
@@ -199,13 +199,14 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 		if err != nil {
 			return err
 		}
-		assertedObj, ok := obj.(**pb.ExecutionBlock)
+		assertedObj, ok := obj.(**types.HeaderInfo)
 		if !ok {
 			return errors.Errorf("wrong argument type provided: %T", obj)
 		}
-		*assertedObj = &pb.ExecutionBlock{
-			Header: *h,
+		*assertedObj = &types.HeaderInfo{
 			Hash:   h.Hash(),
+			Number: h.Number,
+			Time:   h.Time,
 		}
 	case "eth_getBlockByHash":
 		val, ok := args[0].(common.Hash)
@@ -216,13 +217,14 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 		if err != nil {
 			return err
 		}
-		assertedObj, ok := obj.(**pb.ExecutionBlock)
+		assertedObj, ok := obj.(**types.HeaderInfo)
 		if !ok {
 			return errors.Errorf("wrong argument type provided: %T", obj)
 		}
-		*assertedObj = &pb.ExecutionBlock{
-			Header: *h,
+		*assertedObj = &types.HeaderInfo{
 			Hash:   h.Hash(),
+			Number: h.Number,
+			Time:   h.Time,
 		}
 	}
 	return nil
@@ -243,7 +245,7 @@ func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 		if err != nil {
 			return err
 		}
-		*e.Result.(*pb.ExecutionBlock) = pb.ExecutionBlock{Header: *h, Hash: h.Hash()}
+		*e.Result.(*types.HeaderInfo) = types.HeaderInfo{Number: h.Number, Time: h.Time, Hash: h.Hash()}
 
 	}
 	return nil
