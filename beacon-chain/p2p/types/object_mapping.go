@@ -48,11 +48,6 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}},
 			)
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() (interfaces.SignedBeaconBlock, error) {
-			return blocks.NewSignedBeaconBlock(
-				&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}},
-			)
-		},
 	}
 
 	// Reset our metadata map.

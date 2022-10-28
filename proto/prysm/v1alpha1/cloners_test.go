@@ -360,31 +360,31 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 }
 
 func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
-	sbb := genSignedBlindedBeaconBlockBellatrix()
+	sbb := genSignedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBlindedBeaconBlockBellatrix(sbb)
+	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
-		t.Errorf("TestCopySignedBlindedBeaconBlockBellatrix() = %v, want %v", got, sbb)
+		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
 	assert.NotEmpty(t, sbb, "Copied signed blinded beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
-	b := genBlindedBeaconBlockBellatrix()
+	b := genBeaconBlockBellatrix()
 
-	got := v1alpha1.CopyBlindedBeaconBlockBellatrix(b)
+	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
-		t.Errorf("CopyBlindedBeaconBlockBellatrix() = %v, want %v", got, b)
+		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
 	assert.NotEmpty(t, b, "Copied blinded beacon block Bellatrix has empty fields")
 }
 
 func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := genBlindedBeaconBlockBodyBellatrix()
+	bb := genBeaconBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBlindedBeaconBlockBodyBellatrix(bb)
+	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
-		t.Errorf("CopyBlindedBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
+		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
 	assert.NotEmpty(t, bb, "Copied blinded beacon block body Bellatrix has empty fields")
 }
@@ -496,7 +496,7 @@ func genAttestation() *v1alpha1.Attestation {
 	return &v1alpha1.Attestation{
 		AggregationBits: bytes(32),
 		Data:            genAttData(),
-		Signature:       bytes(96),
+		Signature:       bytes(32),
 	}
 }
 
@@ -762,38 +762,6 @@ func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
 func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 	return &v1alpha1.SignedBeaconBlockBellatrix{
 		Block:     genBeaconBlockBellatrix(),
-		Signature: bytes(32),
-	}
-}
-
-func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBodyBellatrix{
-		RandaoReveal:           bytes(32),
-		Eth1Data:               genEth1Data(),
-		Graffiti:               bytes(32),
-		ProposerSlashings:      genProposerSlashings(5),
-		AttesterSlashings:      genAttesterSlashings(5),
-		Attestations:           genAttestations(10),
-		Deposits:               genDeposits(5),
-		VoluntaryExits:         genSignedVoluntaryExits(12),
-		SyncAggregate:          genSyncAggregate(),
-		ExecutionPayloadHeader: genPayloadHeader(),
-	}
-}
-
-func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBellatrix{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(32),
-		StateRoot:     bytes(32),
-		Body:          genBlindedBeaconBlockBodyBellatrix(),
-	}
-}
-
-func genSignedBlindedBeaconBlockBellatrix() *v1alpha1.SignedBlindedBeaconBlockBellatrix {
-	return &v1alpha1.SignedBlindedBeaconBlockBellatrix{
-		Block:     genBlindedBeaconBlockBellatrix(),
 		Signature: bytes(32),
 	}
 }

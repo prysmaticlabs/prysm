@@ -30,42 +30,35 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 		return err
 	}
 	var obtainedCtx []byte
-	var digest [4]byte
-	var err error
 
 	switch blk.Version() {
 	case version.Phase0:
 		valRoot := chain.GenesisValidatorsRoot()
-		digest, err = forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
+		obtainedCtx = digest[:]
 	case version.Altair:
 		valRoot := chain.GenesisValidatorsRoot()
-		digest, err = forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
+		obtainedCtx = digest[:]
 	case version.Bellatrix:
 		valRoot := chain.GenesisValidatorsRoot()
-		digest, err = forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
-	case version.Capella:
-		valRoot := chain.GenesisValidatorsRoot()
-		digest, err = forks.ForkDigestFromEpoch(params.BeaconConfig().CapellaForkEpoch, valRoot[:])
-		if err != nil {
-			return err
-		}
-
+		obtainedCtx = digest[:]
 	}
-	obtainedCtx = digest[:]
 
 	if err := writeContextToStream(obtainedCtx, stream, chain); err != nil {
 		return err
 	}
-	_, err = encoding.EncodeWithMaxLength(stream, blk)
+	_, err := encoding.EncodeWithMaxLength(stream, blk)
 	return err
 }
 

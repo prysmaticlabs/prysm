@@ -148,7 +148,6 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 2
 	cfg.BellatrixForkEpoch = 4
-	cfg.CapellaForkEpoch = 6
 	params.OverrideBeaconConfig(cfg)
 
 	tests := []struct {
@@ -166,10 +165,6 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 		{
 			name: "bellatrix",
 			slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(cfg.BellatrixForkEpoch)),
-		},
-		{
-			name: "capella",
-			slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(cfg.CapellaForkEpoch)),
 		},
 	}
 
@@ -223,14 +218,6 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Bellatrix{
 					Bellatrix: util.NewBeaconBlockBellatrix().Block,
-				},
-			},
-		},
-		{
-			name: "capella",
-			block: &ethpb.GenericBeaconBlock{
-				Block: &ethpb.GenericBeaconBlock_Capella{
-					Capella: util.NewBeaconBlockCapella().Block,
 				},
 			},
 		},
@@ -327,24 +314,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 					blocks = append(blocks, &ethpb.GenericBeaconBlock{
 						Block: &ethpb.GenericBeaconBlock_Bellatrix{
 							Bellatrix: block.Block,
-						},
-					})
-				}
-				return blocks
-			}(),
-		},
-		{
-			name: "capella",
-			blocks: func() []*ethpb.GenericBeaconBlock {
-				block0, block1 := util.NewBeaconBlockCapella(), util.NewBeaconBlockCapella()
-				block1.Block.Body.Graffiti = blockGraffiti[:]
-
-				var blocks []*ethpb.GenericBeaconBlock
-				for _, block := range []*ethpb.SignedBeaconBlockCapella{block0, block1} {
-					block.Block.Slot = slot
-					blocks = append(blocks, &ethpb.GenericBeaconBlock{
-						Block: &ethpb.GenericBeaconBlock_Capella{
-							Capella: block.Block,
 						},
 					})
 				}
@@ -587,30 +556,6 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{
 					BlindedBellatrix: func() *ethpb.BlindedBeaconBlockBellatrix {
 						blk := util.NewBlindedBeaconBlockBellatrix()
-						blk.Block.Body.Graffiti = graffiti
-						return blk.Block
-					}(),
-				},
-			},
-		},
-		{
-			name: "capella",
-			block: &ethpb.GenericBeaconBlock{
-				Block: &ethpb.GenericBeaconBlock_Capella{
-					Capella: func() *ethpb.BeaconBlockCapella {
-						blk := util.NewBeaconBlockCapella()
-						blk.Block.Body.Graffiti = graffiti
-						return blk.Block
-					}(),
-				},
-			},
-		},
-		{
-			name: "capella blind block",
-			block: &ethpb.GenericBeaconBlock{
-				Block: &ethpb.GenericBeaconBlock_BlindedCapella{
-					BlindedCapella: func() *ethpb.BlindedBeaconBlockCapella {
-						blk := util.NewBlindedBeaconBlockCapella()
 						blk.Block.Body.Graffiti = graffiti
 						return blk.Block
 					}(),
