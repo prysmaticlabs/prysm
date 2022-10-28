@@ -14,6 +14,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.10.23
+	github.com/ferranbt/fastssz v0.0.0-20210526181520-7df50c8568f8
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/ghodss/yaml v1.0.0
@@ -124,7 +125,6 @@ require (
 	github.com/dop251/goja v0.0.0-20220405120441-9037c2b61cbf // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210526181520-7df50c8568f8 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect

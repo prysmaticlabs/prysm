@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,22 +60,11 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, errors.New("mismatched blobs and kzgs length")
 	}
 
-	switch execData.Version() {
-	case version.Bellatrix:
-		payload, err := execData.PbGenericPayload()
-		if err != nil {
-			return nil, err
-		}
-		return vs.assembleEip4844CompatBlock(ctx, altairBlk, payload, blobsBundle)
-	case version.EIP4844:
-		payload, err := execData.PbEip4844Payload()
-		if err != nil {
-			return nil, err
-		}
-		return vs.assembleEip4844Block(ctx, altairBlk, payload, blobsBundle)
-	default:
-		return nil, errors.New("unknown payload version received from engine")
+	payload, err := execData.PbEip4844Payload()
+	if err != nil {
+		return nil, err
 	}
+	return vs.assembleEip4844Block(ctx, altairBlk, payload, blobsBundle)
 }
 
 func (vs *Server) assembleEip4844Block(ctx context.Context, altairBlk *ethpb.BeaconBlockAltair, payload *enginev1.ExecutionPayload4844, blobsBundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
@@ -118,9 +106,6 @@ func (vs *Server) assembleEip4844Block(ctx context.Context, altairBlk *ethpb.Bea
 		return nil, err
 	}
 
-	// TOOD(EIP-4844): Upgrade Hazard. If only the CL supports new payloads, how should the beacon block root be computed? Right now the spec says
-	// it should use the new payload regardless. But then validators will have to be careful and detect this to use the post-4844 block when voting/attesting.
-
 	var sideCar *ethpb.BlobsSidecar
 	if len(blobsBundle.Blobs) != 0 {
 		sideCar = &ethpb.BlobsSidecar{
@@ -133,61 +118,6 @@ func (vs *Server) assembleEip4844Block(ctx context.Context, altairBlk *ethpb.Bea
 
 	return &ethpb.GenericBeaconBlock{
 		Block:   &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk},
-		Sidecar: sideCar,
-	}, nil
-}
-
-func (vs *Server) assembleEip4844CompatBlock(ctx context.Context, altairBlk *ethpb.BeaconBlockAltair, payload *enginev1.ExecutionPayload, blobsBundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
-	blk := &ethpb.BeaconBlockWithBlobKZGsCompat{
-		Slot:          altairBlk.Slot,
-		ProposerIndex: altairBlk.ProposerIndex,
-		ParentRoot:    altairBlk.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyWithBlobKZGsCompat{
-			RandaoReveal:      altairBlk.Body.RandaoReveal,
-			Eth1Data:          altairBlk.Body.Eth1Data,
-			Graffiti:          altairBlk.Body.Graffiti,
-			ProposerSlashings: altairBlk.Body.ProposerSlashings,
-			AttesterSlashings: altairBlk.Body.AttesterSlashings,
-			Attestations:      altairBlk.Body.Attestations,
-			Deposits:          altairBlk.Body.Deposits,
-			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
-			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
-			BlobKzgs:          blobsBundle.Kzgs,
-		},
-	}
-
-	// Compute state root with the newly constructed block.
-	signedBlk := &ethpb.SignedBeaconBlockWithBlobKZGsCompat{Block: blk, Signature: make([]byte, 96)}
-	wsb, err := consensusblocks.NewSignedBeaconBlock(signedBlk)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-
-	r, err := wsb.Block().HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	var sideCar *ethpb.BlobsSidecar
-	if len(blobsBundle.Blobs) != 0 {
-		sideCar = &ethpb.BlobsSidecar{
-			BeaconBlockRoot: r[:],
-			BeaconBlockSlot: wsb.Block().Slot(),
-			Blobs:           blobsBundle.Blobs,
-			AggregatedProof: blobsBundle.AggregatedProof,
-		}
-	}
-
-	return &ethpb.GenericBeaconBlock{
-		Block:   &ethpb.GenericBeaconBlock_Eip4844Compat{Eip4844Compat: blk},
 		Sidecar: sideCar,
 	}, nil
 }

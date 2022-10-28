@@ -84,7 +84,6 @@ message SignRequest {
 
         // EIP4844 objects.
         ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGs block_eip4844 = 114;
-        ethereum.eth.v1alpha1.BeaconBlockWithBlobKZGsCompat block_eip4844_compat = 115;
         ethereum.eth.v1alpha1.BlobsSidecar sidecar = 116;
     }
     reserved 4, 5; // Reserving old, deleted fields.
