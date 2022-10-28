@@ -356,6 +356,7 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	return execBlks, nil
 }
 
+// HeaderByHash returns the relevant header details for the provided block hash.
 func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
 	err := s.rpcClient.CallContext(ctx, &hdr, "eth_getBlockByHash", hash, false /* no transactions */)
@@ -365,6 +366,7 @@ func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 	return hdr, err
 }
 
+// HeaderByNumber returns the relevant header details for the provided block number.
 func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
 	err := s.rpcClient.CallContext(ctx, &hdr, "eth_getBlockByNumber", toBlockNumArg(number), false /* no transactions */)
