@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -96,12 +97,6 @@ type Chain interface {
 	POWBlockFetcher
 }
 
-// RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
-// fetching eth1 data from the clients.
-type RPCDataFetcher interface {
-	Close()
-}
-
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	Close()
@@ -119,6 +114,18 @@ func (RPCClientEmpty) BatchCall([]gethRPC.BatchElem) error {
 
 func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...interface{}) error {
 	return errors.New("rpc client is not initialized")
+}
+
+type RPCClientBad struct {
+}
+
+func (RPCClientBad) Close() {}
+func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("rpc client is not initialized")
+}
+
+func (RPCClientBad) CallContext(context.Context, interface{}, string, ...interface{}) error {
+	return ethereum.NotFound
 }
 
 // config defines a config struct for dependencies into the service.

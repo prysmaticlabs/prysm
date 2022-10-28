@@ -1,9 +1,7 @@
 package execution
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -28,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -80,56 +77,6 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 		g.MockStateFeed = new(event.Feed)
 	}
 	return g.MockStateFeed
-}
-
-type goodFetcher struct {
-	backend     *backends.SimulatedBackend
-	blockNumMap map[uint64]*pb.ExecutionBlock
-}
-
-func (_ *goodFetcher) Close() {}
-
-func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
-	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
-		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
-	}
-	if g.backend == nil {
-		return &gethTypes.Header{
-			Number: big.NewInt(0),
-		}, nil
-	}
-	header := g.backend.Blockchain().GetHeaderByHash(hash)
-	if header == nil {
-		return nil, errors.New("nil header returned")
-	}
-	return header, nil
-
-}
-
-func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
-	if g.backend == nil && g.blockNumMap == nil {
-		return &gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		}, nil
-	}
-	if g.blockNumMap != nil {
-		return &g.blockNumMap[number.Uint64()].Header, nil
-	}
-	var header *gethTypes.Header
-	if number == nil {
-		header = g.backend.Blockchain().CurrentHeader()
-	} else {
-		header = g.backend.Blockchain().GetHeaderByNumber(number.Uint64())
-	}
-	if header == nil {
-		return nil, errors.New("nil header returned")
-	}
-	return header, nil
-}
-
-func (_ *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
-	return nil, nil
 }
 
 var depositsReqForChainStart = 64
