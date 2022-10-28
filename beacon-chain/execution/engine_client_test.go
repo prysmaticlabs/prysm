@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
@@ -37,6 +38,18 @@ var (
 	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
+
+type RPCClientBad struct {
+}
+
+func (RPCClientBad) Close() {}
+func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("rpc client is not initialized")
+}
+
+func (RPCClientBad) CallContext(context.Context, interface{}, string, ...interface{}) error {
+	return ethereum.NotFound
+}
 
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)

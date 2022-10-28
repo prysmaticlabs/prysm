@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -114,18 +113,6 @@ func (RPCClientEmpty) BatchCall([]gethRPC.BatchElem) error {
 
 func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...interface{}) error {
 	return errors.New("rpc client is not initialized")
-}
-
-type RPCClientBad struct {
-}
-
-func (RPCClientBad) Close() {}
-func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
-	return errors.New("rpc client is not initialized")
-}
-
-func (RPCClientBad) CallContext(context.Context, interface{}, string, ...interface{}) error {
-	return ethereum.NotFound
 }
 
 // config defines a config struct for dependencies into the service.
