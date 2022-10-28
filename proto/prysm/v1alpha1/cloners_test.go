@@ -768,7 +768,7 @@ func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 
 func genBeaconBlockBodyCapella() *v1alpha1.BeaconBlockBodyCapella {
 	return &v1alpha1.BeaconBlockBodyCapella{
-		RandaoReveal:          bytes(32),
+		RandaoReveal:          bytes(96),
 		Eth1Data:              genEth1Data(),
 		Graffiti:              bytes(32),
 		ProposerSlashings:     genProposerSlashings(5),
@@ -795,13 +795,13 @@ func genBeaconBlockCapella() *v1alpha1.BeaconBlockCapella {
 func genSignedBeaconBlockCapella() *v1alpha1.SignedBeaconBlockCapella {
 	return &v1alpha1.SignedBeaconBlockCapella{
 		Block:     genBeaconBlockCapella(),
-		Signature: bytes(32),
+		Signature: bytes(96),
 	}
 }
 
 func genBlindedBeaconBlockBodyCapella() *v1alpha1.BlindedBeaconBlockBodyCapella {
 	return &v1alpha1.BlindedBeaconBlockBodyCapella{
-		RandaoReveal:           bytes(32),
+		RandaoReveal:           bytes(96),
 		Eth1Data:               genEth1Data(),
 		Graffiti:               bytes(32),
 		ProposerSlashings:      genProposerSlashings(5),
@@ -863,10 +863,10 @@ func genPayload() *enginev1.ExecutionPayload {
 func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 	return &enginev1.ExecutionPayloadCapella{
 		ParentHash:    bytes(32),
-		FeeRecipient:  bytes(32),
+		FeeRecipient:  bytes(20),
 		StateRoot:     bytes(32),
 		ReceiptsRoot:  bytes(32),
-		LogsBloom:     bytes(32),
+		LogsBloom:     bytes(256),
 		PrevRandao:    bytes(32),
 		BlockNumber:   1,
 		GasLimit:      2,
@@ -915,10 +915,10 @@ func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
 func genPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
 	return &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       bytes(32),
-		FeeRecipient:     bytes(32),
+		FeeRecipient:     bytes(20),
 		StateRoot:        bytes(32),
 		ReceiptsRoot:     bytes(32),
-		LogsBloom:        bytes(32),
+		LogsBloom:        bytes(256),
 		PrevRandao:       bytes(32),
 		BlockNumber:      1,
 		GasLimit:         2,
