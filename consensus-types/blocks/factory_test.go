@@ -114,31 +114,6 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, version.EIP4844, exec.Version())
 	})
-	t.Run("GenericSignedBeaconBlock_Eip4844Compat", func(t *testing.T) {
-		pb := &eth.GenericSignedBeaconBlock_Eip4844Compat{
-			Eip4844Compat: &eth.SignedBeaconBlockWithBlobKZGsCompat{
-				Block: &eth.BeaconBlockWithBlobKZGsCompat{
-					Body: &eth.BeaconBlockBodyWithBlobKZGsCompat{
-						ExecutionPayload: &enginev1.ExecutionPayload{}}}}}
-		b, err := NewSignedBeaconBlock(pb)
-		require.NoError(t, err)
-		assert.Equal(t, version.EIP4844, b.Version())
-		exec, err := b.Block().Body().Execution()
-		require.NoError(t, err)
-		assert.Equal(t, version.Bellatrix, exec.Version())
-	})
-	t.Run("SignedBeaconBlockWithBlobKZGsCompat", func(t *testing.T) {
-		pb := &eth.SignedBeaconBlockWithBlobKZGsCompat{
-			Block: &eth.BeaconBlockWithBlobKZGsCompat{
-				Body: &eth.BeaconBlockBodyWithBlobKZGsCompat{
-					ExecutionPayload: &enginev1.ExecutionPayload{}}}}
-		b, err := NewSignedBeaconBlock(pb)
-		require.NoError(t, err)
-		assert.Equal(t, version.EIP4844, b.Version())
-		exec, err := b.Block().Body().Execution()
-		require.NoError(t, err)
-		assert.Equal(t, version.Bellatrix, exec.Version())
-	})
 
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewSignedBeaconBlock(nil)
@@ -219,24 +194,6 @@ func Test_NewBeaconBlock(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, version.EIP4844, e.Version())
 	})
-	t.Run("GenericBeaconBlock_Eip4844Compat", func(t *testing.T) {
-		pb := &eth.GenericBeaconBlock_Eip4844Compat{Eip4844Compat: &eth.BeaconBlockWithBlobKZGsCompat{Body: &eth.BeaconBlockBodyWithBlobKZGsCompat{ExecutionPayload: &enginev1.ExecutionPayload{}}}}
-		b, err := NewBeaconBlock(pb)
-		require.NoError(t, err)
-		assert.Equal(t, version.EIP4844, b.Version())
-		e, err := b.Body().Execution()
-		require.NoError(t, err)
-		assert.Equal(t, version.Bellatrix, e.Version())
-	})
-	t.Run("BeaconBlockWithBlobKZGsCompat", func(t *testing.T) {
-		pb := &eth.BeaconBlockWithBlobKZGsCompat{Body: &eth.BeaconBlockBodyWithBlobKZGsCompat{ExecutionPayload: &enginev1.ExecutionPayload{}}}
-		b, err := NewBeaconBlock(pb)
-		require.NoError(t, err)
-		assert.Equal(t, version.EIP4844, b.Version())
-		e, err := b.Body().Execution()
-		require.NoError(t, err)
-		assert.Equal(t, version.Bellatrix, e.Version())
-	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlock(nil)
 		assert.ErrorContains(t, "received nil object", err)
@@ -290,15 +247,6 @@ func Test_NewBeaconBlockBody(t *testing.T) {
 		assert.Equal(t, version.EIP4844, b.version)
 		assert.Equal(t, version.EIP4844, b.executionData.Version())
 	})
-	t.Run("BeaconBlockBodyWithBlobKZGsCompat", func(t *testing.T) {
-		pb := &eth.BeaconBlockBodyWithBlobKZGsCompat{ExecutionPayload: &enginev1.ExecutionPayload{}}
-		i, err := NewBeaconBlockBody(pb)
-		require.NoError(t, err)
-		b, ok := i.(*BeaconBlockBody)
-		require.Equal(t, true, ok)
-		assert.Equal(t, version.EIP4844, b.version)
-		assert.Equal(t, version.Bellatrix, b.executionData.Version())
-	})
 	t.Run("nil", func(t *testing.T) {
 		_, err := NewBeaconBlockBody(nil)
 		assert.ErrorContains(t, "received nil object", err)
@@ -346,15 +294,6 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 	})
 	t.Run("Eip4844", func(t *testing.T) {
 		payload, err := NewExecutionData(&enginev1.ExecutionPayload4844{})
-		require.NoError(t, err)
-		b := &BeaconBlock{version: version.EIP4844, body: &BeaconBlockBody{version: version.EIP4844, executionData: payload}}
-		sb, err := BuildSignedBeaconBlock(b, sig[:])
-		require.NoError(t, err)
-		assert.DeepEqual(t, sig, sb.Signature())
-		assert.Equal(t, version.EIP4844, sb.Version())
-	})
-	t.Run("Eip4844Compat", func(t *testing.T) {
-		payload, err := NewExecutionData(&enginev1.ExecutionPayload{})
 		require.NoError(t, err)
 		b := &BeaconBlock{version: version.EIP4844, body: &BeaconBlockBody{version: version.EIP4844, executionData: payload}}
 		sb, err := BuildSignedBeaconBlock(b, sig[:])
@@ -445,6 +384,4 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, gotProto)
 	})
-
-	// TODO(EIP-4844): Test eip4844 compat against Bellatrix payloads
 }

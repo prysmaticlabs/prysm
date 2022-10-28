@@ -75,16 +75,15 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Signature: b.signature[:],
 		}, nil
 	case version.EIP4844:
-		switch block := blockMessage.(type) {
-		case nil:
-			return nil, ErrNilObject
-		case *eth.BeaconBlockWithBlobKZGs:
-			return &eth.SignedBeaconBlockWithBlobKZGs{Block: block, Signature: b.signature[:]}, nil
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return &eth.SignedBeaconBlockWithBlobKZGsCompat{Block: block, Signature: b.signature[:]}, nil
-		default:
-			return nil, errIncorrectBlockVersion
+		var block *eth.BeaconBlockWithBlobKZGs
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlockWithBlobKZGs)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
 		}
+		return &eth.SignedBeaconBlockWithBlobKZGs{Block: block, Signature: b.signature[:]}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
@@ -168,28 +167,21 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.EIP4844:
-		switch body := bodyMessage.(type) {
-		case nil:
-			return nil, ErrNilObject
-		case *eth.BeaconBlockBodyWithBlobKZGs:
-			return &eth.BeaconBlockWithBlobKZGs{
-				Slot:          b.slot,
-				ProposerIndex: b.proposerIndex,
-				ParentRoot:    b.parentRoot[:],
-				StateRoot:     b.stateRoot[:],
-				Body:          body,
-			}, nil
-		case *eth.BeaconBlockBodyWithBlobKZGsCompat:
-			return &eth.BeaconBlockWithBlobKZGsCompat{
-				Slot:          b.slot,
-				ProposerIndex: b.proposerIndex,
-				ParentRoot:    b.parentRoot[:],
-				StateRoot:     b.stateRoot[:],
-				Body:          body,
-			}, nil
-		default:
-			return nil, errIncorrectBlockVersion
+		var body *eth.BeaconBlockBodyWithBlobKZGs
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyWithBlobKZGs)
+			if !ok {
+				return nil, errIncorrectBodyVersion
+			}
 		}
+		return &eth.BeaconBlockWithBlobKZGs{
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot[:],
+			StateRoot:     b.stateRoot[:],
+			Body:          body,
+		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block version")
 	}
@@ -261,47 +253,24 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:  payload,
 		}, nil
 	case version.EIP4844:
-		switch b.executionData.Version() {
-		case version.Bellatrix:
-			payload, err := b.executionData.PbGenericPayload()
-			if err != nil {
-				return nil, err
-			}
-			return &eth.BeaconBlockBodyWithBlobKZGsCompat{
-				RandaoReveal:      b.randaoReveal[:],
-				Eth1Data:          b.eth1Data,
-				Graffiti:          b.graffiti[:],
-				ProposerSlashings: b.proposerSlashings,
-				AttesterSlashings: b.attesterSlashings,
-				Attestations:      b.attestations,
-				Deposits:          b.deposits,
-				VoluntaryExits:    b.voluntaryExits,
-				SyncAggregate:     b.syncAggregate,
-				ExecutionPayload:  payload,
-				BlobKzgs:          b.blobKzgs,
-			}, nil
-		case version.EIP4844:
-			// TODO(EIP-4844): Blinded blocks
-			payload, err := b.executionData.PbEip4844Payload()
-			if err != nil {
-				return nil, err
-			}
-			return &eth.BeaconBlockBodyWithBlobKZGs{
-				RandaoReveal:      b.randaoReveal[:],
-				Eth1Data:          b.eth1Data,
-				Graffiti:          b.graffiti[:],
-				ProposerSlashings: b.proposerSlashings,
-				AttesterSlashings: b.attesterSlashings,
-				Attestations:      b.attestations,
-				Deposits:          b.deposits,
-				VoluntaryExits:    b.voluntaryExits,
-				SyncAggregate:     b.syncAggregate,
-				ExecutionPayload:  payload,
-				BlobKzgs:          b.blobKzgs,
-			}, nil
-		default:
-			return nil, errors.New("unsupported execution data in beacon block")
+		// TODO(EIP-4844): Blinded blocks
+		payload, err := b.executionData.PbEip4844Payload()
+		if err != nil {
+			return nil, err
 		}
+		return &eth.BeaconBlockBodyWithBlobKZGs{
+			RandaoReveal:      b.randaoReveal[:],
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti[:],
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
+			SyncAggregate:     b.syncAggregate,
+			ExecutionPayload:  payload,
+			BlobKzgs:          b.blobKzgs,
+		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
 	}
@@ -364,23 +333,6 @@ func initSignedBlockFromProtoEip4844(pb *eth.SignedBeaconBlockWithBlobKZGs) (*Si
 	}
 
 	block, err := initBlockFromProtoEip4844(pb.Block)
-	if err != nil {
-		return nil, err
-	}
-	b := &SignedBeaconBlock{
-		version:   version.EIP4844,
-		block:     block,
-		signature: bytesutil.ToBytes96(pb.Signature),
-	}
-	return b, nil
-}
-
-func initSignedBlockFromProtoEip4844Compat(pb *eth.SignedBeaconBlockWithBlobKZGsCompat) (*SignedBeaconBlock, error) {
-	if pb == nil {
-		return nil, errNilBlock
-	}
-
-	block, err := initBlockFromProtoEip4844Compat(pb.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -509,26 +461,6 @@ func initBlockFromProtoEip4844(pb *eth.BeaconBlockWithBlobKZGs) (*BeaconBlock, e
 	return b, nil
 }
 
-func initBlockFromProtoEip4844Compat(pb *eth.BeaconBlockWithBlobKZGsCompat) (*BeaconBlock, error) {
-	if pb == nil {
-		return nil, errNilBlock
-	}
-
-	body, err := initBlockBodyFromProtoEip4844Compat(pb.Body)
-	if err != nil {
-		return nil, err
-	}
-	b := &BeaconBlock{
-		version:       version.EIP4844,
-		slot:          pb.Slot,
-		proposerIndex: pb.ProposerIndex,
-		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
-		stateRoot:     bytesutil.ToBytes32(pb.StateRoot),
-		body:          body,
-	}
-	return b, nil
-}
-
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
@@ -625,34 +557,6 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 }
 
 func initBlockBodyFromProtoEip4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*BeaconBlockBody, error) {
-	if pb == nil {
-		return nil, errNilBlockBody
-	}
-
-	executionData, err := NewExecutionData(pb.ExecutionPayload)
-	if err != nil {
-		return nil, err
-	}
-
-	b := &BeaconBlockBody{
-		version:           version.EIP4844,
-		isBlinded:         false,
-		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:          pb.Eth1Data,
-		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings: pb.ProposerSlashings,
-		attesterSlashings: pb.AttesterSlashings,
-		attestations:      pb.Attestations,
-		deposits:          pb.Deposits,
-		voluntaryExits:    pb.VoluntaryExits,
-		syncAggregate:     pb.SyncAggregate,
-		executionData:     executionData,
-		blobKzgs:          pb.BlobKzgs,
-	}
-	return b, nil
-}
-
-func initBlockBodyFromProtoEip4844Compat(pb *eth.BeaconBlockBodyWithBlobKZGsCompat) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
 	}

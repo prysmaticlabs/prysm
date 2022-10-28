@@ -61,16 +61,8 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 		cp := eth.CopySignedBeaconBlockBellatrix(pb.(*eth.SignedBeaconBlockBellatrix))
 		return initSignedBlockFromProtoBellatrix(cp)
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.SignedBeaconBlockWithBlobKZGs:
-			cp := eth.CopySignedBeaconBlockWithBlobKZGs(p)
-			return initSignedBlockFromProtoEip4844(cp)
-		case *eth.SignedBeaconBlockWithBlobKZGsCompat:
-			cp := eth.CopySignedBeaconBlockWithBlobKZGsCompat(p)
-			return initSignedBlockFromProtoEip4844Compat(cp)
-		default:
-			return nil, errIncorrectBlockVersion
-		}
+		cp := eth.CopySignedBeaconBlockWithBlobKZGs(pb.(*eth.SignedBeaconBlockWithBlobKZGs))
+		return initSignedBlockFromProtoEip4844(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -101,7 +93,6 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 			Block: &eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: pb.(*eth.SignedBeaconBlockBellatrix)},
 		}, nil
 	case version.EIP4844:
-		// TODO(EIP-4844): What does it mean to propose a Eip4844Compat block?
 		return &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: pb.(*eth.SignedBeaconBlockWithBlobKZGs)},
 		}, nil
@@ -445,14 +436,7 @@ func (b *BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).HashTreeRoot()
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return p.HashTreeRoot()
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return p.HashTreeRoot()
-		default:
-			return [field_params.RootLength]byte{}, errIncorrectBlockVersion
-		}
+		return pb.(*eth.BeaconBlockWithBlobKZGs).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBlockVersion
 	}
@@ -475,14 +459,7 @@ func (b *BeaconBlock) HashTreeRootWith(h *ssz.Hasher) error {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).HashTreeRootWith(h)
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return p.HashTreeRootWith(h)
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return p.HashTreeRootWith(h)
-		default:
-			return errIncorrectBlockVersion
-		}
+		return pb.(*eth.BeaconBlockBodyWithBlobKZGs).HashTreeRootWith(h)
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -506,14 +483,7 @@ func (b *BeaconBlock) MarshalSSZ() ([]byte, error) {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).MarshalSSZ()
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return p.MarshalSSZ()
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return p.MarshalSSZ()
-		default:
-			return []byte{}, errIncorrectBlockVersion
-		}
+		return pb.(*eth.BeaconBlockWithBlobKZGs).MarshalSSZ()
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -537,14 +507,7 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).MarshalSSZTo(dst)
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return p.MarshalSSZTo(dst)
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return p.MarshalSSZTo(dst)
-		default:
-			return []byte{}, errIncorrectBlockVersion
-		}
+		return pb.(*eth.BeaconBlockWithBlobKZGs).MarshalSSZTo(dst)
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -572,14 +535,7 @@ func (b *BeaconBlock) SizeSSZ() int {
 		}
 		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ()
 	case version.EIP4844:
-		switch p := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return p.SizeSSZ()
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return p.SizeSSZ()
-		default:
-			panic(incorrectBodyVersion)
-		}
+		return pb.(*eth.BeaconBlockWithBlobKZGs).SizeSSZ()
 	default:
 		panic(incorrectBodyVersion)
 	}
@@ -632,7 +588,6 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 			}
 		}
 	case version.EIP4844:
-		// TODO(EIP-4844): This needs to be compatible with pre-4844 payloads
 		pb := &eth.BeaconBlockWithBlobKZGs{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
@@ -666,14 +621,7 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 		}
 		return &validatorpb.SignRequest_BlockBellatrix{BlockBellatrix: pb.(*eth.BeaconBlockBellatrix)}, nil
 	case version.EIP4844:
-		switch b := pb.(type) {
-		case *eth.BeaconBlockWithBlobKZGs:
-			return &validatorpb.SignRequest_BlockEip4844{BlockEip4844: b}, nil
-		case *eth.BeaconBlockWithBlobKZGsCompat:
-			return &validatorpb.SignRequest_BlockEip4844Compat{BlockEip4844Compat: b}, nil
-		default:
-			return nil, errIncorrectBlockVersion
-		}
+		return &validatorpb.SignRequest_BlockEip4844{BlockEip4844: pb.(*eth.BeaconBlockWithBlobKZGs)}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}
