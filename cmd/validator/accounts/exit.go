@@ -92,7 +92,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 		return errors.New("wallet is empty, no accounts to delete")
 	}
 	// Filter keys either from CLI flag or from interactive session.
-	rawPubKey, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(c, r, validatingPublicKeys)
+	rawPubKey, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(c, r, validatingPublicKeys, c.Bool(flags.ForceExitFlag.Name))
 	if err != nil {
 		return errors.Wrap(err, "could not filter public keys for deletion")
 	}
