@@ -145,7 +145,7 @@ message Withdrawal {
 // Blobs bundle is retrieved through engine-api from the execution layer client.
 // It consists of the necessary components for constructing a blobs sidecar object to gossip through p2p.
 message BlobsBundle {
-	// The block hash of the payload  which corresponds to the blobs.
+	// The block hash of the payload which corresponds to the blobs.
 	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	// The KZG commitments of the blobs.
 	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
