@@ -33,11 +33,15 @@ func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	//}
 	//compareFns := append(beacon, validator...)
 	//compareFns = append(compareFns, node...)
+	debug := []apiComparisonFunc{
+		withCompareDebugState,
+	}
+	compareFns := append(beacon, debug...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
-			beacon...,
+			compareFns...,
 		); err != nil {
 			return errors.Wrap(err, "beaconAPI verify")
 		}
