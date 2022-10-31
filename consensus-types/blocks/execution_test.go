@@ -82,19 +82,56 @@ func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
 }
 
 func TestWrapExecutionPayloadCapella(t *testing.T) {
-	data := &enginev1.ExecutionPayloadCapella{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadCapella(data)
+	data := &enginev1.ExecutionPayloadCapella{
+		ParentHash:    []byte("parenthash"),
+		FeeRecipient:  []byte("feerecipient"),
+		StateRoot:     []byte("stateroot"),
+		ReceiptsRoot:  []byte("receiptsroot"),
+		LogsBloom:     []byte("logsbloom"),
+		PrevRandao:    []byte("prevrandao"),
+		BlockNumber:   11,
+		GasLimit:      22,
+		GasUsed:       33,
+		Timestamp:     44,
+		ExtraData:     []byte("extradata"),
+		BaseFeePerGas: []byte("basefeepergas"),
+		BlockHash:     []byte("blockhash"),
+		Transactions:  [][]byte{[]byte("transaction")},
+		Withdrawals: []*enginev1.Withdrawal{{
+			WithdrawalIndex:  55,
+			ValidatorIndex:   66,
+			ExecutionAddress: []byte("executionaddress"),
+			Amount:           77,
+		}},
+	}
+	payload, err := blocks.WrappedExecutionPayloadCapella(data)
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, data, wsb.Proto())
+	assert.DeepEqual(t, data, payload.Proto())
 }
 
 func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
-	data := &enginev1.ExecutionPayloadHeaderCapella{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadHeaderCapella(data)
+	data := &enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       []byte("parenthash"),
+		FeeRecipient:     []byte("feerecipient"),
+		StateRoot:        []byte("stateroot"),
+		ReceiptsRoot:     []byte("receiptsroot"),
+		LogsBloom:        []byte("logsbloom"),
+		PrevRandao:       []byte("prevrandao"),
+		BlockNumber:      11,
+		GasLimit:         22,
+		GasUsed:          33,
+		Timestamp:        44,
+		ExtraData:        []byte("extradata"),
+		BaseFeePerGas:    []byte("basefeepergas"),
+		BlockHash:        []byte("blockhash"),
+		TransactionsRoot: []byte("transactionsroot"),
+		WithdrawalsRoot:  []byte("withdrawalsroot"),
+	}
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data)
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, data, wsb.Proto())
+	assert.DeepEqual(t, data, payload.Proto())
 }
 
 func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
@@ -102,10 +139,10 @@ func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadCapella{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadCapella(data)
+	payload, err := blocks.WrappedExecutionPayloadCapella(data)
 	require.NoError(t, err)
 
-	assert.Equal(t, false, wsb.IsNil())
+	assert.Equal(t, false, payload.IsNil())
 }
 
 func TestWrapExecutionPayloadHeaderCapella_IsNil(t *testing.T) {
@@ -113,42 +150,42 @@ func TestWrapExecutionPayloadHeaderCapella_IsNil(t *testing.T) {
 	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeaderCapella{GasUsed: 54}
-	wsb, err := blocks.WrappedExecutionPayloadHeaderCapella(data)
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data)
 	require.NoError(t, err)
 
-	assert.Equal(t, false, wsb.IsNil())
+	assert.Equal(t, false, payload.IsNil())
 }
 
 func TestWrapExecutionPayloadCapella_SSZ(t *testing.T) {
-	wsb := createWrappedPayloadCapella(t)
-	rt, err := wsb.HashTreeRoot()
+	payload := createWrappedPayloadCapella(t)
+	rt, err := payload.HashTreeRoot()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, rt)
 
 	var b []byte
-	b, err = wsb.MarshalSSZTo(b)
+	b, err = payload.MarshalSSZTo(b)
 	assert.NoError(t, err)
 	assert.NotEqual(t, 0, len(b))
-	encoded, err := wsb.MarshalSSZ()
+	encoded, err := payload.MarshalSSZ()
 	require.NoError(t, err)
-	assert.NotEqual(t, 0, wsb.SizeSSZ())
-	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
+	assert.NotEqual(t, 0, payload.SizeSSZ())
+	assert.NoError(t, payload.UnmarshalSSZ(encoded))
 }
 
 func TestWrapExecutionPayloadHeaderCapella_SSZ(t *testing.T) {
-	wsb := createWrappedPayloadHeaderCapella(t)
-	rt, err := wsb.HashTreeRoot()
+	payload := createWrappedPayloadHeaderCapella(t)
+	rt, err := payload.HashTreeRoot()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, rt)
 
 	var b []byte
-	b, err = wsb.MarshalSSZTo(b)
+	b, err = payload.MarshalSSZTo(b)
 	assert.NoError(t, err)
 	assert.NotEqual(t, 0, len(b))
-	encoded, err := wsb.MarshalSSZ()
+	encoded, err := payload.MarshalSSZ()
 	require.NoError(t, err)
-	assert.NotEqual(t, 0, wsb.SizeSSZ())
-	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
+	assert.NotEqual(t, 0, payload.SizeSSZ())
+	assert.NoError(t, payload.UnmarshalSSZ(encoded))
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
@@ -194,7 +231,7 @@ func createWrappedPayloadHeader(t testing.TB) interfaces.ExecutionData {
 }
 
 func createWrappedPayloadCapella(t testing.TB) interfaces.ExecutionData {
-	wsb, err := blocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{
+	payload, err := blocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -212,11 +249,11 @@ func createWrappedPayloadCapella(t testing.TB) interfaces.ExecutionData {
 		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	})
 	require.NoError(t, err)
-	return wsb
+	return payload
 }
 
 func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
-	wsb, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
@@ -234,5 +271,5 @@ func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
 		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 	})
 	require.NoError(t, err)
-	return wsb
+	return payload
 }
