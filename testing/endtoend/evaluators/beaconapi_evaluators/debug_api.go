@@ -38,7 +38,7 @@ func withCompareDebugState(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	}
 	if err := doMiddlewareJSONGetRequest(
 		v2MiddlewarePathTemplate,
-		"/eth/v2/debug/beacon/states/head",
+		"/debug/beacon/states/head",
 		beaconNodeIdx,
 		respJSONPrysm,
 	); err != nil {
@@ -46,7 +46,7 @@ func withCompareDebugState(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	}
 	if err := doMiddlewareJSONGetRequest(
 		v2MiddlewarePathTemplate,
-		"/eth/v2/debug/beacon/states/head",
+		"/debug/beacon/states/head",
 		beaconNodeIdx,
 		respJSONLighthouse,
 		"lighthouse",
