@@ -148,7 +148,7 @@ message BlobsBundle {
 	// The block hash of the payload  which corresponds to the blobs.
 	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	// The KZG commitments of the blobs.
-	repeated bytes commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
 	// The blobs itself.
 	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
 	// The aggregated proof of the blobs to enable fast validation for commitments and blobs.
