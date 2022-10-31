@@ -884,7 +884,7 @@ func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 				Amount:           123,
 			},
 			{
-				WithdrawalIndex:  456,
+				WithdrawalIndex:  124,
 				ValidatorIndex:   456,
 				ExecutionAddress: bytes(20),
 				Amount:           456,

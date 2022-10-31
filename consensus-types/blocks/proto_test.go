@@ -483,6 +483,30 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
+	t.Run("Bellatrix - wrong payload type", func(t *testing.T) {
+		body := bodyBellatrix(t)
+		body.executionPayload = &executionPayloadHeader{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadWrongType)
+	})
+	t.Run("BellatrixBlind - wrong payload type", func(t *testing.T) {
+		body := bodyBlindedBellatrix(t)
+		body.executionPayloadHeader = &executionPayload{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadHeaderWrongType)
+	})
+	t.Run("Capella - wrong payload type", func(t *testing.T) {
+		body := bodyCapella(t)
+		body.executionPayload = &executionPayloadHeaderCapella{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadWrongType)
+	})
+	t.Run("CapellaBlind - wrong payload type", func(t *testing.T) {
+		body := bodyBlindedCapella(t)
+		body.executionPayloadHeader = &executionPayloadCapella{}
+		_, err := body.Proto()
+		require.ErrorIs(t, err, errPayloadHeaderWrongType)
+	})
 }
 
 func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
