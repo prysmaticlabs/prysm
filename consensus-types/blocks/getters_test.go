@@ -309,6 +309,14 @@ func Test_BeaconBlockBody_SyncAggregate(t *testing.T) {
 	assert.Equal(t, result, sa)
 }
 
+func Test_BeaconBlockBody_BLSToExecutionChanges(t *testing.T) {
+	changes := []*eth.SignedBLSToExecutionChange{{}}
+	bb := &BeaconBlockBody{version: version.Capella, blsToExecutionChanges: changes}
+	result, err := bb.BLSToExecutionChanges()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, result, changes)
+}
+
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
 	pb := hydrateBeaconBlockBody()
 	expectedHTR, err := pb.HashTreeRoot()

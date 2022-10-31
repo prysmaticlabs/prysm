@@ -24,6 +24,8 @@ type SignedBeaconBlock interface {
 	ToBlinded() (SignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
+	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
+	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -66,6 +68,7 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([field_params.RootLength]byte, error)
 	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
+	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 }
 
 // ExecutionData represents execution layer information that is contained

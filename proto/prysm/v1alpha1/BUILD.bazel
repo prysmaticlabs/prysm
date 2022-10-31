@@ -213,6 +213,7 @@ ssz_proto_files(
         "beacon_state.proto",
         "sync_committee.proto",
         "withdrawals.proto",
+        "blobs.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
