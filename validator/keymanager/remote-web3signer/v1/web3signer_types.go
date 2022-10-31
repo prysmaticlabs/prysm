@@ -8,50 +8,50 @@ import (
 
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregationSlotSignRequest struct {
-	Type            string           `json:"type" validate:"required"`
 	ForkInfo        *ForkInfo        `json:"fork_info" validate:"required"`
-	SigningRoot     hexutil.Bytes    `json:"signingRoot"`
 	AggregationSlot *AggregationSlot `json:"aggregation_slot" validate:"required"`
+	Type            string           `json:"type" validate:"required"`
+	SigningRoot     hexutil.Bytes    `json:"signingRoot"`
 }
 
 // AggregateAndProofSignRequest is a request object for web3signer sign api.
 type AggregateAndProofSignRequest struct {
-	Type              string             `json:"type" validate:"required"`
 	ForkInfo          *ForkInfo          `json:"fork_info" validate:"required"`
-	SigningRoot       hexutil.Bytes      `json:"signingRoot"`
 	AggregateAndProof *AggregateAndProof `json:"aggregate_and_proof" validate:"required"`
+	Type              string             `json:"type" validate:"required"`
+	SigningRoot       hexutil.Bytes      `json:"signingRoot"`
 }
 
 // AttestationSignRequest is a request object for web3signer sign api.
 type AttestationSignRequest struct {
-	Type        string           `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo        `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes    `json:"signingRoot"`
 	Attestation *AttestationData `json:"attestation" validate:"required"`
+	Type        string           `json:"type" validate:"required"`
+	SigningRoot hexutil.Bytes    `json:"signingRoot"`
 }
 
 // BlockSignRequest is a request object for web3signer sign api.
 type BlockSignRequest struct {
-	Type        string        `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo     `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes `json:"signingRoot"`
 	Block       *BeaconBlock  `json:"block" validate:"required"`
+	Type        string        `json:"type" validate:"required"`
+	SigningRoot hexutil.Bytes `json:"signingRoot"`
 }
 
 // BlockAltairSignRequest is a request object for web3signer sign api.
 type BlockAltairSignRequest struct {
-	Type        string                    `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                 `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes             `json:"signingRoot"`
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
+	Type        string                    `json:"type" validate:"required"`
+	SigningRoot hexutil.Bytes             `json:"signingRoot"`
 }
 
 // BlockBellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
 type BlockBellatrixSignRequest struct {
-	Type        string                       `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes                `json:"signingRoot"`
 	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
+	Type        string                       `json:"type" validate:"required"`
+	SigningRoot hexutil.Bytes                `json:"signingRoot"`
 }
 
 // DepositSignRequest Not currently supported by Prysm.
@@ -59,49 +59,49 @@ type BlockBellatrixSignRequest struct {
 
 // RandaoRevealSignRequest is a request object for web3signer sign api.
 type RandaoRevealSignRequest struct {
-	Type         string        `json:"type" validate:"required"`
 	ForkInfo     *ForkInfo     `json:"fork_info" validate:"required"`
-	SigningRoot  hexutil.Bytes `json:"signingRoot"`
 	RandaoReveal *RandaoReveal `json:"randao_reveal" validate:"required"`
+	Type         string        `json:"type" validate:"required"`
+	SigningRoot  hexutil.Bytes `json:"signingRoot"`
 }
 
 // VoluntaryExitSignRequest is a request object for web3signer sign api.
 type VoluntaryExitSignRequest struct {
-	Type          string         `json:"type" validate:"required"`
 	ForkInfo      *ForkInfo      `json:"fork_info"`
-	SigningRoot   hexutil.Bytes  `json:"signingRoot" validate:"required"`
 	VoluntaryExit *VoluntaryExit `json:"voluntary_exit" validate:"required"`
+	Type          string         `json:"type" validate:"required"`
+	SigningRoot   hexutil.Bytes  `json:"signingRoot" validate:"required"`
 }
 
 // SyncCommitteeMessageSignRequest is a request object for web3signer sign api.
 type SyncCommitteeMessageSignRequest struct {
-	Type                 string                `json:"type" validate:"required"`
 	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
-	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 	SyncCommitteeMessage *SyncCommitteeMessage `json:"sync_committee_message" validate:"required"`
+	Type                 string                `json:"type" validate:"required"`
+	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 }
 
 // SyncCommitteeSelectionProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeSelectionProofSignRequest struct {
-	Type                        string                       `json:"type" validate:"required"`
 	ForkInfo                    *ForkInfo                    `json:"fork_info" validate:"required"`
-	SigningRoot                 hexutil.Bytes                `json:"signingRoot"`
 	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data" validate:"required"`
+	Type                        string                       `json:"type" validate:"required"`
+	SigningRoot                 hexutil.Bytes                `json:"signingRoot"`
 }
 
 // SyncCommitteeContributionAndProofSignRequest is a request object for web3signer sign api.
 type SyncCommitteeContributionAndProofSignRequest struct {
-	Type                 string                `json:"type" validate:"required"`
 	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
-	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
+	Type                 string                `json:"type" validate:"required"`
+	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 }
 
 // ValidatorRegistrationSignRequest a request object for web3signer sign api.
 type ValidatorRegistrationSignRequest struct {
+	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
 	Type                  string                 `json:"type" validate:"required"`
 	SigningRoot           hexutil.Bytes          `json:"signingRoot"`
-	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,9 +116,9 @@ type ForkInfo struct {
 
 // Fork a sub property of ForkInfo.
 type Fork struct {
+	Epoch           string        `json:"epoch"` /*uint64*/
 	PreviousVersion hexutil.Bytes `json:"previous_version"`
 	CurrentVersion  hexutil.Bytes `json:"current_version"`
-	Epoch           string        `json:"epoch"` /*uint64*/
 }
 
 // AggregationSlot a sub property of AggregationSlotSignRequest.
@@ -142,11 +142,11 @@ type Attestation struct {
 
 // AttestationData a sub property of Attestation.
 type AttestationData struct {
+	Source          *Checkpoint   `json:"source"`
+	Target          *Checkpoint   `json:"target"`
 	Slot            string        `json:"slot"`  /* uint64 */
 	Index           string        `json:"index"` /* uint64 */ // Prysm uses CommitteeIndex but web3signer uses index.
 	BeaconBlockRoot hexutil.Bytes `json:"beacon_block_root"`
-	Source          *Checkpoint   `json:"source"`
-	Target          *Checkpoint   `json:"target"`
 }
 
 // Checkpoint a sub property of AttestationData.
@@ -157,11 +157,11 @@ type Checkpoint struct {
 
 // BeaconBlock a sub property of BeaconBlockBlockV2.
 type BeaconBlock struct {
-	Slot          string           `json:"slot"`           /* uint64 */
+	Body          *BeaconBlockBody `json:"body"` /* uint64 */
+	Slot          string           `json:"slot"`
 	ProposerIndex string           `json:"proposer_index"` /* uint64 */
 	ParentRoot    hexutil.Bytes    `json:"parent_root"`
 	StateRoot     hexutil.Bytes    `json:"state_root"`
-	Body          *BeaconBlockBody `json:"body"`
 }
 
 // BeaconBlockBody a sub property of BeaconBlock.
@@ -221,8 +221,8 @@ type IndexedAttestation struct {
 
 // Deposit a sub property of DepositSignRequest.
 type Deposit struct {
-	Proof []string     `json:"proof"`
 	Data  *DepositData `json:"data"`
+	Proof []string     `json:"proof"`
 }
 
 // DepositData a sub property of Deposit.
@@ -249,36 +249,36 @@ type VoluntaryExit struct {
 
 // BeaconBlockAltairBlockV2 a sub property of BlockAltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
-	Version string             `json:"version"`
 	Block   *BeaconBlockAltair `json:"block"`
+	Version string             `json:"version"`
 }
 
 // BeaconBlockAltair a sub property of BeaconBlockAltairBlockV2.
 type BeaconBlockAltair struct {
+	Body          *BeaconBlockBodyAltair `json:"body"`
 	Slot          string                 `json:"slot"`
 	ProposerIndex string                 `json:"proposer_index"`
 	ParentRoot    hexutil.Bytes          `json:"parent_root"`
 	StateRoot     hexutil.Bytes          `json:"state_root"`
-	Body          *BeaconBlockBodyAltair `json:"body"`
 }
 
 // BeaconBlockBodyAltair a sub property of BeaconBlockAltair.
 type BeaconBlockBodyAltair struct {
-	RandaoReveal      hexutil.Bytes          `json:"randao_reveal"`
 	Eth1Data          *Eth1Data              `json:"eth1_data"`
+	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+	RandaoReveal      hexutil.Bytes          `json:"randao_reveal"`
 	Graffiti          hexutil.Bytes          `json:"graffiti"` /* Hash32 */
 	ProposerSlashings []*ProposerSlashing    `json:"proposer_slashings"`
 	AttesterSlashings []*AttesterSlashing    `json:"attester_slashings"`
 	Attestations      []*Attestation         `json:"attestations"`
 	Deposits          []*Deposit             `json:"deposits"`
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits"`
-	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
 }
 
 // BeaconBlockBellatrixBlockV2 a field of BlockBellatrixSignRequest.
 type BeaconBlockBellatrixBlockV2 struct {
-	Version     string             `json:"version"`
 	BlockHeader *BeaconBlockHeader `json:"block_header"`
+	Version     string             `json:"version"`
 }
 
 // SyncAggregate is a sub property of BeaconBlockBodyAltair.
@@ -289,8 +289,8 @@ type SyncAggregate struct {
 
 // BeaconBlockBlockV2 a sub property of BlockV2SignRequest.
 type BeaconBlockBlockV2 struct {
-	Version string       `json:"version"`
 	Block   *BeaconBlock `json:"beacon_block"`
+	Version string       `json:"version"`
 }
 
 // RandaoReveal a sub property of RandaoRevealSignRequest.
@@ -300,8 +300,8 @@ type RandaoReveal struct {
 
 // SyncCommitteeMessage a sub property of SyncCommitteeSignRequest.
 type SyncCommitteeMessage struct {
-	BeaconBlockRoot hexutil.Bytes `json:"beacon_block_root"` /* Hash32 */
 	Slot            string        `json:"slot"`              /* uint64 */
+	BeaconBlockRoot hexutil.Bytes `json:"beacon_block_root"` /* Hash32 */
 	// Prysm uses BlockRoot instead of BeaconBlockRoot and has the following extra properties : ValidatorIndex, Signature
 }
 
@@ -313,9 +313,9 @@ type SyncAggregatorSelectionData struct {
 
 // ContributionAndProof a sub property of AggregatorSelectionSignRequest.
 type ContributionAndProof struct {
+	Contribution    *SyncCommitteeContribution `json:"contribution"`
 	AggregatorIndex string                     `json:"aggregator_index"` /* uint64 */
 	SelectionProof  hexutil.Bytes              `json:"selection_proof"`  /* 96 byte hexadecimal */
-	Contribution    *SyncCommitteeContribution `json:"contribution"`
 }
 
 // SyncCommitteeContribution a sub property of AggregatorSelectionSignRequest.

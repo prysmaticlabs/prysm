@@ -40,8 +40,8 @@ func TestSSZUint64(t *testing.T) {
 	tests := []struct {
 		name            string
 		serializedBytes []byte
-		actualValue     uint64
 		root            []byte
+		actualValue     uint64
 		wantErr         bool
 	}{
 		{

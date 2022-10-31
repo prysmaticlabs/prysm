@@ -21,8 +21,8 @@ import (
 
 type Builder struct {
 	service  *blockchain.Service
-	lastTick int64
 	execMock *engineMock
+	lastTick int64
 }
 
 func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.SignedBeaconBlock) *Builder {

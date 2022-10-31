@@ -23,9 +23,9 @@ func NewStatus(store BackfillDB) *Status {
 // end of the missing block range via the Advance() method, to check whether a Slot is missing from the database
 // via the SlotCovered() method, and to see the current StartGap() and EndGap().
 type Status struct {
+	store       BackfillDB
 	start       types.Slot
 	end         types.Slot
-	store       BackfillDB
 	genesisSync bool
 }
 

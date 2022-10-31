@@ -19,9 +19,9 @@ import (
 
 func Test_migrateStateValidators(t *testing.T) {
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
 		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		name  string
 	}{
 		{
 			name: "only runs once",
@@ -209,9 +209,9 @@ func Test_migrateStateValidators(t *testing.T) {
 
 func Test_migrateAltairStateValidators(t *testing.T) {
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
 		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		name  string
 	}{
 		{
 			name: "migrates validators and adds them to new buckets",

@@ -23,8 +23,8 @@ func TestRandaoMix_OK(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     types.Epoch
 		randaoMix []byte
+		epoch     types.Epoch
 	}{
 		{
 			epoch:     10,
@@ -57,8 +57,8 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     types.Epoch
 		randaoMix []byte
+		epoch     types.Epoch
 	}{
 		{
 			epoch:     10,

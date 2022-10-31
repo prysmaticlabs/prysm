@@ -87,10 +87,8 @@ type Status struct {
 
 // StatusConfig represents peer status service params.
 type StatusConfig struct {
-	// PeerLimit specifies maximum amount of concurrent peers that are expected to be connect to the node.
-	PeerLimit int
-	// ScorerParams holds peer scorer configuration params.
-	ScorerParams *scorers.Config
+	ScorerParams *scorers.Config // ScorerParams holds peer scorer configuration params.
+	PeerLimit    int             // PeerLimit specifies maximum amount of concurrent peers that are expected to be connect to the node.
 }
 
 // NewStatus creates a new status entity.

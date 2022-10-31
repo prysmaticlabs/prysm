@@ -11,9 +11,9 @@ import (
 
 func Test_migrateBlockSlotIndex(t *testing.T) {
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, db *bbolt.DB)
 		eval  func(t *testing.T, db *bbolt.DB)
+		name  string
 	}{
 		{
 			name: "only runs once",

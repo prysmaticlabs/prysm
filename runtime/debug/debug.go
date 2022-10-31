@@ -97,11 +97,11 @@ var (
 // Do not create values of this type, use the one
 // in the Handler variable instead.
 type HandlerT struct {
-	mu        sync.Mutex
 	cpuW      io.WriteCloser
-	cpuFile   string
 	traceW    io.WriteCloser
+	cpuFile   string
 	traceFile string
+	mu        sync.Mutex
 }
 
 // MemStats returns detailed runtime memory statistics.

@@ -14,8 +14,6 @@ type EventType int
 
 // Event is the event that is sent with operation feed updates.
 type Event struct {
-	// Type is the type of event.
-	Type EventType
-	// Data is event-specific data.
 	Data interface{}
+	Type EventType
 }

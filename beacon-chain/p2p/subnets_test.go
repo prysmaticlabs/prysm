@@ -151,11 +151,11 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 func Test_AttSubnets(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name        string
 		record      func(t *testing.T) *enr.Record
+		name        string
+		errContains string
 		want        []uint64
 		wantErr     bool
-		errContains string
 	}{
 		{
 			name: "valid record",
@@ -336,11 +336,11 @@ func Test_AttSubnets(t *testing.T) {
 func Test_SyncSubnets(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name        string
 		record      func(t *testing.T) *enr.Record
+		name        string
+		errContains string
 		want        []uint64
 		wantErr     bool
-		errContains string
 	}{
 		{
 			name: "valid record",

@@ -25,8 +25,8 @@ func NewGenericClientStatsUpdater(w io.Writer) Updater {
 }
 
 type httpPoster struct {
-	url    string
 	client *http.Client
+	url    string
 }
 
 func (gw *httpPoster) Update(r io.Reader) error {

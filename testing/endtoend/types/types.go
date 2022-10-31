@@ -31,32 +31,32 @@ func WithCheckpointSync() E2EConfigOpt {
 
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
-	TestCheckpointSync      bool
-	TestSync                bool
-	TestFeature             bool
-	UsePrysmShValidator     bool
-	UsePprof                bool
-	UseWeb3RemoteSigner     bool
-	TestDeposits            bool
-	UseFixedPeerIDs         bool
-	UseValidatorCrossClient bool
-	EpochsToRun             uint64
-	Seed                    int64
-	TracingSinkEndpoint     string
-	Evaluators              []Evaluator
 	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
-	BeaconFlags             []string
-	ValidatorFlags          []string
+	TracingSinkEndpoint     string
 	PeerIDs                 []string
+	ValidatorFlags          []string
+	BeaconFlags             []string
+	Evaluators              []Evaluator
+	EpochsToRun             uint64
 	ExtraEpochs             uint64
+	Seed                    int64
+	UsePprof                bool
+	UseValidatorCrossClient bool
+	UseFixedPeerIDs         bool
+	TestDeposits            bool
+	UseWeb3RemoteSigner     bool
+	TestCheckpointSync      bool
+	UsePrysmShValidator     bool
+	TestFeature             bool
+	TestSync                bool
 }
 
 // Evaluator defines the structure of the evaluators used to
 // conduct the current beacon state during the E2E.
 type Evaluator struct {
-	Name       string
 	Policy     func(currentEpoch types.Epoch) bool
 	Evaluation func(conn ...*grpc.ClientConn) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
+	Name       string
 }
 
 // ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.

@@ -22,9 +22,7 @@ type eip3076TestCase struct {
 	Name                  string `json:"name"`
 	GenesisValidatorsRoot string `json:"genesis_validators_root"`
 	Steps                 []struct {
-		ShouldSucceed      bool `json:"should_succeed"`
-		AllowPartialImport bool `json:"allow_partial_import"`
-		Interchange        struct {
+		Interchange struct {
 			Metadata struct {
 				InterchangeFormatVersion string `json:"interchange_format_version"`
 				GenesisValidatorsRoot    string `json:"genesis_validators_root"`
@@ -55,6 +53,8 @@ type eip3076TestCase struct {
 			SigningRoot   string `json:"signing_root"`
 			ShouldSucceed bool   `json:"should_succeed"`
 		} `json:"attestations"`
+		ShouldSucceed      bool `json:"should_succeed"`
+		AllowPartialImport bool `json:"allow_partial_import"`
 	} `json:"steps"`
 }
 

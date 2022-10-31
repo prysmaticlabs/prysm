@@ -13,9 +13,9 @@ const (
 // messages as well as validator and beaconnode, whereas
 // CommonStats would only be part of beaconnode and validator.
 type APIMessage struct {
+	ProcessName string `json:"process"` // validator, beaconnode, system
 	APIVersion  int    `json:"version"`
 	Timestamp   int64  `json:"timestamp"` // unix timestamp in milliseconds
-	ProcessName string `json:"process"`   // validator, beaconnode, system
 }
 
 // CommonStats represent generic metrics that are expected on both
@@ -24,11 +24,12 @@ type APIMessage struct {
 // Note that some metrics are labeled NA because they are expected
 // to be present with their zero-value when not supported by a client.
 type CommonStats struct {
-	CPUProcessSecondsTotal int64  `json:"cpu_process_seconds_total"`
-	MemoryProcessBytes     int64  `json:"memory_process_bytes"`
 	ClientName             string `json:"client_name"`
 	ClientVersion          string `json:"client_version"`
-	ClientBuild            int64  `json:"client_build"`
+	APIMessage             `json:",inline"`
+	CPUProcessSecondsTotal int64 `json:"cpu_process_seconds_total"`
+	MemoryProcessBytes     int64 `json:"memory_process_bytes"`
+	ClientBuild            int64 `json:"client_build"`
 	// TODO(#8849): parse the grpc connection string to determine
 	// if multiple addresses are present
 	SyncEth2FallbackConfigured bool `json:"sync_eth2_fallback_configured"`
@@ -37,7 +38,6 @@ type CommonStats struct {
 	// This is different from a "fallback" configuration where
 	// the second address is treated as a failover.
 	SyncEth2FallbackConnected bool `json:"sync_eth2_fallback_connected"`
-	APIMessage                `json:",inline"`
 }
 
 // BeaconNodeStats embeds CommonStats and represents metrics specific to
@@ -48,20 +48,20 @@ type CommonStats struct {
 // Note that some metrics are labeled NA because they are expected
 // to be present with their zero-value when not supported by a client.
 type BeaconNodeStats struct {
-	// TODO(#8850): add support for this after slasher refactor is merged
-	SlasherActive             bool  `json:"slasher_active"`
-	SyncEth1Connected         bool  `json:"sync_eth1_connected"`
-	SyncEth2Synced            bool  `json:"sync_eth2_synced"`
+	CommonStats               `json:",inline"`
 	DiskBeaconchainBytesTotal int64 `json:"disk_beaconchain_bytes_total"`
 	// N/A -- would require significant network code changes at this time
-	NetworkLibp2pBytesTotalReceive int64 `json:"network_libp2p_bytes_total_receive"`
-	// N/A -- would require significant network code changes at this time
+	NetworkLibp2pBytesTotalReceive  int64 `json:"network_libp2p_bytes_total_receive"`
 	NetworkLibp2pBytesTotalTransmit int64 `json:"network_libp2p_bytes_total_transmit"`
+	// N/A -- would require significant network code changes at this time
 	// p2p_peer_count where label "state" == "Connected"
 	NetworkPeersConnected int64 `json:"network_peers_connected"`
 	// beacon_head_slot
 	SyncBeaconHeadSlot int64 `json:"sync_beacon_head_slot"`
-	CommonStats        `json:",inline"`
+	// TODO(#8850): add support for this after slasher refactor is merged
+	SlasherActive     bool `json:"slasher_active"`
+	SyncEth1Connected bool `json:"sync_eth1_connected"`
+	SyncEth2Synced    bool `json:"sync_eth2_synced"`
 }
 
 // ValidatorStats embeds CommonStats and represents metrics specific to
@@ -70,9 +70,9 @@ type BeaconNodeStats struct {
 // Note that some metrics are labeled NA because they are expected
 // to be present with their zero-value when not supported by a client.
 type ValidatorStats struct {
+	CommonStats `json:",inline"`
 	// N/A -- TODO(#8848): verify whether we can obtain this metric from the validator process
 	ValidatorTotal int64 `json:"validator_total"`
 	// N/A -- TODO(#8848): verify whether we can obtain this metric from the validator process
 	ValidatorActive int64 `json:"validator_active"`
-	CommonStats     `json:",inline"`
 }

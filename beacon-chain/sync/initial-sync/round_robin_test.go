@@ -29,10 +29,10 @@ func TestService_roundRobinSync(t *testing.T) {
 	}()
 	tests := []struct {
 		name                string
-		currentSlot         types.Slot
 		availableBlockSlots []types.Slot
 		expectedBlockSlots  []types.Slot
 		peers               []*peerData
+		currentSlot         types.Slot
 	}{
 		{
 			name:                "Single peer with no finalized blocks",

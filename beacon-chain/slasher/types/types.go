@@ -24,18 +24,18 @@ type IndexedAttestationWrapper struct {
 // AttesterDoubleVote represents a double vote instance
 // which is a slashable event for attesters.
 type AttesterDoubleVote struct {
-	Target                 types.Epoch
-	ValidatorIndex         types.ValidatorIndex
 	PrevAttestationWrapper *IndexedAttestationWrapper
 	AttestationWrapper     *IndexedAttestationWrapper
+	Target                 types.Epoch
+	ValidatorIndex         types.ValidatorIndex
 }
 
 // DoubleBlockProposal containing an incoming and an existing proposal's signing root.
 type DoubleBlockProposal struct {
-	Slot                   types.Slot
-	ValidatorIndex         types.ValidatorIndex
 	PrevBeaconBlockWrapper *SignedBlockHeaderWrapper
 	BeaconBlockWrapper     *SignedBlockHeaderWrapper
+	Slot                   types.Slot
+	ValidatorIndex         types.ValidatorIndex
 }
 
 // SignedBlockHeaderWrapper contains an signed beacon block header with its

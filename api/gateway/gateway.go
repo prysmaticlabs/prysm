@@ -25,9 +25,9 @@ var _ runtime.Service = (*Gateway)(nil)
 
 // PbMux serves grpc-gateway requests for selected patterns using registered protobuf handlers.
 type PbMux struct {
+	Mux           *gwruntime.ServeMux
 	Registrations []PbHandlerRegistration // Protobuf registrations to be registered in Mux.
 	Patterns      []string                // URL patterns that will be handled by Mux.
-	Mux           *gwruntime.ServeMux     // The router that will be used for grpc-gateway requests.
 }
 
 // PbHandlerRegistration is a function that registers a protobuf handler.
@@ -43,15 +43,15 @@ type MuxHandler func(
 
 // Config parameters for setting up the gateway service.
 type config struct {
-	maxCallRecvMsgSize           uint64
+	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
+	muxHandler                   MuxHandler
+	router                       *mux.Router
 	remoteCert                   string
 	gatewayAddr                  string
 	remoteAddr                   string
 	allowedOrigins               []string
-	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
-	muxHandler                   MuxHandler
 	pbHandlers                   []*PbMux
-	router                       *mux.Router
+	maxCallRecvMsgSize           uint64
 	timeout                      time.Duration
 }
 

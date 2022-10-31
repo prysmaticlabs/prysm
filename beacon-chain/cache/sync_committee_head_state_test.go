@@ -34,14 +34,14 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	})
 	require.NoError(t, err)
 	type put struct {
-		slot  types.Slot
 		state state.BeaconState
+		slot  types.Slot
 	}
 	tests := []struct {
+		want       state.BeaconState
+		put        *put
 		name       string
 		key        types.Slot
-		put        *put
-		want       state.BeaconState
 		wantErr    bool
 		wantPutErr bool
 	}{

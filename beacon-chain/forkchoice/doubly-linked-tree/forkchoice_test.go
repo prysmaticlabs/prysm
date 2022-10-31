@@ -615,7 +615,6 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                string
 		justified           *forkchoicetypes.Checkpoint
 		bestJustified       *forkchoicetypes.Checkpoint
 		finalized           *forkchoicetypes.Checkpoint
@@ -624,8 +623,9 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 		wantedJustified     *forkchoicetypes.Checkpoint
 		wantedBestJustified *forkchoicetypes.Checkpoint
 		wantedFinalized     *forkchoicetypes.Checkpoint
-		currentSlot         types.Slot
+		name                string
 		wantedErr           string
+		currentSlot         types.Slot
 	}{
 		{
 			name:                "lower than store justified and finalized",

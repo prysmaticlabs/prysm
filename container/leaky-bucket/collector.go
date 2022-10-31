@@ -18,12 +18,12 @@ type bucketMap map[string]*LeakyBucket
 // All Collector methods are goroutine safe.
 type Collector struct {
 	buckets  bucketMap
+	quit     chan bool
 	heap     priorityQueue
 	rate     float64
 	capacity int64
 	period   time.Duration
 	lock     sync.Mutex
-	quit     chan bool
 }
 
 // NewCollector creates a new Collector. When new buckets are created within

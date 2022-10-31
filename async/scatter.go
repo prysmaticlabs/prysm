@@ -8,8 +8,8 @@ import (
 
 // WorkerResults are the results of a scatter worker.
 type WorkerResults struct {
-	Offset int
 	Extent interface{}
+	Offset int
 }
 
 // Scatter scatters a computation across multiple goroutines.

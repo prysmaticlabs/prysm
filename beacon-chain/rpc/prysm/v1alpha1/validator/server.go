@@ -40,13 +40,13 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                    context.Context
-	AttestationCache       *cache.AttestationCache
-	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
+	BlockNotifier          blockfeed.Notifier
+	BeaconDB               db.HeadAccessDatabase
+	SyncChecker            sync.Checker
 	HeadFetcher            blockchain.HeadFetcher
 	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
-	GenesisFetcher         blockchain.GenesisFetcher
+	Ctx                    context.Context
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           execution.POWBlockFetcher
@@ -54,24 +54,24 @@ type Server struct {
 	ChainStartFetcher      execution.ChainStartFetcher
 	Eth1InfoFetcher        execution.ChainInfoFetcher
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
-	SyncChecker            sync.Checker
-	StateNotifier          statefeed.Notifier
-	BlockNotifier          blockfeed.Notifier
+	BlockBuilder           builder.BlockBuilder
+	ExecutionEngineCaller  execution.EngineCaller
+	GenesisFetcher         blockchain.GenesisFetcher
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
 	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
-	MockEth1Votes          bool
+	StateNotifier          statefeed.Notifier
 	Eth1BlockFetcher       execution.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
-	BeaconDB               db.HeadAccessDatabase
-	ExecutionEngineCaller  execution.EngineCaller
-	BlockBuilder           builder.BlockBuilder
+	AttestationCache       *cache.AttestationCache
+	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
+	MockEth1Votes          bool
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

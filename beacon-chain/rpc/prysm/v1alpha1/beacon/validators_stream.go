@@ -34,21 +34,21 @@ import (
 
 // infostream is a struct for each instance of the infostream created by a client connection.
 type infostream struct {
-	ctx                 context.Context
-	headFetcher         blockchain.HeadFetcher
+	stateSub            event.Subscription
+	beaconDB            db.ReadOnlyDatabase
 	depositFetcher      depositcache.DepositFetcher
 	blockFetcher        execution.POWBlockFetcher
-	beaconDB            db.ReadOnlyDatabase
-	pubKeys             [][]byte
+	ctx                 context.Context
+	stream              ethpb.BeaconChain_StreamValidatorsInfoServer
+	headFetcher         blockchain.HeadFetcher
 	pubKeysMutex        *sync.RWMutex
 	stateChannel        chan *feed.Event
-	stateSub            event.Subscription
 	eth1Deposits        *cache.Cache
 	eth1DepositsMutex   *sync.RWMutex
 	eth1Blocktimes      *cache.Cache
 	eth1BlocktimesMutex *sync.RWMutex
+	pubKeys             [][]byte
 	currentEpoch        types.Epoch
-	stream              ethpb.BeaconChain_StreamValidatorsInfoServer
 	genesisTime         uint64
 }
 

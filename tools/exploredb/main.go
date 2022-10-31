@@ -66,9 +66,9 @@ type modifiedState struct {
 
 // used to parallelize state summary bucket processing
 type modifiedStateSummary struct {
-	slot      types.Slot
 	root      []byte
 	key       []byte
+	slot      types.Slot
 	valueSize uint64
 	rowCount  uint64
 }

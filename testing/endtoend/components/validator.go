@@ -158,10 +158,10 @@ type ValidatorNode struct {
 	e2etypes.ComponentRunner
 	config       *e2etypes.E2EConfig
 	started      chan struct{}
+	cmd          *exec.Cmd
 	validatorNum int
 	index        int
 	offset       int
-	cmd          *exec.Cmd
 }
 
 // NewValidatorNode creates and returns a validator node.

@@ -97,11 +97,11 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 	}
 
 	tests := []struct {
-		name            string
 		modifyFunc      func(b state.BeaconState, k [fieldparams.BLSPubkeyLength]byte)
-		exists          bool
+		name            string
 		expectedIdx     types.ValidatorIndex
 		largestIdxInSet types.ValidatorIndex
+		exists          bool
 	}{
 		{
 			name: "retrieve validator",

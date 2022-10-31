@@ -30,9 +30,9 @@ var (
 
 // Used for tree, each node is a representation of a node in the graph
 type node struct {
-	parentRoot [32]byte
 	dothNode   *dot.Node
 	score      map[uint64]bool
+	parentRoot [32]byte
 }
 
 func main() {

@@ -13,8 +13,8 @@ func TestIsSurround(t *testing.T) {
 		b *ethpb.IndexedAttestation
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 		want bool
 	}{
 		{

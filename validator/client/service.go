@@ -48,51 +48,51 @@ type GenesisFetcher interface {
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	useWeb                bool
-	emitAccountMetrics    bool
-	logValidatorBalances  bool
-	interopKeysConfig     *local.InteropKeymanagerConfig
-	conn                  *grpc.ClientConn
-	grpcRetryDelay        time.Duration
-	grpcRetries           uint
-	maxCallRecvMsgSize    int
-	cancel                context.CancelFunc
-	walletInitializedFeed *event.Feed
+	ctx                   context.Context
+	db                    db.Database
+	validator             iface.Validator
 	wallet                *wallet.Wallet
 	graffitiStruct        *graffiti.Graffiti
+	proposerSettings      *validatorserviceconfig.ProposerSettings
+	Web3SignerConfig      *remoteweb3signer.SetupConfig
+	interopKeysConfig     *local.InteropKeymanagerConfig
+	cancel                context.CancelFunc
+	walletInitializedFeed *event.Feed
+	conn                  *grpc.ClientConn
 	dataDir               string
 	withCert              string
 	endpoint              string
-	ctx                   context.Context
-	validator             iface.Validator
-	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	proposerSettings      *validatorserviceconfig.ProposerSettings
+	maxCallRecvMsgSize    int
+	grpcRetries           uint
+	grpcRetryDelay        time.Duration
+	useWeb                bool
+	logValidatorBalances  bool
+	emitAccountMetrics    bool
 }
 
 // Config for the validator service.
 type Config struct {
-	UseWeb                     bool
-	LogValidatorBalances       bool
-	EmitAccountMetrics         bool
+	ValDB                      db.Database
+	Validator                  iface.Validator
+	GraffitiStruct             *graffiti.Graffiti
+	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	Web3SignerConfig           *remoteweb3signer.SetupConfig
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
-	GrpcRetriesFlag            uint
-	GrpcMaxCallRecvMsgSizeFlag int
-	GrpcRetryDelay             time.Duration
-	GraffitiStruct             *graffiti.Graffiti
-	Validator                  iface.Validator
-	ValDB                      db.Database
 	CertFlag                   string
 	DataDir                    string
 	GrpcHeadersFlag            string
 	GraffitiFlag               string
 	Endpoint                   string
-	Web3SignerConfig           *remoteweb3signer.SetupConfig
-	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	GrpcRetryDelay             time.Duration
+	GrpcMaxCallRecvMsgSizeFlag int
+	GrpcRetriesFlag            uint
+	UseWeb                     bool
+	EmitAccountMetrics         bool
+	LogValidatorBalances       bool
 }
 
 // NewValidatorService creates a new validator service for the service

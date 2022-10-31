@@ -19,12 +19,12 @@ type weakSubjectivityDB interface {
 }
 
 type WeakSubjectivityVerifier struct {
-	enabled  bool
-	verified bool
-	root     [32]byte
+	db       weakSubjectivityDB
 	epoch    types.Epoch
 	slot     types.Slot
-	db       weakSubjectivityDB
+	root     [32]byte
+	enabled  bool
+	verified bool
 }
 
 // NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.

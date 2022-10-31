@@ -36,8 +36,8 @@ func slotKeyFn(obj interface{}) (string, error) {
 
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
 type rootStateInfo struct {
-	root  [32]byte
 	state state.BeaconState
+	root  [32]byte
 }
 
 // rootKeyFn takes the string representation of the block root to be used as key

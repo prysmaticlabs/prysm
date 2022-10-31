@@ -46,15 +46,15 @@ func TestNewLeakyBucket(t *testing.T) {
 }
 
 type actionSet struct {
-	count  int64
-	action string
 	value  interface{}
+	action string
+	count  int64
 }
 
 type testSet struct {
+	set      []actionSet
 	capacity int64
 	rate     float64
-	set      []actionSet
 }
 
 var oneAtaTime = testSet{
@@ -62,40 +62,40 @@ var oneAtaTime = testSet{
 	rate:     1.0,
 	set: []actionSet{
 		{},
-		{1, "add", 1},
-		{1, "time-set", time.Nanosecond},
-		{1, "till", time.Second - time.Nanosecond},
-		{1, "time-set", time.Second - time.Nanosecond},
-		{1, "till", time.Nanosecond},
-		{0, "time-set", time.Second},
-		{0, "till", time.Duration(0)},
+		{count: 1, action: "add", value: 1},
+		{count: 1, action: "time-set", value: time.Nanosecond},
+		{count: 1, action: "till", value: time.Second - time.Nanosecond},
+		{count: 1, action: "time-set", value: time.Second - time.Nanosecond},
+		{count: 1, action: "till", value: time.Nanosecond},
+		{count: 0, action: "time-set", value: time.Second},
+		{count: 0, action: "till", value: time.Duration(0)},
 
 		// Add a couple.
-		{1, "add", 1},
-		{1, "time-add", time.Second / 2},
-		{1, "till", time.Second / 2},
-		{2, "add", 1},
-		{2, "time-add", time.Second/2 - time.Nanosecond},
+		{count: 1, action: "add", value: 1},
+		{count: 1, action: "time-add", value: time.Second / 2},
+		{count: 1, action: "till", value: time.Second / 2},
+		{count: 2, action: "add", value: 1},
+		{count: 2, action: "time-add", value: time.Second/2 - time.Nanosecond},
 
 		// Monkey with the capacity and make sure Count()/TillEmpty() are
 		// adjusted as needed.
-		{2, "cap", 5 + 1},
-		{2, "till", time.Second + time.Nanosecond},
-		{2, "cap", 5 - 1},
-		{2, "till", time.Second + time.Nanosecond},
-		{1, "cap", 1},
-		{1, "till", time.Second},
-		{1, "cap", 4},
-		{1, "till", time.Second},
+		{count: 2, action: "cap", value: 5 + 1},
+		{count: 2, action: "till", value: time.Second + time.Nanosecond},
+		{count: 2, action: "cap", value: 5 - 1},
+		{count: 2, action: "till", value: time.Second + time.Nanosecond},
+		{count: 1, action: "cap", value: 1},
+		{count: 1, action: "till", value: time.Second},
+		{count: 1, action: "cap", value: 4},
+		{count: 1, action: "till", value: time.Second},
 
 		// Test the full cases.
-		{0, "time-add", time.Second * time.Duration(5)},
-		{1, "add", 1},
-		{2, "add", 1},
-		{3, "add", 1},
-		{4, "add", 1},
-		{4, "add", 1},
-		{4, "till", time.Second * 4},
+		{count: 0, action: "time-add", value: time.Second * time.Duration(5)},
+		{count: 1, action: "add", value: 1},
+		{count: 2, action: "add", value: 1},
+		{count: 3, action: "add", value: 1},
+		{count: 4, action: "add", value: 1},
+		{count: 4, action: "add", value: 1},
+		{count: 4, action: "till", value: time.Second * 4},
 	},
 }
 
@@ -104,11 +104,11 @@ var varied = testSet{
 	rate:     60.0,
 	set: []actionSet{
 		{},
-		{100, "add", 100},
-		{100, "time-set", time.Nanosecond},
-		{1000, "add", 1000},
-		{1000, "add", 1},
-		{940, "time-set", time.Second},
+		{count: 100, action: "add", value: 100},
+		{count: 100, action: "time-set", value: time.Nanosecond},
+		{count: 1000, action: "add", value: 1000},
+		{count: 1000, action: "add", value: 1},
+		{count: 940, action: "time-set", value: time.Second},
 	},
 }
 

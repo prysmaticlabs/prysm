@@ -12,16 +12,16 @@ import (
 )
 
 type fields struct {
-	root              [32]byte
-	sig               [96]byte
+	syncAggregate     *eth.SyncAggregate
+	execPayload       *enginev1.ExecutionPayload
+	execPayloadHeader *enginev1.ExecutionPayloadHeader
 	deposits          []*eth.Deposit
 	atts              []*eth.Attestation
 	proposerSlashings []*eth.ProposerSlashing
 	attesterSlashings []*eth.AttesterSlashing
 	voluntaryExits    []*eth.SignedVoluntaryExit
-	syncAggregate     *eth.SyncAggregate
-	execPayload       *enginev1.ExecutionPayload
-	execPayloadHeader *enginev1.ExecutionPayloadHeader
+	sig               [96]byte
+	root              [32]byte
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {

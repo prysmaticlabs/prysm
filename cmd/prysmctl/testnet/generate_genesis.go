@@ -25,11 +25,11 @@ var (
 		DepositJsonFile string
 		ChainConfigFile string
 		ConfigName      string
-		NumValidators   uint64
-		GenesisTime     uint64
 		OutputSSZ       string
 		OutputJSON      string
 		OutputYaml      string
+		NumValidators   uint64
+		GenesisTime     uint64
 	}{}
 	log           = logrus.WithField("prefix", "genesis")
 	outputSSZFlag = &cli.StringFlag{
@@ -93,10 +93,10 @@ var (
 // validators on Ethereum. This file can be generated using the official staking-deposit-cli.
 type depositDataJSON struct {
 	PubKey                string `json:"pubkey"`
-	Amount                uint64 `json:"amount"`
 	WithdrawalCredentials string `json:"withdrawal_credentials"`
 	DepositDataRoot       string `json:"deposit_data_root"`
 	Signature             string `json:"signature"`
+	Amount                uint64 `json:"amount"`
 }
 
 func cliActionGenerateGenesisState(cliCtx *cli.Context) error {

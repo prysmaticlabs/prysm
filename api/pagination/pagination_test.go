@@ -11,9 +11,9 @@ import (
 func TestStartAndEndPage(t *testing.T) {
 	tests := []struct {
 		token     string
+		nextToken string
 		pageSize  int
 		totalSize int
-		nextToken string
 		start     int
 		end       int
 	}{

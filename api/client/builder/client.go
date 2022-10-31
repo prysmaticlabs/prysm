@@ -186,9 +186,9 @@ var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath)
 
 func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
 	v := struct {
-		Slot       types.Slot
 		ParentHash string
 		Pubkey     string
+		Slot       types.Slot
 	}{
 		Slot:       slot,
 		ParentHash: fmt.Sprintf("%#x", parentHash),

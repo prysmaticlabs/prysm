@@ -291,8 +291,8 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 func TestValidatorFlag_Has(t *testing.T) {
 	tests := []struct {
 		name     string
-		set      uint8
 		expected []uint8
+		set      uint8
 	}{
 		{name: "none",
 			set:      0,
@@ -439,13 +439,13 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 	tests := []struct {
+		participatedFlags   map[uint8]bool
 		name                string
 		indices             []uint64
 		epochParticipation  []byte
-		participatedFlags   map[uint8]bool
+		wantedParticipation []byte
 		epoch               types.Epoch
 		wantedBalance       uint64
-		wantedParticipation []byte
 	}{
 		{name: "none participated",
 			indices: []uint64{}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
@@ -536,12 +536,12 @@ func TestEpochParticipation(t *testing.T) {
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 	tests := []struct {
+		participatedFlags        map[uint8]bool
 		name                     string
 		indices                  []uint64
 		epochParticipation       []byte
-		participatedFlags        map[uint8]bool
-		wantedNumerator          uint64
 		wantedEpochParticipation []byte
+		wantedNumerator          uint64
 	}{
 		{name: "none participated",
 			indices: []uint64{}, epochParticipation: []byte{0, 0, 0, 0, 0, 0, 0, 0}, participatedFlags: map[uint8]bool{
@@ -631,11 +631,11 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 	headFlagIndex := cfg.TimelyHeadFlagIndex
 
 	tests := []struct {
-		name                 string
 		inputState           state.BeaconState
 		inputData            *ethpb.AttestationData
-		inputDelay           types.Slot
 		participationIndices map[uint8]bool
+		name                 string
+		inputDelay           types.Slot
 	}{
 		{
 			name: "none",
@@ -708,10 +708,10 @@ func TestMatchingStatus(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
 	tests := []struct {
-		name          string
 		inputState    state.BeaconState
 		inputData     *ethpb.AttestationData
 		inputCheckpt  *ethpb.Checkpoint
+		name          string
 		matchedSource bool
 		matchedTarget bool
 		matchedHead   bool

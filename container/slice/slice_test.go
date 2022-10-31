@@ -272,14 +272,14 @@ func TestNotInt64(t *testing.T) {
 
 func TestIsInUint64(t *testing.T) {
 	testCases := []struct {
-		a      uint64
 		b      []uint64
+		a      uint64
 		result bool
 	}{
-		{0, []uint64{}, false},
-		{0, []uint64{0}, true},
-		{4, []uint64{2, 3, 5, 4, 6}, true},
-		{100, []uint64{2, 3, 5, 4, 6}, false},
+		{a: 0, b: []uint64{}, result: false},
+		{a: 0, b: []uint64{0}, result: true},
+		{a: 4, b: []uint64{2, 3, 5, 4, 6}, result: true},
+		{a: 100, b: []uint64{2, 3, 5, 4, 6}, result: false},
 	}
 	for _, tt := range testCases {
 		result := slice.IsInUint64(tt.a, tt.b)
@@ -292,14 +292,14 @@ func TestIsInUint64(t *testing.T) {
 
 func TestIsInInt64(t *testing.T) {
 	testCases := []struct {
-		a      int64
 		b      []int64
+		a      int64
 		result bool
 	}{
-		{0, []int64{}, false},
-		{0, []int64{0}, true},
-		{4, []int64{2, 3, 5, 4, 6}, true},
-		{100, []int64{2, 3, 5, 4, 6}, false},
+		{a: 0, b: []int64{}, result: false},
+		{a: 0, b: []int64{0}, result: true},
+		{a: 4, b: []int64{2, 3, 5, 4, 6}, result: true},
+		{a: 100, b: []int64{2, 3, 5, 4, 6}, result: false},
 	}
 	for _, tt := range testCases {
 		result := slice.IsInInt64(tt.a, tt.b)
@@ -571,14 +571,14 @@ func TestNotSlot(t *testing.T) {
 
 func TestIsInSlots(t *testing.T) {
 	testCases := []struct {
-		a      types.Slot
 		b      []types.Slot
+		a      types.Slot
 		result bool
 	}{
-		{0, []types.Slot{}, false},
-		{0, []types.Slot{0}, true},
-		{4, []types.Slot{2, 3, 5, 4, 6}, true},
-		{100, []types.Slot{2, 3, 5, 4, 6}, false},
+		{a: 0, b: []types.Slot{}, result: false},
+		{a: 0, b: []types.Slot{0}, result: true},
+		{a: 4, b: []types.Slot{2, 3, 5, 4, 6}, result: true},
+		{a: 100, b: []types.Slot{2, 3, 5, 4, 6}, result: false},
 	}
 	for _, tt := range testCases {
 		result := slice.IsInSlots(tt.a, tt.b)

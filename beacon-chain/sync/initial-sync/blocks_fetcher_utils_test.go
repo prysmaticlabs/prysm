@@ -488,13 +488,13 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 func TestBlocksFetcher_currentHeadAndTargetEpochs(t *testing.T) {
 	tests := []struct {
 		name               string
-		syncMode           syncMode
 		peers              []*peerData
 		ourFinalizedEpoch  types.Epoch
 		ourHeadSlot        types.Slot
 		expectedHeadEpoch  types.Epoch
 		targetEpoch        types.Epoch
 		targetEpochSupport int
+		syncMode           syncMode
 	}{
 		{
 			name:               "ignore lower epoch peers in best finalized",

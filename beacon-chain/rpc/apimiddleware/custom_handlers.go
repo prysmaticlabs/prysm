@@ -28,8 +28,8 @@ const (
 var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 type sszConfig struct {
-	fileName     string
 	responseJson SszResponse
+	fileName     string
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {

@@ -12,9 +12,9 @@ import (
 
 func TestDouble(t *testing.T) {
 	tests := []struct {
+		err      error
 		name     string
 		inValues int
-		err      error
 	}{
 		{
 			name:     "0",

@@ -17,14 +17,14 @@ import (
 
 // Wallet contains an in-memory, simulated wallet implementation.
 type Wallet struct {
-	InnerAccountsDir  string
-	Directories       []string
 	Files             map[string]map[string][]byte
-	EncryptedSeedFile []byte
 	AccountPasswords  map[string]string
+	InnerAccountsDir  string
 	WalletPassword    string
-	UnlockAccounts    bool
+	Directories       []string
+	EncryptedSeedFile []byte
 	lock              sync.RWMutex
+	UnlockAccounts    bool
 }
 
 // AccountNames --

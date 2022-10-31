@@ -60,30 +60,30 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	started               bool
-	isPreGenesis          bool
-	pingMethod            func(ctx context.Context, id peer.ID) error
-	cancel                context.CancelFunc
-	cfg                   *Config
-	peers                 *peers.Status
-	addrFilter            *multiaddr.Filters
-	ipLimiter             *leakybucket.Collector
-	privKey               *ecdsa.PrivateKey
+	genesisTime           time.Time
 	metaData              metadata.Metadata
+	host                  host.Host
+	ctx                   context.Context
+	stateNotifier         statefeed.Notifier
+	startupErr            error
+	dv5Listener           Listener
+	addrFilter            *multiaddr.Filters
+	cancel                context.CancelFunc
+	ipLimiter             *leakybucket.Collector
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
-	joinedTopicsLock      sync.Mutex
+	privKey               *ecdsa.PrivateKey
 	subnetsLock           map[uint64]*sync.RWMutex
-	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
-	initializationLock    sync.Mutex
-	dv5Listener           Listener
-	startupErr            error
-	stateNotifier         statefeed.Notifier
-	ctx                   context.Context
-	host                  host.Host
-	genesisTime           time.Time
+	pingMethod            func(ctx context.Context, id peer.ID) error
+	peers                 *peers.Status
+	cfg                   *Config
 	genesisValidatorsRoot []byte
 	activeValidatorCount  uint64
+	joinedTopicsLock      sync.Mutex
+	initializationLock    sync.Mutex
+	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
+	started               bool
+	isPreGenesis          bool
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No

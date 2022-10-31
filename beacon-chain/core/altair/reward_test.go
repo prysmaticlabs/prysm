@@ -20,11 +20,11 @@ func Test_BaseReward(t *testing.T) {
 		return s
 	}
 	tests := []struct {
-		name      string
-		valIdx    types.ValidatorIndex
 		st        state.ReadOnlyBeaconState
-		want      uint64
+		name      string
 		errString string
+		valIdx    types.ValidatorIndex
+		want      uint64
 	}{
 		{
 			name:      "unknown validator",
@@ -72,10 +72,10 @@ func Test_BaseRewardWithTotalBalance(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, 1)
 	tests := []struct {
 		name          string
+		errString     string
 		valIdx        types.ValidatorIndex
 		activeBalance uint64
 		want          uint64
-		errString     string
 	}{
 		{
 			name:          "active balance is 0",
@@ -143,9 +143,9 @@ func Test_BaseRewardPerIncrement(t *testing.T) {
 	helpers.ClearCache()
 	tests := []struct {
 		name          string
+		errString     string
 		activeBalance uint64
 		want          uint64
-		errString     string
 	}{
 		{
 			name:          "active balance is 0",

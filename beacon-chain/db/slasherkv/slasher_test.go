@@ -238,8 +238,8 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 
 func Test_encodeDecodeProposalRecord(t *testing.T) {
 	tests := []struct {
-		name    string
 		blkHdr  *slashertypes.SignedBlockHeaderWrapper
+		name    string
 		wantErr bool
 	}{
 		{
@@ -290,8 +290,8 @@ func Test_encodeDecodeProposalRecord(t *testing.T) {
 
 func Test_encodeDecodeAttestationRecord(t *testing.T) {
 	tests := []struct {
-		name       string
 		attWrapper *slashertypes.IndexedAttestationWrapper
+		name       string
 		wantErr    bool
 	}{
 		{

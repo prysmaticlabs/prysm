@@ -41,8 +41,8 @@ var (
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
 type CommitteeCache struct {
 	CommitteeCache *lru.Cache
-	lock           sync.RWMutex
 	inProgress     map[string]bool
+	lock           sync.RWMutex
 }
 
 // committeeKeyFn takes the seed as the key to retrieve shuffled indices of a committee in a given epoch.

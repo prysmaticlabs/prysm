@@ -8,14 +8,14 @@ import (
 
 // Struct for handling a thread-safe list of indexed attestation wrappers.
 type attestationsQueue struct {
-	sync.RWMutex
 	items []*slashertypes.IndexedAttestationWrapper
+	sync.RWMutex
 }
 
 // Struct for handling a thread-safe list of beacon block header wrappers.
 type blocksQueue struct {
-	lock  sync.RWMutex
 	items []*slashertypes.SignedBlockHeaderWrapper
+	lock  sync.RWMutex
 }
 
 func newAttestationsQueue() *attestationsQueue {

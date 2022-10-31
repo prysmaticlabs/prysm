@@ -30,8 +30,8 @@ type Service struct {
 
 // Handler represents a path and handler func to serve on the same port as /metrics, /healthz, /goroutinez, etc.
 type Handler struct {
-	Path    string
 	Handler func(http.ResponseWriter, *http.Request)
+	Path    string
 }
 
 // NewService sets up a new instance for a given address host:port.
@@ -62,8 +62,8 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 
 	type serviceStatus struct {
 		Name   string `json:"service"`
-		Status bool   `json:"status"`
 		Err    string `json:"error"`
+		Status bool   `json:"status"`
 	}
 	var hasError bool
 	statuses := make([]serviceStatus, 0, len(s.svcRegistry.Statuses()))

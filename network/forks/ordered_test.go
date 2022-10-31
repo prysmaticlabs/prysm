@@ -47,10 +47,10 @@ func TestVersionForEpoch(t *testing.T) {
 	bc := testForkVersionBCC()
 	ofs := NewOrderedSchedule(bc)
 	testCases := []struct {
-		name    string
-		version [4]byte
-		epoch   types.Epoch
 		err     error
+		name    string
+		epoch   types.Epoch
+		version [4]byte
 	}{
 		{
 			name:    "found between versions",
@@ -95,10 +95,10 @@ func TestVersionForName(t *testing.T) {
 	bc := testForkVersionBCC()
 	ofs := NewOrderedSchedule(bc)
 	testCases := []struct {
-		testName    string
-		version     [4]byte
-		versionName string
 		err         error
+		testName    string
+		versionName string
+		version     [4]byte
 	}{
 		{
 			testName:    "found",

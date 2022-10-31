@@ -62,12 +62,12 @@ func TestGetTargetData(t *testing.T) {
 func TestSetTargetData(t *testing.T) {
 	type testStruct struct {
 		name        string
+		error       string
 		enc         deprecatedEncodedAttestingHistory
-		target      types.Epoch
-		source      types.Epoch
 		signingRoot []byte
 		expected    deprecatedEncodedAttestingHistory
-		error       string
+		target      types.Epoch
+		source      types.Epoch
 	}
 	tests := []testStruct{
 		{

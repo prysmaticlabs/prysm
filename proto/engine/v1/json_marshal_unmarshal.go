@@ -27,9 +27,9 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 // eth_getBlockByNumber endpoints via JSON-RPC.
 type ExecutionBlock struct {
 	gethtypes.Header
-	Hash            common.Hash              `json:"hash"`
-	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
+	Transactions    []*gethtypes.Transaction `json:"transactions"`
+	Hash            common.Hash              `json:"hash"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -237,9 +237,9 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadAttributesJSON struct {
-	Timestamp             hexutil.Uint64 `json:"timestamp"`
 	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
 	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+	Timestamp             hexutil.Uint64 `json:"timestamp"`
 }
 
 // MarshalJSON --
@@ -266,8 +266,8 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 
 type payloadStatusJSON struct {
 	LatestValidHash *common.Hash `json:"latestValidHash"`
-	Status          string       `json:"status"`
 	ValidationError *string      `json:"validationError"`
+	Status          string       `json:"status"`
 }
 
 // MarshalJSON --

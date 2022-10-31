@@ -68,20 +68,16 @@ type ValidatorMonitorConfig struct {
 // Service is the main structure that tracks validators and reports logs and
 // metrics of their performances throughout their lifetime.
 type Service struct {
-	config    *ValidatorMonitorConfig
-	ctx       context.Context
-	cancel    context.CancelFunc
-	isLogging bool
-
-	// Locks access to TrackedValidators, latestPerformance, aggregatedPerformance,
-	// trackedSyncedCommitteeIndices and lastSyncedEpoch
-	sync.RWMutex
-
+	ctx                         context.Context
+	config                      *ValidatorMonitorConfig
+	cancel                      context.CancelFunc
 	TrackedValidators           map[types.ValidatorIndex]bool
 	latestPerformance           map[types.ValidatorIndex]ValidatorLatestPerformance
 	aggregatedPerformance       map[types.ValidatorIndex]ValidatorAggregatedPerformance
 	trackedSyncCommitteeIndices map[types.ValidatorIndex][]types.CommitteeIndex
 	lastSyncedEpoch             types.Epoch
+	sync.RWMutex
+	isLogging bool
 }
 
 // NewService sets up a new validator monitor service instance when given a list of validator indices to track.

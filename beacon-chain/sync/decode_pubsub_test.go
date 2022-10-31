@@ -27,11 +27,11 @@ func TestService_decodePubsubMessage(t *testing.T) {
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, make([]byte, 32))
 	require.NoError(t, err)
 	tests := []struct {
-		name    string
-		topic   string
-		input   *pubsub.Message
 		want    interface{}
 		wantErr error
+		input   *pubsub.Message
+		name    string
+		topic   string
 	}{
 		{
 			name:    "Nil message",

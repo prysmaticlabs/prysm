@@ -51,10 +51,10 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  types.Slot                   // current head slot.
-	root  [32]byte                     // current head root.
-	block interfaces.SignedBeaconBlock // current head block.
-	state state.BeaconState            // current head state.
+	block interfaces.SignedBeaconBlock
+	state state.BeaconState
+	slot  types.Slot
+	root  [32]byte
 }
 
 // This saves head info to the local service cache, it also saves the

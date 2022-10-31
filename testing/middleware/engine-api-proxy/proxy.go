@@ -27,11 +27,11 @@ var (
 )
 
 type jsonRPCObject struct {
+	Result  interface{}   `json:"result"`
 	Jsonrpc string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
 	ID      uint64        `json:"id"`
-	Result  interface{}   `json:"result"`
 }
 
 type interceptorConfig struct {
@@ -43,11 +43,11 @@ type interceptorConfig struct {
 // allowing us to modify in-flight requests and responses for testing purposes.
 type Proxy struct {
 	cfg              *config
-	address          string
 	srv              *http.Server
-	lock             sync.RWMutex
 	interceptors     map[string]*interceptorConfig
 	backedUpRequests map[string][]*http.Request
+	address          string
+	lock             sync.RWMutex
 }
 
 // New creates a proxy server forwarding requests from a consensus client to an execution client.

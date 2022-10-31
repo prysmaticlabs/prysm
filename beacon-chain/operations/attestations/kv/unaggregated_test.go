@@ -18,10 +18,10 @@ import (
 
 func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 	tests := []struct {
-		name          string
 		att           *ethpb.Attestation
-		count         int
+		name          string
 		wantErrString string
+		count         int
 	}{
 		{
 			name: "nil attestation",
@@ -85,9 +85,9 @@ func TestKV_Unaggregated_SaveUnaggregatedAttestation(t *testing.T) {
 func TestKV_Unaggregated_SaveUnaggregatedAttestations(t *testing.T) {
 	tests := []struct {
 		name          string
+		wantErrString string
 		atts          []*ethpb.Attestation
 		count         int
-		wantErrString string
 	}{
 		{
 			name: "unaggregated only",

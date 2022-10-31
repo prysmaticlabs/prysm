@@ -201,11 +201,11 @@ func TestUnmarshalBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
+		err     error
 		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
 		name    string
-		version [4]byte
 		slot    types.Slot
-		err     error
+		version [4]byte
 	}{
 		{
 			name:    "genesis - slot 0",
@@ -293,11 +293,11 @@ func TestUnmarshalBlindedBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
+		err     error
 		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
 		name    string
-		version [4]byte
 		slot    types.Slot
-		err     error
+		version [4]byte
 	}{
 		{
 			name:    "genesis - slot 0",

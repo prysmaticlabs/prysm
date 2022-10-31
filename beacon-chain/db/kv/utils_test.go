@@ -17,11 +17,11 @@ func Test_deleteValueForIndices(t *testing.T) {
 	_, err := rand.Read(blocks)
 	require.NoError(t, err)
 	tests := []struct {
-		name          string
 		inputIndices  map[string][]byte
-		root          []byte
 		outputIndices map[string][]byte
+		name          string
 		wantedErr     string
+		root          []byte
 	}{
 		{
 			name:          "empty input, no root",
@@ -157,10 +157,10 @@ func TestSplitRoots(t *testing.T) {
 		bt = append(bt, b)
 	}
 	cases := []struct {
+		err    error
 		name   string
 		b      []byte
 		expect [][32]byte
-		err    error
 	}{
 		{
 			name: "misaligned",

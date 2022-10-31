@@ -9,10 +9,10 @@ import (
 // Store defines the caches for various sync committee objects
 // such as message(un-aggregated) and contribution(aggregated).
 type Store struct {
-	messageLock       sync.RWMutex
 	messageCache      *queue.PriorityQueue
-	contributionLock  sync.RWMutex
 	contributionCache *queue.PriorityQueue
+	messageLock       sync.RWMutex
+	contributionLock  sync.RWMutex
 }
 
 // NewStore initializes a new sync committee store.

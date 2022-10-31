@@ -318,10 +318,10 @@ func BenchmarkFeedSend1000(b *testing.B) {
 
 func TestFeed_Send(t *testing.T) {
 	tests := []struct {
-		name        string
+		obj         interface{}
 		evFeed      *Feed
 		testSetup   func(fd *Feed, t *testing.T, o interface{})
-		obj         interface{}
+		name        string
 		expectPanic bool
 	}{
 		{
@@ -456,8 +456,8 @@ func TestFeed_Send(t *testing.T) {
 // The following objects below are a collection of different
 // struct types to test with.
 type testFeed struct {
-	a uint64
 	b string
+	a uint64
 }
 
 func (testFeed) method1() {
@@ -474,9 +474,9 @@ type testFeedWithPointer struct {
 }
 
 type testFeed2 struct {
-	a uint64
 	b string
 	c []byte
+	a uint64
 }
 
 func (testFeed2) method1() {
@@ -484,9 +484,10 @@ func (testFeed2) method1() {
 }
 
 type testFeed3 struct {
-	a    uint64
-	b    string
-	c, d []byte
+	b string
+	c []byte
+	d []byte
+	a uint64
 }
 
 func (testFeed3) method1() {

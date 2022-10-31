@@ -58,8 +58,8 @@ func defaultResponseContainer() *testResponseContainer {
 
 type testErrorJson struct {
 	Message     string
-	Code        int
 	CustomField string
+	Code        int
 }
 
 // StatusCode returns the error's underlying error code.

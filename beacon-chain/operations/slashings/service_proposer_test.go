@@ -26,9 +26,9 @@ func proposerSlashingForValIdx(valIdx types.ValidatorIndex) *ethpb.ProposerSlash
 
 func TestPool_InsertProposerSlashing(t *testing.T) {
 	type fields struct {
+		included  map[types.ValidatorIndex]bool
 		wantedErr string
 		pending   []*ethpb.ProposerSlashing
-		included  map[types.ValidatorIndex]bool
 	}
 	type args struct {
 		slashings []*ethpb.ProposerSlashing
@@ -207,16 +207,16 @@ func TestPool_InsertProposerSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 
 func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 	type fields struct {
-		pending  []*ethpb.ProposerSlashing
 		included map[types.ValidatorIndex]bool
+		pending  []*ethpb.ProposerSlashing
 	}
 	type args struct {
 		slashing *ethpb.ProposerSlashing
 	}
 	tests := []struct {
+		args   args
 		name   string
 		fields fields
-		args   args
 		want   fields
 	}{
 		{
@@ -336,8 +336,8 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   []*ethpb.ProposerSlashing
+		fields fields
 	}{
 		{
 			name: "Empty list",
@@ -381,8 +381,8 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 
 func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	type fields struct {
-		all     bool
 		pending []*ethpb.ProposerSlashing
+		all     bool
 	}
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 	val, err := beaconState.ValidatorAtIndex(0)
@@ -406,8 +406,8 @@ func TestPool_PendingProposerSlashings_Slashed(t *testing.T) {
 	result = append(result[1:5], result[6:]...)
 	tests := []struct {
 		name   string
-		fields fields
 		want   []*ethpb.ProposerSlashing
+		fields fields
 	}{
 		{
 			name: "removes slashed",

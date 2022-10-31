@@ -11,9 +11,9 @@ import (
 )
 
 type nextSlotCache struct {
-	sync.RWMutex
-	root  []byte
 	state state.BeaconState
+	root  []byte
+	sync.RWMutex
 }
 
 var (

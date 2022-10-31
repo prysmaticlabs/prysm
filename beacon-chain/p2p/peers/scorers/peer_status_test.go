@@ -20,9 +20,9 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 	defer cancel()
 
 	tests := []struct {
-		name   string
 		update func(scorer *scorers.PeerStatusScorer)
 		check  func(scorer *scorers.PeerStatusScorer)
+		name   string
 	}{
 		{
 			name: "nonexistent peer",

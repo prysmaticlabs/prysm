@@ -21,8 +21,8 @@ type ProposalHistoryForPubkey struct {
 
 // Proposal representation for a validator public key.
 type Proposal struct {
-	Slot        types.Slot `json:"slot"`
 	SigningRoot []byte     `json:"signing_root"`
+	Slot        types.Slot `json:"slot"`
 }
 
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.

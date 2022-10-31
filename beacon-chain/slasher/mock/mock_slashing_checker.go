@@ -9,9 +9,9 @@ import (
 )
 
 type MockSlashingChecker struct {
+	HighestAtts           map[types.ValidatorIndex]*ethpb.HighestAttestation
 	AttesterSlashingFound bool
 	ProposerSlashingFound bool
-	HighestAtts           map[types.ValidatorIndex]*ethpb.HighestAttestation
 }
 
 func (s *MockSlashingChecker) HighestAttestations(

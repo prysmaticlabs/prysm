@@ -28,8 +28,8 @@ var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
 	headState state.BeaconState
-	headRoot  [32]byte
 	headBlock interfaces.BeaconBlock
+	headRoot  [32]byte
 }
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:

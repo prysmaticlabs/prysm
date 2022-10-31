@@ -71,10 +71,10 @@ type PublicKeyDeleter interface {
 }
 
 type ListKeymanagerAccountConfig struct {
-	ShowDepositData          bool
-	ShowPrivateKeys          bool
 	WalletAccountsDir        string
 	KeymanagerConfigFileName string
+	ShowDepositData          bool
+	ShowPrivateKeys          bool
 }
 
 type AccountLister interface {
@@ -86,9 +86,9 @@ type Keystore struct {
 	Crypto  map[string]interface{} `json:"crypto"`
 	ID      string                 `json:"uuid"`
 	Pubkey  string                 `json:"pubkey"`
-	Version uint                   `json:"version"`
 	Name    string                 `json:"name"`
 	Path    string                 `json:"path"`
+	Version uint                   `json:"version"`
 }
 
 // Kind defines an enum for either local, derived, or remote-signing

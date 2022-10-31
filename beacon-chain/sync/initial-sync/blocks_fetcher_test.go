@@ -593,11 +593,11 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
 	p1 := p2pt.NewTestP2P(t)
 	tests := []struct {
-		name         string
 		req          *ethpb.BeaconBlocksByRangeRequest
 		handlerGenFn func(req *ethpb.BeaconBlocksByRangeRequest) func(stream network.Stream)
-		wantedErr    string
 		validate     func(req *ethpb.BeaconBlocksByRangeRequest, blocks []interfaces.SignedBeaconBlock)
+		name         string
+		wantedErr    string
 	}{
 		{
 			name: "no error",

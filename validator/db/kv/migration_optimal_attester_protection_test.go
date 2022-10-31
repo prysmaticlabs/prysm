@@ -14,9 +14,9 @@ import (
 
 func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
+		name  string
 	}{
 		{
 			name: "only runs once",
@@ -192,9 +192,9 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 
 func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
+		name  string
 	}{
 		{
 			name: "unsets the migration completed key upon completion",

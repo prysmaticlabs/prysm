@@ -31,10 +31,10 @@ func FakeDeposits(n uint64) []*ethpb.Eth1Data {
 
 func TestEth1DataHasEnoughSupport(t *testing.T) {
 	tests := []struct {
-		stateVotes         []*ethpb.Eth1Data
 		data               *ethpb.Eth1Data
-		hasSupport         bool
+		stateVotes         []*ethpb.Eth1Data
 		votingPeriodLength types.Epoch
+		hasSupport         bool
 	}{
 		{
 			stateVotes: FakeDeposits(uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))),
@@ -95,8 +95,8 @@ func TestAreEth1DataEqual(t *testing.T) {
 		b *ethpb.Eth1Data
 	}
 	tests := []struct {
-		name string
 		args args
+		name string
 		want bool
 	}{
 		{

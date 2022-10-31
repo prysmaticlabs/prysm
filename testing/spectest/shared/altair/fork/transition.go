@@ -24,9 +24,9 @@ func init() {
 }
 
 type ForkConfig struct {
+	ForkBlock   *int   `json:"fork_block"`
 	PostFork    string `json:"post_fork"`
 	ForkEpoch   int    `json:"fork_epoch"`
-	ForkBlock   *int   `json:"fork_block"`
 	BlocksCount int    `json:"blocks_count"`
 }
 

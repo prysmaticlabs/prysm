@@ -94,17 +94,17 @@ func TestStateMachine_trigger(t *testing.T) {
 		err         bool
 	}
 	type args struct {
+		data        interface{}
+		epoch       types.Epoch
 		name        eventID
 		returnState stateID
-		epoch       types.Epoch
-		data        interface{}
 	}
 	tests := []struct {
+		args   args
+		err    error
 		name   string
 		events []event
 		epochs []types.Epoch
-		args   args
-		err    error
 	}{
 		{
 			name:   "event not found",

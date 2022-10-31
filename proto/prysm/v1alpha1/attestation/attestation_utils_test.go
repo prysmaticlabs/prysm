@@ -21,9 +21,9 @@ func TestAttestingIndices(t *testing.T) {
 	}
 	tests := []struct {
 		name string
+		err  string
 		args args
 		want []uint64
-		err  string
 	}{
 		{
 			name: "Full committee attested",
@@ -188,9 +188,9 @@ func BenchmarkIsValidAttestationIndices(b *testing.B) {
 
 func TestAttDataIsEqual(t *testing.T) {
 	type test struct {
-		name     string
 		attData1 *eth.AttestationData
 		attData2 *eth.AttestationData
+		name     string
 		equal    bool
 	}
 	tests := []test{
@@ -321,9 +321,9 @@ func TestAttDataIsEqual(t *testing.T) {
 
 func TestCheckPtIsEqual(t *testing.T) {
 	type test struct {
-		name     string
 		checkPt1 *eth.Checkpoint
 		checkPt2 *eth.Checkpoint
+		name     string
 		equal    bool
 	}
 	tests := []test{

@@ -15,10 +15,10 @@ import (
 
 func TestService_groupByValidatorChunkIndex(t *testing.T) {
 	tests := []struct {
-		name   string
 		params *Parameters
-		atts   []*slashertypes.IndexedAttestationWrapper
 		want   map[uint64][]*slashertypes.IndexedAttestationWrapper
+		name   string
+		atts   []*slashertypes.IndexedAttestationWrapper
 	}{
 		{
 			name:   "No attestations returns empty map",
@@ -77,10 +77,10 @@ func TestService_groupByValidatorChunkIndex(t *testing.T) {
 
 func TestService_groupByChunkIndex(t *testing.T) {
 	tests := []struct {
-		name   string
 		params *Parameters
-		atts   []*slashertypes.IndexedAttestationWrapper
 		want   map[uint64][]*slashertypes.IndexedAttestationWrapper
+		name   string
+		atts   []*slashertypes.IndexedAttestationWrapper
 	}{
 		{
 			name:   "No attestations returns empty map",
@@ -143,9 +143,9 @@ func TestService_filterAttestations(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          []*slashertypes.IndexedAttestationWrapper
-		inputEpoch     types.Epoch
 		wantedValid    []*slashertypes.IndexedAttestationWrapper
 		wantedDeferred []*slashertypes.IndexedAttestationWrapper
+		inputEpoch     types.Epoch
 		wantedDropped  int
 	}{
 		{
@@ -265,8 +265,8 @@ func TestService_filterAttestations(t *testing.T) {
 
 func Test_logSlashingEvent(t *testing.T) {
 	tests := []struct {
-		name     string
 		slashing *ethpb.AttesterSlashing
+		name     string
 	}{
 		{
 			name: "Surrounding vote",
@@ -301,8 +301,8 @@ func Test_logSlashingEvent(t *testing.T) {
 
 func Test_validateAttestationIntegrity(t *testing.T) {
 	tests := []struct {
-		name string
 		att  *ethpb.IndexedAttestation
+		name string
 		want bool
 	}{
 		{
@@ -413,8 +413,8 @@ func Test_validateBlockHeaderIntegrity(t *testing.T) {
 	fakeSig := make([]byte, 96)
 	copy(fakeSig, "hi")
 	tests := []struct {
-		name string
 		args args
+		name string
 		want bool
 	}{
 		{

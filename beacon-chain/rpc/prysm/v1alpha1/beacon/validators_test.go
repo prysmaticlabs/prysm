@@ -2594,8 +2594,8 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 
 func Test_validatorStatus(t *testing.T) {
 	tests := []struct {
-		name      string
 		validator *ethpb.Validator
+		name      string
 		epoch     types.Epoch
 		want      ethpb.ValidatorStatus
 	}{

@@ -53,8 +53,8 @@ import (
 
 func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
-		name  string
 		block func([32]byte) *ethpb.GenericSignedBeaconBlock
+		name  string
 	}{
 		{
 			name: "phase0",
@@ -1031,9 +1031,9 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 
 func TestProposer_ValidateDepositTrie(t *testing.T) {
 	tt := []struct {
-		name            string
 		eth1dataCreator func() *ethpb.Eth1Data
 		trieCreator     func() *trie.SparseMerkleTrie
+		name            string
 		success         bool
 	}{
 		{
@@ -1662,10 +1662,10 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name         string
-		wantedErr    string
 		inputAtts    func() []*ethpb.Attestation
 		expectedAtts func(inputAtts []*ethpb.Attestation) []*ethpb.Attestation
+		name         string
+		wantedErr    string
 	}{
 		{
 			name: "nil attestations",

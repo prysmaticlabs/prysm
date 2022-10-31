@@ -10,14 +10,13 @@ import (
 )
 
 type votes struct {
-	l sync.RWMutex
-
 	hashes     map[[32]byte]uint
 	roots      map[[32]byte]uint
 	counts     map[uint64]uint
 	votes      map[[32]byte]*v1alpha1.Eth1Data
 	voteCounts map[[32]byte]uint
 	total      uint
+	l          sync.RWMutex
 }
 
 func NewVotes() *votes {

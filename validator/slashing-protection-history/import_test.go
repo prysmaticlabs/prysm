@@ -173,11 +173,11 @@ func Test_validateMetadata(t *testing.T) {
 	goodStr := make([]byte, hex.EncodedLen(len(goodRoot)))
 	hex.Encode(goodStr, goodRoot[:])
 	tests := []struct {
-		name                    string
 		interchangeJSON         *format.EIPSlashingProtectionFormat
+		name                    string
+		wantFatal               string
 		dbGenesisValidatorsRoot []byte
 		wantErr                 bool
-		wantFatal               string
 	}{
 		{
 			name: "Incorrect version for EIP format should fail",
@@ -296,9 +296,9 @@ func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
 	require.NoError(t, err)
 	roots := valtest.CreateMockRoots(numValidators)
 	tests := []struct {
+		want    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock
 		name    string
 		data    []*format.ProtectionData
-		want    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock
 		wantErr bool
 	}{
 		{
@@ -540,9 +540,9 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 	require.NoError(t, err)
 	roots := valtest.CreateMockRoots(numValidators)
 	tests := []struct {
+		want    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation
 		name    string
 		data    []*format.ProtectionData
-		want    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation
 		wantErr bool
 	}{
 		{
@@ -790,9 +790,9 @@ func Test_parseUniqueSignedAttestationsByPubKey(t *testing.T) {
 
 func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 	var tests = []struct {
+		given    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock
 		name     string
 		expected [][fieldparams.BLSPubkeyLength]byte
-		given    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock
 	}{
 		{
 			name:     "No slashable keys returns empty",
@@ -922,10 +922,10 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name                 string
 		previousAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation
 		incomingAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation
 		want                 map[[fieldparams.BLSPubkeyLength]byte]bool
+		name                 string
 		wantErr              bool
 	}{
 		{

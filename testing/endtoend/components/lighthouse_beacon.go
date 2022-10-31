@@ -140,9 +140,9 @@ type LighthouseBeaconNode struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
-	index   int
-	enr     string
 	cmd     *exec.Cmd
+	enr     string
+	index   int
 }
 
 // NewLighthouseBeaconNode creates and returns a lighthouse beacon node.

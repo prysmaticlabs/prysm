@@ -335,11 +335,11 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	assert.NoError(t, err)
 	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
-		topic        string
 		v            wrappedVal
-		chainstarted bool
-		pid          peer.ID
 		msg          *pubsub.Message
+		topic        string
+		pid          peer.ID
+		chainstarted bool
 	}
 	tests := []struct {
 		name string

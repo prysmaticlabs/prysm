@@ -76,12 +76,12 @@ type mockHistorySpec struct {
 type mockHistory struct {
 	blocks                         map[[32]byte]interfaces.SignedBeaconBlock
 	slotMap                        map[types.Slot][32]byte
-	slotIndex                      slotList
 	canonical                      map[[32]byte]bool
 	states                         map[[32]byte]state.BeaconState
 	hiddenStates                   map[[32]byte]state.BeaconState
-	current                        types.Slot
 	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
+	slotIndex                      slotList
+	current                        types.Slot
 }
 
 type slotList []types.Slot

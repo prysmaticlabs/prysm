@@ -70,8 +70,8 @@ var (
 // Config to open a wallet programmatically.
 type Config struct {
 	WalletDir      string
-	KeymanagerKind keymanager.Kind
 	WalletPassword string
+	KeymanagerKind keymanager.Kind
 }
 
 // Wallet is a primitive in Prysm's account management which

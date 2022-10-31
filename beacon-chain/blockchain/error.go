@@ -40,9 +40,9 @@ var (
 // The block is deemed invalid according to execution layer client.
 // The block violates certain fork choice rules (before finalized slot, not finalized ancestor)
 type invalidBlock struct {
-	invalidAncestorRoots [][32]byte
 	error
-	root [32]byte
+	invalidAncestorRoots [][32]byte
+	root                 [32]byte
 }
 
 type invalidBlockError interface {

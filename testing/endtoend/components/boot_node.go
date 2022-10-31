@@ -21,8 +21,8 @@ var _ e2etypes.ComponentRunner = (*BootNode)(nil)
 type BootNode struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
-	enr     string
 	cmd     *exec.Cmd
+	enr     string
 }
 
 // NewBootNode creates and returns boot node.

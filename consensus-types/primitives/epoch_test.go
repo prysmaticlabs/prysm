@@ -19,9 +19,10 @@ func TestMaxEpoch(t *testing.T) {
 
 func TestEpoch_Mul(t *testing.T) {
 	tests := []struct {
-		a, b     uint64
-		res      types.Epoch
 		panicMsg string
+		a        uint64
+		b        uint64
+		res      types.Epoch
 	}{
 		{a: 0, b: 1, res: 0},
 		{a: 1 << 32, b: 1, res: 1 << 32},
@@ -53,9 +54,10 @@ func TestEpoch_Mul(t *testing.T) {
 
 func TestEpoch_Div(t *testing.T) {
 	tests := []struct {
-		a, b     uint64
-		res      types.Epoch
 		panicMsg string
+		a        uint64
+		b        uint64
+		res      types.Epoch
 	}{
 		{a: 0, b: 1, res: 0},
 		{a: 1, b: 0, res: 0, panicMsg: mathprysm.ErrDivByZero.Error()},
@@ -86,9 +88,10 @@ func TestEpoch_Div(t *testing.T) {
 
 func TestEpoch_Add(t *testing.T) {
 	tests := []struct {
-		a, b     uint64
-		res      types.Epoch
 		panicMsg string
+		a        uint64
+		b        uint64
+		res      types.Epoch
 	}{
 		{a: 0, b: 1, res: 1},
 		{a: 1 << 32, b: 1, res: 4294967297},
@@ -133,9 +136,10 @@ func TestEpoch_Add(t *testing.T) {
 
 func TestEpoch_Sub(t *testing.T) {
 	tests := []struct {
-		a, b     uint64
-		res      types.Epoch
 		panicMsg string
+		a        uint64
+		b        uint64
+		res      types.Epoch
 	}{
 		{a: 1, b: 0, res: 1},
 		{a: 0, b: 1, res: 0, panicMsg: mathprysm.ErrSubUnderflow.Error()},
@@ -169,9 +173,10 @@ func TestEpoch_Sub(t *testing.T) {
 
 func TestEpoch_Mod(t *testing.T) {
 	tests := []struct {
-		a, b     uint64
-		res      types.Epoch
 		panicMsg string
+		a        uint64
+		b        uint64
+		res      types.Epoch
 	}{
 		{a: 1, b: 0, res: 0, panicMsg: mathprysm.ErrDivByZero.Error()},
 		{a: 0, b: 1, res: 0},

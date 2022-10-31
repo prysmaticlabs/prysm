@@ -23,8 +23,8 @@ const (
 // deprecatedHistoryData stores the needed data to confirm if an attestation is slashable
 // or repeated.
 type deprecatedHistoryData struct {
-	Source      types.Epoch
 	SigningRoot []byte
+	Source      types.Epoch
 }
 
 // deprecatedEncodedAttestingHistory encapsulated history data.

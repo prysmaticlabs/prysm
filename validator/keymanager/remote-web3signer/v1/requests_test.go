@@ -18,9 +18,9 @@ func TestGetAggregateAndProofSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.AggregateAndProofSignRequest
 		name    string
 		args    args
-		want    *v1.AggregateAndProofSignRequest
 		wantErr bool
 	}{
 		{
@@ -53,9 +53,9 @@ func TestGetAggregationSlotSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.AggregationSlotSignRequest
 		name    string
 		args    args
-		want    *v1.AggregationSlotSignRequest
 		wantErr bool
 	}{
 		{
@@ -88,9 +88,9 @@ func TestGetAttestationSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.AttestationSignRequest
 		name    string
 		args    args
-		want    *v1.AttestationSignRequest
 		wantErr bool
 	}{
 		{
@@ -122,9 +122,9 @@ func TestGetBlockSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.BlockSignRequest
 		name    string
 		args    args
-		want    *v1.BlockSignRequest
 		wantErr bool
 	}{
 		{
@@ -157,9 +157,9 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.BlockAltairSignRequest
 		name    string
 		args    args
-		want    *v1.BlockAltairSignRequest
 		wantErr bool
 	}{
 		{
@@ -192,9 +192,9 @@ func TestGetRandaoRevealSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.RandaoRevealSignRequest
 		name    string
 		args    args
-		want    *v1.RandaoRevealSignRequest
 		wantErr bool
 	}{
 		{
@@ -227,9 +227,9 @@ func TestGetSyncCommitteeContributionAndProofSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.SyncCommitteeContributionAndProofSignRequest
 		name    string
 		args    args
-		want    *v1.SyncCommitteeContributionAndProofSignRequest
 		wantErr bool
 	}{
 		{
@@ -262,9 +262,9 @@ func TestGetSyncCommitteeMessageSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.SyncCommitteeMessageSignRequest
 		name    string
 		args    args
-		want    *v1.SyncCommitteeMessageSignRequest
 		wantErr bool
 	}{
 		{
@@ -297,9 +297,9 @@ func TestGetSyncCommitteeSelectionProofSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.SyncCommitteeSelectionProofSignRequest
 		name    string
 		args    args
-		want    *v1.SyncCommitteeSelectionProofSignRequest
 		wantErr bool
 	}{
 		{
@@ -332,9 +332,9 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.VoluntaryExitSignRequest
 		name    string
 		args    args
-		want    *v1.VoluntaryExitSignRequest
 		wantErr bool
 	}{
 		{
@@ -367,9 +367,9 @@ func TestGetBlockBellatrixSignRequest(t *testing.T) {
 		genesisValidatorsRoot []byte
 	}
 	tests := []struct {
+		want    *v1.BlockBellatrixSignRequest
 		name    string
 		args    args
-		want    *v1.BlockBellatrixSignRequest
 		wantErr bool
 	}{
 		{
@@ -418,9 +418,9 @@ func TestGetValidatorRegistrationSignRequest(t *testing.T) {
 		request *validatorpb.SignRequest
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.ValidatorRegistrationSignRequest
+		name    string
 		wantErr bool
 	}{
 		{

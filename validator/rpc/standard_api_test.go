@@ -704,10 +704,10 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
 		args    *validatorserviceconfig.ProposerSettings
 		want    *want
 		cached  *eth.FeeRecipientByPubKeyResponse
+		name    string
 		wantErr bool
 	}{
 		{
@@ -808,12 +808,12 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 		error error
 	}
 	tests := []struct {
-		name             string
-		args             string
 		proposerSettings *validatorserviceconfig.ProposerSettings
 		want             *want
-		wantErr          bool
 		beaconReturn     *beaconResp
+		name             string
+		args             string
+		wantErr          bool
 	}{
 		{
 			name: "Happy Path Test",
@@ -911,9 +911,9 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 		EthAddress string
 	}
 	tests := []struct {
-		name             string
 		proposerSettings *validatorserviceconfig.ProposerSettings
 		want             *want
+		name             string
 		wantErr          bool
 	}{
 		{
@@ -960,10 +960,10 @@ func TestServer_GetGasLimit(t *testing.T) {
 	require.NoError(t, err2)
 
 	tests := []struct {
-		name   string
 		args   *validatorserviceconfig.ProposerSettings
-		pubkey [48]byte
+		name   string
 		want   uint64
+		pubkey [48]byte
 	}{
 		{
 			name: "ProposerSetting for specific pubkey exists",
@@ -1040,12 +1040,12 @@ func TestServer_SetGasLimit(t *testing.T) {
 	}
 
 	tests := []struct {
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		beaconReturn     *beaconResp
 		name             string
 		pubkey           []byte
-		newGasLimit      uint64
-		proposerSettings *validatorserviceconfig.ProposerSettings
 		w                []want
-		beaconReturn     *beaconResp
+		newGasLimit      uint64
 	}{
 		{
 			name:        "update existing gas limit",

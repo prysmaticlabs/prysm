@@ -340,10 +340,10 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 func TestService_connectWithPeer(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
-		name    string
 		peers   *peers.Status
-		info    peer.AddrInfo
+		name    string
 		wantErr string
+		info    peer.AddrInfo
 	}{
 		{
 			name: "bad peer",

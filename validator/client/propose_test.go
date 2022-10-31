@@ -194,8 +194,8 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 
 func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	tests := []struct {
-		name  string
 		block *ethpb.GenericBeaconBlock
+		name  string
 	}{
 		{
 			name: "phase0",
@@ -511,8 +511,8 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 func testProposeBlock(t *testing.T, graffiti []byte) {
 	tests := []struct {
-		name  string
 		block *ethpb.GenericBeaconBlock
+		name  string
 	}{
 		{
 			name: "phase0",

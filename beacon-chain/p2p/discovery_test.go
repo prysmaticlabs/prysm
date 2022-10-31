@@ -349,9 +349,9 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 	defer cache.SubnetIDs.EmptyAllCaches()
 
 	tests := []struct {
-		name           string
 		svcBuilder     func(t *testing.T) *Service
 		postValidation func(t *testing.T, s *Service)
+		name           string
 	}{
 		{
 			name: "metadata no change",

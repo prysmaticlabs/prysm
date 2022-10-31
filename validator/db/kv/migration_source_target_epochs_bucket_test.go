@@ -25,9 +25,9 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 		pubKeys[i] = pk
 	}
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
+		name  string
 	}{
 		{
 			name: "only runs once",
@@ -126,9 +126,9 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 		pubKeys[i] = pk
 	}
 	tests := []struct {
-		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
+		name  string
 	}{
 		{
 			name: "unsets the migration completed key upon completion",
@@ -213,9 +213,9 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 func Test_batchPublicKeys(t *testing.T) {
 	tests := []struct {
 		name       string
-		batchSize  int
 		publicKeys [][]byte
 		want       [][][]byte
+		batchSize  int
 	}{
 		{
 			name:       "less than batch size returns all keys",

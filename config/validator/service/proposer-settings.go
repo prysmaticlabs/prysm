@@ -19,16 +19,16 @@ type ProposerSettingsPayload struct {
 // ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
 type ProposerOptionPayload struct {
-	FeeRecipient  string         `json:"fee_recipient" yaml:"fee_recipient"`
 	BuilderConfig *BuilderConfig `json:"builder" yaml:"builder"`
+	FeeRecipient  string         `json:"fee_recipient" yaml:"fee_recipient"`
 }
 
 // BuilderConfig is the struct representation of the JSON config file set in the validator through the CLI.
 // GasLimit is a number set to help the network decide on the maximum gas in each block.
 type BuilderConfig struct {
-	Enabled  bool     `json:"enabled" yaml:"enabled"`
-	GasLimit Uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
 	Relays   []string `json:"relays" yaml:"relays"`
+	GasLimit Uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+	Enabled  bool     `json:"enabled" yaml:"enabled"`
 }
 
 type Uint64 uint64
@@ -71,8 +71,8 @@ type ProposerSettings struct {
 
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
-	FeeRecipient  common.Address
 	BuilderConfig *BuilderConfig
+	FeeRecipient  common.Address
 }
 
 // DefaultProposerOption returns a Proposer Option with defaults filled

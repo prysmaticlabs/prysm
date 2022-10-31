@@ -46,9 +46,9 @@ func (s *mulServer) do(a, b int) int {
 // The servers are contained in an App. The app controls the servers and exposes them
 // through its API.
 type App struct {
+	scope event.SubscriptionScope
 	divServer
 	mulServer
-	scope event.SubscriptionScope
 }
 
 func (s *App) Calc(op byte, a, b int) int {

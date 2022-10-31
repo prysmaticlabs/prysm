@@ -5,8 +5,8 @@ import "testing"
 func TestVersionString(t *testing.T) {
 	tests := []struct {
 		name    string
-		version int
 		want    string
+		version int
 	}{
 		{
 			name:    "phase0",

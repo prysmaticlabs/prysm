@@ -59,12 +59,12 @@ type mockWsCheckpoint func() (stateRoot [32]byte, blockRoot [32]byte, e types.Ep
 
 func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	tests := []struct {
-		name            string
-		epoch           types.Epoch
 		genWsState      func() state.ReadOnlyBeaconState
 		genWsCheckpoint mockWsCheckpoint
-		want            bool
+		name            string
 		wantedErr       string
+		epoch           types.Epoch
+		want            bool
 	}{
 		{
 			name: "nil weak subjectivity state",

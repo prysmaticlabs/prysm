@@ -35,10 +35,10 @@ const (
 type Miner struct {
 	e2etypes.ComponentRunner
 	started      chan struct{}
+	cmd          *exec.Cmd
 	bootstrapEnr string
 	enr          string
 	keystorePath string
-	cmd          *exec.Cmd
 }
 
 // NewMiner creates and returns an ETH1 node miner.

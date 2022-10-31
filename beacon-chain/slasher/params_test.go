@@ -22,8 +22,8 @@ func TestParams_cellIndex(t *testing.T) {
 		epoch          types.Epoch
 	}
 	tests := []struct {
-		name   string
 		fields *Parameters
+		name   string
 		args   args
 		want   uint64
 	}{
@@ -158,8 +158,8 @@ func TestParams_cellIndex(t *testing.T) {
 
 func TestParams_chunkIndex(t *testing.T) {
 	tests := []struct {
-		name   string
 		fields *Parameters
+		name   string
 		epoch  types.Epoch
 		want   uint64
 	}{
@@ -251,8 +251,8 @@ func TestParams_chunkIndex(t *testing.T) {
 
 func TestParams_flatSliceID(t *testing.T) {
 	tests := []struct {
-		name                string
 		fields              *Parameters
+		name                string
 		validatorChunkIndex uint64
 		chunkIndex          uint64
 		want                uint64
@@ -309,8 +309,8 @@ func TestParams_flatSliceID(t *testing.T) {
 
 func TestParams_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
-		name           string
 		fields         *Parameters
+		name           string
 		validatorIndex types.ValidatorIndex
 		want           uint64
 	}{
@@ -353,8 +353,8 @@ func TestParams_validatorChunkIndex(t *testing.T) {
 
 func TestParams_chunkOffset(t *testing.T) {
 	tests := []struct {
-		name   string
 		fields *Parameters
+		name   string
 		epoch  types.Epoch
 		want   uint64
 	}{
@@ -397,8 +397,8 @@ func TestParams_chunkOffset(t *testing.T) {
 
 func TestParams_validatorOffset(t *testing.T) {
 	tests := []struct {
-		name           string
 		fields         *Parameters
+		name           string
 		validatorIndex types.ValidatorIndex
 		want           uint64
 	}{
@@ -441,10 +441,10 @@ func TestParams_validatorOffset(t *testing.T) {
 
 func TestParams_validatorIndicesInChunk(t *testing.T) {
 	tests := []struct {
-		name              string
 		fields            *Parameters
-		validatorChunkIdx uint64
+		name              string
 		want              []types.ValidatorIndex
+		validatorChunkIdx uint64
 	}{
 		{
 			name: "Returns proper indices",
@@ -477,8 +477,8 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 
 func TestParameters_firstEpoch(t *testing.T) {
 	tests := []struct {
-		name       string
 		params     *Parameters
+		name       string
 		chunkIndex uint64
 		want       types.Epoch
 	}{
@@ -508,8 +508,8 @@ func TestParameters_firstEpoch(t *testing.T) {
 
 func TestParameters_lastEpoch(t *testing.T) {
 	tests := []struct {
-		name       string
 		params     *Parameters
+		name       string
 		chunkIndex uint64
 		want       types.Epoch
 	}{

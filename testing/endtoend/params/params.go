@@ -18,13 +18,13 @@ import (
 
 // params struct defines the parameters needed for running E2E tests to properly handle test sharding.
 type params struct {
+	Ports                     *ports
 	TestPath                  string
 	LogPath                   string
 	TestShardIndex            int
 	BeaconNodeCount           int
 	LighthouseBeaconNodeCount int
 	ContractAddress           common.Address
-	Ports                     *ports
 }
 
 type ports struct {

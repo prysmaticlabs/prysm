@@ -53,10 +53,10 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 		msg proto.Message
 	}
 	tests := []struct {
-		name      string
 		args      args
-		wantedErr string
 		check     func(*testing.T, *Service)
+		name      string
+		wantedErr string
 	}{
 		{
 			name: "invalid block does not remove attestations",

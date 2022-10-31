@@ -221,8 +221,8 @@ func (s *resubscribeSub) backoffWait() bool {
 //
 // The zero value is ready to use.
 type SubscriptionScope struct {
-	mu     sync.Mutex
 	subs   map[*scopeSub]struct{}
+	mu     sync.Mutex
 	closed bool
 }
 

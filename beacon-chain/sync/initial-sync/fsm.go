@@ -34,20 +34,20 @@ type eventID uint8
 
 // stateMachineManager is a collection of managed FSMs.
 type stateMachineManager struct {
-	keys     []types.Slot
 	machines map[types.Slot]*stateMachine
 	handlers map[stateID]map[eventID]eventHandlerFn
+	keys     []types.Slot
 }
 
 // stateMachine holds a state of a single block processing FSM.
 // Each FSM allows deterministic state transitions: State(S) x Event(E) -> Actions (A), State(S').
 type stateMachine struct {
+	updated time.Time
 	smm     *stateMachineManager
-	start   types.Slot
-	state   stateID
 	pid     peer.ID
 	blocks  []interfaces.SignedBeaconBlock
-	updated time.Time
+	start   types.Slot
+	state   stateID
 }
 
 // eventHandlerFn is an event handler function's signature.

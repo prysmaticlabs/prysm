@@ -60,11 +60,11 @@ type syncMode uint8
 
 // blocksQueueConfig is a config to setup block queue service.
 type blocksQueueConfig struct {
-	blocksFetcher       *blocksFetcher
 	chain               blockchainService
-	highestExpectedSlot types.Slot
 	p2p                 p2p.P2P
 	db                  db.ReadOnlyDatabase
+	blocksFetcher       *blocksFetcher
+	highestExpectedSlot types.Slot
 	mode                syncMode
 }
 
@@ -72,18 +72,16 @@ type blocksQueueConfig struct {
 // and block processing goroutine (consumer). Consumer can rely on order of incoming blocks.
 type blocksQueue struct {
 	ctx                 context.Context
+	chain               blockchainService
 	cancel              context.CancelFunc
 	smm                 *stateMachineManager
 	blocksFetcher       *blocksFetcher
-	chain               blockchainService
+	fetchedData         chan *blocksQueueFetchedData // output channel for ready blocks
+	staleEpochs         map[types.Epoch]uint8        // counter to keep track of stale FSMs
+	quit                chan struct{}                // termination notifier
 	highestExpectedSlot types.Slot
+	exitConditions      struct{ noRequiredPeersErrRetries int }
 	mode                syncMode
-	exitConditions      struct {
-		noRequiredPeersErrRetries int
-	}
-	fetchedData chan *blocksQueueFetchedData // output channel for ready blocks
-	staleEpochs map[types.Epoch]uint8        // counter to keep track of stale FSMs
-	quit        chan struct{}                // termination notifier
 }
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.

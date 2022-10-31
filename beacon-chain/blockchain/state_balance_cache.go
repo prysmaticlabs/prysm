@@ -12,10 +12,10 @@ import (
 )
 
 type stateBalanceCache struct {
-	sync.Mutex
-	balances []uint64
-	root     [32]byte
 	stateGen stateByRooter
+	balances []uint64
+	sync.Mutex
+	root [32]byte
 }
 
 type stateByRooter interface {

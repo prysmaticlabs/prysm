@@ -64,15 +64,15 @@ import (
 // ValidatorClient defines an instance of an Ethereum validator that manages
 // the entire lifecycle of services attached to it participating in proof of stake.
 type ValidatorClient struct {
-	cliCtx            *cli.Context
 	ctx               context.Context
+	cliCtx            *cli.Context
 	cancel            context.CancelFunc
 	db                *kv.Store
 	services          *runtime.ServiceRegistry // Lifecycle and service store.
-	lock              sync.RWMutex
 	wallet            *wallet.Wallet
 	walletInitialized *event.Feed
 	stop              chan struct{} // Channel to wait for termination notifications.
+	lock              sync.RWMutex
 }
 
 // NewValidatorClient creates a new instance of the Prysm validator client.

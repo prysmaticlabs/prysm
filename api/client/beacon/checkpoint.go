@@ -21,11 +21,11 @@ import (
 // OriginData represents the BeaconState and SignedBeaconBlock necessary to start an empty Beacon Node
 // using Checkpoint Sync.
 type OriginData struct {
-	sb []byte
-	bb []byte
 	st state.BeaconState
 	b  interfaces.SignedBeaconBlock
 	vu *detect.VersionedUnmarshaler
+	sb []byte
+	bb []byte
 	br [32]byte
 	sr [32]byte
 }

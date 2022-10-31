@@ -65,10 +65,10 @@ func genMockKeymanager(numKeys int) *mockKeymanager {
 }
 
 type mockKeymanager struct {
-	lock                sync.RWMutex
 	keysMap             map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey
-	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
+	lock                sync.RWMutex
+	fetchNoKeys         bool
 }
 
 func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
@@ -1455,9 +1455,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 	type ExpectedValidatorRegistration struct {
 		FeeRecipient []byte
+		Pubkey       []byte
 		GasLimit     uint64
 		Timestamp    uint64
-		Pubkey       []byte
 	}
 
 	tests := []struct {

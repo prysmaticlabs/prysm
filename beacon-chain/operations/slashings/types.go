@@ -35,10 +35,10 @@ type PoolManager interface {
 
 // Pool is a concrete implementation of PoolManager.
 type Pool struct {
-	lock                    sync.RWMutex
+	included                map[types.ValidatorIndex]bool
 	pendingProposerSlashing []*ethpb.ProposerSlashing
 	pendingAttesterSlashing []*PendingAttesterSlashing
-	included                map[types.ValidatorIndex]bool
+	lock                    sync.RWMutex
 }
 
 // PendingAttesterSlashing represents an attester slashing in the operation pool.

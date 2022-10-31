@@ -27,35 +27,35 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 // AccountsCLIManager defines a struct capable of performing various validator
 // wallet & account operations via the command line.
 type AccountsCLIManager struct {
-	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
-	keymanagerKind       keymanager.Kind
 	keymanagerOpts       *remote.KeymanagerOpts
-	showDepositData      bool
-	showPrivateKeys      bool
-	listValidatorIndices bool
-	deletePublicKeys     bool
-	importPrivateKeys    bool
-	readPasswordFile     bool
-	skipMnemonicConfirm  bool
-	dialOpts             []grpc.DialOption
-	grpcHeaders          []string
+	wallet               *wallet.Wallet
+	walletDir            string
+	mnemonic             string
+	walletPassword       string
 	beaconRPCProvider    string
-	walletKeyCount       int
-	privateKeyFile       string
-	passwordFilePath     string
 	keysDir              string
 	mnemonicLanguage     string
 	backupsDir           string
+	passwordFilePath     string
 	backupsPassword      string
-	filteredPubKeys      []bls.PublicKey
-	rawPubKeys           [][]byte
-	formattedPubKeys     []string
-	walletDir            string
-	walletPassword       string
-	mnemonic             string
-	numAccounts          int
+	privateKeyFile       string
 	mnemonic25thWord     string
+	rawPubKeys           [][]byte
+	grpcHeaders          []string
+	dialOpts             []grpc.DialOption
+	filteredPubKeys      []bls.PublicKey
+	formattedPubKeys     []string
+	walletKeyCount       int
+	numAccounts          int
+	keymanagerKind       keymanager.Kind
+	skipMnemonicConfirm  bool
+	readPasswordFile     bool
+	importPrivateKeys    bool
+	deletePublicKeys     bool
+	listValidatorIndices bool
+	showPrivateKeys      bool
+	showDepositData      bool
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

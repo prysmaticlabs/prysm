@@ -36,11 +36,11 @@ type Service struct {
 
 // Config options for the interop service.
 type Config struct {
-	GenesisTime   uint64
-	NumValidators uint64
 	BeaconDB      db.HeadAccessDatabase
 	DepositCache  *depositcache.DepositCache
 	GenesisPath   string
+	GenesisTime   uint64
+	NumValidators uint64
 }
 
 // NewService is an interoperability testing service to inject a deterministically generated genesis state

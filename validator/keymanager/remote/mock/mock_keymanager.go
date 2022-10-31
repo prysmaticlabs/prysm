@@ -18,10 +18,10 @@ import (
 
 // MockKeymanager --
 type MockKeymanager struct {
-	PublicKeys             [][fieldparams.BLSPubkeyLength]byte
 	ReloadPublicKeysChan   chan [][fieldparams.BLSPubkeyLength]byte
-	ReloadPublicKeysCalled bool
 	accountsChangedFeed    *event.Feed
+	PublicKeys             [][fieldparams.BLSPubkeyLength]byte
+	ReloadPublicKeysCalled bool
 }
 
 func NewMock() MockKeymanager {

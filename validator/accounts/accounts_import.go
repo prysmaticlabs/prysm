@@ -69,9 +69,9 @@ func (fileNames byDerivationPath) Swap(i, j int) {
 
 // ImportAccountsConfig defines values to run the import accounts function.
 type ImportAccountsConfig struct {
-	Keystores       []*keymanager.Keystore
 	Importer        keymanager.Importer
 	AccountPassword string
+	Keystores       []*keymanager.Keystore
 }
 
 // Import can import external, EIP-2335 compliant keystore.json files as

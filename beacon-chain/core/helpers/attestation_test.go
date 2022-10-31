@@ -130,8 +130,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 
 	type args struct {
-		attSlot     types.Slot
 		genesisTime time.Time
+		attSlot     types.Slot
 	}
 	tests := []struct {
 		name      string

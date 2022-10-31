@@ -23,9 +23,9 @@ func TestScorers_BlockProvider_Score(t *testing.T) {
 
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 	tests := []struct {
-		name   string
 		update func(scorer *scorers.BlockProviderScorer)
 		check  func(scorer *scorers.BlockProviderScorer)
+		name   string
 	}{
 		{
 			name: "nonexistent peer",
@@ -312,8 +312,8 @@ func TestScorers_BlockProvider_MaxScore(t *testing.T) {
 	batchSize := uint64(flags.Get().BlockBatchLimit)
 
 	tests := []struct {
-		name string
 		cfg  *scorers.BlockProviderScorerConfig
+		name string
 		want float64
 	}{
 		{
@@ -351,9 +351,9 @@ func TestScorers_BlockProvider_FormatScorePretty(t *testing.T) {
 	format := "[%0.1f%%, raw: %0.2f,  blocks: %d/1280]"
 
 	tests := []struct {
-		name   string
 		update func(s *scorers.BlockProviderScorer)
 		check  func(s *scorers.BlockProviderScorer)
+		name   string
 	}{
 		{
 			name:   "peer not registered",

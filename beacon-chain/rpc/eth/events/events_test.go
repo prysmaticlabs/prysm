@@ -409,13 +409,13 @@ func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller
 }
 
 type assertFeedArgs struct {
+	shouldReceive interface{}
 	t             *testing.T
-	topics        []string
 	srv           *Server
 	stream        *mock.MockEvents_StreamEventsServer
-	shouldReceive interface{}
 	itemToSend    *feed.Event
 	feed          *event.Feed
+	topics        []string
 }
 
 func assertFeedSendAndReceive(ctx context.Context, args *assertFeedArgs) {

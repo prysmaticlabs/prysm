@@ -31,6 +31,6 @@ type IndexedVerificationFailure struct {
 
 // SingleIndexedVerificationFailure represents an issue when verifying a single indexed object e.g. an item in an array.
 type SingleIndexedVerificationFailure struct {
-	Index   int    `json:"index"`
 	Message string `json:"message"`
+	Index   int    `json:"index"`
 }

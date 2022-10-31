@@ -18,10 +18,10 @@ var (
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
+	field types.BeaconStateField
 	*sync.RWMutex
 	reference     *stateutil.Reference
 	fieldLayers   [][]*[32]byte
-	field         types.BeaconStateField
 	dataType      types.DataType
 	length        uint64
 	numOfElems    int

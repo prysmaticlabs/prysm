@@ -56,8 +56,8 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 		keys = append(keys, key)
 	}
 	tests := []struct {
-		name         string
 		batchCreator func() (input *SignatureBatch, output *SignatureBatch)
+		name         string
 		want         int
 	}{
 		{
@@ -335,8 +335,8 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 		keys = append(keys, key)
 	}
 	tests := []struct {
-		name         string
 		batchCreator func(t *testing.T) (input *SignatureBatch, output *SignatureBatch)
+		name         string
 		wantErr      bool
 	}{
 		{

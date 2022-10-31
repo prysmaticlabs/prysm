@@ -83,12 +83,12 @@ var blockedBuckets = [][]byte{
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum Beacon Nodes.
 type Store struct {
+	ctx                 context.Context
 	db                  *bolt.DB
-	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorEntryCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
-	ctx                 context.Context
+	databasePath        string
 }
 
 // KVStoreDatafilePath is the canonical construction of a full

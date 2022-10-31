@@ -904,9 +904,9 @@ func Test_DepositStatus(t *testing.T) {
 
 func TestServer_CheckDoppelGanger(t *testing.T) {
 	tests := []struct {
+		svSetup func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse)
 		name    string
 		wantErr bool
-		svSetup func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse)
 	}{
 		{
 			name:    "normal doppelganger request",

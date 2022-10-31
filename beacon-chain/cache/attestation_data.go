@@ -43,8 +43,8 @@ var ErrAlreadyInProgress = errors.New("already in progress")
 // AttestationCache is used to store the cached results of an AttestationData request.
 type AttestationCache struct {
 	cache      *cache.FIFO
-	lock       sync.RWMutex
 	inProgress map[string]bool
+	lock       sync.RWMutex
 }
 
 // NewAttestationCache initializes the map and underlying cache.

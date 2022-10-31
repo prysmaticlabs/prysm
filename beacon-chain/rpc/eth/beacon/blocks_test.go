@@ -234,9 +234,9 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	}
 
 	tests := []struct {
+		want    *ethpbalpha.SignedBeaconBlock
 		name    string
 		blockID []byte
-		want    *ethpbalpha.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -379,9 +379,9 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		slot       types.Slot
 		parentRoot []byte
 		want       []*ethpbalpha.SignedBeaconBlock
+		slot       types.Slot
 		wantErr    bool
 	}{
 		{
@@ -1022,9 +1022,9 @@ func TestServer_GetBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
+		want    *ethpbalpha.SignedBeaconBlock
 		name    string
 		blockID []byte
-		want    *ethpbalpha.SignedBeaconBlock
 		wantErr bool
 	}{
 		{
@@ -1152,9 +1152,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlock
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlock
 			wantErr bool
 		}{
 			{
@@ -1283,9 +1283,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlockAltair
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockAltair
 			wantErr bool
 		}{
 			{
@@ -1417,9 +1417,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlockBellatrix
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockBellatrix
 			wantErr bool
 		}{
 			{
@@ -1590,9 +1590,9 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlock
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlock
 			wantErr bool
 		}{
 			{
@@ -1721,9 +1721,9 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlockAltair
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockAltair
 			wantErr bool
 		}{
 			{
@@ -1855,9 +1855,9 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBlindedBeaconBlockBellatrix
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBlindedBeaconBlockBellatrix
 			wantErr bool
 		}{
 			{
@@ -2403,9 +2403,9 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlock
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlock
 			wantErr bool
 		}{
 			{
@@ -2509,9 +2509,9 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlockAltair
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockAltair
 			wantErr bool
 		}{
 			{
@@ -2616,9 +2616,9 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 
 		tests := []struct {
+			want    *ethpbalpha.SignedBeaconBlockBellatrix
 			name    string
 			blockID []byte
-			want    *ethpbalpha.SignedBeaconBlockBellatrix
 			wantErr bool
 		}{
 			{

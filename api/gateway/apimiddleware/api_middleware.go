@@ -13,10 +13,10 @@ import (
 //   - Ethereum consensus API requests can be handled by grpc-gateway correctly
 //   - gRPC responses can be returned as spec-compliant Ethereum consensus API responses
 type ApiProxyMiddleware struct {
-	GatewayAddress  string
 	EndpointCreator EndpointFactory
-	Timeout         time.Duration
 	router          *mux.Router
+	GatewayAddress  string
+	Timeout         time.Duration
 }
 
 // EndpointFactory is responsible for creating new instances of Endpoint values.
@@ -72,8 +72,8 @@ type HookCollection struct {
 
 // fieldProcessor applies the processing function f to a value when the tag is present on the field.
 type fieldProcessor struct {
-	tag string
 	f   func(value reflect.Value) error
+	tag string
 }
 
 // Run starts the proxy, registering all proxy endpoints.

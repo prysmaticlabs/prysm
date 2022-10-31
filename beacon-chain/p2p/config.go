@@ -8,23 +8,23 @@ import (
 // Config for the p2p service. These parameters are set from application level flags
 // to initialize the p2p service.
 type Config struct {
-	NoDiscovery         bool
-	EnableUPnP          bool
-	StaticPeers         []string
-	BootstrapNodeAddr   []string
-	Discv5BootStrapAddr []string
+	DB                  db.ReadOnlyDatabase
+	StateNotifier       statefeed.Notifier
+	DataDir             string
+	AllowListCIDR       string
+	MetaDataDir         string
 	RelayNodeAddr       string
 	LocalIP             string
 	HostAddress         string
 	HostDNS             string
 	PrivateKey          string
-	DataDir             string
-	MetaDataDir         string
+	Discv5BootStrapAddr []string
+	BootstrapNodeAddr   []string
+	DenyListCIDR        []string
+	StaticPeers         []string
 	TCPPort             uint
 	UDPPort             uint
 	MaxPeers            uint
-	AllowListCIDR       string
-	DenyListCIDR        []string
-	StateNotifier       statefeed.Notifier
-	DB                  db.ReadOnlyDatabase
+	NoDiscovery         bool
+	EnableUPnP          bool
 }

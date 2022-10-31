@@ -6,8 +6,8 @@ import (
 
 // MockExecutionChainInfoFetcher is a fake implementation of the powchain.ChainInfoFetcher
 type MockExecutionChainInfoFetcher struct {
-	CurrEndpoint string
 	CurrError    error
+	CurrEndpoint string
 }
 
 func (*MockExecutionChainInfoFetcher) GenesisExecutionChainInfo() (uint64, *big.Int) {

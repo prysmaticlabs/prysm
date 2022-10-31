@@ -28,9 +28,9 @@ const (
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum consensus.
 type Store struct {
+	ctx          context.Context
 	db           *bolt.DB
 	databasePath string
-	ctx          context.Context
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory

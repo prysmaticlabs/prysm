@@ -24,8 +24,8 @@ import (
 
 var requestBlocksFlags = struct {
 	Peers        string
-	ClientPort   uint
 	APIEndpoints string
+	ClientPort   uint
 	StartSlot    uint64
 	Count        uint64
 	Step         uint64

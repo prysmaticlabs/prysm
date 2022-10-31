@@ -25,8 +25,8 @@ func Test_Equal(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "equal values",
@@ -103,8 +103,8 @@ func Test_NotEqual(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "equal values",
@@ -170,8 +170,8 @@ func TestAssert_DeepEqual(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "equal values",
@@ -239,8 +239,8 @@ func TestAssert_DeepNotEqual(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "equal values",
@@ -306,8 +306,8 @@ func TestAssert_DeepSSZEqual(t *testing.T) {
 		actual   interface{}
 	}
 	tests := []struct {
-		name           string
 		args           args
+		name           string
 		expectedResult bool
 	}{
 		{
@@ -368,8 +368,8 @@ func TestAssert_DeepNotSSZEqual(t *testing.T) {
 		actual   interface{}
 	}
 	tests := []struct {
-		name           string
 		args           args
+		name           string
 		expectedResult bool
 	}{
 		{
@@ -431,8 +431,8 @@ func TestAssert_NoError(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "nil error",
@@ -495,8 +495,8 @@ func TestAssert_ErrorContains(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "nil error",
@@ -603,8 +603,8 @@ func Test_NotNil(t *testing.T) {
 	var nilBlock *eth.SignedBeaconBlock = nil
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "nil",
@@ -676,14 +676,14 @@ func Test_LogsContainDoNotContain(t *testing.T) {
 	type args struct {
 		tb   *assertions.TBMock
 		want string
-		flag bool
 		msgs []interface{}
+		flag bool
 	}
 	tests := []struct {
-		name        string
-		args        args
 		updateLogs  func(log *logrus.Logger)
+		name        string
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "should contain not found",
@@ -814,8 +814,8 @@ func TestAssert_NotEmpty(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		args        args
 		expectedErr string
+		args        args
 	}{
 		{
 			name: "literal value int",
@@ -847,8 +847,8 @@ func TestAssert_NotEmpty(t *testing.T) {
 			args: args{
 				tb: &assertions.TBMock{},
 				input: struct {
-					foo int
 					bar string
+					foo int
 				}{
 					foo: 42,
 					bar: "42",
@@ -859,8 +859,8 @@ func TestAssert_NotEmpty(t *testing.T) {
 			args: args{
 				tb: &assertions.TBMock{},
 				input: struct {
-					foo int
 					bar string
+					foo int
 				}{
 					bar: "42",
 				},
@@ -871,8 +871,8 @@ func TestAssert_NotEmpty(t *testing.T) {
 			args: args{
 				tb: &assertions.TBMock{},
 				input: struct {
-					foo int
 					bar string
+					foo int
 				}{},
 			},
 			expectedErr: "empty/zero field",

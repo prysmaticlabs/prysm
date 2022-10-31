@@ -22,96 +22,95 @@ import (
 //         J        -- K -- L
 //
 // And every block in the Fork choice is optimistic.
-//
 func TestPruneInvalid(t *testing.T) {
 	tests := []struct {
-		root             [32]byte // the root of the new INVALID block
-		parentRoot       [32]byte // the root of the parent block
-		payload          [32]byte // the last valid hash
-		wantedNodeNumber int
-		wantedRoots      [][32]byte
 		wantedErr        error
+		wantedRoots      [][32]byte
+		wantedNodeNumber int
+		root             [32]byte
+		parentRoot       [32]byte
+		payload          [32]byte
 	}{
 		{ // Bogus LVH, root not in forkchoice
-			[32]byte{'x'},
-			[32]byte{'i'},
-			[32]byte{'R'},
-			13,
-			[][32]byte{},
-			nil,
+			root:             [32]byte{'x'},
+			parentRoot:       [32]byte{'i'},
+			payload:          [32]byte{'R'},
+			wantedNodeNumber: 13,
+			wantedRoots:      [][32]byte{},
+			wantedErr:        nil,
 		},
 		{
 			// Bogus LVH
-			[32]byte{'i'},
-			[32]byte{'h'},
-			[32]byte{'R'},
-			12,
-			[][32]byte{{'i'}},
-			nil,
+			root:             [32]byte{'i'},
+			parentRoot:       [32]byte{'h'},
+			payload:          [32]byte{'R'},
+			wantedNodeNumber: 12,
+			wantedRoots:      [][32]byte{{'i'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'j'},
-			[32]byte{'b'},
-			[32]byte{'B'},
-			12,
-			[][32]byte{{'j'}},
-			nil,
+			root:             [32]byte{'j'},
+			parentRoot:       [32]byte{'b'},
+			payload:          [32]byte{'B'},
+			wantedNodeNumber: 12,
+			wantedRoots:      [][32]byte{{'j'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'c'},
-			[32]byte{'b'},
-			[32]byte{'B'},
-			4,
-			[][32]byte{{'f'}, {'e'}, {'i'}, {'h'}, {'l'},
+			root:             [32]byte{'c'},
+			parentRoot:       [32]byte{'b'},
+			payload:          [32]byte{'B'},
+			wantedNodeNumber: 4,
+			wantedRoots: [][32]byte{{'f'}, {'e'}, {'i'}, {'h'}, {'l'},
 				{'k'}, {'g'}, {'d'}, {'c'}},
-			nil,
+			wantedErr: nil,
 		},
 		{
-			[32]byte{'i'},
-			[32]byte{'h'},
-			[32]byte{'H'},
-			12,
-			[][32]byte{{'i'}},
-			nil,
+			root:             [32]byte{'i'},
+			parentRoot:       [32]byte{'h'},
+			payload:          [32]byte{'H'},
+			wantedNodeNumber: 12,
+			wantedRoots:      [][32]byte{{'i'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'h'},
-			[32]byte{'g'},
-			[32]byte{'G'},
-			11,
-			[][32]byte{{'i'}, {'h'}},
-			nil,
+			root:             [32]byte{'h'},
+			parentRoot:       [32]byte{'g'},
+			payload:          [32]byte{'G'},
+			wantedNodeNumber: 11,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'g'},
-			[32]byte{'d'},
-			[32]byte{'D'},
-			8,
-			[][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
-			nil,
+			root:             [32]byte{'g'},
+			parentRoot:       [32]byte{'d'},
+			payload:          [32]byte{'D'},
+			wantedNodeNumber: 8,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'i'},
-			[32]byte{'h'},
-			[32]byte{'D'},
-			8,
-			[][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
-			nil,
+			root:             [32]byte{'i'},
+			parentRoot:       [32]byte{'h'},
+			payload:          [32]byte{'D'},
+			wantedNodeNumber: 8,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'f'},
-			[32]byte{'e'},
-			[32]byte{'D'},
-			11,
-			[][32]byte{{'f'}, {'e'}},
-			nil,
+			root:             [32]byte{'f'},
+			parentRoot:       [32]byte{'e'},
+			payload:          [32]byte{'D'},
+			wantedNodeNumber: 11,
+			wantedRoots:      [][32]byte{{'f'}, {'e'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'h'},
-			[32]byte{'g'},
-			[32]byte{'C'},
-			5,
-			[][32]byte{
+			root:             [32]byte{'h'},
+			parentRoot:       [32]byte{'g'},
+			payload:          [32]byte{'C'},
+			wantedNodeNumber: 5,
+			wantedRoots: [][32]byte{
 				{'f'},
 				{'e'},
 				{'i'},
@@ -121,55 +120,55 @@ func TestPruneInvalid(t *testing.T) {
 				{'g'},
 				{'d'},
 			},
-			nil,
+			wantedErr: nil,
 		},
 		{
-			[32]byte{'g'},
-			[32]byte{'d'},
-			[32]byte{'E'},
-			8,
-			[][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
-			nil,
+			root:             [32]byte{'g'},
+			parentRoot:       [32]byte{'d'},
+			payload:          [32]byte{'E'},
+			wantedNodeNumber: 8,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'z'},
-			[32]byte{'j'},
-			[32]byte{'B'},
-			12,
-			[][32]byte{{'j'}},
-			nil,
+			root:             [32]byte{'z'},
+			parentRoot:       [32]byte{'j'},
+			payload:          [32]byte{'B'},
+			wantedNodeNumber: 12,
+			wantedRoots:      [][32]byte{{'j'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'z'},
-			[32]byte{'j'},
-			[32]byte{'J'},
-			13,
-			[][32]byte{},
-			nil,
+			root:             [32]byte{'z'},
+			parentRoot:       [32]byte{'j'},
+			payload:          [32]byte{'J'},
+			wantedNodeNumber: 13,
+			wantedRoots:      [][32]byte{},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'j'},
-			[32]byte{'a'},
-			[32]byte{'B'},
-			0,
-			[][32]byte{},
-			errInvalidParentRoot,
+			root:             [32]byte{'j'},
+			parentRoot:       [32]byte{'a'},
+			payload:          [32]byte{'B'},
+			wantedNodeNumber: 0,
+			wantedRoots:      [][32]byte{},
+			wantedErr:        errInvalidParentRoot,
 		},
 		{
-			[32]byte{'z'},
-			[32]byte{'h'},
-			[32]byte{'D'},
-			8,
-			[][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
-			nil,
+			root:             [32]byte{'z'},
+			parentRoot:       [32]byte{'h'},
+			payload:          [32]byte{'D'},
+			wantedNodeNumber: 8,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
+			wantedErr:        nil,
 		},
 		{
-			[32]byte{'z'},
-			[32]byte{'h'},
-			[32]byte{'D'},
-			8,
-			[][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
-			nil,
+			root:             [32]byte{'z'},
+			parentRoot:       [32]byte{'h'},
+			payload:          [32]byte{'D'},
+			wantedNodeNumber: 8,
+			wantedRoots:      [][32]byte{{'i'}, {'h'}, {'l'}, {'k'}, {'g'}},
+			wantedErr:        nil,
 		},
 	}
 	for _, tc := range tests {
@@ -291,7 +290,6 @@ func TestSetOptimisticToInvalid_CorrectChildren(t *testing.T) {
 //    \
 //     ----------------------F -- G
 // B is INVALID
-//
 func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
@@ -344,7 +342,6 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 //    \
 //     --A -------------------------F -- G
 // B is INVALID
-//
 func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)

@@ -48,10 +48,10 @@ func TestStore_CheckSlashableAttestation_DoubleVote(t *testing.T) {
 	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	validatorDB := setupDB(t, pubKeys)
 	tests := []struct {
-		name                string
 		existingAttestation *ethpb.IndexedAttestation
-		existingSigningRoot [32]byte
 		incomingAttestation *ethpb.IndexedAttestation
+		name                string
+		existingSigningRoot [32]byte
 		incomingSigningRoot [32]byte
 		want                bool
 	}{
@@ -170,10 +170,10 @@ func TestStore_CheckSlashableAttestation_SurroundVote_54kEpochs(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name        string
-		signingRoot [32]byte
 		attestation *ethpb.IndexedAttestation
+		name        string
 		want        SlashingKind
+		signingRoot [32]byte
 	}{
 		{
 			name:        "surround vote at half of the weak subjectivity period",

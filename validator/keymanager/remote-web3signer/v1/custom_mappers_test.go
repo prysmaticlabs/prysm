@@ -17,9 +17,9 @@ func TestMapAggregateAndProof(t *testing.T) {
 		from *ethpb.AggregateAttestationAndProof
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.AggregateAndProof
+		name    string
 		wantErr bool
 	}{
 		{
@@ -70,9 +70,9 @@ func TestMapAttestation(t *testing.T) {
 		attestation *ethpb.Attestation
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.Attestation
+		name    string
 		wantErr bool
 	}{
 		{
@@ -115,9 +115,9 @@ func TestMapAttestationData(t *testing.T) {
 		data *ethpb.AttestationData
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.AttestationData
+		name    string
 		wantErr bool
 	}{
 		{
@@ -156,9 +156,9 @@ func TestMapAttesterSlashing(t *testing.T) {
 		slashing *ethpb.AttesterSlashing
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.AttesterSlashing
+		name    string
 		wantErr bool
 	}{
 		{
@@ -219,9 +219,9 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 		block *ethpb.BeaconBlockAltair
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.BeaconBlockAltair
+		name    string
 		wantErr bool
 	}{
 		{
@@ -359,9 +359,9 @@ func TestMapBeaconBlockBody(t *testing.T) {
 		body *ethpb.BeaconBlockBody
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.BeaconBlockBody
+		name    string
 		wantErr bool
 	}{
 		{
@@ -489,9 +489,9 @@ func TestMapContributionAndProof(t *testing.T) {
 		contribution *ethpb.ContributionAndProof
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.ContributionAndProof
+		name    string
 		wantErr bool
 	}{
 		{
@@ -528,14 +528,14 @@ func TestMapContributionAndProof(t *testing.T) {
 
 func TestMapForkInfo(t *testing.T) {
 	type args struct {
-		slot                  types.Slot
 		genesisValidatorsRoot []byte
+		slot                  types.Slot
 	}
 
 	tests := []struct {
+		want    *v1.ForkInfo
 		name    string
 		args    args
-		want    *v1.ForkInfo
 		wantErr bool
 	}{
 		{
@@ -567,9 +567,9 @@ func TestMapSyncAggregatorSelectionData(t *testing.T) {
 		data *ethpb.SyncAggregatorSelectionData
 	}
 	tests := []struct {
-		name    string
 		args    args
 		want    *v1.SyncAggregatorSelectionData
+		name    string
 		wantErr bool
 	}{
 		{

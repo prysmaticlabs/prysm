@@ -15,10 +15,10 @@ func TestStore_NewSlot(t *testing.T) {
 	bj := [32]byte{'z'}
 
 	type args struct {
-		slot          types.Slot
 		finalized     *forkchoicetypes.Checkpoint
 		justified     *forkchoicetypes.Checkpoint
 		bestJustified *forkchoicetypes.Checkpoint
+		slot          types.Slot
 		shouldEqual   bool
 	}
 	tests := []struct {

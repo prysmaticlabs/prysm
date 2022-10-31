@@ -72,9 +72,9 @@ func startChainService(t testing.TB,
 }
 
 type engineMock struct {
+	payloadStatus   error
 	powBlocks       map[[32]byte]*ethpb.PowBlock
 	latestValidHash []byte
-	payloadStatus   error
 }
 
 func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {

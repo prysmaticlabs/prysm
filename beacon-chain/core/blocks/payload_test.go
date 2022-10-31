@@ -20,8 +20,8 @@ import (
 
 func Test_IsMergeComplete(t *testing.T) {
 	tests := []struct {
-		name    string
 		payload interfaces.ExecutionData
+		name    string
 		want    bool
 	}{
 		{
@@ -205,8 +205,8 @@ func Test_IsMergeComplete(t *testing.T) {
 
 func Test_IsExecutionBlock(t *testing.T) {
 	tests := []struct {
-		name    string
 		payload *enginev1.ExecutionPayload
+		name    string
 		want    bool
 	}{
 		{
@@ -239,9 +239,9 @@ func Test_IsExecutionBlock(t *testing.T) {
 
 func Test_IsExecutionEnabled(t *testing.T) {
 	tests := []struct {
-		name        string
-		payload     *enginev1.ExecutionPayload
 		header      interfaces.ExecutionData
+		payload     *enginev1.ExecutionPayload
+		name        string
 		useAltairSt bool
 		want        bool
 	}{
@@ -333,9 +333,9 @@ func Test_IsExecutionEnabled(t *testing.T) {
 
 func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
 		header  interfaces.ExecutionData
+		payload *enginev1.ExecutionPayload
+		name    string
 		want    bool
 	}{
 		{
@@ -410,10 +410,10 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 
 func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
 		header  interfaces.ExecutionData
 		err     error
+		payload *enginev1.ExecutionPayload
+		name    string
 	}{
 		{
 			name:    "merge incomplete",
@@ -483,9 +483,9 @@ func Test_ValidatePayload(t *testing.T) {
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
 		err     error
+		payload *enginev1.ExecutionPayload
+		name    string
 	}{
 		{
 			name: "validate passes",
@@ -533,9 +533,9 @@ func Test_ProcessPayload(t *testing.T) {
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
 		err     error
+		payload *enginev1.ExecutionPayload
+		name    string
 	}{
 		{
 			name: "process passes",
@@ -590,9 +590,9 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
-		name   string
 		header interfaces.ExecutionData
 		err    error
+		name   string
 	}{
 		{
 			name: "process passes",
@@ -655,9 +655,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	require.NoError(t, err)
 	tests := []struct {
-		name   string
 		header interfaces.ExecutionData
 		err    error
+		name   string
 	}{
 		{
 			name: "process passes",
@@ -709,10 +709,10 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
-		name   string
 		state  state.BeaconState
 		header interfaces.ExecutionData
 		err    error
+		name   string
 	}{
 		{
 			name: "no merge",

@@ -33,26 +33,26 @@ func TestDeepEqualBasicTypes(t *testing.T) {
 
 func TestDeepEqualStructs(t *testing.T) {
 	type Store struct {
-		V1 uint64
 		V2 []byte
+		V1 uint64
 	}
-	store1 := Store{uint64(1234), nil}
-	store2 := Store{uint64(1234), []byte{}}
-	store3 := Store{uint64(4321), []byte{}}
+	store1 := Store{V1: uint64(1234), V2: nil}
+	store2 := Store{V1: uint64(1234), V2: []byte{}}
+	store3 := Store{V1: uint64(4321), V2: []byte{}}
 	assert.Equal(t, true, equality.DeepEqual(store1, store2))
 	assert.Equal(t, false, equality.DeepEqual(store1, store3))
 }
 
 func TestDeepEqualStructs_Unexported(t *testing.T) {
 	type Store struct {
-		V1           uint64
-		V2           []byte
 		dontIgnoreMe string
+		V2           []byte
+		V1           uint64
 	}
-	store1 := Store{uint64(1234), nil, "hi there"}
-	store2 := Store{uint64(1234), []byte{}, "hi there"}
-	store3 := Store{uint64(4321), []byte{}, "wow"}
-	store4 := Store{uint64(4321), []byte{}, "bow wow"}
+	store1 := Store{V1: uint64(1234), V2: nil, dontIgnoreMe: "hi there"}
+	store2 := Store{V1: uint64(1234), V2: []byte{}, dontIgnoreMe: "hi there"}
+	store3 := Store{V1: uint64(4321), V2: []byte{}, dontIgnoreMe: "wow"}
+	store4 := Store{V1: uint64(4321), V2: []byte{}, dontIgnoreMe: "bow wow"}
 	assert.Equal(t, true, equality.DeepEqual(store1, store2))
 	assert.Equal(t, false, equality.DeepEqual(store1, store3))
 	assert.Equal(t, false, equality.DeepEqual(store3, store4))
@@ -88,8 +88,8 @@ func TestDeepEqualProto(t *testing.T) {
 
 func Test_IsProto(t *testing.T) {
 	tests := []struct {
-		name string
 		item interface{}
+		name string
 		want bool
 	}{
 		{

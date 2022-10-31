@@ -29,9 +29,9 @@ var (
 // SkipSlotCache is used to store the cached results of processing skip slots in transition.ProcessSlots.
 type SkipSlotCache struct {
 	cache      *lru.Cache
+	inProgress map[[32]byte]bool
 	lock       sync.RWMutex
 	disabled   bool // Allow for programmatic toggling of the cache, useful during initial sync.
-	inProgress map[[32]byte]bool
 }
 
 // NewSkipSlotCache initializes the map and underlying cache.

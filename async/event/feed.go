@@ -34,15 +34,13 @@ var errBadChannel = errors.New("event: Subscribe argument does not have sendable
 //
 // The zero value is ready to use.
 type Feed struct {
-	once      sync.Once        // ensures that init only runs once
+	etype     reflect.Type
 	sendLock  chan struct{}    // sendLock has a one-element buffer and is empty when held.It protects sendCases.
 	removeSub chan interface{} // interrupts Send
 	sendCases caseList         // the active set of select cases used by Send
-
-	// The inbox holds newly subscribed channels until they are added to sendCases.
-	mu    sync.Mutex
-	inbox caseList
-	etype reflect.Type
+	inbox     caseList         // The inbox holds newly subscribed channels until they are added to sendCases.
+	once      sync.Once        // ensures that init only runs once
+	mu        sync.Mutex
 }
 
 // This is the index of the first actual subscription channel in sendCases.
@@ -196,9 +194,9 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 
 type feedSub struct {
 	feed    *Feed
+	err     chan error
 	channel reflect.Value
 	errOnce sync.Once
-	err     chan error
 }
 
 // Unsubscribe remove feed subscription.

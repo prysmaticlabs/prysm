@@ -32,38 +32,38 @@ var ErrNilState = errors.New("nil state")
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	Optimistic                  bool
-	ValidAttestation            bool
-	ValidatorsRoot              [32]byte
-	PublicKey                   [fieldparams.BLSPubkeyLength]byte
-	FinalizedCheckPoint         *ethpb.Checkpoint
-	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
-	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	Balance                     *precompute.Balance
-	CanonicalRoots              map[[32]byte]bool
-	Fork                        *ethpb.Fork
-	ETH1Data                    *ethpb.Eth1Data
-	InitSyncBlockRoots          map[[32]byte]bool
+	Genesis                     time.Time
 	DB                          db.Database
-	State                       state.BeaconState
-	Block                       interfaces.SignedBeaconBlock
-	VerifyBlkDescendantErr      error
-	stateNotifier               statefeed.Notifier
-	BlocksReceived              []interfaces.SignedBeaconBlock
-	SyncCommitteeIndices        []types.CommitteeIndex
-	blockNotifier               blockfeed.Notifier
+	ReceiveBlockMockErr         error
+	ForkChoiceStore             forkchoice.ForkChoicer
 	opNotifier                  opfeed.Notifier
+	blockNotifier               blockfeed.Notifier
+	stateNotifier               statefeed.Notifier
+	VerifyBlkDescendantErr      error
+	Block                       interfaces.SignedBeaconBlock
+	State                       state.BeaconState
+	Balance                     *precompute.Balance
+	FinalizedCheckPoint         *ethpb.Checkpoint
+	InitSyncBlockRoots          map[[32]byte]bool
+	Fork                        *ethpb.Fork
+	CanonicalRoots              map[[32]byte]bool
+	FinalizedRoots              map[[32]byte]bool
+	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
+	PreviousJustifiedCheckPoint *ethpb.Checkpoint
+	ETH1Data                    *ethpb.Eth1Data
+	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
+	SyncCommitteeIndices        []types.CommitteeIndex
+	BlocksReceived              []interfaces.SignedBeaconBlock
 	Root                        []byte
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
 	SyncCommitteePubkeys        [][]byte
-	Genesis                     time.Time
-	ForkChoiceStore             forkchoice.ForkChoicer
-	ReceiveBlockMockErr         error
+	PublicKey                   [fieldparams.BLSPubkeyLength]byte
+	ValidatorsRoot              [32]byte
 	OptimisticCheckRootReceived [32]byte
-	FinalizedRoots              map[[32]byte]bool
+	ValidAttestation            bool
+	Optimistic                  bool
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -102,13 +102,11 @@ func (mbn *MockBlockNotifier) BlockFeed() *event.Feed {
 
 // MockStateNotifier mocks the state notifier.
 type MockStateNotifier struct {
-	feed     *event.Feed
-	feedLock sync.Mutex
-
-	recv     []*feed.Event
-	recvLock sync.Mutex
-	recvCh   chan *feed.Event
-
+	feed         *event.Feed
+	recvCh       chan *feed.Event
+	recv         []*feed.Event
+	feedLock     sync.Mutex
+	recvLock     sync.Mutex
 	RecordEvents bool
 }
 
