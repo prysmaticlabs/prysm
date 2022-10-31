@@ -36,6 +36,9 @@ func withCompareDebugState(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "BeaconStateV2 errors")
 	}
+	if grpcResp == nil {
+		return errors.New("BeaconStateV2 empty")
+	}
 	if err := doMiddlewareJSONGetRequest(
 		v2MiddlewarePathTemplate,
 		"/debug/beacon/states/head",
@@ -52,11 +55,6 @@ func withCompareDebugState(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		"lighthouse",
 	); err != nil {
 		return errors.Wrap(err, "lighthouse json error")
-	}
-	if grpcResp.Version != respJSONPrysm.Version {
-		return fmt.Errorf("API Middleware state version  %s does not match gRPC state version %s",
-			respJSONPrysm.Version,
-			grpcResp.Version)
 	}
 	if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
 		p, err := json.Marshal(respJSONPrysm)
