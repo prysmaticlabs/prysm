@@ -4,8 +4,9 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "beacon.go",
+        "beacon_api.go",
         "beacon_api_verify.go",
+        "debug_api.go",
         "node.go",
         "types.go",
         "util.go",
