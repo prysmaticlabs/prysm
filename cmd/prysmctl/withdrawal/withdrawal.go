@@ -2,7 +2,6 @@ package withdrawal
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,7 +25,6 @@ var withdrawalFlags = struct {
 }{}
 
 func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
-	ctx := context.Background()
 	apiPath := "/blsToExecutionAddress"
 	f := withdrawalFlags
 	cleanpath := filepath.Clean(f.File)
@@ -61,7 +59,7 @@ func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
 		return nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "withdrawal.blsToExecutionAddress")
+	ctx, span := trace.StartSpan(c.Context, "withdrawal.blsToExecutionAddress")
 	defer span.End()
 
 	fullpath := f.BeaconNodeHost + apiPath
