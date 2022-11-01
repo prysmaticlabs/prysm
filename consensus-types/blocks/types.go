@@ -7,7 +7,6 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	engine "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -16,6 +15,11 @@ var (
 	_ = interfaces.SignedBeaconBlock(&SignedBeaconBlock{})
 	_ = interfaces.BeaconBlock(&BeaconBlock{})
 	_ = interfaces.BeaconBlockBody(&BeaconBlockBody{})
+)
+
+var (
+	errPayloadWrongType       = errors.New("execution payload has wrong type")
+	errPayloadHeaderWrongType = errors.New("execution payload header has wrong type")
 )
 
 const (
@@ -49,8 +53,9 @@ type BeaconBlockBody struct {
 	deposits               []*eth.Deposit
 	voluntaryExits         []*eth.SignedVoluntaryExit
 	syncAggregate          *eth.SyncAggregate
-	executionPayload       *engine.ExecutionPayload
-	executionPayloadHeader *engine.ExecutionPayloadHeader
+	executionPayload       interfaces.ExecutionData
+	executionPayloadHeader interfaces.ExecutionData
+	blsToExecutionChanges  []*eth.SignedBLSToExecutionChange
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.
