@@ -142,3 +142,20 @@ message Withdrawal {
 	uint64 amount = 4;
 }
 
+// Blobs bundle is retrieved through engine-api from the execution layer client.
+// It consists of the necessary components for constructing a blobs sidecar object to gossip through p2p.
+message BlobsBundle {
+	// The block hash of the payload which corresponds to the blobs.
+	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+	// The KZG commitments of the blobs.
+	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+	// The blobs itself.
+	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
+	// The aggregated proof of the blobs to enable fast validation for commitments and blobs.
+	bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
+// Blob contains the data that is to be committed on chain.
+message Blob {
+	repeated bytes blob = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+}
