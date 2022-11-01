@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -24,8 +25,8 @@ func withCompareDebugState(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return errors.Wrap(err, "error getting genesis data")
 	}
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
-	respJSONPrysm := &ethpbv2.BeaconStateResponseV2{}
-	respJSONLighthouse := &ethpbv2.BeaconStateResponseV2{}
+	respJSONPrysm := &apimiddleware.BeaconStateV2ResponseJson{}
+	respJSONLighthouse := &apimiddleware.BeaconStateV2ResponseJson{}
 	var check string
 	if currentEpoch < 4 {
 		check = "genesis"
