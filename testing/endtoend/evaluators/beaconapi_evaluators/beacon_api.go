@@ -2,143 +2,116 @@ package beaconapi_evaluators
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 )
 
 // GET "/eth/v1/beacon/blocks/{block_id}"
 // GET "/eth/v1/beacon/blocks/{block_id}/root"
-func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
-	ctx := context.Background()
-	beaconClient := service.NewBeaconChainClient(conn)
-	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "error getting genesis data")
+func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	//ctx := context.Background()
+	//beaconClient := service.NewBeaconChainClient(conn)
+	//genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
+	//if err != nil {
+	//	return errors.Wrap(err, "error getting genesis data")
+	//}
+	//currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	type metadata struct {
+		basepath        string
+		params          []string
+		prysmResps      map[string]interface{}
+		lighthouseResps map[string]interface{}
 	}
-	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
-	respJSONPrysm := &apimiddleware.BlockResponseJson{}
-	respJSONLighthouse := &apimiddleware.BlockResponseJson{}
-	var check string
-	if currentEpoch < 4 {
-		check = "genesis"
-	} else {
-		check = "finalized"
+	beaconPathsAndObjects := map[string]metadata{
+		"/beacon/blocks/{param1}": {
+			basepath: v2MiddlewarePathTemplate,
+			params:   []string{"head"},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.BlockResponseJson{},
+				"ssz":  []byte{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.BlockResponseJson{},
+				"ssz":  []byte{},
+			},
+		},
+		"/beacon/states/{param1}/fork": {
+			basepath: v2MiddlewarePathTemplate,
+			params:   []string{"finalized"},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.StateForkResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.StateForkResponseJson{},
+			},
+		},
 	}
-
-	resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
-		BlockId: []byte("head"),
-	})
-	if err != nil {
-		return errors.Wrap(err, "block v2 errors")
-	}
-	fmt.Printf("version: 2 current Epoch: %d", currentEpoch)
-	if err := doMiddlewareJSONGetRequest(
-		v2MiddlewarePathTemplate,
-		"/beacon/blocks/head",
-		beaconNodeIdx,
-		respJSONPrysm,
-	); err != nil {
-		return errors.Wrap(err, "prysm json error")
-	}
-
-	if err := doMiddlewareJSONGetRequest(
-		v2MiddlewarePathTemplate,
-		"/beacon/blocks/head",
-		beaconNodeIdx,
-		respJSONLighthouse,
-		"lighthouse",
-	); err != nil {
-		return errors.Wrap(err, "lighthouse json error")
-	}
-
-	if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
-		return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
-			respJSONPrysm.Data.Signature,
-			hexutil.Encode(resp.Data.Signature))
-	}
-
-	if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
-		p, err := json.Marshal(respJSONPrysm)
-		if err != nil {
-			return errors.Wrap(err, "prysm json")
+	for path, meta := range beaconPathsAndObjects {
+		apipath := pathFromParams(path, meta.params)
+		for key, _ := range meta.prysmResps {
+			switch key {
+			case "json":
+				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, meta.prysmResps[key], meta.lighthouseResps[key]); err != nil {
+					return err
+				}
+			case "ssz":
+				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
+				if err != nil {
+					return err
+				}
+				beaconPathsAndObjects[path].prysmResps[key] = prysmr
+				beaconPathsAndObjects[path].lighthouseResps[key] = lighthouser
+			default:
+				return fmt.Errorf("unknown encoding type %s", key)
+			}
 		}
-		l, err := json.Marshal(respJSONLighthouse)
-		if err != nil {
-			return errors.Wrap(err, "lighthouse json")
-		}
-		return fmt.Errorf("prysm response %s does not match lighthouse response %s",
-			string(p),
-			string(l))
 	}
 
-	sszrspL, err := doMiddlewareSSZGetRequest(
-		v2MiddlewarePathTemplate,
-		"/beacon/blocks/"+check,
-		beaconNodeIdx,
-		"lighthouse",
-	)
-	if err != nil {
-		return errors.Wrap(err, "lighthouse json error")
-	}
+	//var check string
+	//if currentEpoch < 4 {
+	//	check = "genesis"
+	//} else {
+	//	check = "finalized"
+	//}
+	//resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
+	//	BlockId: []byte("head"),
+	//})
+	//if err != nil {
+	//	return errors.Wrap(err, "block v2 errors")
+	//}
+	//fmt.Printf("version: 2 current Epoch: %d", currentEpoch)
+	//
+	//if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
+	//	return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
+	//		respJSONPrysm.Data.Signature,
+	//		hexutil.Encode(resp.Data.Signature))
+	//}
 
-	sszrspP, err := doMiddlewareSSZGetRequest(
-		v2MiddlewarePathTemplate,
-		"/beacon/blocks/"+check,
-		beaconNodeIdx,
-	)
-	if err != nil {
-		return errors.Wrap(err, "prysm json error")
-	}
-	if !bytes.Equal(sszrspL, sszrspP) {
-		return fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
-			hexutil.Encode(sszrspP),
-			hexutil.Encode(sszrspL))
-	}
-	fmt.Printf("prysm ssz: %v", sszrspP)
-	fmt.Printf("lighthouse ssz: %v", sszrspL)
-
-	forkJSONPrysm := &apimiddleware.StateForkResponseJson{}
-	forkJSONLighthouse := &apimiddleware.StateForkResponseJson{}
-	if err := doMiddlewareJSONGetRequest(
-		v1MiddlewarePathTemplate,
-		"/beacon/states/finalized/fork",
-		beaconNodeIdx,
-		forkJSONPrysm,
-	); err != nil {
-		return errors.Wrap(err, "prysm fork json error")
-	}
-	if err := doMiddlewareJSONGetRequest(
-		v1MiddlewarePathTemplate,
-		"/beacon/states/finalized/fork",
-		beaconNodeIdx,
-		forkJSONLighthouse,
-	); err != nil {
-		return errors.Wrap(err, "prysm fork json error")
-	}
-
-	if forkJSONPrysm.Data.Epoch != forkJSONLighthouse.Data.Epoch {
+	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
+	prysmForkData := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
+	lighthouseForkData := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
+	if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
 		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-			forkJSONPrysm,
-			forkJSONLighthouse)
+			prysmForkData,
+			lighthouseForkData)
 	}
 
-	finalizedEpoch, err := strconv.ParseUint(forkJSONPrysm.Data.Epoch, 10, 64)
+	finalizedEpoch, err := strconv.ParseUint(prysmForkData.Data.Epoch, 10, 64)
 	if err != nil {
 		return err
 	}
+	blockPathData := beaconPathsAndObjects["/beacon/blocks/{param1}"]
+	sszrspL := blockPathData.prysmResps["ssz"].([]byte)
+	sszrspP := blockPathData.lighthouseResps["ssz"].([]byte)
 	if finalizedEpoch < 8 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
@@ -207,4 +180,75 @@ func withCompareBeaconBlocks(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	//		hexutil.Encode(blockroot.Data.Root))
 	//}
 	return nil
+}
+
+func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSONPrysm interface{}, respJSONLighthouse interface{}) error {
+	if err := doMiddlewareJSONGetRequest(
+		base,
+		path,
+		beaconNodeIdx,
+		respJSONPrysm,
+	); err != nil {
+		return errors.Wrap(err, "prysm json error")
+	}
+
+	if err := doMiddlewareJSONGetRequest(
+		base,
+		path,
+		beaconNodeIdx,
+		respJSONLighthouse,
+		"lighthouse",
+	); err != nil {
+		return errors.Wrap(err, "lighthouse json error")
+	}
+	if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
+		p, err := json.Marshal(respJSONPrysm)
+		if err != nil {
+			return errors.Wrap(err, "prysm json")
+		}
+		l, err := json.Marshal(respJSONLighthouse)
+		if err != nil {
+			return errors.Wrap(err, "lighthouse json")
+		}
+		return fmt.Errorf("prysm response %s does not match lighthouse response %s",
+			string(p),
+			string(l))
+	}
+	return nil
+}
+
+func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte, []byte, error) {
+	sszrspL, err := doMiddlewareSSZGetRequest(
+		base,
+		path,
+		beaconNodeIdx,
+		"lighthouse",
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "lighthouse json error")
+	}
+
+	sszrspP, err := doMiddlewareSSZGetRequest(
+		base,
+		path,
+		beaconNodeIdx,
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "prysm json error")
+	}
+	if !bytes.Equal(sszrspL, sszrspP) {
+		return nil, nil, fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
+			hexutil.Encode(sszrspP),
+			hexutil.Encode(sszrspL))
+	}
+	fmt.Printf("prysm ssz: %v", sszrspP)
+	fmt.Printf("lighthouse ssz: %v", sszrspL)
+	return sszrspP, sszrspL, nil
+}
+
+func pathFromParams(path string, params []string) string {
+	for index, _ := range params {
+		path = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
+	}
+	return path
 }

@@ -23,25 +23,13 @@ type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
 func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
-		withCompareBeaconBlocks,
+		withCompareBeaconAPIs,
 	}
-	//validator := []apiComparisonFunc{
-	//	withCompareAttesterDuties,
-	//}
-	//node := []apiComparisonFunc{
-	//	withCompareNodeMetaData,
-	//}
-	//compareFns := append(beacon, validator...)
-	//compareFns = append(compareFns, node...)
-	debug := []apiComparisonFunc{
-		withCompareDebugState,
-	}
-	compareFns := append(beacon, debug...)
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
 			conn,
-			compareFns...,
+			beacon...,
 		); err != nil {
 			return errors.Wrap(err, "beaconAPI verify")
 		}
