@@ -157,5 +157,5 @@ message BlobsBundle {
 
 // Blob contains the data that is to be committed on chain.
 message Blob {
-	repeated bytes blob = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+	repeated bytes data = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
 }
