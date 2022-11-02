@@ -5,4 +5,5 @@ go_library(
     srcs = ["merkle_tree.go"],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositsnapshot",
     visibility = ["//visibility:public"],
+    deps = ["//crypto/hash:go_default_library"],
 )
