@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -144,6 +145,55 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
+		ExecutionOptimistic: isOptimistic,
+	}, nil
+}
+
+// GetRandao fetches the RANDAO mix for the requested epoch from the state identified by state_id.
+// If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
+// By adjusting the state_id parameter you can query for any historic value of the RANDAO mix.
+// Ordinarily states from the same epoch will mutate the RANDAO mix for that epoch as blocks are applied.
+func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2.RandaoResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.GetRandao")
+	defer span.End()
+
+	var (
+		st  state.BeaconState
+		err error
+	)
+
+	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+
+	var randao []byte
+	if req.Epoch == nil {
+		idx := uint64(st.RandaoMixesLength() - 1)
+		randao, err = st.RandaoMixAtIndex(idx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
+		}
+	} else {
+		reqEpoch := *req.Epoch
+		stEpoch := slots.ToEpoch(st.Slot())
+		if reqEpoch > stEpoch || uint64(reqEpoch) < uint64(stEpoch)-uint64(st.RandaoMixesLength())+1 {
+			return nil, status.Errorf(codes.InvalidArgument, "Epoch is out of range for the randao mixes of the state")
+		}
+		idx := uint64(st.RandaoMixesLength()) - uint64(stEpoch-reqEpoch) - 1
+		randao, err = st.RandaoMixAtIndex(idx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
+		}
+	}
+
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
+	return &eth2.RandaoResponse{
+		Data:                &eth2.RandaoResponse_Randao{Randao: randao},
 		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
