@@ -168,6 +168,11 @@ func (z *Zero) GetFinalized(result [][32]byte) ([][32]byte, uint) {
 	return result, 0
 }
 
+// PushLeaf satisfies the MerkleTreeNode interface.
+func (z *Zero) PushLeaf(leaf [32]byte, deposits uint, depth uint) MerkleTreeNode {
+	return fromSnapshotParts([][32]byte{leaf}, deposits, depth)
+}
+
 // UintPow is a utility function to compute the power of 2 for uint.
 func UintPow(n, m uint) uint {
 	if m == 0 {
