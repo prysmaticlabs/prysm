@@ -20,7 +20,6 @@ import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
 import "proto/eth/v1/beacon_chain.proto";
-import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 
