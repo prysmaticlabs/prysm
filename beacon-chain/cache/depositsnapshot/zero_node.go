@@ -1,0 +1,39 @@
+package depositsnapshot
+
+import (
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+)
+
+// Zero represents an empty node without a deposit and satisfies the MerkleTreeNode interface.
+type Zero struct {
+	depth uint64
+}
+
+// GetRoot returns the root of the Merkle tree.
+func (z *Zero) GetRoot() [32]byte {
+	if z.depth == DepositContractDepth {
+		return hash.Hash(append(zeroHash[:], zeroHash[:]...))
+	}
+	return zeroHash
+}
+
+// IsFull returns whether there is space left for deposits.
+func (z *Zero) IsFull() bool {
+	return false
+}
+
+// Finalize marks deposits of the Merkle tree as finalized.
+func (z *Zero) Finalize(deposits uint64, depth uint64) (MerkleTreeNode, error) {
+	return nil, errors.New("finalize should not be called on a zero node")
+}
+
+// GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
+func (z *Zero) GetFinalized(result [][32]byte) ([][32]byte, uint64) {
+	return result, 0
+}
+
+// PushLeaf adds a new leaf node at the next available Zero node.
+func (z *Zero) PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error) {
+	return fromSnapshotPartsIter([][32]byte{leaf}, deposits, depth), nil
+}
