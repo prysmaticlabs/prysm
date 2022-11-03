@@ -1,5 +1,10 @@
 load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
+config_setting(
+    name = "use_beacon_api",
+    values = {"define": "use_beacon_api=1"},
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -85,7 +90,10 @@ go_library(
         "@org_golang_google_grpc//status:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
-    ],
+    ] + select({
+        ":use_beacon_api": ["//validator/client/beacon-api:go_default_library"],
+        "//conditions:default": ["//validator/client/grpc-api:go_default_library"],
+    }),
 )
 
 go_test(
