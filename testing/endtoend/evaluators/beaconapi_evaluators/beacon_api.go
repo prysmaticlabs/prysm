@@ -42,16 +42,16 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				"ssz":  []byte{},
 			},
 		},
-		"/beacon/states/{param1}/fork": {
-			basepath: v2MiddlewarePathTemplate,
-			params:   []string{"finalized"},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
-			},
-		},
+		//"/beacon/states/{param1}/fork": {
+		//	basepath: v2MiddlewarePathTemplate,
+		//	params:   []string{"finalized"},
+		//	prysmResps: map[string]interface{}{
+		//		"json": &apimiddleware.StateForkResponseJson{},
+		//	},
+		//	lighthouseResps: map[string]interface{}{
+		//		"json": &apimiddleware.StateForkResponseJson{},
+		//	},
+		//},
 	}
 	for path, meta := range beaconPathsAndObjects {
 		apipath := pathFromParams(path, meta.params)
