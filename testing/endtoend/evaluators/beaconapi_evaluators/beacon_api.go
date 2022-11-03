@@ -97,8 +97,14 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	//}
 
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	prysmForkData := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
-	lighthouseForkData := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
+	prysmForkData, ok := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
 	if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
 		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
 			prysmForkData,
@@ -110,8 +116,14 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return err
 	}
 	blockPathData := beaconPathsAndObjects["/beacon/blocks/{param1}"]
-	sszrspL := blockPathData.prysmResps["ssz"].([]byte)
-	sszrspP := blockPathData.lighthouseResps["ssz"].([]byte)
+	sszrspL, ok := blockPathData.prysmResps["ssz"].([]byte)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	sszrspP, ok := blockPathData.lighthouseResps["ssz"].([]byte)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
 	if finalizedEpoch < 8 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
