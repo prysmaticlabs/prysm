@@ -60,10 +60,12 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		for key, _ := range meta.prysmResps {
 			switch key {
 			case "json":
-				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, meta.prysmResps[key], meta.lighthouseResps[key]); err != nil {
+				fmt.Printf("json api path: %s", apipath)
+				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, beaconPathsAndObjects[path].prysmResps[key], beaconPathsAndObjects[path].lighthouseResps[key]); err != nil {
 					return err
 				}
 			case "ssz":
+				fmt.Printf("ssz api path: %s", apipath)
 				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
 				if err != nil {
 					return err
@@ -259,8 +261,9 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 }
 
 func pathFromParams(path string, params []string) string {
+	var apiPath string
 	for index, _ := range params {
-		path = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
+		apiPath = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
 	}
-	return path
+	return apiPath
 }
