@@ -28,7 +28,6 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -582,7 +581,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
-			).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest, arg2 ...grpc.CallOption) (*ethpb.GenericBeaconBlock, error) {
+			).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 				assert.DeepEqual(t, graffiti, req.Graffiti, "Unexpected graffiti in request")
 
 				return tt.block, nil
@@ -599,7 +598,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
-			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
+			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
