@@ -36,11 +36,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			basepath: v2MiddlewarePathTemplate,
 			params:   []string{"head"},
 			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.BlockResponseJson{},
+				"json": apimiddleware.BlockResponseJson{},
 				"ssz":  []byte{},
 			},
 			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.BlockResponseJson{},
+				"json": apimiddleware.BlockResponseJson{},
 				"ssz":  []byte{},
 			},
 		},
@@ -48,10 +48,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			basepath: v2MiddlewarePathTemplate,
 			params:   []string{"finalized"},
 			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
+				"json": apimiddleware.StateForkResponseJson{},
 			},
 			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
+				"json": apimiddleware.StateForkResponseJson{},
 			},
 		},
 	}
@@ -60,7 +60,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		for key, _ := range meta.prysmResps {
 			switch key {
 			case "json":
-				fmt.Printf("json api path: %s", apipath)
+				fmt.Printf("json api path: %s/n", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, beaconPathsAndObjects[path].prysmResps[key], beaconPathsAndObjects[path].lighthouseResps[key]); err != nil {
 					return err
 				}
