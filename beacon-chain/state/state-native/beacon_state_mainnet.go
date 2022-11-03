@@ -47,9 +47,8 @@ type BeaconState struct {
 	nextSyncCommittee                   *ethpb.SyncCommittee                    `ssz-gen:"true"`
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader        `ssz-gen:"true"`
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella `ssz-gen:"true"`
-	withdrawalQueue                     []*enginev1.Withdrawal                  `ssz-gen:"true" ssz-max:"1099511627776"`
 	nextWithdrawalIndex                 uint64                                  `ssz-gen:"true"`
-	nextPartialWithdrawalValidatorIndex eth2types.ValidatorIndex                `ssz-gen:"true"`
+	lastWithdrawalValidatorIndex        eth2types.ValidatorIndex                `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
 	dirtyFields           map[nativetypes.FieldIndex]bool
