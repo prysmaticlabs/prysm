@@ -338,7 +338,6 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	m.validatorClient.EXPECT().GetDuties(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
-		gomock.Any(),
 	).Times(0)
 
 	m.validatorClient.EXPECT().GetAttestationData(

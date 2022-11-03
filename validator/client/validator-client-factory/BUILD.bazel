@@ -12,7 +12,7 @@ go_library(
         "//conditions:default": ["grpc_validator_client_factory.go"],
     }),
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory",
-    visibility = ["//validator:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "@org_golang_google_grpc//:go_default_library",
         "//validator/client/iface:go_default_library",
