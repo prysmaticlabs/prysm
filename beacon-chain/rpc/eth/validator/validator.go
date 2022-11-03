@@ -37,6 +37,7 @@ import (
 )
 
 var errInvalidValIndex = errors.New("invalid validator index")
+var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch participation")
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
@@ -964,6 +965,74 @@ func (vs *Server) SubmitContributionAndProofs(ctx context.Context, req *ethpbv2.
 	}
 
 	return &empty.Empty{}, nil
+}
+
+// GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
+// The beacon node might detect liveness by observing messages from the validator on the network,
+// in the beacon chain, from its API or from any other source.
+// A beacon node SHOULD support the current and previous epoch, however it MAY support earlier epoch.
+// It is important to note that the values returned by the beacon node are not canonical;
+// they are best-effort and based upon a subjective view of the network.
+// A beacon node that was recently started or suffered a network partition may indicate that a validator is not live when it actually is.
+func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessRequest) (*ethpbv2.GetLivenessResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.GetLiveness")
+	defer span.End()
+
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	headSlot := headState.Slot()
+	currEpoch := slots.ToEpoch(headSlot)
+	if req.Epoch != currEpoch && req.Epoch != currEpoch-1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Only current and previous epochs are supported")
+	}
+
+	// We request a state 32 slots ago. We are guaranteed to have
+	// currentSlot > 32 since we assume that we are past Phase 0.
+	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
+	prevEpochEnd, err := slots.EpochEnd(slots.ToEpoch(prevStateSlot))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
+	}
+	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get previous state")
+	}
+
+	var currParticipation, prevParticipation []byte
+	if req.Epoch == currEpoch {
+		currParticipation, err = headState.CurrentEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+		prevParticipation, err = headState.PreviousEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+	} else {
+		currParticipation, err = prevState.CurrentEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+		prevParticipation, err = prevState.PreviousEpochParticipation()
+		if err != nil {
+			return nil, errParticipation
+		}
+	}
+
+	resp := &ethpbv2.GetLivenessResponse{
+		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Indices)),
+	}
+	for i := range req.Indices {
+		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
+			Index:  req.Indices[i],
+			IsLive: (currParticipation[i] != 0) || (prevParticipation[i] != 0),
+		}
+	}
+
+	return resp, nil
 }
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)

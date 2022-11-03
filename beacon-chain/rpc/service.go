@@ -241,6 +241,7 @@ func (s *Service) Start() {
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		ReplayerBuilder:        ch,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
