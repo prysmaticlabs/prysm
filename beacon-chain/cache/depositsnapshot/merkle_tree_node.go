@@ -20,7 +20,7 @@ type MerkleTreeNode interface {
 	Finalize(deposits uint64, depth uint64) (MerkleTreeNode, error)
 	// GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
 	GetFinalized(result [][32]byte) ([][32]byte, uint64)
-	// PushLeaf adds a new leaf node at the next available Zero node.
+	// PushLeaf adds a new leaf node at the next available zero node.
 	PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error)
 }
 
@@ -28,24 +28,24 @@ type MerkleTreeNode interface {
 // The tree creation is done recursively and not iteratively.
 func fromSnapshotParts(finalized [][32]byte, deposits uint64, depth uint64) MerkleTreeNode {
 	if len(finalized) < 1 || deposits == 0 {
-		return &Zero{
+		return &ZeroNode{
 			depth: depth,
 		}
 	}
 	if deposits == math.PowerOf2(depth) {
-		return &Finalized{
+		return &FinalizedNode{
 			deposits: deposits,
 			hash:     finalized[0],
 		}
 	}
 
-	node := Node{}
+	node := InnerNode{}
 	if leftSubtree := math.PowerOf2(depth - 1); deposits <= leftSubtree {
 		node.left = fromSnapshotParts(finalized, deposits, depth-1)
-		node.right = &Zero{depth: depth - 1}
+		node.right = &ZeroNode{depth: depth - 1}
 
 	} else {
-		node.left = &Finalized{
+		node.left = &FinalizedNode{
 			deposits: leftSubtree,
 			hash:     finalized[0],
 		}
@@ -59,13 +59,13 @@ func fromSnapshotParts(finalized [][32]byte, deposits uint64, depth uint64) Merk
 func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) MerkleTreeNode {
 	switch {
 	case deposits == 0, len(finalized) == 0:
-		return &Zero{depth: depth}
+		return &ZeroNode{depth: depth}
 	case depth == 0:
-		return &Leaf{
+		return &LeafNode{
 			hash: finalized[0],
 		}
 	default:
-		node := &Node{
+		node := &InnerNode{
 			left:  nil,
 			right: nil,
 		}
@@ -73,25 +73,25 @@ func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) 
 		for depth > 0 {
 			split = math.PowerOf2(depth - 1)
 			if deposits < split {
-				next := &Node{}
-				node.left = &Node{left: next, right: &Node{}}
-				node.right = &Zero{depth: depth - 1}
+				next := &InnerNode{}
+				node.left = &InnerNode{left: next, right: &InnerNode{}}
+				node.right = &ZeroNode{depth: depth - 1}
 				node = next // = node.left
 				depth -= 1
 			} else if deposits > split {
-				node.left = &Finalized{
+				node.left = &FinalizedNode{
 					deposits: deposits,
 					hash:     finalized[0],
 				}
-				next := &Node{}
-				node.right = &Node{left: &Node{}, right: next}
+				next := &InnerNode{}
+				node.right = &InnerNode{left: &InnerNode{}, right: next}
 				finalized = finalized[1:]
 				deposits -= split
 				node = next // = node.right
 				depth -= 1
 			} else {
-				node.left = &Finalized{split, finalized[0]}
-				node.right = &Zero{depth: depth - 1}
+				node.left = &FinalizedNode{split, finalized[0]}
+				node.right = &ZeroNode{depth: depth - 1}
 				finalized = finalized[1:]
 			}
 		}
