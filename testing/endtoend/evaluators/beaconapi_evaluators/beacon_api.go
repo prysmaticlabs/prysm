@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 )
 
@@ -42,16 +43,16 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				"ssz":  []byte{},
 			},
 		},
-		//"/beacon/states/{param1}/fork": {
-		//	basepath: v2MiddlewarePathTemplate,
-		//	params:   []string{"finalized"},
-		//	prysmResps: map[string]interface{}{
-		//		"json": &apimiddleware.StateForkResponseJson{},
-		//	},
-		//	lighthouseResps: map[string]interface{}{
-		//		"json": &apimiddleware.StateForkResponseJson{},
-		//	},
-		//},
+		"/beacon/states/{param1}/fork": {
+			basepath: v1MiddlewarePathTemplate,
+			params:   []string{"finalized"},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.StateForkResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.StateForkResponseJson{},
+			},
+		},
 	}
 	for path, meta := range beaconPathsAndObjects {
 		apipath := pathFromParams(path, meta.params)
@@ -98,80 +99,80 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	//		hexutil.Encode(resp.Data.Signature))
 	//}
 
-	//forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	//prysmForkData, ok := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
-	//if !ok {
-	//	return errors.New("failed to cast type")
-	//}
-	//lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
-	//if !ok {
-	//	return errors.New("failed to cast type")
-	//}
-	//if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
-	//	return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-	//		prysmForkData,
-	//		lighthouseForkData)
-	//}
-	//
-	//finalizedEpoch, err := strconv.ParseUint(prysmForkData.Data.Epoch, 10, 64)
-	//if err != nil {
-	//	return err
-	//}
-	//blockPathData := beaconPathsAndObjects["/beacon/blocks/{param1}"]
-	//sszrspL, ok := blockPathData.prysmResps["ssz"].([]byte)
-	//if !ok {
-	//	return errors.New("failed to cast type")
-	//}
-	//sszrspP, ok := blockPathData.lighthouseResps["ssz"].([]byte)
-	//if !ok {
-	//	return errors.New("failed to cast type")
-	//}
-	//if finalizedEpoch < 8 {
-	//	blockP := &ethpb.SignedBeaconBlock{}
-	//	blockL := &ethpb.SignedBeaconBlock{}
-	//	if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-	//		return errors.Wrap(err, "lighthouse ssz error")
-	//	}
-	//	if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-	//		return errors.Wrap(err, "prysm ssz error")
-	//	}
-	//
-	//	if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-	//		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-	//			blockP,
-	//			blockL)
-	//	}
-	//} else if finalizedEpoch > 8 && finalizedEpoch < 10 {
-	//	blockP := &ethpb.SignedBeaconBlockAltair{}
-	//	blockL := &ethpb.SignedBeaconBlockAltair{}
-	//	if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-	//		return errors.Wrap(err, "lighthouse ssz error")
-	//	}
-	//	if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-	//		return errors.Wrap(err, "prysm ssz error")
-	//	}
-	//
-	//	if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-	//		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-	//			blockP,
-	//			blockL)
-	//	}
-	//} else {
-	//	blockP := &ethpb.SignedBeaconBlockBellatrix{}
-	//	blockL := &ethpb.SignedBeaconBlockBellatrix{}
-	//	if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-	//		return errors.Wrap(err, "lighthouse ssz error")
-	//	}
-	//	if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-	//		return errors.Wrap(err, "prysm ssz error")
-	//	}
-	//
-	//	if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-	//		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-	//			blockP,
-	//			blockL)
-	//	}
-	//}
+	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
+	prysmForkData, ok := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
+		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+			prysmForkData,
+			lighthouseForkData)
+	}
+
+	finalizedEpoch, err := strconv.ParseUint(prysmForkData.Data.Epoch, 10, 64)
+	if err != nil {
+		return err
+	}
+	blockPathData := beaconPathsAndObjects["/beacon/blocks/{param1}"]
+	sszrspL, ok := blockPathData.prysmResps["ssz"].([]byte)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	sszrspP, ok := blockPathData.lighthouseResps["ssz"].([]byte)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	if finalizedEpoch < 8 {
+		blockP := &ethpb.SignedBeaconBlock{}
+		blockL := &ethpb.SignedBeaconBlock{}
+		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+			return errors.Wrap(err, "lighthouse ssz error")
+		}
+		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
+			return errors.Wrap(err, "prysm ssz error")
+		}
+
+		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
+			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+				blockP,
+				blockL)
+		}
+	} else if finalizedEpoch > 8 && finalizedEpoch < 10 {
+		blockP := &ethpb.SignedBeaconBlockAltair{}
+		blockL := &ethpb.SignedBeaconBlockAltair{}
+		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+			return errors.Wrap(err, "lighthouse ssz error")
+		}
+		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
+			return errors.Wrap(err, "prysm ssz error")
+		}
+
+		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
+			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+				blockP,
+				blockL)
+		}
+	} else {
+		blockP := &ethpb.SignedBeaconBlockBellatrix{}
+		blockL := &ethpb.SignedBeaconBlockBellatrix{}
+		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+			return errors.Wrap(err, "lighthouse ssz error")
+		}
+		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
+			return errors.Wrap(err, "prysm ssz error")
+		}
+
+		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
+			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
+				blockP,
+				blockL)
+		}
+	}
 
 	//blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
 	//	BlockId: []byte("head"),
