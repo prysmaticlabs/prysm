@@ -1,0 +1,23 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+config_setting(
+    name = "use_beacon_api",
+    values = {"define": "use_beacon_api=1"},
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = select({
+        ":use_beacon_api": ["beacon_api_validator_client_factory.go"],
+        "//conditions:default": ["grpc_validator_client_factory.go"],
+    }),
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory",
+    visibility = ["//validator:__subpackages__"],
+    deps = [
+        "@org_golang_google_grpc//:go_default_library",
+        "//validator/client/iface:go_default_library",
+    ] + select({
+        ":use_beacon_api": ["//validator/client/beacon-api:go_default_library"],
+        "//conditions:default": ["//validator/client/grpc-api:go_default_library"],
+    }),
+)
