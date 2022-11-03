@@ -1,3 +1,6 @@
+//go:build use_beacon_api
+// +build use_beacon_api
+
 package validator_client_factory
 
 import (
