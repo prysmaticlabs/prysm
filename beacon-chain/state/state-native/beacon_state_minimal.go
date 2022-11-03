@@ -47,9 +47,8 @@ type BeaconState struct {
 	nextSyncCommittee                   *ethpb.SyncCommittee
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
-	withdrawalQueue                     []*enginev1.Withdrawal
 	nextWithdrawalIndex                 uint64
-	nextPartialWithdrawalValidatorIndex eth2types.ValidatorIndex
+	lastWithdrawalValidatorIndex        eth2types.ValidatorIndex
 
 	lock                  sync.RWMutex
 	dirtyFields           map[nativetypes.FieldIndex]bool
