@@ -308,4 +308,29 @@ func TestGetRandao(t *testing.T) {
 		_, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &futureEpoch})
 		require.ErrorContains(t, "Epoch is out of range for the randao mixes of the state", err)
 	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService := &chainMock.ChainService{Optimistic: true}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }
