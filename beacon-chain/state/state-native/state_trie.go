@@ -80,9 +80,8 @@ var bellatrixFields = append(altairFields, nativetypes.LatestExecutionPayloadHea
 var capellaFields = append(
 	altairFields,
 	nativetypes.LatestExecutionPayloadHeaderCapella,
-	nativetypes.WithdrawalQueue,
 	nativetypes.NextWithdrawalIndex,
-	nativetypes.NextPartialWithdrawalValidatorIndex,
+	nativetypes.LastWithdrawalValidatorIndex,
 )
 
 const (
@@ -432,9 +431,8 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		currentSyncCommittee:                st.CurrentSyncCommittee,
 		nextSyncCommittee:                   st.NextSyncCommittee,
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
-		withdrawalQueue:                     st.WithdrawalQueue,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		nextPartialWithdrawalValidatorIndex: st.NextPartialWithdrawalValidatorIndex,
+		lastWithdrawalValidatorIndex:        st.LastWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -468,7 +466,6 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
-	b.sharedFieldReferences[nativetypes.WithdrawalQueue] = stateutil.NewRef(1)                     // New in Capella.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -497,11 +494,11 @@ func (b *BeaconState) Copy() state.BeaconState {
 		version: b.version,
 
 		// Primitive nativetypes, safe to copy.
-		genesisTime:                         b.genesisTime,
-		slot:                                b.slot,
-		eth1DepositIndex:                    b.eth1DepositIndex,
-		nextWithdrawalIndex:                 b.nextWithdrawalIndex,
-		nextPartialWithdrawalValidatorIndex: b.nextPartialWithdrawalValidatorIndex,
+		genesisTime:                  b.genesisTime,
+		slot:                         b.slot,
+		eth1DepositIndex:             b.eth1DepositIndex,
+		nextWithdrawalIndex:          b.nextWithdrawalIndex,
+		lastWithdrawalValidatorIndex: b.lastWithdrawalValidatorIndex,
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
@@ -519,7 +516,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 		previousEpochParticipation: b.previousEpochParticipation,
 		currentEpochParticipation:  b.currentEpochParticipation,
 		inactivityScores:           b.inactivityScores,
-		withdrawalQueue:            b.withdrawalQueue,
 
 		// Everything else, too small to be concerned about, constant size.
 		genesisValidatorsRoot:               b.genesisValidatorsRoot,
@@ -833,12 +829,10 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return b.latestExecutionPayloadHeader.HashTreeRoot()
 	case nativetypes.LatestExecutionPayloadHeaderCapella:
 		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
-	case nativetypes.WithdrawalQueue:
-		return ssz.WithdrawalSliceRoot(hasher, b.withdrawalQueue, fieldparams.WithdrawalQueueLimit)
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
-	case nativetypes.NextPartialWithdrawalValidatorIndex:
-		return ssz.Uint64Root(uint64(b.nextPartialWithdrawalValidatorIndex)), nil
+	case nativetypes.LastWithdrawalValidatorIndex:
+		return ssz.Uint64Root(uint64(b.lastWithdrawalValidatorIndex)), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
