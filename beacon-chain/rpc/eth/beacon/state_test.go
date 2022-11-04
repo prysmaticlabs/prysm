@@ -262,15 +262,15 @@ func TestGetRandao(t *testing.T) {
 	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
 	mixOld := bytesutil.PadTo([]byte("old"), 32)
 	epochCurrent := types.Epoch(100000)
-	epochOld := types.Epoch(100000 - 35)
+	epochOld := types.Epoch(100000 - 100)
 
 	ctx := context.Background()
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	// Set slot to epoch 100000
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*100000))
-	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(st.RandaoMixesLength())-1, mixCurrent))
-	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(st.RandaoMixesLength())-1-35, mixOld))
+	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochCurrent%params.BeaconConfig().EpochsPerHistoricalVector), mixCurrent))
+	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochOld%params.BeaconConfig().EpochsPerHistoricalVector), mixOld))
 
 	db := dbTest.SetupDB(t)
 	chainService := &chainMock.ChainService{}

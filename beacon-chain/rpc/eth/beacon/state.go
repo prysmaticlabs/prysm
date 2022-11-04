@@ -58,12 +58,7 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateRoot")
 	defer span.End()
 
-	var (
-		stateRoot []byte
-		err       error
-	)
-
-	stateRoot, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
+	stateRoot, err := bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
@@ -94,12 +89,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
 	defer span.End()
 
-	var (
-		st  state.BeaconState
-		err error
-	)
-
-	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -125,12 +115,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	ctx, span := trace.StartSpan(ctx, "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	var (
-		st  state.BeaconState
-		err error
-	)
-
-	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -157,34 +142,24 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 	ctx, span := trace.StartSpan(ctx, "beacon.GetRandao")
 	defer span.End()
 
-	var (
-		st  state.BeaconState
-		err error
-	)
-
-	st, err = bs.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	var randao []byte
-	if req.Epoch == nil {
-		idx := uint64(st.RandaoMixesLength() - 1)
-		randao, err = st.RandaoMixAtIndex(idx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
-		}
-	} else {
-		reqEpoch := *req.Epoch
-		stEpoch := slots.ToEpoch(st.Slot())
-		if reqEpoch > stEpoch || uint64(reqEpoch) < uint64(stEpoch)-uint64(st.RandaoMixesLength())+1 {
-			return nil, status.Errorf(codes.InvalidArgument, "Epoch is out of range for the randao mixes of the state")
-		}
-		idx := uint64(st.RandaoMixesLength()) - uint64(stEpoch-reqEpoch) - 1
-		randao, err = st.RandaoMixAtIndex(idx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
-		}
+	stEpoch := slots.ToEpoch(st.Slot())
+	epoch := stEpoch
+	if req.Epoch != nil {
+		epoch = *req.Epoch
+	}
+	// future epochs and epochs too far back are not supported
+	if epoch > stEpoch || uint64(epoch) < uint64(stEpoch)-uint64(st.RandaoMixesLength())+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Epoch is out of range for the randao mixes of the state")
+	}
+	idx := epoch % params.BeaconConfig().EpochsPerHistoricalVector
+	randao, err := st.RandaoMixAtIndex(uint64(idx))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get randao mix at index %d", idx)
 	}
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
