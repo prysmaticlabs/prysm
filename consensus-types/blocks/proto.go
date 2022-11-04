@@ -316,6 +316,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				SyncAggregate:          b.syncAggregate,
 				ExecutionPayloadHeader: ph,
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
+				BlobKzgs:               b.blogKzgs,
 			}, nil
 		}
 		var p *enginev1.ExecutionPayloadCapella
@@ -338,6 +339,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			SyncAggregate:         b.syncAggregate,
 			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
+			BlobKzgs:              b.blogKzgs,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")

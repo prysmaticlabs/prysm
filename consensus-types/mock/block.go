@@ -223,6 +223,10 @@ func (BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChang
 	panic("implement me")
 }
 
+func (BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+	panic("implement me")
+}
+
 var _ interfaces.SignedBeaconBlock = &SignedBeaconBlock{}
 var _ interfaces.BeaconBlock = &BeaconBlock{}
 var _ interfaces.BeaconBlockBody = &BeaconBlockBody{}

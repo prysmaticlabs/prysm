@@ -69,6 +69,7 @@ type BeaconBlockBody interface {
 	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
+	BlobKzgs() ([][]byte, error)
 }
 
 // ExecutionData represents execution layer information that is contained

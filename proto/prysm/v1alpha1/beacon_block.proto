@@ -508,6 +508,8 @@ message BeaconBlockBodyCapella {
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    repeated bytes blob_kzgs = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 
 message SignedBlindedBeaconBlockCapella {
@@ -569,6 +571,8 @@ message BlindedBeaconBlockBodyCapella {
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+
+    repeated bytes blob_kzgs = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 
 message ValidatorRegistrationV1 {
@@ -596,4 +600,16 @@ message BuilderBid {
 message SignedBuilderBid {
     BuilderBid message         = 1 ;
     bytes signature      = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+// BlobsAndCommitments is to be merkelized to compute the "r" value for eip4844 blob validation.
+message BlobsAndCommitments {
+    repeated ethereum.engine.v1.Blob blobs = 1 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated bytes commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+}
+
+// PolynomailAndCommitment is to be  merkelized to compute the "x" value for eip4844 blob validation.
+message PolynomialAndCommitment {
+    repeated bytes polynomial = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+    bytes commitment = 2 [(ethereum.eth.ext.ssz_size) = "48"];
 }

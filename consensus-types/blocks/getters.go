@@ -836,11 +836,24 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	}
 }
 
+// BLSToExecutionChanges returns the `BLSToExecutionChanges` objects in the block.
 func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
 	if b.version < version.Capella {
 		return nil, errNotSupported("BLSToExecutionChanges", b.version)
 	}
 	return b.blsToExecutionChanges, nil
+}
+
+// BlobKzgs returns the blob kzgs in the block.
+func (b *BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+	switch b.version {
+	case version.Phase0, version.Altair, version.Bellatrix:
+		return nil, errNotSupported("BlobKzgs", b.version)
+	case version.Capella:
+		return b.blogKzgs, nil
+	default:
+		return nil, errIncorrectBlockVersion
+	}
 }
 
 // HashTreeRoot returns the ssz root of the block body.
