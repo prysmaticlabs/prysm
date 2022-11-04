@@ -275,7 +275,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.AncestorRoot")
 	defer span.End()
 
 	f.store.nodesLock.RLock()
@@ -493,7 +493,7 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 
 // CommonAncestor returns the common ancestor root and slot between the two block roots r1 and r2.
 func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
-	ctx, span := trace.StartSpan(ctx, "doublelinkedtree.CommonAncestorRoot")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.CommonAncestorRoot")
 	defer span.End()
 
 	f.store.nodesLock.RLock()
