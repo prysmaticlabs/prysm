@@ -2,8 +2,12 @@ package beaconapi_evaluators
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,13 +22,13 @@ import (
 // GET "/eth/v1/beacon/blocks/{block_id}"
 // GET "/eth/v1/beacon/blocks/{block_id}/root"
 func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
-	//ctx := context.Background()
-	//beaconClient := service.NewBeaconChainClient(conn)
-	//genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
-	//if err != nil {
-	//	return errors.Wrap(err, "error getting genesis data")
-	//}
-	//currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	ctx := context.Background()
+	beaconClient := service.NewBeaconChainClient(conn)
+	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "error getting genesis data")
+	}
+	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
 	type metadata struct {
 		basepath        string
 		params          []string
@@ -56,17 +60,24 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		},
 	}
 	for path, meta := range beaconPathsAndObjects {
-		apipath := pathFromParams(path, meta.params)
 		for key, _ := range meta.prysmResps {
 			switch key {
 			case "json":
-				fmt.Printf("json api path: %s/n", apipath)
+				apipath := pathFromParams(path, meta.params)
+				fmt.Printf("json api path: %s", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, beaconPathsAndObjects[path].prysmResps[key], beaconPathsAndObjects[path].lighthouseResps[key]); err != nil {
 					return err
 				}
 				fmt.Printf("prysm ob: %v/n", beaconPathsAndObjects[path].prysmResps[key])
 				fmt.Printf("lighthouse ob: %v", beaconPathsAndObjects[path].prysmResps[key])
 			case "ssz":
+				var check string
+				if currentEpoch < 4 {
+					check = "genesis"
+				} else {
+					check = "finalized"
+				}
+				apipath := pathFromParams(path, []string{check})
 				fmt.Printf("ssz api path: %s", apipath)
 				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
 				if err != nil {
@@ -101,11 +112,12 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	//}
 
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	prysmForkData, ok := forkPathData.prysmResps["json"].(apimiddleware.StateForkResponseJson)
+	fmt.Printf("forkdata %v, %v", forkPathData, forkPathData.prysmResps["json"])
+	prysmForkData, ok := forkPathData.prysmResps["json"].(*apimiddleware.StateForkResponseJson)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(apimiddleware.StateForkResponseJson)
+	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*apimiddleware.StateForkResponseJson)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
@@ -137,7 +149,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
 			return errors.Wrap(err, "prysm ssz error")
 		}
-
 		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
 			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
 				blockP,
