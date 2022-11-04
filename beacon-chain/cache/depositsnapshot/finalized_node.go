@@ -19,6 +19,8 @@ func (f *FinalizedNode) GetRoot() [32]byte {
 }
 
 // IsFull returns whether there is space left for deposits.
+// A FinalizedNode will always return true as by definition it
+// is full and deposits can't be added to it.
 func (f *FinalizedNode) IsFull() bool {
 	return true
 }
