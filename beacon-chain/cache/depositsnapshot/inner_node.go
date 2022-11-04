@@ -54,14 +54,14 @@ func (n *InnerNode) PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (Merk
 		if err == nil {
 			n.left = left
 		} else {
-			return err
+			return n, err
 		}
 	} else {
 		right, err := n.right.PushLeaf(leaf, deposits, depth-1)
 		if err == nil {
 			n.right = right
 		} else {
-			return err
+			return n, err
 		}
 	}
 	return n, nil
