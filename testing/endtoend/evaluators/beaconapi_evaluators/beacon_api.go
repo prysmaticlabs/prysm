@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -58,6 +59,16 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				"json": &apimiddleware.StateForkResponseJson{},
 			},
 		},
+		"/debug/beacon/states/{param1}": {
+			basepath: v1MiddlewarePathTemplate,
+			params:   []string{"head"},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.BeaconStateV2ResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.BeaconStateV2ResponseJson{},
+			},
+		},
 	}
 	for path, meta := range beaconPathsAndObjects {
 		for key, _ := range meta.prysmResps {
@@ -90,26 +101,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			}
 		}
 	}
-
-	//var check string
-	//if currentEpoch < 4 {
-	//	check = "genesis"
-	//} else {
-	//	check = "finalized"
-	//}
-	//resp, err := beaconClient.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
-	//	BlockId: []byte("head"),
-	//})
-	//if err != nil {
-	//	return errors.Wrap(err, "block v2 errors")
-	//}
-	//fmt.Printf("version: 2 current Epoch: %d", currentEpoch)
-	//
-	//if hexutil.Encode(resp.Data.Signature) != respJSONPrysm.Data.Signature {
-	//	return fmt.Errorf("API Middleware block signature  %s does not match gRPC block signature %s",
-	//		respJSONPrysm.Data.Signature,
-	//		hexutil.Encode(resp.Data.Signature))
-	//}
 
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
 	fmt.Printf("forkdata %v, %v", forkPathData, forkPathData.prysmResps["json"])
@@ -185,27 +176,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockL)
 		}
 	}
-
-	//blockroot, err := beaconClient.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
-	//	BlockId: []byte("head"),
-	//})
-	//if err != nil {
-	//	return err
-	//}
-	//blockrootJSON := &apimiddleware.BlockRootResponseJson{}
-	//if err := doMiddlewareJSONGetRequest(
-	//	v1MiddlewarePathTemplate,
-	//	"/beacon/blocks/head/root",
-	//	beaconNodeIdx,
-	//	blockrootJSON,
-	//); err != nil {
-	//	return err
-	//}
-	//if hexutil.Encode(blockroot.Data.Root) != blockrootJSON.Data.Root {
-	//	return fmt.Errorf("API Middleware block root  %s does not match gRPC block root %s",
-	//		blockrootJSON.Data.Root,
-	//		hexutil.Encode(blockroot.Data.Root))
-	//}
 	return nil
 }
 
