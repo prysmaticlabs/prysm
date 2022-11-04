@@ -31,6 +31,9 @@ type NetworkConfig struct {
 	// Chain Network Config
 	ContractDeploymentBlock uint64   // ContractDeploymentBlock is the eth1 block in which the deposit contract is deployed.
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
+
+	// Blobs config
+	MinEpochsForBlobsSidecarsRequest types.Epoch `yaml:"MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS"` // MinEpochsForBlobsSidecarsRequest is the minimum epoch range over which a node must serve blobs sidecars.
 }
 
 var networkConfig = mainnetNetworkConfig
