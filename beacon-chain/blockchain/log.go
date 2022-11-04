@@ -38,14 +38,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
+	if b.Version() == version.Altair || b.Version() == version.Bellatrix || b.Version() == version.Capella {
 		agg, err := b.Body().SyncAggregate()
 		if err != nil {
 			return err
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() == version.Bellatrix || b.Version() == version.Capella {
 		p, err := b.Body().Execution()
 		if err != nil {
 			return err
@@ -61,6 +61,13 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
 
+	}
+	if b.Version() == version.Capella {
+		k, err := b.Body().BlobKzgs()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("blobKzgCount", len(k))
 	}
 	log.Info("Finished applying state transition")
 	return nil
