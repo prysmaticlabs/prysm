@@ -50,9 +50,19 @@ func (n *InnerNode) GetFinalized(result [][32]byte) ([][32]byte, uint64) {
 // PushLeaf adds a new leaf node at the next available zero node.
 func (n *InnerNode) PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error) {
 	if !n.left.IsFull() {
-		n.left, _ = n.left.PushLeaf(leaf, deposits, depth-1)
+		left, err := n.left.PushLeaf(leaf, deposits, depth-1)
+		if err == nil {
+			n.left = left
+		} else {
+			return err
+		}
 	} else {
-		n.right, _ = n.right.PushLeaf(leaf, deposits, depth-1)
+		right, err := n.right.PushLeaf(leaf, deposits, depth-1)
+		if err == nil {
+			n.right = right
+		} else {
+			return err
+		}
 	}
 	return n, nil
 }
