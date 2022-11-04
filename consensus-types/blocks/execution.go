@@ -435,6 +435,11 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return e.p.Withdrawals, nil
 }
 
+// ExcessiveBlobs --
+func (e executionPayloadCapella) ExcessiveBlobs() uint64 {
+	return e.p.ExcessBlobs
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -564,6 +569,11 @@ func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
 // Withdrawals --
 func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedGetter
+}
+
+// ExcessiveBlobs --
+func (e executionPayloadHeaderCapella) ExcessiveBlobs() uint64 {
+	return e.p.ExcessBlobs
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
