@@ -288,7 +288,6 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 			TransactionsRoot: make([]byte, 32),
 			WithdrawalsRoot:  make([]byte, 32),
 		},
-		WithdrawalQueue: make([]*enginev1.Withdrawal, 0),
 	}
 
 	for _, opt := range options {
