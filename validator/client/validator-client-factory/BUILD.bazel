@@ -2,7 +2,9 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 config_setting(
     name = "use_beacon_api",
-    values = {"define": "use_beacon_api=1"},
+    define_values = {
+        "use_beacon_api": "1",
+    },
 )
 
 go_library(
