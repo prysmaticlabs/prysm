@@ -295,6 +295,18 @@ type ForkchoiceResponse struct {
 	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"forkchoice_nodes"`
 }
 
+type LivenessRequestJson struct {
+	Epoch   string   `json:"epoch"`
+	Indices []string `json:"indices"`
+}
+
+type LivenessResponseJson struct {
+	Data []*struct {
+		Index  string `json:"index"`
+		IsLive bool   `json:"is_live"`
+	} `json:"data"`
+}
+
 //----------------
 // Reusable types.
 //----------------

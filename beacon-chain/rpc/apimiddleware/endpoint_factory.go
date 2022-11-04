@@ -71,6 +71,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/contribution_and_proofs",
 		"/eth/v1/validator/prepare_beacon_proposer",
 		"/eth/v1/validator/register_validator",
+		"/eth/v1/validator/liveness",
 	}
 }
 
@@ -283,6 +284,9 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedValidatorRegistrationsArray,
 		}
+	case "/eth/v1/validator/liveness":
+		endpoint.PostRequest = &LivenessRequestJson{}
+		endpoint.PostResponse = &LivenessResponseJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}

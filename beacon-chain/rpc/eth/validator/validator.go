@@ -37,7 +37,7 @@ import (
 )
 
 var errInvalidValIndex = errors.New("invalid validator index")
-var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch participation")
+var errParticipation = status.Errorf(codes.Internal, "Could not obtain epoch participation")
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
@@ -978,45 +978,41 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	ctx, span := trace.StartSpan(ctx, "validator.GetLiveness")
 	defer span.End()
 
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	var participation []byte
+
+	// First we check if the requested epoch is the current epoch.
+	// If it is, then we won't be able to fetch the state at the end of the epoch.
+	// In that case we get participation info from the head state.
+	// We can also use the head state to get participation info for the previous epoch.
+	headSt, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-
-	headSlot := headState.Slot()
-	currEpoch := slots.ToEpoch(headSlot)
-	if req.Epoch != currEpoch && req.Epoch != currEpoch-1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Only current and previous epochs are supported")
+	currEpoch := slots.ToEpoch(headSt.Slot())
+	if req.Epoch > currEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Requested epoch cannot be in the future")
 	}
 
-	// We request a state 32 slots ago. We are guaranteed to have
-	// currentSlot > 32 since we assume that we are past Phase 0.
-	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
-	prevEpochEnd, err := slots.EpochEnd(slots.ToEpoch(prevStateSlot))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
-	}
-	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get previous state")
-	}
-
-	var currParticipation, prevParticipation []byte
 	if req.Epoch == currEpoch {
-		currParticipation, err = headState.CurrentEpochParticipation()
+		participation, err = headSt.CurrentEpochParticipation()
 		if err != nil {
 			return nil, errParticipation
 		}
-		prevParticipation, err = headState.PreviousEpochParticipation()
+	} else if req.Epoch == currEpoch-1 {
+		participation, err = headSt.PreviousEpochParticipation()
 		if err != nil {
 			return nil, errParticipation
 		}
 	} else {
-		currParticipation, err = prevState.CurrentEpochParticipation()
+		epochEnd, err := slots.EpochEnd(req.Epoch)
 		if err != nil {
-			return nil, errParticipation
+			return nil, status.Error(codes.Internal, "Could not get requested epoch's end slot")
 		}
-		prevParticipation, err = prevState.PreviousEpochParticipation()
+		st, err := vs.StateFetcher.StateBySlot(ctx, epochEnd)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get slot for requested epoch")
+		}
+		participation, err = st.CurrentEpochParticipation()
 		if err != nil {
 			return nil, errParticipation
 		}
@@ -1025,10 +1021,10 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	resp := &ethpbv2.GetLivenessResponse{
 		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Indices)),
 	}
-	for i := range req.Indices {
+	for i, vi := range req.Indices {
 		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
-			Index:  req.Indices[i],
-			IsLive: (currParticipation[i] != 0) || (prevParticipation[i] != 0),
+			Index:  vi,
+			IsLive: participation[vi] != 0,
 		}
 	}
 
