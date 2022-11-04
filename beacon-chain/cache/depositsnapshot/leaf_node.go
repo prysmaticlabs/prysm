@@ -18,6 +18,8 @@ func (l *LeafNode) GetRoot() [32]byte {
 }
 
 // IsFull returns whether there is space left for deposits.
+// A LeafNode will always return true as it is the last node
+// in the tree and therefore can't have any deposits added to it.
 func (l *LeafNode) IsFull() bool {
 	return true
 }

@@ -24,6 +24,8 @@ func (z *ZeroNode) GetRoot() [32]byte {
 }
 
 // IsFull returns whether there is space left for deposits.
+// A ZeroNode will always return false as a ZeroNode is an empty node
+// that gets replaced by a deposit.
 func (z *ZeroNode) IsFull() bool {
 	return false
 }
