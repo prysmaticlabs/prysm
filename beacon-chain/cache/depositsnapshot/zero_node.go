@@ -5,6 +5,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 )
 
+var (
+	// ErrZeroNodeCannotBeFinalized may occur when attempting to finalize a zero node. A zero node is empty and can't be finalized.
+	ErrZeroNodeCannotBeFinalized = errors.New("can't finalize a zero node")
+)
+
 // ZeroNode represents an empty node without a deposit and satisfies the MerkleTreeNode interface.
 type ZeroNode struct {
 	depth uint64
@@ -25,7 +30,7 @@ func (z *ZeroNode) IsFull() bool {
 
 // Finalize marks deposits of the Merkle tree as finalized.
 func (z *ZeroNode) Finalize(deposits uint64, depth uint64) (MerkleTreeNode, error) {
-	return nil, errors.New("finalize should not be called on a zero node")
+	return nil, ErrZeroNodeCannotBeFinalized
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.

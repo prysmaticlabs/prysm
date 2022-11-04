@@ -2,6 +2,11 @@ package depositsnapshot
 
 import "github.com/pkg/errors"
 
+var (
+	// ErrLeafNodeCannotPushLeaf may occur when attempting to push a leaf to a leaf node. When a node is a leaf, it cannot have additional nodes.
+	ErrLeafNodeCannotPushLeaf = errors.New("can't push a leaf to a leaf node")
+)
+
 // LeafNode represents a leaf node holding a deposit and satisfies the MerkleTreeNode interface.
 type LeafNode struct {
 	hash [32]byte
@@ -32,5 +37,5 @@ func (l *LeafNode) GetFinalized(result [][32]byte) ([][32]byte, uint64) {
 
 // PushLeaf adds a new leaf node at the next available zero node.
 func (l *LeafNode) PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error) {
-	return nil, errors.New("leaf should not be able to push another leaf")
+	return nil, ErrLeafNodeCannotPushLeaf
 }
