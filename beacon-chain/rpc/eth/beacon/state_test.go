@@ -262,7 +262,7 @@ func TestGetRandao(t *testing.T) {
 	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
 	mixOld := bytesutil.PadTo([]byte("old"), 32)
 	epochCurrent := types.Epoch(100000)
-	epochOld := types.Epoch(100000 - 100)
+	epochOld := 100000 - params.BeaconConfig().EpochsPerHistoricalVector + 1
 
 	ctx := context.Background()
 	st, err := util.NewBeaconState()
