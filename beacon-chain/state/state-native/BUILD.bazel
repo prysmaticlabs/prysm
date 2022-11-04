@@ -90,10 +90,7 @@ go_test(
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",
-    ] + select({
-        "//config:mainnet": ["beacon_state_mainnet_test.go"],
-        "//config:minimal": ["beacon_state_minimal_test.go"],
-    }),
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/transition:go_default_library",
