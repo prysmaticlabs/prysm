@@ -103,6 +103,7 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = "73"
 	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
+	config.MaxWithdrawalsPerPayload = 74
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -355,6 +356,8 @@ func TestGetSpec(t *testing.T) {
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+		case "MAX_VOLUNTARY_EXITS":
+			assert.Equal(t, "74", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
