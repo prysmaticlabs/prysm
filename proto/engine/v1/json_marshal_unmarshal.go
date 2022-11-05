@@ -8,7 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -370,5 +372,61 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 	f.HeadBlockHash = dec.HeadBlockHash
 	f.SafeBlockHash = dec.SafeBlockHash
 	f.FinalizedBlockHash = dec.FinalizedBlockHash
+	return nil
+}
+
+type blobBundleJSON struct {
+	BlockHash       common.Hash           `json:"blockHash"`
+	Kzgs            []types.KZGCommitment `json:"kzgs"`
+	Blobs           []types.Blob          `json:"blobs"`
+	AggregatedProof types.KZGProof        `json:"aggregatedProof"`
+}
+
+// MarshalJSON --
+func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
+	kzgs := make([]types.KZGCommitment, len(b.KzgCommitments))
+	for i, kzg := range b.KzgCommitments {
+		kzgs[i] = bytesutil.ToBytes48(kzg)
+	}
+	blobs := make([]types.Blob, len(b.Blobs))
+	for i, b1 := range b.Blobs {
+		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
+		for j := 0; j < params.FieldElementsPerBlob; j++ {
+			blob[j] = bytesutil.ToBytes32(b1.Data[j*32 : j*32+31])
+		}
+		blobs[i] = blob
+	}
+
+	return json.Marshal(blobBundleJSON{
+		BlockHash:       bytesutil.ToBytes32(b.BlockHash),
+		Kzgs:            kzgs,
+		Blobs:           blobs,
+		AggregatedProof: bytesutil.ToBytes48(b.AggregatedProof),
+	})
+}
+
+// UnmarshalJSON --
+func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
+	dec := blobBundleJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*e = BlobsBundle{}
+	e.BlockHash = bytesutil.PadTo(dec.BlockHash.Bytes(), fieldparams.RootLength)
+	kzgs := make([][]byte, len(dec.Kzgs))
+	for i, kzg := range dec.Kzgs {
+		kzgs[i] = bytesutil.PadTo(kzg[:], fieldparams.BLSPubkeyLength)
+	}
+	e.KzgCommitments = kzgs
+	blobs := make([]*Blob, len(dec.Blobs))
+	for i, blob := range dec.Blobs {
+		b := make([]byte, 0, params.FieldElementsPerBlob)
+		for _, fe := range blob {
+			b = append(b, fe[:]...)
+		}
+		blobs[i].Data = bytesutil.SafeCopyBytes(b)
+	}
+	e.Blobs = blobs
+	e.AggregatedProof = bytesutil.PadTo(dec.AggregatedProof[:], fieldparams.BLSPubkeyLength)
 	return nil
 }
