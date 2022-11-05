@@ -865,6 +865,163 @@ func (x *ForkChoiceHead) GetExecutionOptimistic() bool {
 	return false
 }
 
+type RandaoRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	StateId []byte                                                              `protobuf:"bytes,1,opt,name=state_id,json=stateId,proto3" json:"state_id,omitempty"`
+	Epoch   *github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=epoch,proto3,oneof" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+}
+
+func (x *RandaoRequest) Reset() {
+	*x = RandaoRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RandaoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RandaoRequest) ProtoMessage() {}
+
+func (x *RandaoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RandaoRequest.ProtoReflect.Descriptor instead.
+func (*RandaoRequest) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v2_beacon_state_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RandaoRequest) GetStateId() []byte {
+	if x != nil {
+		return x.StateId
+	}
+	return nil
+}
+
+func (x *RandaoRequest) GetEpoch() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch {
+	if x != nil && x.Epoch != nil {
+		return *x.Epoch
+	}
+	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(0)
+}
+
+type RandaoResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Data                *RandaoResponse_Randao `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	ExecutionOptimistic bool                   `protobuf:"varint,2,opt,name=execution_optimistic,json=executionOptimistic,proto3" json:"execution_optimistic,omitempty"`
+}
+
+func (x *RandaoResponse) Reset() {
+	*x = RandaoResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RandaoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RandaoResponse) ProtoMessage() {}
+
+func (x *RandaoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RandaoResponse.ProtoReflect.Descriptor instead.
+func (*RandaoResponse) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v2_beacon_state_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *RandaoResponse) GetData() *RandaoResponse_Randao {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *RandaoResponse) GetExecutionOptimistic() bool {
+	if x != nil {
+		return x.ExecutionOptimistic
+	}
+	return false
+}
+
+type RandaoResponse_Randao struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Randao []byte `protobuf:"bytes,1,opt,name=randao,proto3" json:"randao,omitempty" ssz-size:"32"`
+}
+
+func (x *RandaoResponse_Randao) Reset() {
+	*x = RandaoResponse_Randao{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RandaoResponse_Randao) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RandaoResponse_Randao) ProtoMessage() {}
+
+func (x *RandaoResponse_Randao) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_eth_v2_beacon_state_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RandaoResponse_Randao.ProtoReflect.Descriptor instead.
+func (*RandaoResponse_Randao) Descriptor() ([]byte, []int) {
+	return file_proto_eth_v2_beacon_state_proto_rawDescGZIP(), []int{9, 0}
+}
+
+func (x *RandaoResponse_Randao) GetRandao() []byte {
+	if x != nil {
+		return x.Randao
+	}
+	return nil
+}
+
 var File_proto_eth_v2_beacon_state_proto protoreflect.FileDescriptor
 
 var file_proto_eth_v2_beacon_state_proto_rawDesc = []byte{
@@ -1159,16 +1316,36 @@ var file_proto_eth_v2_beacon_state_proto_rawDesc = []byte{
 	0x12, 0x31, 0x0a, 0x14, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6f, 0x70,
 	0x74, 0x69, 0x6d, 0x69, 0x73, 0x74, 0x69, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x13,
 	0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x4f, 0x70, 0x74, 0x69, 0x6d, 0x69, 0x73,
-	0x74, 0x69, 0x63, 0x42, 0x83, 0x01, 0x0a, 0x13, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65,
-	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x42, 0x12, 0x53, 0x79, 0x6e,
-	0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50,
-	0x01, 0x5a, 0x32, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72,
-	0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73,
-	0x6d, 0x2f, 0x76, 0x33, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76,
-	0x32, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x32, 0xca, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65,
-	0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x32, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x74, 0x69, 0x63, 0x22, 0x97, 0x01, 0x0a, 0x0d, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x73, 0x74, 0x61, 0x74, 0x65, 0x49, 0x64,
+	0x12, 0x61, 0x0a, 0x05, 0x65, 0x70, 0x6f, 0x63, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x42,
+	0x46, 0x82, 0xb5, 0x18, 0x42, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72,
+	0x79, 0x73, 0x6d, 0x2f, 0x76, 0x33, 0x2f, 0x63, 0x6f, 0x6e, 0x73, 0x65, 0x6e, 0x73, 0x75, 0x73,
+	0x2d, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x70, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65,
+	0x73, 0x2e, 0x45, 0x70, 0x6f, 0x63, 0x68, 0x48, 0x00, 0x52, 0x05, 0x65, 0x70, 0x6f, 0x63, 0x68,
+	0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x65, 0x70, 0x6f, 0x63, 0x68, 0x22, 0xa9, 0x01,
+	0x0a, 0x0e, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x3a, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x26,
+	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32,
+	0x2e, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e,
+	0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x12, 0x31, 0x0a, 0x14,
+	0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6f, 0x70, 0x74, 0x69, 0x6d, 0x69,
+	0x73, 0x74, 0x69, 0x63, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x13, 0x65, 0x78, 0x65, 0x63,
+	0x75, 0x74, 0x69, 0x6f, 0x6e, 0x4f, 0x70, 0x74, 0x69, 0x6d, 0x69, 0x73, 0x74, 0x69, 0x63, 0x1a,
+	0x28, 0x0a, 0x06, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x12, 0x1e, 0x0a, 0x06, 0x72, 0x61, 0x6e,
+	0x64, 0x61, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33,
+	0x32, 0x52, 0x06, 0x72, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x42, 0x83, 0x01, 0x0a, 0x13, 0x6f, 0x72,
+	0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x32, 0x42, 0x12, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65,
+	0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x32, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62,
+	0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x33, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x32, 0xca, 0x02, 0x0f,
+	0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x32, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1183,7 +1360,7 @@ func file_proto_eth_v2_beacon_state_proto_rawDescGZIP() []byte {
 	return file_proto_eth_v2_beacon_state_proto_rawDescData
 }
 
-var file_proto_eth_v2_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_proto_eth_v2_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconState)(nil),                // 0: ethereum.eth.v2.BeaconState
 	(*BeaconStateBellatrix)(nil),       // 1: ethereum.eth.v2.BeaconStateBellatrix
@@ -1193,50 +1370,54 @@ var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconStateContainer)(nil),       // 5: ethereum.eth.v2.BeaconStateContainer
 	(*ForkChoiceHeadsResponse)(nil),    // 6: ethereum.eth.v2.ForkChoiceHeadsResponse
 	(*ForkChoiceHead)(nil),             // 7: ethereum.eth.v2.ForkChoiceHead
-	(*v1.Fork)(nil),                    // 8: ethereum.eth.v1.Fork
-	(*v1.BeaconBlockHeader)(nil),       // 9: ethereum.eth.v1.BeaconBlockHeader
-	(*v1.Eth1Data)(nil),                // 10: ethereum.eth.v1.Eth1Data
-	(*v1.Validator)(nil),               // 11: ethereum.eth.v1.Validator
-	(*v1.Checkpoint)(nil),              // 12: ethereum.eth.v1.Checkpoint
-	(*SyncCommittee)(nil),              // 13: ethereum.eth.v2.SyncCommittee
-	(*v11.ExecutionPayloadHeader)(nil), // 14: ethereum.engine.v1.ExecutionPayloadHeader
-	(Version)(0),                       // 15: ethereum.eth.v2.Version
-	(*v1.BeaconState)(nil),             // 16: ethereum.eth.v1.BeaconState
+	(*RandaoRequest)(nil),              // 8: ethereum.eth.v2.RandaoRequest
+	(*RandaoResponse)(nil),             // 9: ethereum.eth.v2.RandaoResponse
+	(*RandaoResponse_Randao)(nil),      // 10: ethereum.eth.v2.RandaoResponse.Randao
+	(*v1.Fork)(nil),                    // 11: ethereum.eth.v1.Fork
+	(*v1.BeaconBlockHeader)(nil),       // 12: ethereum.eth.v1.BeaconBlockHeader
+	(*v1.Eth1Data)(nil),                // 13: ethereum.eth.v1.Eth1Data
+	(*v1.Validator)(nil),               // 14: ethereum.eth.v1.Validator
+	(*v1.Checkpoint)(nil),              // 15: ethereum.eth.v1.Checkpoint
+	(*SyncCommittee)(nil),              // 16: ethereum.eth.v2.SyncCommittee
+	(*v11.ExecutionPayloadHeader)(nil), // 17: ethereum.engine.v1.ExecutionPayloadHeader
+	(Version)(0),                       // 18: ethereum.eth.v2.Version
+	(*v1.BeaconState)(nil),             // 19: ethereum.eth.v1.BeaconState
 }
 var file_proto_eth_v2_beacon_state_proto_depIdxs = []int32{
-	8,  // 0: ethereum.eth.v2.BeaconState.fork:type_name -> ethereum.eth.v1.Fork
-	9,  // 1: ethereum.eth.v2.BeaconState.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	10, // 2: ethereum.eth.v2.BeaconState.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	10, // 3: ethereum.eth.v2.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
-	11, // 4: ethereum.eth.v2.BeaconState.validators:type_name -> ethereum.eth.v1.Validator
-	12, // 5: ethereum.eth.v2.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 6: ethereum.eth.v2.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 7: ethereum.eth.v2.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	13, // 8: ethereum.eth.v2.BeaconState.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	13, // 9: ethereum.eth.v2.BeaconState.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	8,  // 10: ethereum.eth.v2.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1.Fork
-	9,  // 11: ethereum.eth.v2.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	10, // 12: ethereum.eth.v2.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	10, // 13: ethereum.eth.v2.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
-	11, // 14: ethereum.eth.v2.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1.Validator
-	12, // 15: ethereum.eth.v2.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 16: ethereum.eth.v2.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 17: ethereum.eth.v2.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	13, // 18: ethereum.eth.v2.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	13, // 19: ethereum.eth.v2.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	14, // 20: ethereum.eth.v2.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader
-	15, // 21: ethereum.eth.v2.BeaconStateResponseV2.version:type_name -> ethereum.eth.v2.Version
+	11, // 0: ethereum.eth.v2.BeaconState.fork:type_name -> ethereum.eth.v1.Fork
+	12, // 1: ethereum.eth.v2.BeaconState.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	13, // 2: ethereum.eth.v2.BeaconState.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	13, // 3: ethereum.eth.v2.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
+	14, // 4: ethereum.eth.v2.BeaconState.validators:type_name -> ethereum.eth.v1.Validator
+	15, // 5: ethereum.eth.v2.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	15, // 6: ethereum.eth.v2.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	15, // 7: ethereum.eth.v2.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	16, // 8: ethereum.eth.v2.BeaconState.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	16, // 9: ethereum.eth.v2.BeaconState.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	11, // 10: ethereum.eth.v2.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1.Fork
+	12, // 11: ethereum.eth.v2.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	13, // 12: ethereum.eth.v2.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	13, // 13: ethereum.eth.v2.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
+	14, // 14: ethereum.eth.v2.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1.Validator
+	15, // 15: ethereum.eth.v2.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	15, // 16: ethereum.eth.v2.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	15, // 17: ethereum.eth.v2.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	16, // 18: ethereum.eth.v2.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	16, // 19: ethereum.eth.v2.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	17, // 20: ethereum.eth.v2.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader
+	18, // 21: ethereum.eth.v2.BeaconStateResponseV2.version:type_name -> ethereum.eth.v2.Version
 	5,  // 22: ethereum.eth.v2.BeaconStateResponseV2.data:type_name -> ethereum.eth.v2.BeaconStateContainer
-	15, // 23: ethereum.eth.v2.BeaconStateSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
-	16, // 24: ethereum.eth.v2.BeaconStateContainer.phase0_state:type_name -> ethereum.eth.v1.BeaconState
+	18, // 23: ethereum.eth.v2.BeaconStateSSZResponseV2.version:type_name -> ethereum.eth.v2.Version
+	19, // 24: ethereum.eth.v2.BeaconStateContainer.phase0_state:type_name -> ethereum.eth.v1.BeaconState
 	0,  // 25: ethereum.eth.v2.BeaconStateContainer.altair_state:type_name -> ethereum.eth.v2.BeaconState
 	1,  // 26: ethereum.eth.v2.BeaconStateContainer.bellatrix_state:type_name -> ethereum.eth.v2.BeaconStateBellatrix
 	7,  // 27: ethereum.eth.v2.ForkChoiceHeadsResponse.data:type_name -> ethereum.eth.v2.ForkChoiceHead
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	10, // 28: ethereum.eth.v2.RandaoResponse.data:type_name -> ethereum.eth.v2.RandaoResponse.Randao
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_proto_eth_v2_beacon_state_proto_init() }
@@ -1343,19 +1524,56 @@ func file_proto_eth_v2_beacon_state_proto_init() {
 				return nil
 			}
 		}
+		file_proto_eth_v2_beacon_state_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RandaoRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_eth_v2_beacon_state_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RandaoResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_eth_v2_beacon_state_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RandaoResponse_Randao); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_proto_eth_v2_beacon_state_proto_msgTypes[5].OneofWrappers = []interface{}{
 		(*BeaconStateContainer_Phase0State)(nil),
 		(*BeaconStateContainer_AltairState)(nil),
 		(*BeaconStateContainer_BellatrixState)(nil),
 	}
+	file_proto_eth_v2_beacon_state_proto_msgTypes[8].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_v2_beacon_state_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
