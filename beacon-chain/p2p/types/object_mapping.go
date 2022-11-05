@@ -61,5 +61,8 @@ func InitializeDataMaps() {
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() metadata.Metadata {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
 	}
 }
