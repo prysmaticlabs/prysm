@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"google.golang.org/grpc"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 )
 
 // OptimisticSyncEnabled checks that the node is in an optimistic state.
@@ -22,9 +22,9 @@ var OptimisticSyncEnabled = types.Evaluator{
 	Evaluation: optimisticSyncEnabled,
 }
 
-func optimisticSyncEnabled(conns ...*grpc.ClientConn) error {
+func optimisticSyncEnabled(conns ...*validatorClientFactory.ValidatorConnection) error {
 	for _, conn := range conns {
-		client := service.NewBeaconChainClient(conn)
+		client := service.NewBeaconChainClient(conn.GrpcClientConn)
 		head, err := client.GetBlockV2(context.Background(), &v2.BlockRequestV2{BlockId: []byte("head")})
 		if err != nil {
 			return err

@@ -7,7 +7,6 @@ import (
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
-	"google.golang.org/grpc"
 )
 
 type E2EConfigOpt func(*E2EConfig)
@@ -45,7 +44,7 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
-	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
+	EvalInterceptor         func(uint64, []*validatorClientFactory.ValidatorConnection) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string

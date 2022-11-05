@@ -6,7 +6,6 @@ package validator_client_factory
 import (
 	beaconApi "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"google.golang.org/grpc"
 )
 
 func NewValidatorClient(validatorConn *ValidatorConnection) iface.ValidatorClient {

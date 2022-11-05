@@ -19,7 +19,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"google.golang.org/grpc"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -29,9 +29,9 @@ var FeeRecipientIsPresent = types.Evaluator{
 	Evaluation: feeRecipientIsPresent,
 }
 
-func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
+func feeRecipientIsPresent(conns ...*validatorClientFactory.ValidatorConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")

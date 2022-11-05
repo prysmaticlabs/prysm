@@ -16,7 +16,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"google.golang.org/grpc"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -52,7 +52,7 @@ var AllNodesHaveSameHead = e2etypes.Evaluator{
 	Evaluation: allNodesHaveSameHead,
 }
 
-func healthzCheck(conns ...*grpc.ClientConn) error {
+func healthzCheck(conns ...*validatorClientFactory.ValidatorConnection) error {
 	count := len(conns)
 	for i := 0; i < count; i++ {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
@@ -94,13 +94,13 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func peersConnect(conns ...*grpc.ClientConn) error {
+func peersConnect(conns ...*validatorClientFactory.ValidatorConnection) error {
 	if len(conns) == 1 {
 		return nil
 	}
 	ctx := context.Background()
 	for _, conn := range conns {
-		nodeClient := eth.NewNodeClient(conn)
+		nodeClient := eth.NewNodeClient(conn.GrpcClientConn)
 		peersResp, err := nodeClient.ListPeers(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
@@ -114,9 +114,9 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func finishedSyncing(conns ...*grpc.ClientConn) error {
+func finishedSyncing(conns ...*validatorClientFactory.ValidatorConnection) error {
 	conn := conns[0]
-	syncNodeClient := eth.NewNodeClient(conn)
+	syncNodeClient := eth.NewNodeClient(conn.GrpcClientConn)
 	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -127,13 +127,13 @@ func finishedSyncing(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
+func allNodesHaveSameHead(conns ...*validatorClientFactory.ValidatorConnection) error {
 	headEpochs := make([]types.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))
 	for i, conn := range conns {
-		beaconClient := eth.NewBeaconChainClient(conn)
+		beaconClient := eth.NewBeaconChainClient(conn.GrpcClientConn)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return errors.Wrapf(err, "connection number=%d", i)

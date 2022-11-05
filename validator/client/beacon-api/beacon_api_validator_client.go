@@ -5,6 +5,8 @@ package beacon_api
 
 import (
 	"context"
+	"net/http"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -12,6 +14,8 @@ import (
 )
 
 type beaconApiValidatorClient struct {
+	url        string
+	httpClient http.Client
 }
 
 func (*beaconApiValidatorClient) GetDuties(_ context.Context, _ *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -145,6 +149,6 @@ func (*beaconApiValidatorClient) WaitForChainStart(_ context.Context, _ *empty.E
 	panic("beaconApiValidatorClient.WaitForChainStart is not implemented")
 }
 
-func NewBeaconApiValidatorClient() iface.ValidatorClient {
-	return &beaconApiValidatorClient{}
+func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
+	return &beaconApiValidatorClient{url, http.Client{Timeout: timeout}}
 }

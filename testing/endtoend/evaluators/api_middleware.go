@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/grpc"
 )
 
@@ -51,11 +52,11 @@ const (
 	v1MiddlewarePathTemplate = "http://localhost:%d/eth/v1"
 )
 
-func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
+func apiMiddlewareVerify(conns ...*validatorClientFactory.ValidatorConnection) error {
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
+			conn.GrpcClientConn,
 			withCompareValidatorsEth,
 			withCompareSyncCommittee,
 			withCompareAttesterDuties,
