@@ -91,6 +91,15 @@ func WithBeaconRPCProvider(provider string) Option {
 	}
 }
 
+// WithBeaconAPIEndpoint provides a beacon node REST API endpoint to the accounts cli manager.
+func WithBeaconAPIEndpoint(beaconApiEndpoint string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.beaconApiEndpoint = beaconApiEndpoint
+		acc.beaconApiTimeout = 30
+		return nil
+	}
+}
+
 // WithWalletKeyCount tracks the number of keys in a wallet.
 func WithWalletKeyCount(walletKeyCount int) Option {
 	return func(acc *AccountsCLIManager) error {

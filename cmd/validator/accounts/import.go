@@ -39,6 +39,7 @@ func accountsImport(c *cli.Context) error {
 		accounts.WithKeymanager(km),
 		accounts.WithGRPCDialOpts(dialOpts),
 		accounts.WithBeaconRPCProvider(c.String(flags.BeaconRPCProviderFlag.Name)),
+		accounts.WithBeaconAPIEndpoint("http://" + flags.BeaconRPCGatewayProviderFlag.Value),
 		accounts.WithGRPCHeaders(grpcHeaders),
 	}
 
