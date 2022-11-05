@@ -1,16 +1,22 @@
 load("@prysm//tools/go:def.bzl", "go_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+
+bool_flag(
+    name = "use_beacon_api",
+    build_setting_default = False
+)
 
 config_setting(
-    name = "use_beacon_api",
-    define_values = {
-        "use_beacon_api": "1",
+    name = "beacon_api_usage",
+    flag_values = {
+        ":use_beacon_api": "true",
     },
 )
 
 go_library(
     name = "go_default_library",
     srcs = select({
-        ":use_beacon_api": ["beacon_api_validator_client_factory.go"],
+        ":beacon_api_usage": ["beacon_api_validator_client_factory.go"],
         "//conditions:default": ["grpc_validator_client_factory.go"],
     }),
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory",
@@ -19,7 +25,7 @@ go_library(
         "@org_golang_google_grpc//:go_default_library",
         "//validator/client/iface:go_default_library",
     ] + select({
-        ":use_beacon_api": ["//validator/client/beacon-api:go_default_library"],
+        ":beacon_api_usage": ["//validator/client/beacon-api:go_default_library"],
         "//conditions:default": ["//validator/client/grpc-api:go_default_library"],
     }),
 )
