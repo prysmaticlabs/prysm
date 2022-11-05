@@ -35,8 +35,8 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
-// before the Altair fork epoch and Altair blocks post-fork epoch.
+// by passing in the slot and the signed randao reveal of the slot. Returns a full block
+// corresponding to the fork epoch
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
@@ -59,7 +59,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-
 	return vs.getBellatrixBeaconBlock(ctx, req)
 }
 

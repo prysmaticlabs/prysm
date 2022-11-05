@@ -269,8 +269,10 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockBellatrixContainerJson{}
+	} else {
+		endpoint.PostRequest = &SignedBeaconBlockCapellaContainerJson{}
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil

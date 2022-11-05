@@ -225,6 +225,8 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
 	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	// Set Capella fork data.
+	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	return fvs
 }
 
@@ -236,5 +238,7 @@ func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]s
 	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
 	// Set Bellatrix fork data.
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	// Set Capella fork data.
+	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
 }

@@ -26,6 +26,9 @@ var gossipTopicMappings = map[string]proto.Message{
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().CapellaForkEpoch {
+			return &ethpb.SignedBeaconBlockCapella{}
+		}
 		if epoch >= params.BeaconConfig().BellatrixForkEpoch {
 			return &ethpb.SignedBeaconBlockBellatrix{}
 		}

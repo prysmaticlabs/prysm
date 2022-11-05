@@ -40,6 +40,7 @@ type BeaconBlock interface {
 	ProposerIndex() types.ValidatorIndex
 	ParentRoot() [field_params.RootLength]byte
 	StateRoot() [field_params.RootLength]byte
+	SetStateRoot([]byte)
 	Body() BeaconBlockBody
 	IsNil() bool
 	IsBlinded() bool
