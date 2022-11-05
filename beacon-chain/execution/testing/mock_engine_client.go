@@ -34,6 +34,7 @@ type EngineClient struct {
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
+	BlobsBundle                 *pb.BlobsBundle
 }
 
 // NewPayload --
@@ -157,4 +158,9 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		}
 		blk = parentBlk
 	}
+}
+
+// GetBlobsBundle --
+func (e *EngineClient) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+	return e.BlobsBundle, nil
 }

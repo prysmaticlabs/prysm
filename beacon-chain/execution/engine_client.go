@@ -36,6 +36,8 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// GetBlobsBundleMethod v1 request string for JSON-RPC.
+	GetBlobsBundleMethod = "engine_getBlobsBundleV1"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
 )
@@ -72,6 +74,7 @@ type EngineCaller interface {
 	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
+	GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
@@ -212,15 +215,16 @@ func (s *Service) ExchangeTransitionConfiguration(
 //
 // Spec code:
 // def get_pow_block_at_terminal_total_difficulty(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
-//    # `pow_chain` abstractly represents all blocks in the PoW chain
-//    for block in pow_chain:
-//        parent = pow_chain[block.parent_hash]
-//        block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
-//        parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
-//        if block_reached_ttd and not parent_reached_ttd:
-//            return block
 //
-//    return None
+//	# `pow_chain` abstractly represents all blocks in the PoW chain
+//	for block in pow_chain:
+//	    parent = pow_chain[block.parent_hash]
+//	    block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//	    parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//	    if block_reached_ttd and not parent_reached_ttd:
+//	        return block
+//
+//	return None
 func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
@@ -473,6 +477,19 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	}
 	reconstructedExecutionPayloadCount.Add(float64(len(blindedBlocks)))
 	return blindedBlocks, nil
+}
+
+// GetBlobsBundle calls the engine_getBlobsV1 method via JSON-RPC.
+func (s *Service) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobsBundle")
+	defer span.End()
+
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
+	result := &pb.BlobsBundle{}
+	err := s.rpcClient.CallContext(ctx, result, GetBlobsBundleMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
 }
 
 func fullPayloadFromExecutionBlock(
