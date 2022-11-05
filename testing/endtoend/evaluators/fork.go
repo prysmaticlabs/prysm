@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
-	"google.golang.org/grpc"
 )
 
 var streamDeadline = 1 * time.Minute
@@ -31,7 +30,7 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-func altairForkOccurs(conns ...*grpc.ClientConn) error {
+func altairForkOccurs(conns ...*validatorClientFactory.ValidatorConnection) error {
 	conn := conns[0]
 	client := validatorClientFactory.NewValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
@@ -73,7 +72,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
+func bellatrixForkOccurs(conns ...*validatorClientFactory.ValidatorConnection) error {
 	conn := conns[0]
 	client := validatorClientFactory.NewValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)

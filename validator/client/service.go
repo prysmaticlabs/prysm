@@ -53,7 +53,7 @@ type ValidatorService struct {
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
 	interopKeysConfig     *local.InteropKeymanagerConfig
-	conn                  *grpc.ClientConn
+	conn                  *validatorClientFactory.ValidatorConnection
 	grpcRetryDelay        time.Duration
 	grpcRetries           uint
 	maxCallRecvMsgSize    int
@@ -94,6 +94,8 @@ type Config struct {
 	Endpoint                   string
 	Web3SignerConfig           *remoteweb3signer.SetupConfig
 	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	BeaconApiEndpoint          string
+	BeaconApiTimeout           time.Duration
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -136,14 +138,17 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 
 	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
 
-	conn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
 	if err != nil {
 		return s, err
 	}
 	if s.withCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.conn = conn
+	s.conn = &validatorClientFactory.ValidatorConnection{}
+	s.conn.GrpcClientConn = grpcConn
+	s.conn.BeaconApiConn.Url = cfg.BeaconApiEndpoint
+	s.conn.BeaconApiConn.Timeout = cfg.BeaconApiTimeout
 
 	return s, nil
 }
@@ -181,9 +186,9 @@ func (v *ValidatorService) Start() {
 	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn),
-		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
-		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
-		node:                           ethpb.NewNodeClient(v.conn),
+		beaconClient:                   ethpb.NewBeaconChainClient(v.conn.GrpcClientConn),
+		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn.GrpcClientConn),
+		node:                           ethpb.NewNodeClient(v.conn.GrpcClientConn),
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -227,7 +232,7 @@ func (v *ValidatorService) Stop() error {
 	v.cancel()
 	log.Info("Stopping service")
 	if v.conn != nil {
-		return v.conn.Close()
+		return v.conn.GrpcClientConn.Close()
 	}
 	return nil
 }
@@ -314,7 +319,7 @@ func ConstructDialOptions(
 
 // Syncing returns whether or not the beacon node is currently synchronizing the chain.
 func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
-	nc := ethpb.NewNodeClient(v.conn)
+	nc := ethpb.NewNodeClient(v.conn.GrpcClientConn)
 	resp, err := nc.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return false, err
@@ -325,6 +330,6 @@ func (v *ValidatorService) Syncing(ctx context.Context) (bool, error) {
 // GenesisInfo queries the beacon node for the chain genesis info containing
 // the genesis time along with the validator deposit contract address.
 func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, error) {
-	nc := ethpb.NewNodeClient(v.conn)
+	nc := ethpb.NewNodeClient(v.conn.GrpcClientConn)
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }

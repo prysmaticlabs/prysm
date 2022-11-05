@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
@@ -58,6 +59,8 @@ type AccountsCLIManager struct {
 	mnemonic             string
 	numAccounts          int
 	mnemonic25thWord     string
+	beaconApiEndpoint    string
+	beaconApiTimeout     time.Duration
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *ethpb.NodeClient, error) {
@@ -66,11 +69,17 @@ func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface
 	}
 
 	ctx = grpcutil.AppendHeaders(ctx, acm.grpcHeaders)
-	conn, err := grpc.DialContext(ctx, acm.beaconRPCProvider, acm.dialOpts...)
+	grpcConn, err := grpc.DialContext(ctx, acm.beaconRPCProvider, acm.dialOpts...)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", acm.beaconRPCProvider)
 	}
+
+	conn := &validatorClientFactory.ValidatorConnection{}
+	conn.GrpcClientConn = grpcConn
+	conn.BeaconApiConn.Url = acm.beaconApiEndpoint
+	conn.BeaconApiConn.Timeout = acm.beaconApiTimeout
+
 	validatorClient := validatorClientFactory.NewValidatorClient(conn)
-	nodeClient := ethpb.NewNodeClient(conn)
+	nodeClient := ethpb.NewNodeClient(grpcConn)
 	return &validatorClient, &nodeClient, nil
 }

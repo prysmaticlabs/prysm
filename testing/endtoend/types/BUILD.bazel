@@ -8,6 +8,7 @@ go_library(
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//consensus-types/primitives:go_default_library",
+        "//validator/client/validator-client-factory:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )

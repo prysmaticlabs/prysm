@@ -6,6 +6,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/grpc"
 )
 
@@ -56,7 +57,7 @@ type E2EConfig struct {
 type Evaluator struct {
 	Name       string
 	Policy     func(currentEpoch types.Epoch) bool
-	Evaluation func(conn ...*grpc.ClientConn) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
+	Evaluation func(conn ...*validatorClientFactory.ValidatorConnection) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
 }
 
 // ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.

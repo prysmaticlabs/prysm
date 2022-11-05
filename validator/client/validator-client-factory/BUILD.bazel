@@ -3,7 +3,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 bool_flag(
     name = "use_beacon_api",
-    build_setting_default = False
+    build_setting_default = False,
 )
 
 config_setting(
@@ -15,7 +15,7 @@ config_setting(
 
 go_library(
     name = "go_default_library",
-    srcs = select({
+    srcs = ["validator_connection.go"] + select({
         ":beacon_api_usage": ["beacon_api_validator_client_factory.go"],
         "//conditions:default": ["grpc_validator_client_factory.go"],
     }),

@@ -9,6 +9,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-func NewValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
-	return beaconApi.NewBeaconApiValidatorClient()
+func NewValidatorClient(validatorConn *ValidatorConnection) iface.ValidatorClient {
+	return beaconApi.NewBeaconApiValidatorClient(validatorConn.BeaconApiConn.Url, validatorConn.BeaconApiConn.Timeout)
 }
