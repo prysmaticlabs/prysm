@@ -789,6 +789,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
+	case hasCapellaKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal Capella block")
+		}
+	case hasCapellaBlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaBlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded Capella block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -828,6 +838,11 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		}
 	}
 	switch blockToSave.Version() {
+	case version.Capella:
+		if blockToSave.IsBlinded() {
+			return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
+		}
+		return snappy.Encode(nil, append(capellaKey, encodedBlock...)), nil
 	case version.Bellatrix:
 		if blockToSave.IsBlinded() {
 			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
