@@ -83,6 +83,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	genesisDstPath := binaryPath[:strings.LastIndex(binaryPath, "/")]
 	cpCmd := exec.CommandContext(ctx, "cp", genesisSrcPath, genesisDstPath) // #nosec G204 -- Safe
 	if err = cpCmd.Start(); err != nil {

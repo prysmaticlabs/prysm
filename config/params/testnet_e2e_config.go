@@ -3,6 +3,7 @@ package params
 const (
 	altairE2EForkEpoch    = 6
 	bellatrixE2EForkEpoch = 8
+	capellaE2EForkEpoch   = 10
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -33,6 +34,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = capellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "616"
@@ -71,6 +73,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = capellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "616"
