@@ -112,6 +112,7 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
+	// Append the Beacon REST API flags
 	if flags.BuiltWithBeaconApi {
 		appFlags = append(appFlags, flags.BeaconRESTApiProviderFlag)
 	}

@@ -128,10 +128,13 @@ var appHelpFlagGroups = []flagGroup{
 }
 
 func init() {
-	for groupIndex := range appHelpFlagGroups {
-		group := &appHelpFlagGroups[groupIndex]
-		if group.Name == "validator" {
-			group.Flags = append(group.Flags, flags.BeaconRESTApiProviderFlag)
+	// Append the Beacon REST API flags
+	if flags.BuiltWithBeaconApi {
+		for groupIndex := range appHelpFlagGroups {
+			group := &appHelpFlagGroups[groupIndex]
+			if group.Name == "validator" {
+				group.Flags = append(group.Flags, flags.BeaconRESTApiProviderFlag)
+			}
 		}
 	}
 
