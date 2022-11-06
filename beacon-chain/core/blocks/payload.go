@@ -133,6 +133,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 		return err
 	}
 	if !bytes.Equal(payload.ParentHash(), header.BlockHash()) {
+		log.Errorf("parent Hash %#x,  header Hash: %#x", bytesutil.Trunc(payload.ParentHash()), bytesutil.Trunc(header.BlockHash()))
 		return ErrInvalidPayloadBlockHash
 	}
 	return nil
@@ -214,15 +215,7 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-	header, err := blocks.PayloadToHeader(payload)
-	if err != nil {
-		return nil, err
-	}
-	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(header)
-	if err != nil {
-		return nil, err
-	}
-	if err := st.SetLatestExecutionPayloadHeader(wrappedHeader); err != nil {
+	if err := st.SetLatestExecutionPayloadHeader(payload); err != nil {
 		return nil, err
 	}
 	return st, nil

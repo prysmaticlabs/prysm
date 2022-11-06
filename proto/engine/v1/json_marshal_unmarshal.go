@@ -121,14 +121,45 @@ func (w *Withdrawal) MarshalJSON() ([]byte, error) {
 	index := hexutil.Uint64(w.WithdrawalIndex)
 	validatorIndex := hexutil.Uint64(w.ValidatorIndex)
 	address := common.BytesToAddress(w.ExecutionAddress)
-	amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
-	amount := hexutil.EncodeBig(amountWei)
+	wei := new(big.Int).SetUint64(1000000000)
+	amountWei := new(big.Int).Mul(new(big.Int).SetUint64(w.Amount), wei)
 	return json.Marshal(withdrawalJSON{
 		Index:     &index,
 		Validator: &validatorIndex,
 		Address:   &address,
-		Amount:    amount,
+		Amount:    hexutil.EncodeBig(amountWei),
 	})
+}
+
+func (w *Withdrawal) UnmarshalJSON(enc []byte) error {
+	dec := withdrawalJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	if dec.Index == nil {
+		return errors.New("missing withdrawal index")
+	}
+	if dec.Validator == nil {
+		return errors.New("missing validator index")
+	}
+	if dec.Address == nil {
+		return errors.New("missing execution address")
+	}
+	*w = Withdrawal{}
+	w.WithdrawalIndex = uint64(*dec.Index)
+	w.ValidatorIndex = types.ValidatorIndex(*dec.Validator)
+	w.ExecutionAddress = dec.Address.Bytes()
+	wei := new(big.Int).SetUint64(1000000000)
+	amountWei, err := hexutil.DecodeBig(dec.Amount)
+	if err != nil {
+		return err
+	}
+	amount := new(big.Int).Div(amountWei, wei)
+	if !amount.IsUint64() {
+		return errors.New("withdrawal amount overflow")
+	}
+	w.Amount = amount.Uint64()
+	return nil
 }
 
 type executionPayloadJSON struct {
@@ -149,21 +180,21 @@ type executionPayloadJSON struct {
 }
 
 type executionPayloadCapellaJSON struct {
-	ParentHash    *common.Hash      `json:"parentHash"`
-	FeeRecipient  *common.Address   `json:"feeRecipient"`
-	StateRoot     *common.Hash      `json:"stateRoot"`
-	ReceiptsRoot  *common.Hash      `json:"receiptsRoot"`
-	LogsBloom     *hexutil.Bytes    `json:"logsBloom"`
-	PrevRandao    *common.Hash      `json:"prevRandao"`
-	BlockNumber   *hexutil.Uint64   `json:"blockNumber"`
-	GasLimit      *hexutil.Uint64   `json:"gasLimit"`
-	GasUsed       *hexutil.Uint64   `json:"gasUsed"`
-	Timestamp     *hexutil.Uint64   `json:"timestamp"`
-	ExtraData     hexutil.Bytes     `json:"extraData"`
-	BaseFeePerGas string            `json:"baseFeePerGas"`
-	BlockHash     *common.Hash      `json:"blockHash"`
-	Transactions  []hexutil.Bytes   `json:"transactions"`
-	Withdrawals   []*withdrawalJSON `json:"withdrawals"`
+	ParentHash    *common.Hash    `json:"parentHash"`
+	FeeRecipient  *common.Address `json:"feeRecipient"`
+	StateRoot     *common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
+	LogsBloom     *hexutil.Bytes  `json:"logsBloom"`
+	PrevRandao    *common.Hash    `json:"prevRandao"`
+	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64 `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64 `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64 `json:"timestamp"`
+	ExtraData     hexutil.Bytes   `json:"extraData"`
+	BaseFeePerGas string          `json:"baseFeePerGas"`
+	BlockHash     *common.Hash    `json:"blockHash"`
+	Transactions  []hexutil.Bytes `json:"transactions"`
+	Withdrawals   []*Withdrawal   `json:"withdrawals"`
 }
 
 // MarshalJSON --
@@ -209,21 +240,6 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	withdrawals := make([]*withdrawalJSON, len(e.Withdrawals))
-	for i, w := range e.Withdrawals {
-		index := hexutil.Uint64(w.WithdrawalIndex)
-		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
-		address := common.BytesToAddress(w.ExecutionAddress)
-		amountWei := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bytesutil.ToBytes(w.Amount, 32)))
-		amount := hexutil.EncodeBig(amountWei)
-		withdrawals[i] = &withdrawalJSON{
-			Index:     &index,
-			Validator: &validatorIndex,
-			Address:   &address,
-			Amount:    amount,
-		}
-	}
-
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	pHash := common.BytesToHash(e.ParentHash)
@@ -252,7 +268,7 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
-		Withdrawals:   withdrawals,
+		Withdrawals:   e.Withdrawals,
 	})
 }
 
@@ -399,22 +415,7 @@ func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
 		transactions[i] = tx
 	}
 	e.Transactions = transactions
-	withdrawals := make([]*Withdrawal, len(dec.Withdrawals))
-	for i, wjson := range dec.Withdrawals {
-		bigAmt, err := hexutil.DecodeBig(wjson.Amount)
-		if err != nil {
-			return err
-		}
-
-		w := &Withdrawal{
-			WithdrawalIndex:  uint64(*wjson.Index),
-			ExecutionAddress: wjson.Address.Bytes(),
-			ValidatorIndex:   types.ValidatorIndex(*wjson.Index),
-			Amount:           bytesutil.FromBytes8(bytesutil.ReverseByteOrder(bytesutil.PadTo(bigAmt.Bytes(), 8))),
-		}
-		withdrawals[i] = w
-	}
-	e.Withdrawals = withdrawals
+	e.Withdrawals = dec.Withdrawals
 	return nil
 }
 
@@ -425,10 +426,10 @@ type payloadAttributesJSON struct {
 }
 
 type payloadAttributesV2JSON struct {
-	Timestamp             hexutil.Uint64    `json:"timestamp"`
-	PrevRandao            hexutil.Bytes     `json:"prevRandao"`
-	SuggestedFeeRecipient hexutil.Bytes     `json:"suggestedFeeRecipient"`
-	Withdrawals           []*withdrawalJSON `json:"withdrawals"`
+	Timestamp             hexutil.Uint64 `json:"timestamp"`
+	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
+	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+	Withdrawals           []*Withdrawal  `json:"withdrawals"`
 }
 
 // MarshalJSON --
@@ -442,25 +443,11 @@ func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON --
 func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
-	withdrawals := make([]*withdrawalJSON, len(p.Withdrawals))
-	for i, w := range p.Withdrawals {
-		index := hexutil.Uint64(w.WithdrawalIndex)
-		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
-		address := common.BytesToAddress(w.ExecutionAddress)
-		amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
-		amount := hexutil.EncodeBig(amountWei)
-		withdrawals[i] = &withdrawalJSON{
-			Index:     &index,
-			Validator: &validatorIndex,
-			Address:   &address,
-			Amount:    amount,
-		}
-	}
 	return json.Marshal(payloadAttributesV2JSON{
 		Timestamp:             hexutil.Uint64(p.Timestamp),
 		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
-		Withdrawals:           withdrawals,
+		Withdrawals:           p.Withdrawals,
 	})
 }
 
@@ -486,12 +473,7 @@ func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
 	p.Timestamp = uint64(dec.Timestamp)
 	p.PrevRandao = dec.PrevRandao
 	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
-	for i, wj := range dec.Withdrawals {
-		p.Withdrawals[i].WithdrawalIndex = uint64(*wj.Index)
-		p.Withdrawals[i].ValidatorIndex = types.ValidatorIndex(*wj.Validator)
-		p.Withdrawals[i].ExecutionAddress = wj.Address.Bytes()
-		p.Withdrawals[i].Amount = uint64(0)
-	}
+	p.Withdrawals = dec.Withdrawals
 	return nil
 }
 
