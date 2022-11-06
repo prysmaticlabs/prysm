@@ -19,6 +19,7 @@ import (
 	e2eTypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -60,10 +61,10 @@ var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evalua
 
 var slashedIndices []uint64
 
-func validatorsSlashed(conns ...*validatorClientFactory.ValidatorConnection) error {
+func validatorsSlashed(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conn.GrpcClientConn)
+	client := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
 	req := &eth.GetValidatorActiveSetChangesRequest{}
 	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
 	if err != nil {
@@ -75,10 +76,10 @@ func validatorsSlashed(conns ...*validatorClientFactory.ValidatorConnection) err
 	return nil
 }
 
-func validatorsLoseBalance(conns ...*validatorClientFactory.ValidatorConnection) error {
+func validatorsLoseBalance(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conn.GrpcClientConn)
+	client := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
@@ -106,10 +107,10 @@ func validatorsLoseBalance(conns ...*validatorClientFactory.ValidatorConnection)
 	return nil
 }
 
-func insertDoubleAttestationIntoPool(conns ...*validatorClientFactory.ValidatorConnection) error {
+func insertDoubleAttestationIntoPool(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn.GrpcClientConn)
+	beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -194,10 +195,10 @@ func insertDoubleAttestationIntoPool(conns ...*validatorClientFactory.ValidatorC
 	return nil
 }
 
-func proposeDoubleBlock(conns ...*validatorClientFactory.ValidatorConnection) error {
+func proposeDoubleBlock(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn.GrpcClientConn)
+	beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})

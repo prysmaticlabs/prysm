@@ -21,6 +21,7 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"golang.org/x/exp/rand"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -92,9 +93,9 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 	Evaluation: validatorsVoteWithTheMajority,
 }
 
-func processesDepositsInBlocks(conns ...*validatorClientFactory.ValidatorConnection) error {
+func processesDepositsInBlocks(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
@@ -138,9 +139,9 @@ func processesDepositsInBlocks(conns ...*validatorClientFactory.ValidatorConnect
 	return nil
 }
 
-func verifyGraffitiInBlocks(conns ...*validatorClientFactory.ValidatorConnection) error {
+func verifyGraffitiInBlocks(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
@@ -172,9 +173,9 @@ func verifyGraffitiInBlocks(conns ...*validatorClientFactory.ValidatorConnection
 	return nil
 }
 
-func activatesDepositedValidators(conns ...*validatorClientFactory.ValidatorConnection) error {
+func activatesDepositedValidators(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
@@ -231,9 +232,9 @@ func activatesDepositedValidators(conns ...*validatorClientFactory.ValidatorConn
 	return nil
 }
 
-func depositedValidatorsAreActive(conns ...*validatorClientFactory.ValidatorConnection) error {
+func depositedValidatorsAreActive(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
@@ -281,10 +282,10 @@ func depositedValidatorsAreActive(conns ...*validatorClientFactory.ValidatorConn
 	return nil
 }
 
-func proposeVoluntaryExit(conns ...*validatorClientFactory.ValidatorConnection) error {
+func proposeVoluntaryExit(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	beaconClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -328,9 +329,9 @@ func proposeVoluntaryExit(conns ...*validatorClientFactory.ValidatorConnection) 
 	return nil
 }
 
-func validatorIsExited(conns ...*validatorClientFactory.ValidatorConnection) error {
+func validatorIsExited(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	validatorRequest := &ethpb.GetValidatorRequest{
 		QueryFilter: &ethpb.GetValidatorRequest_Index{
 			Index: exitedIndex,
@@ -346,9 +347,9 @@ func validatorIsExited(conns ...*validatorClientFactory.ValidatorConnection) err
 	return nil
 }
 
-func validatorsVoteWithTheMajority(conns ...*validatorClientFactory.ValidatorConnection) error {
+func validatorsVoteWithTheMajority(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GrpcClientConn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
@@ -74,10 +75,11 @@ func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", acm.beaconRPCProvider)
 	}
 
-	conn := &validatorClientFactory.ValidatorConnection{}
-	conn.GrpcClientConn = grpcConn
-	conn.BeaconApiConn.Url = acm.beaconApiEndpoint
-	conn.BeaconApiConn.Timeout = acm.beaconApiTimeout
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		acm.beaconApiEndpoint,
+		acm.beaconApiTimeout,
+	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(conn)
 	nodeClient := ethpb.NewNodeClient(grpcConn)

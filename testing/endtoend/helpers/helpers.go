@@ -22,7 +22,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -241,27 +241,28 @@ func writeURLRespAtPath(url, fp string) error {
 }
 
 // NewLocalConnection creates and returns GRPC connection on a given localhost port.
-func NewLocalConnection(ctx context.Context, grpcPort int, beaconApiPort int) (*validatorClientFactory.ValidatorConnection, error) {
+func NewLocalConnection(ctx context.Context, grpcPort int, beaconApiPort int) (validatorHelpers.NodeConnection, error) {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", grpcPort)
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
 	grpcConn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
-
-	conn := &validatorClientFactory.ValidatorConnection{}
-	conn.GrpcClientConn = grpcConn
-	conn.BeaconApiConn.Timeout = time.Second * 60
-	conn.BeaconApiConn.Url = fmt.Sprintf("127.0.0.1:%d", beaconApiPort)
-
 	if err != nil {
 		return nil, err
 	}
+
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		fmt.Sprintf("127.0.0.1:%d", beaconApiPort),
+		time.Second*60,
+	)
+
 	return conn, nil
 }
 
 // NewLocalConnections returns number of GRPC connections, along with function to close all of them.
-func NewLocalConnections(ctx context.Context, numConns int) ([]*validatorClientFactory.ValidatorConnection, func(), error) {
-	conns := make([]*validatorClientFactory.ValidatorConnection, numConns)
+func NewLocalConnections(ctx context.Context, numConns int) ([]validatorHelpers.NodeConnection, func(), error) {
+	conns := make([]validatorHelpers.NodeConnection, numConns)
 	for i := 0; i < len(conns); i++ {
 		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i, e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+i)
 		if err != nil {
@@ -271,7 +272,7 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*validatorClientF
 	}
 	return conns, func() {
 		for _, conn := range conns {
-			if err := conn.GrpcClientConn.Close(); err != nil {
+			if err := conn.GetGrpcClientConn().Close(); err != nil {
 				log.Error(err)
 			}
 		}

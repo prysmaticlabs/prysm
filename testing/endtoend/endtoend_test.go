@@ -36,7 +36,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -146,7 +146,7 @@ func (r *testRunner) waitForChainStart() {
 }
 
 // runEvaluators executes assigned evaluators.
-func (r *testRunner) runEvaluators(conns []*validatorClientFactory.ValidatorConnection, tickingStartTime time.Time) error {
+func (r *testRunner) runEvaluators(conns []validatorHelpers.NodeConnection, tickingStartTime time.Time) error {
 	t, config := r.t, r.config
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
@@ -238,7 +238,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 	}
 }
 
-func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, i int, conns []*validatorClientFactory.ValidatorConnection, bnAPI, enr, minerEnr string) error {
+func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, i int, conns []validatorHelpers.NodeConnection, bnAPI, enr, minerEnr string) error {
 	matchTimeout := 3 * time.Minute
 	ethNode := eth1.NewNode(i, minerEnr)
 	g.Go(func() error {
@@ -286,14 +286,15 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 	grpcConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i), grpc.WithInsecure())
 	require.NoError(r.t, err, "Failed to dial")
 
-	conn := &validatorClientFactory.ValidatorConnection{}
-	conn.GrpcClientConn = grpcConn
-	conn.BeaconApiConn.Url = fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+i)
-	conn.BeaconApiConn.Timeout = time.Second * 60
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+i),
+		time.Second*60,
+	)
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, conn)
-	err = r.waitForMatchingHead(ctx, matchTimeout, conn.GrpcClientConn, conns[0].GrpcClientConn)
+	err = r.waitForMatchingHead(ctx, matchTimeout, conn.GetGrpcClientConn(), conns[0].GetGrpcClientConn())
 	if err != nil {
 		return err
 	}
@@ -309,7 +310,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*validatorClientFactory.ValidatorConnection, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
+	conns []validatorHelpers.NodeConnection, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	ethNode := eth1.NewNode(index, minerEnr)
@@ -336,10 +337,11 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	grpcConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())
 	require.NoError(t, err, "Failed to dial")
 
-	conn := &validatorClientFactory.ValidatorConnection{}
-	conn.GrpcClientConn = grpcConn
-	conn.BeaconApiConn.Timeout = time.Second * 60
-	conn.BeaconApiConn.Url = fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+index)
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+index),
+		time.Second*60,
+	)
 
 	conns = append(conns, conn)
 
@@ -464,7 +466,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 	defer closeConns()
 
 	// Calculate genesis time.
-	nodeClient := eth.NewNodeClient(conns[0].GrpcClientConn)
+	nodeClient := eth.NewNodeClient(conns[0].GetGrpcClientConn())
 	genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	tickingStartTime := helpers.EpochTickerStartTime(genesis)
@@ -495,7 +497,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 	}
 
 	if config.ExtraEpochs > 0 {
-		if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0].GrpcClientConn, types.Epoch(config.ExtraEpochs)); err != nil {
+		if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0].GetGrpcClientConn(), types.Epoch(config.ExtraEpochs)); err != nil {
 			return errors.Wrap(err, "error while waiting for ExtraEpochs")
 		}
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
@@ -543,7 +545,7 @@ func (r *testRunner) scenarioRun() error {
 	defer closeConns()
 
 	// Calculate genesis time.
-	nodeClient := eth.NewNodeClient(conns[0].GrpcClientConn)
+	nodeClient := eth.NewNodeClient(conns[0].GetGrpcClientConn())
 	genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	tickingStartTime := helpers.EpochTickerStartTime(genesis)
@@ -555,7 +557,7 @@ func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }
 
-func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*validatorClientFactory.ValidatorConnection, evals []e2etypes.Evaluator) {
+func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []validatorHelpers.NodeConnection, evals []e2etypes.Evaluator) {
 	wg := new(sync.WaitGroup)
 	for _, eval := range evals {
 		// Fix reference to evaluator as it will be running
@@ -585,7 +587,7 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*val
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*validatorClientFactory.ValidatorConnection) bool {
+func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []validatorHelpers.NodeConnection) bool {
 	type ForkchoiceUpdatedResponse struct {
 		Status    *enginev1.PayloadStatus  `json:"payloadStatus"`
 		PayloadId *enginev1.PayloadIDBytes `json:"payloadId"`
@@ -636,7 +638,7 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*validatorCl
 		})
 		return true
 	case 15:
-		r.executeProvidedEvaluators(epoch, []*validatorClientFactory.ValidatorConnection{conns[0]}, []e2etypes.Evaluator{
+		r.executeProvidedEvaluators(epoch, []validatorHelpers.NodeConnection{conns[0]}, []e2etypes.Evaluator{
 			ev.OptimisticSyncEnabled,
 		})
 		// Disable Interceptor
@@ -664,7 +666,7 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*validatorCl
 	return false
 }
 
-func (r *testRunner) eeOffline(epoch uint64, _ []*validatorClientFactory.ValidatorConnection) bool {
+func (r *testRunner) eeOffline(epoch uint64, _ []validatorHelpers.NodeConnection) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
@@ -690,7 +692,7 @@ func (r *testRunner) eeOffline(epoch uint64, _ []*validatorClientFactory.Validat
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenario(epoch uint64, conns []*validatorClientFactory.ValidatorConnection) bool {
+func (r *testRunner) multiScenario(epoch uint64, conns []validatorHelpers.NodeConnection) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -721,7 +723,7 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*validatorClientFactory
 		})
 		return true
 	case 20:
-		r.executeProvidedEvaluators(epoch, []*validatorClientFactory.ValidatorConnection{conns[0]}, []e2etypes.Evaluator{
+		r.executeProvidedEvaluators(epoch, []validatorHelpers.NodeConnection{conns[0]}, []e2etypes.Evaluator{
 			ev.OptimisticSyncEnabled,
 		})
 		// Disable Interceptor
@@ -741,6 +743,6 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*validatorClientFactory
 }
 
 // All Epochs are valid.
-func defaultInterceptor(_ uint64, _ []*validatorClientFactory.ValidatorConnection) bool {
+func defaultInterceptor(_ uint64, _ []validatorHelpers.NodeConnection) bool {
 	return false
 }

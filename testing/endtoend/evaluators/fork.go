@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 )
 
 var streamDeadline = 1 * time.Minute
@@ -30,7 +31,7 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-func altairForkOccurs(conns ...*validatorClientFactory.ValidatorConnection) error {
+func altairForkOccurs(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	client := validatorClientFactory.NewValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
@@ -72,7 +73,7 @@ func altairForkOccurs(conns ...*validatorClientFactory.ValidatorConnection) erro
 	return nil
 }
 
-func bellatrixForkOccurs(conns ...*validatorClientFactory.ValidatorConnection) error {
+func bellatrixForkOccurs(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	client := validatorClientFactory.NewValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)

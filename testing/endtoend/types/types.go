@@ -6,7 +6,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 )
 
 type E2EConfigOpt func(*E2EConfig)
@@ -44,7 +44,7 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
-	EvalInterceptor         func(uint64, []*validatorClientFactory.ValidatorConnection) bool
+	EvalInterceptor         func(uint64, []validatorHelpers.NodeConnection) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
@@ -56,7 +56,7 @@ type E2EConfig struct {
 type Evaluator struct {
 	Name       string
 	Policy     func(currentEpoch types.Epoch) bool
-	Evaluation func(conn ...*validatorClientFactory.ValidatorConnection) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
+	Evaluation func(conn ...validatorHelpers.NodeConnection) error // A variable amount of conns is allowed to be passed in for evaluations to check all nodes if needed.
 }
 
 // ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.

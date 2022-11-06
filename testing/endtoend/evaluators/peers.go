@@ -7,7 +7,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -19,8 +19,8 @@ var PeersCheck = types.Evaluator{
 	Evaluation: peersTest,
 }
 
-func peersTest(conns ...*validatorClientFactory.ValidatorConnection) error {
-	debugClient := eth.NewDebugClient(conns[0].GrpcClientConn)
+func peersTest(conns ...validatorHelpers.NodeConnection) error {
+	debugClient := eth.NewDebugClient(conns[0].GetGrpcClientConn())
 
 	peerResponses, err := debugClient.ListPeers(context.Background(), &emptypb.Empty{})
 	if err != nil {
