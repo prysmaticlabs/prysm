@@ -9,8 +9,10 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -248,6 +250,83 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
+}
+
+func TestGetRandao(t *testing.T) {
+	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
+	mixOld := bytesutil.PadTo([]byte("old"), 32)
+	epochCurrent := types.Epoch(100000)
+	epochOld := 100000 - params.BeaconConfig().EpochsPerHistoricalVector + 1
+
+	ctx := context.Background()
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	// Set slot to epoch 100000
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*100000))
+	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochCurrent%params.BeaconConfig().EpochsPerHistoricalVector), mixCurrent))
+	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochOld%params.BeaconConfig().EpochsPerHistoricalVector), mixOld))
+
+	db := dbTest.SetupDB(t)
+	chainService := &chainMock.ChainService{}
+	server := &Server{
+		StateFetcher: &testutil.MockFetcher{
+			BeaconState: st,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
+	}
+
+	t.Run("no epoch requested", func(t *testing.T) {
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0)})
+		require.NoError(t, err)
+		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
+	})
+	t.Run("current epoch requested", func(t *testing.T) {
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochCurrent})
+		require.NoError(t, err)
+		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
+	})
+	t.Run("old epoch requested", func(t *testing.T) {
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochOld})
+		require.NoError(t, err)
+		assert.DeepEqual(t, mixOld, resp.Data.Randao)
+	})
+	t.Run("epoch too old", func(t *testing.T) {
+		epochTooOld := types.Epoch(100000 - st.RandaoMixesLength())
+		_, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochTooOld})
+		require.ErrorContains(t, "Epoch is out of range for the randao mixes of the state", err)
+	})
+	t.Run("epoch in the future", func(t *testing.T) {
+		futureEpoch := types.Epoch(100000 + 1)
+		_, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &futureEpoch})
+		require.ErrorContains(t, "Epoch is out of range for the randao mixes of the state", err)
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService := &chainMock.ChainService{Optimistic: true}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
