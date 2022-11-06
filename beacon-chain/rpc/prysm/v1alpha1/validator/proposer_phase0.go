@@ -35,7 +35,7 @@ type blockData struct {
 	VoluntaryExits        []*ethpb.SignedVoluntaryExit
 	SyncAggregate         *ethpb.SyncAggregate
 	ExecutionPayload      *enginev1.ExecutionPayload
-	Withdrawals           []*enginev1.Withdrawal
+	ExecutionPayloadV2    *enginev1.ExecutionPayloadCapella
 	BlsToExecutionChanges []*ethpb.SignedBLSToExecutionChange
 }
 
@@ -192,29 +192,34 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		// with a relayer
 		registered, err := vs.validatorRegistered(ctx, idx)
 		if !registered || err != nil {
-
-			executionPayload, err := vs.getExecutionPayload(
-				ctx,
-				req.Slot,
-				idx,
-				bytesutil.ToBytes32(parentRoot),
-				head,
-			)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get execution payload")
+			if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+				executionPayloadV2, err := vs.getExecutionPayloadV2(
+					ctx,
+					req.Slot,
+					idx,
+					bytesutil.ToBytes32(parentRoot),
+					head,
+				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				blk.ExecutionPayloadV2 = executionPayloadV2
+				// TODO pack BlsToExecutionChanges Here
+				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
+			} else {
+				executionPayload, err := vs.getExecutionPayload(
+					ctx,
+					req.Slot,
+					idx,
+					bytesutil.ToBytes32(parentRoot),
+					head,
+				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				blk.ExecutionPayload = executionPayload
 			}
-			blk.ExecutionPayload = executionPayload
 		}
-	}
-
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-		withdrawals, err := head.ExpectedWithdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get expected withdrawals")
-		}
-		blk.Withdrawals = withdrawals
-		// TODO pack BlsToExecutionChanges Here
-		blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
 	}
 
 	return blk, nil

@@ -116,7 +116,25 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			return nil, err
 		}
 	} else {
-		blk := constructBeaconBlockCapellaFromBlockData(blkData)
+		blk := &ethpb.BeaconBlockCapella{
+			Slot:          blkData.Slot,
+			ProposerIndex: blkData.ProposerIdx,
+			ParentRoot:    blkData.ParentRoot,
+			StateRoot:     params.BeaconConfig().ZeroHash[:],
+			Body: &ethpb.BeaconBlockBodyCapella{
+				RandaoReveal:          blkData.RandaoReveal,
+				Eth1Data:              blkData.Eth1Data,
+				Graffiti:              blkData.Graffiti[:],
+				ProposerSlashings:     blkData.ProposerSlashings,
+				AttesterSlashings:     blkData.AttesterSlashings,
+				Attestations:          blkData.Attestations,
+				Deposits:              blkData.Deposits,
+				VoluntaryExits:        blkData.VoluntaryExits,
+				SyncAggregate:         blkData.SyncAggregate,
+				ExecutionPayload:      blkData.ExecutionPayloadV2,
+				BlsToExecutionChanges: blkData.BlsToExecutionChanges,
+			},
+		}
 		// Compute state root with the newly constructed block.
 		wsb, err = consensusblocks.NewSignedBeaconBlock(
 			&ethpb.SignedBeaconBlockCapella{Block: blk, Signature: make([]byte, 96)},

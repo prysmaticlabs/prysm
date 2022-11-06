@@ -109,6 +109,27 @@ func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
 	return nil
 }
 
+type withdrawalJSON struct {
+	Index     *hexutil.Uint64 `json:"index"`
+	Validator *hexutil.Uint64 `json:"validatorIndex"`
+	Address   *common.Address `json:"address"`
+	Amount    string          `json:"amount"`
+}
+
+func (w *Withdrawal) MarshalJSON() ([]byte, error) {
+	index := hexutil.Uint64(w.WithdrawalIndex)
+	validatorIndex := hexutil.Uint64(w.ValidatorIndex)
+	address := common.BytesToAddress(w.ExecutionAddress)
+	amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
+	amount := hexutil.EncodeBig(amountWei)
+	return json.Marshal(withdrawalJSON{
+		Index:     &index,
+		Validator: &validatorIndex,
+		Address:   &address,
+		Amount:    amount,
+	})
+}
+
 type executionPayloadJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
@@ -124,6 +145,24 @@ type executionPayloadJSON struct {
 	BaseFeePerGas string          `json:"baseFeePerGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
+}
+
+type executionPayloadCapellaJSON struct {
+	ParentHash    *common.Hash      `json:"parentHash"`
+	FeeRecipient  *common.Address   `json:"feeRecipient"`
+	StateRoot     *common.Hash      `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash      `json:"receiptsRoot"`
+	LogsBloom     *hexutil.Bytes    `json:"logsBloom"`
+	PrevRandao    *common.Hash      `json:"prevRandao"`
+	BlockNumber   *hexutil.Uint64   `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64   `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64   `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64   `json:"timestamp"`
+	ExtraData     hexutil.Bytes     `json:"extraData"`
+	BaseFeePerGas string            `json:"baseFeePerGas"`
+	BlockHash     *common.Hash      `json:"blockHash"`
+	Transactions  []hexutil.Bytes   `json:"transactions"`
+	Withdrawals   []*withdrawalJSON `json:"withdrawals"`
 }
 
 // MarshalJSON --
@@ -160,6 +199,59 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
+	})
+}
+
+// MarshalJSON --
+func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	withdrawals := make([]*withdrawalJSON, len(e.Withdrawals))
+	for i, w := range e.Withdrawals {
+		index := hexutil.Uint64(w.WithdrawalIndex)
+		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
+		address := common.BytesToAddress(w.ExecutionAddress)
+		amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
+		amount := hexutil.EncodeBig(amountWei)
+		withdrawals[i] = &withdrawalJSON{
+			Index:     &index,
+			Validator: &validatorIndex,
+			Address:   &address,
+			Amount:    amount,
+		}
+	}
+
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
+	logsBloom := hexutil.Bytes(e.LogsBloom)
+	return json.Marshal(executionPayloadCapellaJSON{
+		ParentHash:    &pHash,
+		FeeRecipient:  &recipient,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
+		LogsBloom:     &logsBloom,
+		PrevRandao:    &prevRan,
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
+		ExtraData:     e.ExtraData,
+		BaseFeePerGas: baseFeeHex,
+		BlockHash:     &bHash,
+		Transactions:  transactions,
+		Withdrawals:   withdrawals,
 	})
 }
 
