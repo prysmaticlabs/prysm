@@ -11,6 +11,7 @@ import (
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
@@ -334,12 +335,43 @@ type payloadAttributesJSON struct {
 	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
 }
 
+type payloadAttributesV2JSON struct {
+	Timestamp             hexutil.Uint64    `json:"timestamp"`
+	PrevRandao            hexutil.Bytes     `json:"prevRandao"`
+	SuggestedFeeRecipient hexutil.Bytes     `json:"suggestedFeeRecipient"`
+	Withdrawals           []*withdrawalJSON `json:"withdrawals"`
+}
+
 // MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(payloadAttributesJSON{
 		Timestamp:             hexutil.Uint64(p.Timestamp),
 		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+	})
+}
+
+// MarshalJSON --
+func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
+	withdrawals := make([]*withdrawalJSON, len(p.Withdrawals))
+	for i, w := range p.Withdrawals {
+		index := hexutil.Uint64(w.WithdrawalIndex)
+		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
+		address := common.BytesToAddress(w.ExecutionAddress)
+		amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
+		amount := hexutil.EncodeBig(amountWei)
+		withdrawals[i] = &withdrawalJSON{
+			Index:     &index,
+			Validator: &validatorIndex,
+			Address:   &address,
+			Amount:    amount,
+		}
+	}
+	return json.Marshal(payloadAttributesV2JSON{
+		Timestamp:             hexutil.Uint64(p.Timestamp),
+		PrevRandao:            p.PrevRandao,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+		Withdrawals:           withdrawals,
 	})
 }
 
@@ -353,6 +385,24 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	p.Timestamp = uint64(dec.Timestamp)
 	p.PrevRandao = dec.PrevRandao
 	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	return nil
+}
+
+func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
+	dec := payloadAttributesV2JSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributesV2{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.PrevRandao = dec.PrevRandao
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	for i, wj := range dec.Withdrawals {
+		p.Withdrawals[i].WithdrawalIndex = uint64(*wj.Index)
+		p.Withdrawals[i].ValidatorIndex = types.ValidatorIndex(*wj.Validator)
+		p.Withdrawals[i].ExecutionAddress = wj.Address.Bytes()
+		p.Withdrawals[i].Amount = uint64(0)
+	}
 	return nil
 }
 
