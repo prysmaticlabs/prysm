@@ -412,7 +412,7 @@ func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
 			WithdrawalIndex:  uint64(*wjson.Index),
 			ExecutionAddress: wjson.Address.Bytes(),
 			ValidatorIndex:   types.ValidatorIndex(*wjson.Index),
-			Amount:           bytesutil.FromBytes8(bytesutil.ReverseByteOrder(bytesutil.PadTo(actualAmt.Bytes(), 8))),
+			Amount:           bytesutil.FromBytes8(bytesutil.PadTo(bytesutil.ReverseByteOrder(actualAmt.Bytes()), 8)),
 		}
 		withdrawals[i] = w
 	}
