@@ -81,7 +81,7 @@ func AccountsExit(c *cli.Context, r io.Reader) error {
 		accounts.WithKeymanager(km),
 		accounts.WithGRPCDialOpts(dialOpts),
 		accounts.WithBeaconRPCProvider(beaconRPCProvider),
-		accounts.WithBeaconAPIEndpoint("http://" + flags.BeaconRPCGatewayProviderFlag.Value),
+		accounts.WithBeaconRESTApiProvider(c.String(flags.BeaconRESTApiProviderFlag.Name)),
 		accounts.WithGRPCHeaders(grpcHeaders),
 	}
 	// Get full set of public keys from the keymanager.

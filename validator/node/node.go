@@ -431,7 +431,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
 		BeaconApiTimeout:           30,
-		BeaconApiEndpoint:          "http://" + flags.BeaconRPCGatewayProviderFlag.Value,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")

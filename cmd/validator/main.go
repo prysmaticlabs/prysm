@@ -112,6 +112,10 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
+	if flags.BuiltWithBeaconApi {
+		appFlags = append(appFlags, flags.BeaconRESTApiProviderFlag)
+	}
+
 	appFlags = cmd.WrapFlags(append(appFlags, features.ValidatorFlags...))
 }
 
