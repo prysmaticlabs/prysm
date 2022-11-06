@@ -93,16 +93,12 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 			return nil, errors.New("invalid withdrawal index")
 		}
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
-			log.Errorf("got WI: %d, VI %d, addr: %v, AM: %d\nexpected  WI: %d, VI %d, addr: %v, AM: %d.", withdrawal.WithdrawalIndex, withdrawal.ValidatorIndex, withdrawal.ExecutionAddress, withdrawal.Amount,
-				expected[i].WithdrawalIndex, expected[i].ValidatorIndex, expected[i].ExecutionAddress, expected[i].Amount)
 			return nil, errors.New("invalid validator index")
 		}
 		if bytesutil.ToBytes20(withdrawal.ExecutionAddress) != bytesutil.ToBytes20(expected[i].ExecutionAddress) {
 			return nil, errors.New("invalid execution address")
 		}
 		if withdrawal.Amount != expected[i].Amount {
-			log.Errorf("got WI: %d, VI %d, addr: %v, AM: %d\nexpected  WI: %d, VI %d, addr: %v, AM: %d.", withdrawal.WithdrawalIndex, withdrawal.ValidatorIndex, withdrawal.ExecutionAddress, withdrawal.Amount,
-				expected[i].WithdrawalIndex, expected[i].ValidatorIndex, expected[i].ExecutionAddress, expected[i].Amount)
 			return nil, errors.New("invalid withdrawal amount")
 		}
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
