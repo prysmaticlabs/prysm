@@ -14,21 +14,29 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // blockData required to create a beacon block.
 type blockData struct {
-	ParentRoot        []byte
-	Graffiti          [32]byte
-	ProposerIdx       types.ValidatorIndex
-	Eth1Data          *ethpb.Eth1Data
-	Deposits          []*ethpb.Deposit
-	Attestations      []*ethpb.Attestation
-	ProposerSlashings []*ethpb.ProposerSlashing
-	AttesterSlashings []*ethpb.AttesterSlashing
-	VoluntaryExits    []*ethpb.SignedVoluntaryExit
+	Slot                  types.Slot
+	ParentRoot            []byte
+	Graffiti              [32]byte
+	ProposerIdx           types.ValidatorIndex
+	Eth1Data              *ethpb.Eth1Data
+	Deposits              []*ethpb.Deposit
+	Attestations          []*ethpb.Attestation
+	RandaoReveal          []byte
+	ProposerSlashings     []*ethpb.ProposerSlashing
+	AttesterSlashings     []*ethpb.AttesterSlashing
+	VoluntaryExits        []*ethpb.SignedVoluntaryExit
+	SyncAggregate         *ethpb.SyncAggregate
+	ExecutionPayload      *enginev1.ExecutionPayload
+	Withdrawals           []*enginev1.Withdrawal
+	BlsToExecutionChanges []*ethpb.SignedBLSToExecutionChange
 }
 
 func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
@@ -43,7 +51,7 @@ func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
 	blk := &ethpb.BeaconBlock{
-		Slot:          req.Slot,
+		Slot:          blkData.Slot,
 		ParentRoot:    blkData.ParentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: blkData.ProposerIdx,
@@ -51,7 +59,7 @@ func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 			Eth1Data:          blkData.Eth1Data,
 			Deposits:          blkData.Deposits,
 			Attestations:      blkData.Attestations,
-			RandaoReveal:      req.RandaoReveal,
+			RandaoReveal:      blkData.RandaoReveal,
 			ProposerSlashings: blkData.ProposerSlashings,
 			AttesterSlashings: blkData.AttesterSlashings,
 			VoluntaryExits:    blkData.VoluntaryExits,
@@ -156,15 +164,58 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		validExits = append(validExits, exit)
 	}
 
-	return &blockData{
+	blk := &blockData{
+		Slot:              req.Slot,
 		ParentRoot:        parentRoot,
 		Graffiti:          graffiti,
 		ProposerIdx:       idx,
 		Eth1Data:          eth1Data,
 		Deposits:          deposits,
 		Attestations:      atts,
+		RandaoReveal:      req.RandaoReveal,
 		ProposerSlashings: validProposerSlashings,
 		AttesterSlashings: validAttSlashings,
 		VoluntaryExits:    validExits,
-	}, nil
+	}
+
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
+		syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(parentRoot))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute the sync aggregate")
+		}
+
+		blk.SyncAggregate = syncAggregate
+	}
+
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		// We request the execution payload only if the validator is not registered
+		// with a relayer
+		registered, err := vs.validatorRegistered(ctx, idx)
+		if !registered || err != nil {
+
+			executionPayload, err := vs.getExecutionPayload(
+				ctx,
+				req.Slot,
+				idx,
+				bytesutil.ToBytes32(parentRoot),
+				head,
+			)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload")
+			}
+			blk.ExecutionPayload = executionPayload
+		}
+	}
+
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+		withdrawals, err := head.ExpectedWithdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get expected withdrawals")
+		}
+		blk.Withdrawals = withdrawals
+		// TODO pack BlsToExecutionChanges Here
+		blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
+	}
+
+	return blk, nil
 }

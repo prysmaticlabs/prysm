@@ -12,12 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -39,9 +38,14 @@ var (
 	})
 )
 
-// This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
+// This returns the execution payload of a given slot.
+// The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte) (interfaces.ExecutionData, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context,
+	slot types.Slot,
+	vIdx types.ValidatorIndex,
+	headRoot [32]byte,
+	st state.BeaconState) (*enginev1.ExecutionPayload, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -72,23 +76,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			if slots.ToEpoch(slot) < params.BeaconConfig().CapellaForkEpoch {
-				return consensusblocks.WrappedExecutionPayload(payload)
-			}
-			return vs.constructCapellaPayloadFromBellatrix(ctx, payload)
+			return payload, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
-	}
-
-	st, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
-	if err != nil {
-		return nil, err
 	}
 
 	var parentHash []byte
@@ -110,14 +102,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			return emptyPayload(), nil
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
 		if !hasTerminalBlock {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			return emptyPayload(), nil
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -170,11 +162,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
-
-	if slots.ToEpoch(slot) < params.BeaconConfig().CapellaForkEpoch {
-		return consensusblocks.WrappedExecutionPayload(payload)
-	}
-	return vs.constructCapellaPayloadFromBellatrix(ctx, payload)
+	return payload, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not

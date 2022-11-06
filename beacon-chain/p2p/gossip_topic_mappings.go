@@ -62,4 +62,7 @@ func init() {
 	// Specially handle Bellatrix objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBlindedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
+	// Specially handle Capella objects
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockCapella{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBlindedBeaconBlockCapella{})] = BlockSubnetTopicFormat
 }

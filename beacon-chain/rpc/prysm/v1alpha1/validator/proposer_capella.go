@@ -1,44 +1,47 @@
 package validator
 
 import (
-	"context"
-
-	"github.com/pkg/errors"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-// constructCapellaPayloadFromBellatrix returns a wrapped Cappella Execution payload with
-// empty withdrawals, from a given Bellatrix execution payload
-func (vs *Server) constructCapellaPayloadFromBellatrix(
-	ctx context.Context, payload *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
-
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get head state")
+// constructBeaconBlockCapellaFromBellatrix returns a wrapped Cappella Beacon block starting from the
+// given blockData object
+func constructBeaconBlockCapellaFromBlockData(blkData *blockData) *ethpb.BeaconBlockCapella {
+	return &ethpb.BeaconBlockCapella{
+		Slot:          blkData.Slot,
+		ProposerIndex: blkData.ProposerIdx,
+		ParentRoot:    blkData.ParentRoot,
+		StateRoot:     params.BeaconConfig().ZeroHash[:],
+		Body: &ethpb.BeaconBlockBodyCapella{
+			RandaoReveal:      blkData.RandaoReveal,
+			Eth1Data:          blkData.Eth1Data,
+			Graffiti:          blkData.Graffiti[:],
+			ProposerSlashings: blkData.ProposerSlashings,
+			AttesterSlashings: blkData.AttesterSlashings,
+			Attestations:      blkData.Attestations,
+			Deposits:          blkData.Deposits,
+			VoluntaryExits:    blkData.VoluntaryExits,
+			SyncAggregate:     blkData.SyncAggregate,
+			ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+				ParentHash:    blkData.ExecutionPayload.ParentHash,
+				FeeRecipient:  blkData.ExecutionPayload.FeeRecipient,
+				StateRoot:     blkData.ExecutionPayload.StateRoot,
+				ReceiptsRoot:  blkData.ExecutionPayload.ReceiptsRoot,
+				LogsBloom:     blkData.ExecutionPayload.LogsBloom,
+				PrevRandao:    blkData.ExecutionPayload.PrevRandao,
+				BlockNumber:   blkData.ExecutionPayload.BlockNumber,
+				GasLimit:      blkData.ExecutionPayload.GasLimit,
+				GasUsed:       blkData.ExecutionPayload.GasUsed,
+				Timestamp:     blkData.ExecutionPayload.Timestamp,
+				ExtraData:     blkData.ExecutionPayload.ExtraData,
+				BaseFeePerGas: blkData.ExecutionPayload.BaseFeePerGas,
+				BlockHash:     blkData.ExecutionPayload.BlockHash,
+				Transactions:  blkData.ExecutionPayload.Transactions,
+				Withdrawals:   blkData.Withdrawals,
+			},
+			BlsToExecutionChanges: blkData.BlsToExecutionChanges,
+		},
 	}
-
-	withdrawals, err := head.ExpectedWithdrawals()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get expected withdrawals")
-	}
-
-	capellaPayload := &enginev1.ExecutionPayloadCapella{
-		ParentHash:    payload.ParentHash,
-		FeeRecipient:  payload.FeeRecipient,
-		StateRoot:     payload.StateRoot,
-		ReceiptsRoot:  payload.ReceiptsRoot,
-		LogsBloom:     payload.LogsBloom,
-		PrevRandao:    payload.PrevRandao,
-		BlockNumber:   payload.BlockNumber,
-		GasLimit:      payload.GasLimit,
-		GasUsed:       payload.GasUsed,
-		Timestamp:     payload.Timestamp,
-		ExtraData:     payload.ExtraData,
-		BaseFeePerGas: payload.BaseFeePerGas,
-		Transactions:  payload.Transactions,
-		Withdrawals:   withdrawals,
-	}
-	return consensusblocks.WrappedExecutionPayloadCapella(capellaPayload)
 }

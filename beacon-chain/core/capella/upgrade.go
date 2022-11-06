@@ -48,7 +48,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
