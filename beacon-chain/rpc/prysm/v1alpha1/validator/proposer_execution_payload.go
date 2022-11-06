@@ -193,11 +193,6 @@ func (vs *Server) getExecutionPayloadV2(ctx context.Context,
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
 	}
 
-	capellaStart, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
-	if err != nil {
-		return nil, err
-	}
-	ok = ok && slot != capellaStart
 	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
