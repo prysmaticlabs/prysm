@@ -26,6 +26,8 @@ import (
 const (
 	// NewPayloadMethod v1 request string for JSON-RPC.
 	NewPayloadMethod = "engine_newPayloadV1"
+	// NewPayloadMethod v2 request string for JSON-RPC.
+	NewPayloadMethodV2 = "engine_newPayloadV2"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethod v2 request string for JSON-RPC.
@@ -101,7 +103,7 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if !ok {
 			return nil, errors.New("execution data must be a Bellatrix or Capella execution payload")
 		}
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, payloadPb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}

@@ -12,7 +12,6 @@ go_library(
         "proposer.go",
         "proposer_altair.go",
         "proposer_attestations.go",
-        "proposer_capella.go",
         "proposer_bellatrix.go",
         "proposer_deposits.go",
         "proposer_eth1data.go",
