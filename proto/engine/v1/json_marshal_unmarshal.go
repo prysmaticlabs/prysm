@@ -214,7 +214,8 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 		index := hexutil.Uint64(w.WithdrawalIndex)
 		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
 		address := common.BytesToAddress(w.ExecutionAddress)
-		amountWei := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bytesutil.ToBytes(w.Amount, 32)))
+		wei := new(big.Int).SetUint64(1000000000)
+		amountWei := new(big.Int).Mul(new(big.Int).SetUint64(w.Amount), wei)
 		amount := hexutil.EncodeBig(amountWei)
 		withdrawals[i] = &withdrawalJSON{
 			Index:     &index,
@@ -405,12 +406,13 @@ func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
 		if err != nil {
 			return err
 		}
-
+		wei := new(big.Int).SetUint64(1000000000)
+		actualAmt := new(big.Int).Div(bigAmt, wei)
 		w := &Withdrawal{
 			WithdrawalIndex:  uint64(*wjson.Index),
 			ExecutionAddress: wjson.Address.Bytes(),
 			ValidatorIndex:   types.ValidatorIndex(*wjson.Index),
-			Amount:           bytesutil.FromBytes8(bytesutil.ReverseByteOrder(bytesutil.PadTo(bigAmt.Bytes(), 8))),
+			Amount:           bytesutil.FromBytes8(bytesutil.ReverseByteOrder(bytesutil.PadTo(actualAmt.Bytes(), 8))),
 		}
 		withdrawals[i] = w
 	}
