@@ -193,6 +193,17 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		registered, err := vs.validatorRegistered(ctx, idx)
 		if !registered || err != nil {
 			if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+				executionPayloadV2, err := vs.getExecutionPayloadV2(
+					ctx,
+					req.Slot,
+					idx,
+					bytesutil.ToBytes32(parentRoot),
+					head,
+				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				blk.ExecutionPayloadV2 = executionPayloadV2
 				// TODO pack BlsToExecutionChanges Here
 				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
 			} else {
