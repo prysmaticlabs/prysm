@@ -42,6 +42,6 @@ func (t *jwtTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not produce signed JWT token")
 	}
-	req.Header.Set("Authorization", "Bearer "+tokenString)
+	req.Header.Set("authorization", "Bearer "+tokenString)
 	return t.underlyingTransport.RoundTrip(req)
 }

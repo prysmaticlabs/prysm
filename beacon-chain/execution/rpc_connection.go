@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -14,7 +15,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/io/logs"
 	"github.com/prysmaticlabs/prysm/v3/network"
-	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {
@@ -116,7 +116,15 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 	}
 	switch u.Scheme {
 	case "http", "https":
-		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, endpoint.HttpClient())
+		httpAuth := gethRPC.WithHTTPAuth(func(h http.Header) error {
+			header, err := endpoint.Auth.ToHeaderValue()
+			if err != nil {
+				return err
+			}
+			client.SetHeader("Authorization", header)
+			return nil
+		})
+		client, err = gethRPC.DialOptions(ctx, endpoint.Url, httpAuth, gethRPC.WithHTTPClient(endpoint.HttpClient()))
 		if err != nil {
 			return nil, err
 		}
@@ -128,13 +136,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 	default:
 		return nil, fmt.Errorf("no known transport for URL scheme %q", u.Scheme)
 	}
-	if endpoint.Auth.Method != authorization.None {
-		header, err := endpoint.Auth.ToHeaderValue()
-		if err != nil {
-			return nil, err
-		}
-		client.SetHeader("Authorization", header)
-	}
+
 	for _, h := range s.cfg.headers {
 		if h != "" {
 			keyValue := strings.Split(h, "=")
