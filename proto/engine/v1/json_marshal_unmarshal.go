@@ -214,7 +214,7 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 		index := hexutil.Uint64(w.WithdrawalIndex)
 		validatorIndex := hexutil.Uint64(w.ValidatorIndex)
 		address := common.BytesToAddress(w.ExecutionAddress)
-		amountWei := new(big.Int).SetBytes(bytesutil.ToBytes(w.Amount, 32))
+		amountWei := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bytesutil.ToBytes(w.Amount, 32)))
 		amount := hexutil.EncodeBig(amountWei)
 		withdrawals[i] = &withdrawalJSON{
 			Index:     &index,
@@ -326,6 +326,95 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 		transactions[i] = tx
 	}
 	e.Transactions = transactions
+	return nil
+}
+
+// UnmarshalJSON --
+func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
+	dec := executionPayloadCapellaJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+
+	if dec.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
+	}
+	if dec.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
+	}
+	if dec.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
+	}
+	if dec.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+
+	if dec.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
+	}
+	if dec.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
+	}
+	if dec.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
+	}
+	if dec.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
+	}
+	if dec.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if dec.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if dec.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if dec.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if dec.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
+	}
+	*e = ExecutionPayloadCapella{}
+	e.ParentHash = dec.ParentHash.Bytes()
+	e.FeeRecipient = dec.FeeRecipient.Bytes()
+	e.StateRoot = dec.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
+	e.LogsBloom = *dec.LogsBloom
+	e.PrevRandao = dec.PrevRandao.Bytes()
+	e.BlockNumber = uint64(*dec.BlockNumber)
+	e.GasLimit = uint64(*dec.GasLimit)
+	e.GasUsed = uint64(*dec.GasUsed)
+	e.Timestamp = uint64(*dec.Timestamp)
+	e.ExtraData = dec.ExtraData
+	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
+	if err != nil {
+		return err
+	}
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
+	e.BlockHash = dec.BlockHash.Bytes()
+	transactions := make([][]byte, len(dec.Transactions))
+	for i, tx := range dec.Transactions {
+		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	withdrawals := make([]*Withdrawal, len(dec.Withdrawals))
+	for i, wjson := range dec.Withdrawals {
+		bigAmt, err := hexutil.DecodeBig(wjson.Amount)
+		if err != nil {
+			return err
+		}
+
+		w := &Withdrawal{
+			WithdrawalIndex:  uint64(*wjson.Index),
+			ExecutionAddress: wjson.Address.Bytes(),
+			ValidatorIndex:   types.ValidatorIndex(*wjson.Index),
+			Amount:           bytesutil.FromBytes8(bytesutil.ReverseByteOrder(bytesutil.PadTo(bigAmt.Bytes(), 8))),
+		}
+		withdrawals[i] = w
+	}
+	e.Withdrawals = withdrawals
 	return nil
 }
 
