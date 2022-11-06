@@ -28,8 +28,12 @@ const (
 	NewPayloadMethod = "engine_newPayloadV1"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
+	// ForkchoiceUpdatedMethod v2 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// GetPayloadMethod v2 request string for JSON-RPC.
+	GetPayloadMethodV2 = "engine_getPayloadV2"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
@@ -66,7 +70,11 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
+	ForkchoiceUpdatedV2(
+		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributesV2,
+	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
+	GetPayloadV2(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayloadCapella, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -154,6 +162,42 @@ func (s *Service) ForkchoiceUpdated(
 	}
 }
 
+// ForkchoiceUpdatedV2 calls the engine_forkchoiceUpdatedV2 method via JSON-RPC.
+func (s *Service) ForkchoiceUpdatedV2(
+	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributesV2,
+) (*pb.PayloadIDBytes, []byte, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdatedV2")
+	defer span.End()
+	start := time.Now()
+	defer func() {
+		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
+	d := time.Now().Add(time.Duration(params.BeaconConfig().ExecutionEngineTimeoutValue) * time.Second)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
+	result := &ForkchoiceUpdatedResponse{}
+	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV2, state, attrs)
+	if err != nil {
+		return nil, nil, handleRPCError(err)
+	}
+
+	if result.Status == nil {
+		return nil, nil, ErrNilResponse
+	}
+	resp := result.Status
+	switch resp.Status {
+	case pb.PayloadStatus_SYNCING:
+		return nil, nil, ErrAcceptedSyncingPayloadStatus
+	case pb.PayloadStatus_INVALID:
+		return nil, resp.LatestValidHash, ErrInvalidPayloadStatus
+	case pb.PayloadStatus_VALID:
+		return result.PayloadId, resp.LatestValidHash, nil
+	default:
+		return nil, nil, ErrUnknownPayloadStatus
+	}
+}
+
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
 func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
@@ -168,6 +212,23 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 	defer cancel()
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	return result, handleRPCError(err)
+}
+
+// GetPayloadV2 calls the engine_getPayloadV2 method via JSON-RPC.
+func (s *Service) GetPayloadV2(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayloadCapella, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadV2")
+	defer span.End()
+	start := time.Now()
+	defer func() {
+		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
+	result := &pb.ExecutionPayloadCapella{}
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 
