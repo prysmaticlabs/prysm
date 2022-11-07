@@ -120,6 +120,7 @@ ssz_gen_marshal(
         "BLSToExecutionChange",
         "SignedBLSToExecutionChange",
         "BuilderBid",
+        "BlobsSidecar",
     ],
 )
 

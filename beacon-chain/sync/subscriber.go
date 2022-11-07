@@ -120,6 +120,15 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 			)
 		}
 	}
+
+	if epoch >= params.BeaconConfig().CapellaForkEpoch {
+		s.subscribe(
+			p2p.BlockAndBlobsSubnetTopicFormat,
+			s.validateBeaconBlockAndBlobsPubSub,
+			s.beaconBlockAndBlobsSubscriber,
+			digest,
+		)
+	}
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
