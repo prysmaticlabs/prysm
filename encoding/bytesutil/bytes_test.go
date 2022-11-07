@@ -54,14 +54,6 @@ func TestToBytes(t *testing.T) {
 	}
 }
 
-func TestToBytes20(t *testing.T) {
-	arg := []byte{3, 4}
-	expected := [20]byte{}
-	expected[0] = 3
-	expected[1] = 4
-	require.DeepEqual(t, expected, bytesutil.ToBytes20(arg))
-}
-
 func TestBytes1(t *testing.T) {
 	tests := []struct {
 		a uint64
