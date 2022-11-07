@@ -189,7 +189,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
 func ProposeExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	nodeClient ethpb.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
@@ -291,7 +291,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 // Sign voluntary exit with proposer domain and private key.
 func signVoluntaryExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
