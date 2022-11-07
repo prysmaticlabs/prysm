@@ -1,5 +1,7 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 
+# Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
+# keep
 go_library(
     name = "go_default_library",
     srcs = ["beacon_api_validator_client.go"],
