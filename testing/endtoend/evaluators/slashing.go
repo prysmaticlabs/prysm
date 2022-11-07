@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2eTypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -108,7 +109,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 
 func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := eth.NewBeaconNodeValidatorClient(conn)
+	valClient := validatorClientFactory.NewValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
@@ -185,7 +186,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		}
 		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 		// Only broadcasting the attestation to one node also helps test slashing propagation.
-		client := eth.NewBeaconNodeValidatorClient(conns[0])
+		client := validatorClientFactory.NewValidatorClient(conns[0])
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
@@ -196,7 +197,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 
 func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := eth.NewBeaconNodeValidatorClient(conn)
+	valClient := validatorClientFactory.NewValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
@@ -238,7 +239,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	// If the proposer index is in the second validator client, we connect to
 	// the corresponding beacon node instead.
 	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
-		valClient = eth.NewBeaconNodeValidatorClient(conns[1])
+		valClient = validatorClientFactory.NewValidatorClient(conns[1])
 	}
 
 	hashLen := 32
