@@ -133,9 +133,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 	})
 	t.Run("one fully withdrawable", func(t *testing.T) {
 		s := BeaconState{
-			version:    version.Capella,
-			validators: make([]*ethpb.Validator, 100),
-			balances:   make([]uint64, 100),
+			version:                      version.Capella,
+			validators:                   make([]*ethpb.Validator, 100),
+			balances:                     make([]uint64, 100),
+			lastWithdrawalValidatorIndex: 20,
 		}
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
