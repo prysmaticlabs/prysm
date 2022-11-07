@@ -53,6 +53,8 @@ var (
 	bellatrixKey      = []byte("merge")
 	bellatrixBlindKey = []byte("blind-bellatrix")
 	capellaKey        = []byte("capella")
+	capellaBlindKey   = []byte("blind-capella")
+
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originCheckpointBlockRootKey = []byte("origin-checkpoint-block-root")
 	// block root tracking the progress of backfill, or pointing at genesis if backfill has not been initiated
