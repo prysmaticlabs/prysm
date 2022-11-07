@@ -1,0 +1,15 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+# Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
+# keep
+go_library(
+    name = "go_default_library",
+    srcs = ["beacon_api_validator_client.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api",
+    visibility = ["//validator:__subpackages__"],
+    deps = [
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//validator/client/iface:go_default_library",
+        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+    ],
+)

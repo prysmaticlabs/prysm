@@ -19,6 +19,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -59,7 +60,7 @@ type Server struct {
 	streamLogsBufferSize      int
 	beaconChainClient         ethpb.BeaconChainClient
 	beaconNodeClient          ethpb.NodeClient
-	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
+	beaconNodeValidatorClient iface.ValidatorClient
 	beaconNodeHealthClient    ethpb.HealthClient
 	valDB                     db.Database
 	ctx                       context.Context

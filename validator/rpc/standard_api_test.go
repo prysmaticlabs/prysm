@@ -770,7 +770,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+			mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 			m := &mock.MockValidator{}
 			m.SetProposerSettings(tt.args)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -793,7 +793,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	beaconClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	beaconClient := mock2.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	wantAddress := "0x055Fb65722e7b2455012Bfebf6177f1d2e9738d7"
@@ -1024,7 +1024,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	beaconClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	beaconClient := mock2.NewMockValidatorClient(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
 	pubkey2, err2 := hexutil.Decode("0xbedefeaa94e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2cdddddddddddddddddddddddd")

@@ -36,7 +36,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		client := mock.NewMockValidatorClient(ctrl)
 		beaconClient := mock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
@@ -75,7 +75,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		client := mock.NewMockValidatorClient(ctrl)
 		beaconClient := mock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
@@ -111,7 +111,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				inactivePubKey: inactivePrivKey,
 			},
 		}
-		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		client := mock.NewMockValidatorClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
