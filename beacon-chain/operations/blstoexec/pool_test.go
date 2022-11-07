@@ -1,4 +1,4 @@
-package blstoexecchanges
+package blstoexec
 
 import (
 	"sync"
