@@ -289,7 +289,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 	conn := validatorHelpers.NewNodeConnection(
 		grpcConn,
 		fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+i),
-		time.Second*60,
+		time.Second*30,
 	)
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
@@ -339,8 +339,8 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 
 	conn := validatorHelpers.NewNodeConnection(
 		grpcConn,
-		fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+index),
-		time.Second*60,
+		fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+index),
+		time.Second*30,
 	)
 
 	conns = append(conns, conn)
@@ -581,7 +581,6 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []vali
 // 1) In the first scenario we will be taking a single prysm node and its validator offline.
 // Along with that we will also take a single lighthouse node and its validator offline.
 // After 1 epoch we will then attempt to bring it online again.
-//
 //
 // 2) Then we will start testing optimistic sync by engaging our engine proxy.
 // After the proxy has been sending `SYNCING` responses to the beacon node, we

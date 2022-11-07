@@ -253,8 +253,8 @@ func NewLocalConnection(ctx context.Context, grpcPort int, beaconApiPort int) (v
 
 	conn := validatorHelpers.NewNodeConnection(
 		grpcConn,
-		fmt.Sprintf("127.0.0.1:%d", beaconApiPort),
-		time.Second*60,
+		fmt.Sprintf("http://127.0.0.1:%d", beaconApiPort),
+		time.Second*30,
 	)
 
 	return conn, nil

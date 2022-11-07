@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -95,7 +97,7 @@ func WithBeaconRPCProvider(provider string) Option {
 func WithBeaconRESTApiProvider(beaconApiEndpoint string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.beaconApiEndpoint = beaconApiEndpoint
-		acc.beaconApiTimeout = 30
+		acc.beaconApiTimeout = time.Second * 30
 		return nil
 	}
 }
