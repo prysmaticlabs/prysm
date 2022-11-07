@@ -223,7 +223,6 @@ func TestExpectedWithdrawals(t *testing.T) {
 		}
 		require.DeepEqual(t, withdrawalPartial, expected[0])
 		require.DeepEqual(t, withdrawalFull, expected[1])
-
 	})
 	t.Run("all partially withdrawable", func(t *testing.T) {
 		s := BeaconState{
@@ -306,5 +305,4 @@ func TestExpectedWithdrawals(t *testing.T) {
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
-
 }

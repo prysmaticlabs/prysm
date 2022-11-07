@@ -36,37 +36,6 @@ func (b *BeaconState) LastWithdrawalValidatorIndex() (types.ValidatorIndex, erro
 	return b.lastWithdrawalValidatorIndex, nil
 }
 
-// hasETH1WithdrawalCredential returns whether the validator has an ETH1
-// Withdrawal prefix. It assumes that the caller has a lock on the state
-func hasETH1WithdrawalCredential(val *ethpb.Validator) bool {
-	if val == nil {
-		return false
-	}
-	cred := val.WithdrawalCredentials
-	return len(cred) > 0 && cred[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-}
-
-// isFullyWithdrawableValidator returns whether the validator is able to perform a full
-// withdrawal. This differ from the spec helper in that the balance > 0 is not
-// checked. This function assumes that the caller holds a lock on the state
-func isFullyWithdrawableValidator(val *ethpb.Validator, epoch types.Epoch) bool {
-	if val == nil {
-		return false
-	}
-	return hasETH1WithdrawalCredential(val) && val.WithdrawableEpoch <= epoch
-}
-
-// isPartiallyWithdrawable returns whether the validator is able to perform a
-// partial withdrawal. This function assumes that the caller has a lock on the state
-func isPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64) bool {
-	if val == nil {
-		return false
-	}
-	hasMaxBalance := val.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
-	hasExcessBalance := balance > params.BeaconConfig().MaxEffectiveBalance
-	return hasETH1WithdrawalCredential(val) && hasExcessBalance && hasMaxBalance
-}
-
 // ExpectedWithdrawals returns the withdrawals that a proposer will need to pack in the next block
 // applied to the current state. It is also used by validators to check that the execution payload carried
 // the right number of withdrawals
@@ -111,4 +80,35 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 		}
 	}
 	return withdrawals, nil
+}
+
+// hasETH1WithdrawalCredential returns whether the validator has an ETH1
+// Withdrawal prefix. It assumes that the caller has a lock on the state
+func hasETH1WithdrawalCredential(val *ethpb.Validator) bool {
+	if val == nil {
+		return false
+	}
+	cred := val.WithdrawalCredentials
+	return len(cred) > 0 && cred[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+}
+
+// isFullyWithdrawableValidator returns whether the validator is able to perform a full
+// withdrawal. This differ from the spec helper in that the balance > 0 is not
+// checked. This function assumes that the caller holds a lock on the state
+func isFullyWithdrawableValidator(val *ethpb.Validator, epoch types.Epoch) bool {
+	if val == nil {
+		return false
+	}
+	return hasETH1WithdrawalCredential(val) && val.WithdrawableEpoch <= epoch
+}
+
+// isPartiallyWithdrawable returns whether the validator is able to perform a
+// partial withdrawal. This function assumes that the caller has a lock on the state
+func isPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64) bool {
+	if val == nil {
+		return false
+	}
+	hasMaxBalance := val.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+	hasExcessBalance := balance > params.BeaconConfig().MaxEffectiveBalance
+	return hasETH1WithdrawalCredential(val) && hasExcessBalance && hasMaxBalance
 }
