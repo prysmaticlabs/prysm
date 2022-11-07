@@ -24,6 +24,7 @@ func (n *InnerNode) IsFull() bool {
 
 // Finalize marks deposits of the Merkle tree as finalized.
 func (n *InnerNode) Finalize(deposits uint64, depth uint64) (MerkleTreeNode, error) {
+	var err error
 	depositsNum := math.PowerOf2(depth)
 	if depositsNum <= deposits {
 		return &FinalizedNode{
@@ -31,10 +32,16 @@ func (n *InnerNode) Finalize(deposits uint64, depth uint64) (MerkleTreeNode, err
 			hash:     n.GetRoot(),
 		}, nil
 	}
-	n.left, _ = n.left.Finalize(deposits, depth-1)
+	n.left, err = n.left.Finalize(deposits, depth-1)
+	if err != nil {
+		return n, err
+	}
 	if deposits > depositsNum/2 {
 		remaining := deposits - depositsNum/2
-		n.right, _ = n.right.Finalize(remaining, depth-1)
+		n.right, err = n.right.Finalize(remaining, depth-1)
+		if err != nil {
+			return n, err
+		}
 	}
 	return n, nil
 }
