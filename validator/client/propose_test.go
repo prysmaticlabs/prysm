@@ -28,12 +28,11 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type mocks struct {
-	validatorClient *mock.MockBeaconNodeValidatorClient
+	validatorClient *mock.MockValidatorClient
 	nodeClient      *mock.MockNodeClient
 	slasherClient   *mock.MockSlasherClient
 	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
@@ -72,7 +71,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
 		slasherClient:   mock.NewMockSlasherClient(ctrl),
 		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
@@ -582,7 +581,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			m.validatorClient.EXPECT().GetBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
-			).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest, arg2 ...grpc.CallOption) (*ethpb.GenericBeaconBlock, error) {
+			).DoAndReturn(func(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 				assert.DeepEqual(t, graffiti, req.Graffiti, "Unexpected graffiti in request")
 
 				return tt.block, nil
@@ -599,7 +598,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
-			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
+			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
@@ -912,7 +911,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 func TestGetGraffiti_Ok(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockValidatorClient(ctrl),
 	}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 	tests := []struct {
@@ -995,7 +994,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
+		validatorClient: mock.NewMockValidatorClient(ctrl),
 	}
 	m.validatorClient.EXPECT().
 		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
