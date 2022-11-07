@@ -91,6 +91,8 @@ type Server struct {
 	validatorMonitoringPort   int
 	validatorGatewayHost      string
 	validatorGatewayPort      int
+	beaconApiEndpoint         string
+	beaconApiTimeout          time.Duration
 }
 
 // NewServer instantiates a new gRPC server.

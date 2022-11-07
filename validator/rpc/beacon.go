@@ -15,6 +15,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -39,16 +40,23 @@ func (s *Server) registerBeaconClient() error {
 
 	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
 
-	conn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
 	if err != nil {
 		return errors.Wrapf(err, "could not dial endpoint: %s", s.beaconClientEndpoint)
 	}
 	if s.clientWithCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.beaconChainClient = ethpb.NewBeaconChainClient(conn)
-	s.beaconNodeClient = ethpb.NewNodeClient(conn)
-	s.beaconNodeHealthClient = ethpb.NewHealthClient(conn)
+	s.beaconChainClient = ethpb.NewBeaconChainClient(grpcConn)
+	s.beaconNodeClient = ethpb.NewNodeClient(grpcConn)
+	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)
+
+	conn := validatorHelpers.NewNodeConnection(
+		grpcConn,
+		s.beaconApiEndpoint,
+		s.beaconApiTimeout,
+	)
+
 	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 	return nil
 }

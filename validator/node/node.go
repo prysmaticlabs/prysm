@@ -430,6 +430,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
+		BeaconApiTimeout:           30,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")

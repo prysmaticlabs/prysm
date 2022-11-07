@@ -21,8 +21,8 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"golang.org/x/exp/rand"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -93,9 +93,9 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 	Evaluation: validatorsVoteWithTheMajority,
 }
 
-func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
+func processesDepositsInBlocks(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
@@ -139,9 +139,9 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
+func verifyGraffitiInBlocks(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
@@ -173,9 +173,9 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
+func activatesDepositedValidators(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
@@ -232,9 +232,9 @@ func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
+func depositedValidatorsAreActive(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
 		PageToken: "1",
@@ -282,10 +282,10 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
+func proposeVoluntaryExit(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
 	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := ethpb.NewBeaconChainClient(conn)
+	beaconClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -329,9 +329,9 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorIsExited(conns ...*grpc.ClientConn) error {
+func validatorIsExited(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	validatorRequest := &ethpb.GetValidatorRequest{
 		QueryFilter: &ethpb.GetValidatorRequest_Index{
 			Index: exitedIndex,
@@ -347,9 +347,9 @@ func validatorIsExited(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
+func validatorsVoteWithTheMajority(conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn)
+	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
