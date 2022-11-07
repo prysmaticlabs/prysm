@@ -20,7 +20,6 @@ const KeystorePassword = "password"
 const minerPasswordFile = "password.txt"
 const minerFile = "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
 const timeGapPerTX = 100 * time.Millisecond
-const staticFilesPath = "/testing/endtoend/static-files/eth1"
 const timeGapPerMiningTX = 250 * time.Millisecond
 
 var _ e2etypes.ComponentRunner = (*NodeSet)(nil)
@@ -31,8 +30,8 @@ var _ e2etypes.ComponentRunner = (*Node)(nil)
 var _ e2etypes.EngineProxy = (*Proxy)(nil)
 
 // WaitForBlocks waits for a certain amount of blocks to be mined by the ETH1 chain before returning.
-func WaitForBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToWait uint64) error {
-	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
+func WaitForBlocks(web3 *ethclient.Client, key *keystore.Key, blocksToWait uint64) error {
+	nonce, err := web3.PendingNonceAt(context.Background(), key.Address)
 	if err != nil {
 		return err
 	}
@@ -47,8 +46,8 @@ func WaitForBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToWait 
 	finishBlock := block.NumberU64() + blocksToWait
 
 	for block.NumberU64() <= finishBlock {
-		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
-		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), keystore.PrivateKey)
+		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
+		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), key.PrivateKey)
 		if err != nil {
 			return err
 		}
