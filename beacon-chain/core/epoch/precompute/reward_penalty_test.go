@@ -358,10 +358,11 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 // individual validator's base reward quotient.
 //
 // Spec pseudocode definition:
-//  def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
-//    total_balance = get_total_active_balance(state)
-//    effective_balance = state.validators[index].effective_balance
-//    return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
+//
+//	def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
+//	  total_balance = get_total_active_balance(state)
+//	  effective_balance = state.validators[index].effective_balance
+//	  return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
 func baseReward(state state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {

@@ -32,18 +32,19 @@ import (
 // See: ExecuteStateTransitionNoVerifyAnySig
 //
 // Spec pseudocode definition:
-//  def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
-//    block = signed_block.message
-//    # Process slots (including those with no blocks) since block
-//    process_slots(state, block.slot)
-//    # Verify signature
-//    if validate_result:
-//        assert verify_block_signature(state, signed_block)
-//    # Process block
-//    process_block(state, block)
-//    # Verify state root
-//    if validate_result:
-//        assert block.state_root == hash_tree_root(state)
+//
+//	def state_transition(state: BeaconState, signed_block: SignedBeaconBlock, validate_result: bool=True) -> None:
+//	  block = signed_block.message
+//	  # Process slots (including those with no blocks) since block
+//	  process_slots(state, block.slot)
+//	  # Verify signature
+//	  if validate_result:
+//	      assert verify_block_signature(state, signed_block)
+//	  # Process block
+//	  process_block(state, block)
+//	  # Verify state root
+//	  if validate_result:
+//	      assert block.state_root == hash_tree_root(state)
 func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
@@ -79,16 +80,16 @@ func ExecuteStateTransition(
 // It happens regardless if there's an incoming block or not.
 // Spec pseudocode definition:
 //
-//  def process_slot(state: BeaconState) -> None:
-//    # Cache state root
-//    previous_state_root = hash_tree_root(state)
-//    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
-//    # Cache latest block header state root
-//    if state.latest_block_header.state_root == Bytes32():
-//        state.latest_block_header.state_root = previous_state_root
-//    # Cache block root
-//    previous_block_root = hash_tree_root(state.latest_block_header)
-//    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
+//	def process_slot(state: BeaconState) -> None:
+//	  # Cache state root
+//	  previous_state_root = hash_tree_root(state)
+//	  state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
+//	  # Cache latest block header state root
+//	  if state.latest_block_header.state_root == Bytes32():
+//	      state.latest_block_header.state_root = previous_state_root
+//	  # Cache block root
+//	  previous_block_root = hash_tree_root(state.latest_block_header)
+//	  state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
@@ -176,14 +177,15 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 // ProcessSlots process through skip slots and apply epoch transition when it's needed
 //
 // Spec pseudocode definition:
-//  def process_slots(state: BeaconState, slot: Slot) -> None:
-//    assert state.slot < slot
-//    while state.slot < slot:
-//        process_slot(state)
-//        # Process epoch on the start slot of the next epoch
-//        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-//            process_epoch(state)
-//        state.slot = Slot(state.slot + 1)
+//
+//	def process_slots(state: BeaconState, slot: Slot) -> None:
+//	  assert state.slot < slot
+//	  while state.slot < slot:
+//	      process_slot(state)
+//	      # Process epoch on the start slot of the next epoch
+//	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+//	          process_epoch(state)
+//	      state.slot = Slot(state.slot + 1)
 func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
