@@ -103,7 +103,8 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalBlockHashActivationEpoch = 72
 	config.TerminalTotalDifficulty = "73"
 	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
-	config.MaxBlsToExecutionChanges = 74
+	config.MaxWithdrawalsPerPayload = 74
+	config.MaxBlsToExecutionChanges = 75
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -356,6 +357,8 @@ func TestGetSpec(t *testing.T) {
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
 		case "MAX_BLS_TO_EXECUTION_CHANGES":
+			assert.Equal(t, "75", v)
+		case "MAX_WITHDRAWALS_PER_PAYLOAD":
 			assert.Equal(t, "74", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:

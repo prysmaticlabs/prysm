@@ -154,6 +154,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxAttestations:          128,
 	MaxDeposits:              16,
 	MaxVoluntaryExits:        16,
+	MaxWithdrawalsPerPayload: 16,
 	MaxBlsToExecutionChanges: 16,
 
 	// BLS domain values.
