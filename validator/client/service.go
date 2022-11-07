@@ -22,6 +22,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"github.com/prysmaticlabs/prysm/v3/validator/db"
 	"github.com/prysmaticlabs/prysm/v3/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -179,7 +180,7 @@ func (v *ValidatorService) Start() {
 
 	valStruct := &validator{
 		db:                             v.db,
-		validatorClient:                ethpb.NewBeaconNodeValidatorClient(v.conn),
+		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn),
 		beaconClient:                   ethpb.NewBeaconChainClient(v.conn),
 		slashingProtectionClient:       ethpb.NewSlasherClient(v.conn),
 		node:                           ethpb.NewNodeClient(v.conn),

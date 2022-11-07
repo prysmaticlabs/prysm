@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -283,7 +284,7 @@ func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
 
 func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := ethpb.NewBeaconNodeValidatorClient(conn)
+	valClient := validatorClientFactory.NewValidatorClient(conn)
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
