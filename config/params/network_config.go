@@ -33,6 +33,7 @@ type NetworkConfig struct {
 	BootstrapNodes          []string // BootstrapNodes are the addresses of the bootnodes.
 
 	// Blobs config
+	MaxRequestBlobsSidecars          uint64      `yaml:"MAX_REQUEST_BLOBS_SIDECARS"`             // MaxRequestBlobsSidecars is the maximum number of blobs sidecars in a single request.
 	MinEpochsForBlobsSidecarsRequest types.Epoch `yaml:"MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS"` // MinEpochsForBlobsSidecarsRequest is the minimum epoch range over which a node must serve blobs sidecars.
 }
 

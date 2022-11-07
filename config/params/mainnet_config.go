@@ -65,6 +65,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 		"enr:-LK4QKWrXTpV9T78hNG6s8AM6IO4XH9kFT91uZtFg1GcsJ6dKovDOr1jtAAFPnS2lvNltkOGA9k29BUN7lFh_sjuc9QBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC1MD8qAAAAAP__________gmlkgnY0gmlwhANAdd-Jc2VjcDI1NmsxoQLQa6ai7y9PMN5hpLe5HmiJSlYzMuzP7ZhwRiwHvqNXdoN0Y3CCI4yDdWRwgiOM",
 	},
 	MinEpochsForBlobsSidecarsRequest: types.Epoch(2 << 12), // 4096 epochs, 18 days
+	MaxRequestBlobsSidecars:          2 << 7,               // 128
 }
 
 var mainnetBeaconConfig = &BeaconChainConfig{

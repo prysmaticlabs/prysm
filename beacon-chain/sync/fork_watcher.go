@@ -69,6 +69,16 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 				return nil
 			}
 			s.registerSubscribers(nextEpoch, digest)
+		case params.BeaconConfig().CapellaForkEpoch:
+			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve fork digest")
+			}
+			if s.subHandler.digestExists(digest) {
+				return nil
+			}
+			s.registerSubscribers(nextEpoch, digest)
+			s.registerRPCHandlersCapella()
 		}
 	}
 	return nil

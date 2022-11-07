@@ -122,6 +122,7 @@ ssz_gen_marshal(
         "BuilderBid",
         "BlobsAndCommitments",
         "PolynomialAndCommitment",
+        "BlobsSidecar",
     ],
 )
 
