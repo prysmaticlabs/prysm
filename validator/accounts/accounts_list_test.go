@@ -608,7 +608,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	m := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	m := mock.NewMockValidatorClient(ctrl)
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
 	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
