@@ -3,6 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -61,10 +63,10 @@ var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evalua
 
 var slashedIndices []uint64
 
-func validatorsSlashed(conns ...validatorHelpers.NodeConnection) error {
+func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+	client := eth.NewBeaconChainClient(conn)
 	req := &eth.GetValidatorActiveSetChangesRequest{}
 	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
 	if err != nil {
@@ -76,10 +78,10 @@ func validatorsSlashed(conns ...validatorHelpers.NodeConnection) error {
 	return nil
 }
 
-func validatorsLoseBalance(conns ...validatorHelpers.NodeConnection) error {
+func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+	client := eth.NewBeaconChainClient(conn)
 
 	for i, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
@@ -107,10 +109,12 @@ func validatorsLoseBalance(conns ...validatorHelpers.NodeConnection) error {
 	return nil
 }
 
-func insertDoubleAttestationIntoPool(conns ...validatorHelpers.NodeConnection) error {
+// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
+func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	valClient := validatorClientFactory.NewValidatorClient(validatorConn)
+	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -186,7 +190,7 @@ func insertDoubleAttestationIntoPool(conns ...validatorHelpers.NodeConnection) e
 		}
 		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 		// Only broadcasting the attestation to one node also helps test slashing propagation.
-		client := validatorClientFactory.NewValidatorClient(conns[0])
+		client := validatorClientFactory.NewValidatorClient(validatorConn)
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
@@ -195,10 +199,12 @@ func insertDoubleAttestationIntoPool(conns ...validatorHelpers.NodeConnection) e
 	return nil
 }
 
-func proposeDoubleBlock(conns ...validatorHelpers.NodeConnection) error {
+// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
+func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	valClient := validatorClientFactory.NewValidatorClient(conn)
-	beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	valClient := validatorClientFactory.NewValidatorClient(validatorConn)
+	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
@@ -239,7 +245,8 @@ func proposeDoubleBlock(conns ...validatorHelpers.NodeConnection) error {
 	// If the proposer index is in the second validator client, we connect to
 	// the corresponding beacon node instead.
 	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
-		valClient = validatorClientFactory.NewValidatorClient(conns[1])
+		validatorConn1 := validatorHelpers.NewNodeConnection(conns[1], "http://127.0.0.1:3500", 30*time.Second)
+		valClient = validatorClientFactory.NewValidatorClient(validatorConn1)
 	}
 
 	hashLen := 32

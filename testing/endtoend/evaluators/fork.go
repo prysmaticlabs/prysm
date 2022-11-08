@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 )
 
 var streamDeadline = 1 * time.Minute
@@ -31,9 +32,11 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-func altairForkOccurs(conns ...validatorHelpers.NodeConnection) error {
+// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
+func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := validatorClientFactory.NewValidatorClient(conn)
+	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	client := validatorClientFactory.NewValidatorClient(validatorConn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
@@ -73,9 +76,11 @@ func altairForkOccurs(conns ...validatorHelpers.NodeConnection) error {
 	return nil
 }
 
-func bellatrixForkOccurs(conns ...validatorHelpers.NodeConnection) error {
+// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
+func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := validatorClientFactory.NewValidatorClient(conn)
+	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	client := validatorClientFactory.NewValidatorClient(validatorConn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})

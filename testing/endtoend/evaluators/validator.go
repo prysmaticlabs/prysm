@@ -17,9 +17,9 @@ import (
 	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -53,9 +53,9 @@ var ValidatorSyncParticipation = types.Evaluator{
 	Evaluation: validatorsSyncParticipation,
 }
 
-func validatorsAreActive(conns ...validatorHelpers.NodeConnection) error {
+func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
+	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
 	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
@@ -106,10 +106,10 @@ func validatorsAreActive(conns ...validatorHelpers.NodeConnection) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(conns ...validatorHelpers.NodeConnection) error {
+func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
-	debugClient := ethpbservice.NewBeaconDebugClient(conn.GetGrpcClientConn())
+	client := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpbservice.NewBeaconDebugClient(conn)
 	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -167,10 +167,10 @@ func validatorsParticipating(conns ...validatorHelpers.NodeConnection) error {
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
 // sync committee assignments.
-func validatorsSyncParticipation(conns ...validatorHelpers.NodeConnection) error {
+func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := ethpb.NewNodeClient(conn.GetGrpcClientConn())
-	altairClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
+	client := ethpb.NewNodeClient(conn)
+	altairClient := ethpb.NewBeaconChainClient(conn)
 	genesis, err := client.GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get genesis data")
