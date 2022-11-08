@@ -108,7 +108,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	}
 	if len(withdrawals) > 0 {
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
-			return nil, errors.Wrap(err, "could not set withdrawal index")
+			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
 		if err := st.SetLastWithdrawalValidatorIndex(withdrawals[len(withdrawals)-1].ValidatorIndex); err != nil {
 			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")

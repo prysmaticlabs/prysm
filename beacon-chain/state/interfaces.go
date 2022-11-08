@@ -18,6 +18,7 @@ import (
 type BeaconState interface {
 	SpecParametersProvider
 	ReadOnlyBeaconState
+	ReadOnlyWithdrawals
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
