@@ -469,7 +469,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				LastWithdrawalValidatorIndex: 4,
 				FullWithdrawalIndices:        []types.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
-					fullWithdrawal(7, 22), fullWithdrawal(19, 23), partialWithdrawal(27, 24),
+					fullWithdrawal(7, 22), fullWithdrawal(19, 23), partialWithdrawal(28, 24),
 					fullWithdrawal(1, 25),
 				},
 			},
