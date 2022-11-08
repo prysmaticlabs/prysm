@@ -95,7 +95,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
 			return nil, errInvalidValidatorIndex
 		}
-		if bytes.Compare(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) != 0 {
+		if !bytes.Equal(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) {
 			return nil, errInvalidExecutionAddress
 		}
 		if withdrawal.Amount != expected[i].Amount {
