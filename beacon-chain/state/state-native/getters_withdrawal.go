@@ -3,6 +3,7 @@ package state_native
 import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -62,7 +63,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				WithdrawalIndex:  withdrawalIndex,
 				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: val.WithdrawalCredentials[ETH1AddressOffset:],
+				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
 				Amount:           balance,
 			})
 			withdrawalIndex++
@@ -70,7 +71,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				WithdrawalIndex:  withdrawalIndex,
 				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: val.WithdrawalCredentials[ETH1AddressOffset:],
+				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
 				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
