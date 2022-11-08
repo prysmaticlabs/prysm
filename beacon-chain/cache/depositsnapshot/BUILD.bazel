@@ -21,7 +21,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["merkle_tree_node_test.go"],
+    srcs = [
+        "deposit_tree_test.go",
+        "merkle_tree_node_test.go",
+    ],
     embed = [":go_default_library"],
     deps = ["//testing/assert:go_default_library"],
 )
