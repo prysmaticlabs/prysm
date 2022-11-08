@@ -493,7 +493,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 		{
 			Args: args{
-				Name:                         "failure validator not withdrawable",
+				Name:                         "failure validator not partially withdrawable",
 				NextWithdrawalIndex:          22,
 				LastWithdrawalValidatorIndex: 4,
 				PartialWithdrawalIndices:     []types.ValidatorIndex{notPartiallyWithdrawable},
