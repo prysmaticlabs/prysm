@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"reflect"
 	"strconv"
 	"strings"
+
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -21,6 +22,126 @@ import (
 	"google.golang.org/grpc"
 )
 
+type metadata struct {
+	basepath         string
+	params           func(encoding string, currentEpoch types.Epoch) []string
+	prysmResps       map[string]interface{}
+	lighthouseResps  map[string]interface{}
+	customEvaluation func(interface{}, interface{}) error
+}
+
+var beaconPathsAndObjects = map[string]metadata{
+	"/beacon/genesis": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"skip"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.GenesisResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.GenesisResponseJson{},
+		},
+	},
+	"/beacon/states/{param1}/root": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.StateRootResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.StateRootResponseJson{},
+		},
+	},
+	"/beacon/states/{param1}/finality_checkpoints": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
+		},
+	},
+	"/beacon/blocks/{param1}": {
+		basepath: v2MiddlewarePathTemplate,
+		params: func(t string, e types.Epoch) []string {
+			if t == "ssz" {
+				var check string
+				if e < 4 {
+					check = "genesis"
+				} else {
+					check = "finalized"
+				}
+				return []string{check}
+			} else {
+				return []string{"head"}
+			}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.BlockResponseJson{},
+			"ssz":  []byte{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.BlockResponseJson{},
+			"ssz":  []byte{},
+		},
+	},
+	"/beacon/states/{param1}/fork": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"finalized"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.StateForkResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.StateForkResponseJson{},
+		},
+	},
+	"/debug/beacon/states/{param1}": {
+		basepath: v2MiddlewarePathTemplate,
+		params: func(_ string, e types.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.BeaconStateV2ResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.BeaconStateV2ResponseJson{},
+		},
+	},
+	"/validator/duties/proposer/{param1}": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, e types.Epoch) []string {
+			return []string{fmt.Sprintf("%v", e)}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.ProposerDutiesResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.ProposerDutiesResponseJson{},
+		},
+		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
+			castedp, ok := prysmResp.(*apimiddleware.ProposerDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			castedl, ok := lhouseResp.(*apimiddleware.ProposerDutiesResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			// remove the first item from lighthouse data as it's from slot 0
+			castedl.Data = castedl.Data[1:]
+			return compareResponseObjects(castedp, castedl)
+		},
+	},
+}
+
 func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
@@ -29,110 +150,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return errors.Wrap(err, "error getting genesis data")
 	}
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
-	type metadata struct {
-		basepath        string
-		params          func(encoding string, currentEpoch types.Epoch) []string
-		prysmResps      map[string]interface{}
-		lighthouseResps map[string]interface{}
-	}
-	beaconPathsAndObjects := map[string]metadata{
-		"/beacon/genesis": {
-			basepath: v1MiddlewarePathTemplate,
-			params: func(_ string, _ types.Epoch) []string {
-				return []string{"skip"}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.GenesisResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.GenesisResponseJson{},
-			},
-		},
-		"/beacon/states/{param1}/root": {
-			basepath: v1MiddlewarePathTemplate,
-			params: func(_ string, _ types.Epoch) []string {
-				return []string{"head"}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.StateRootResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.StateRootResponseJson{},
-			},
-		},
-		"/beacon/states/{param1}/finality_checkpoints": {
-			basepath: v1MiddlewarePathTemplate,
-			params: func(_ string, _ types.Epoch) []string {
-				return []string{"head"}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
-			},
-		},
-		"/beacon/blocks/{param1}": {
-			basepath: v2MiddlewarePathTemplate,
-			params: func(t string, e types.Epoch) []string {
-				if t == "ssz" {
-					var check string
-					if e < 4 {
-						check = "genesis"
-					} else {
-						check = "finalized"
-					}
-					return []string{check}
-				} else {
-					return []string{"head"}
-				}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.BlockResponseJson{},
-				"ssz":  []byte{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.BlockResponseJson{},
-				"ssz":  []byte{},
-			},
-		},
-		"/beacon/states/{param1}/fork": {
-			basepath: v1MiddlewarePathTemplate,
-			params: func(_ string, _ types.Epoch) []string {
-				return []string{"finalized"}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.StateForkResponseJson{},
-			},
-		},
-		"/debug/beacon/states/{param1}": {
-			basepath: v2MiddlewarePathTemplate,
-			params: func(_ string, e types.Epoch) []string {
-				return []string{"head"}
-			},
-			prysmResps: map[string]interface{}{
-				"json": &apimiddleware.BeaconStateV2ResponseJson{},
-			},
-			lighthouseResps: map[string]interface{}{
-				"json": &apimiddleware.BeaconStateV2ResponseJson{},
-			},
-		},
-		//"/validator/duties/proposer/{param1}": {
-		//	basepath: v1MiddlewarePathTemplate,
-		//	params: func(_ string, e types.Epoch) []string {
-		//		return []string{fmt.Sprintf("%v", e)}
-		//	},
-		//	prysmResps: map[string]interface{}{
-		//		"json": &apimiddleware.ProposerDutiesResponseJson{},
-		//	},
-		//	lighthouseResps: map[string]interface{}{
-		//		"json": &apimiddleware.ProposerDutiesResponseJson{},
-		//	},
-		//},
-	}
+
 	for path, meta := range beaconPathsAndObjects {
 		for key, _ := range meta.prysmResps {
 			switch key {
@@ -143,7 +161,13 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				}
 				apipath := pathFromParams(path, params)
 				fmt.Printf("json api path: %s", apipath)
-				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, beaconPathsAndObjects[path].prysmResps[key], beaconPathsAndObjects[path].lighthouseResps[key]); err != nil {
+				if err := compareJSONMulticlient(beaconNodeIdx,
+					meta.basepath,
+					apipath,
+					beaconPathsAndObjects[path].prysmResps[key],
+					beaconPathsAndObjects[path].lighthouseResps[key],
+					meta.customEvaluation,
+				); err != nil {
 					return err
 				}
 				fmt.Printf("prysm ob: %v/n", beaconPathsAndObjects[path].prysmResps[key])
@@ -243,7 +267,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	return nil
 }
 
-func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSONPrysm interface{}, respJSONLighthouse interface{}) error {
+func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSONPrysm interface{}, respJSONLighthouse interface{}, customEvaluator func(interface{}, interface{}) error) error {
 	if err := doMiddlewareJSONGetRequest(
 		base,
 		path,
@@ -262,20 +286,11 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSO
 	); err != nil {
 		return errors.Wrap(err, "lighthouse json error")
 	}
-	if !reflect.DeepEqual(respJSONPrysm, respJSONLighthouse) {
-		p, err := json.Marshal(respJSONPrysm)
-		if err != nil {
-			return errors.Wrap(err, "prysm json")
-		}
-		l, err := json.Marshal(respJSONLighthouse)
-		if err != nil {
-			return errors.Wrap(err, "lighthouse json")
-		}
-		return fmt.Errorf("prysm response %s does not match lighthouse response %s",
-			string(p),
-			string(l))
+	if customEvaluator != nil {
+		return customEvaluator(respJSONPrysm, respJSONLighthouse)
+	} else {
+		return compareResponseObjects(respJSONPrysm, respJSONLighthouse)
 	}
-	return nil
 }
 
 func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte, []byte, error) {
@@ -305,6 +320,23 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 	fmt.Printf("prysm ssz: %v", sszrspP)
 	fmt.Printf("lighthouse ssz: %v", sszrspL)
 	return sszrspP, sszrspL, nil
+}
+
+func compareResponseObjects(prysmResp interface{}, lighthouseResp interface{}) error {
+	if !reflect.DeepEqual(prysmResp, lighthouseResp) {
+		p, err := json.Marshal(prysmResp)
+		if err != nil {
+			return errors.Wrap(err, "prysm json")
+		}
+		l, err := json.Marshal(lighthouseResp)
+		if err != nil {
+			return errors.Wrap(err, "lighthouse json")
+		}
+		return fmt.Errorf("prysm response %s does not match lighthouse response %s",
+			string(p),
+			string(l))
+	}
+	return nil
 }
 
 func pathFromParams(path string, params []string) string {
