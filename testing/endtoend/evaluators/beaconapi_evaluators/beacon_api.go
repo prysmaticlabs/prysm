@@ -135,8 +135,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			if !ok {
 				return errors.New("failed to cast type")
 			}
-			// remove the first item from lighthouse data as it's from slot 0
-			castedl.Data = castedl.Data[1:]
+			if castedl.Data[0].Slot == "0" {
+				// remove the first item from lighthouse data as it's from slot 0
+				castedl.Data = castedl.Data[1:]
+			}
 			return compareResponseObjects(castedp, castedl)
 		},
 	},
