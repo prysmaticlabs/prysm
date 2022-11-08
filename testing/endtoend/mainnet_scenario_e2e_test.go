@@ -17,9 +17,6 @@ import (
 //	runner.scenarioRunner()
 //}
 
-func TestEndToEnd_MultiScenarioRun_Multiclient_CrossClient(t *testing.T) {
-	runner := e2eMainnet(t, false /*usePrysmSh*/, true /*useMultiClient*/, types.WithEpochs(22), types.WithValidatorCrossClient())
-	runner.config.Evaluators = scenarioEvalsMulti()
-	runner.config.EvalInterceptor = runner.multiScenarioMulticlient
-	runner.scenarioRunner()
+func TestEndToEnd_MainnetConfig_Multiclient_CrossClient(t *testing.T) {
+	e2eMainnet(t, false /*usePrysmSh*/, true /*useMultiClient*/, types.WithEpochs(22), types.WithValidatorCrossClient()).run()
 }

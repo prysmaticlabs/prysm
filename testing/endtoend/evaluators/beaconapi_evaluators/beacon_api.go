@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,8 +21,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-// GET "/eth/v1/beacon/blocks/{block_id}"
-// GET "/eth/v1/beacon/blocks/{block_id}/root"
 func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	beaconClient := service.NewBeaconChainClient(conn)
@@ -32,14 +31,62 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
 	type metadata struct {
 		basepath        string
-		params          []string
+		params          func(encoding string, currentEpoch types.Epoch) []string
 		prysmResps      map[string]interface{}
 		lighthouseResps map[string]interface{}
 	}
 	beaconPathsAndObjects := map[string]metadata{
+		"/beacon/genesis": {
+			basepath: v1MiddlewarePathTemplate,
+			params: func(_ string, _ types.Epoch) []string {
+				return []string{"skip"}
+			},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.GenesisResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.GenesisResponseJson{},
+			},
+		},
+		"/beacon/states/{param1}/root": {
+			basepath: v1MiddlewarePathTemplate,
+			params: func(_ string, _ types.Epoch) []string {
+				return []string{"head"}
+			},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.StateRootResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.StateRootResponseJson{},
+			},
+		},
+		"/beacon/states/{param1}/finality_checkpoints": {
+			basepath: v1MiddlewarePathTemplate,
+			params: func(_ string, _ types.Epoch) []string {
+				return []string{"head"}
+			},
+			prysmResps: map[string]interface{}{
+				"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
+			},
+			lighthouseResps: map[string]interface{}{
+				"json": &apimiddleware.StateFinalityCheckpointResponseJson{},
+			},
+		},
 		"/beacon/blocks/{param1}": {
 			basepath: v2MiddlewarePathTemplate,
-			params:   []string{"head"},
+			params: func(t string, e types.Epoch) []string {
+				if t == "ssz" {
+					var check string
+					if e < 4 {
+						check = "genesis"
+					} else {
+						check = "finalized"
+					}
+					return []string{check}
+				} else {
+					return []string{"head"}
+				}
+			},
 			prysmResps: map[string]interface{}{
 				"json": &apimiddleware.BlockResponseJson{},
 				"ssz":  []byte{},
@@ -51,7 +98,9 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		},
 		"/beacon/states/{param1}/fork": {
 			basepath: v1MiddlewarePathTemplate,
-			params:   []string{"finalized"},
+			params: func(_ string, _ types.Epoch) []string {
+				return []string{"finalized"}
+			},
 			prysmResps: map[string]interface{}{
 				"json": &apimiddleware.StateForkResponseJson{},
 			},
@@ -60,8 +109,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			},
 		},
 		"/debug/beacon/states/{param1}": {
-			basepath: v1MiddlewarePathTemplate,
-			params:   []string{"head"},
+			basepath: v2MiddlewarePathTemplate,
+			params: func(_ string, e types.Epoch) []string {
+				return []string{"head"}
+			},
 			prysmResps: map[string]interface{}{
 				"json": &apimiddleware.BeaconStateV2ResponseJson{},
 			},
@@ -69,12 +120,28 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				"json": &apimiddleware.BeaconStateV2ResponseJson{},
 			},
 		},
+		//"/validator/duties/proposer/{param1}": {
+		//	basepath: v1MiddlewarePathTemplate,
+		//	params: func(_ string, e types.Epoch) []string {
+		//		return []string{fmt.Sprintf("%v", e)}
+		//	},
+		//	prysmResps: map[string]interface{}{
+		//		"json": &apimiddleware.ProposerDutiesResponseJson{},
+		//	},
+		//	lighthouseResps: map[string]interface{}{
+		//		"json": &apimiddleware.ProposerDutiesResponseJson{},
+		//	},
+		//},
 	}
 	for path, meta := range beaconPathsAndObjects {
 		for key, _ := range meta.prysmResps {
 			switch key {
 			case "json":
-				apipath := pathFromParams(path, meta.params)
+				params := meta.params("json", currentEpoch)
+				if len(params) == 0 {
+					continue
+				}
+				apipath := pathFromParams(path, params)
 				fmt.Printf("json api path: %s", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx, meta.basepath, apipath, beaconPathsAndObjects[path].prysmResps[key], beaconPathsAndObjects[path].lighthouseResps[key]); err != nil {
 					return err
@@ -82,13 +149,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				fmt.Printf("prysm ob: %v/n", beaconPathsAndObjects[path].prysmResps[key])
 				fmt.Printf("lighthouse ob: %v", beaconPathsAndObjects[path].prysmResps[key])
 			case "ssz":
-				var check string
-				if currentEpoch < 4 {
-					check = "genesis"
-				} else {
-					check = "finalized"
+				params := meta.params("ssz", currentEpoch)
+				if len(params) == 0 {
+					continue
 				}
-				apipath := pathFromParams(path, []string{check})
+				apipath := pathFromParams(path, params)
 				fmt.Printf("ssz api path: %s", apipath)
 				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
 				if err != nil {
@@ -101,7 +166,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			}
 		}
 	}
-
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
 	fmt.Printf("forkdata %v, %v", forkPathData, forkPathData.prysmResps["json"])
 	prysmForkData, ok := forkPathData.prysmResps["json"].(*apimiddleware.StateForkResponseJson)
