@@ -52,7 +52,7 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockBellatrix)
 	assert.Equal(t, true, ok)
 
-	// Bellatrix Fork
+	// Capella Fork
 	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, CapellaForkEpoch)
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockCapella)
 	assert.Equal(t, true, ok)
