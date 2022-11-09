@@ -142,6 +142,18 @@ var beaconPathsAndObjects = map[string]metadata{
 			return compareResponseObjects(castedp, castedl)
 		},
 	},
+	"/beacon/headers/{param1}": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, e types.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.BlockHeaderResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.BlockHeaderResponseJson{},
+		},
+	},
 }
 
 func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
@@ -193,7 +205,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		}
 	}
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	fmt.Printf("forkdata %v, %v", forkPathData, forkPathData.prysmResps["json"])
 	prysmForkData, ok := forkPathData.prysmResps["json"].(*apimiddleware.StateForkResponseJson)
 	if !ok {
 		return errors.New("failed to cast type")
@@ -266,6 +277,20 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockL)
 		}
 	}
+	blockheaderData := beaconPathsAndObjects["/beacon/headers/{param1}"]
+	prysmHeader, ok := blockheaderData.prysmResps["json"].(*apimiddleware.BlockHeaderResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	proposerdutiesData := beaconPathsAndObjects["/validator/duties/proposer/{param1}"]
+	prysmDuties, ok := proposerdutiesData.prysmResps["json"].(*apimiddleware.ProposerDutiesResponseJson)
+	if !ok {
+		return errors.New("failed to cast type")
+	}
+	if prysmHeader.Data.Root != prysmDuties.DependentRoot {
+		return fmt.Errorf("header root %s does not match duties root %s ", prysmHeader.Data.Root, prysmDuties.DependentRoot)
+	}
+
 	return nil
 }
 
