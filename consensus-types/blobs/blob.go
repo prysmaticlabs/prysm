@@ -104,7 +104,7 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 		return err
 	}
 
-	aggregatedPoly, err := vectorLinComb(sidecar.Blobs, rPowers)
+	aggregatedPoly, err := polyLinComb(sidecar.Blobs, rPowers)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 	var y bls.Fr
 	bls.EvaluatePolyInEvaluationForm(&y, aggregatedPoly, x, rootsOfUnity, 0)
 
-	b, err := verifyKZGProof(aggregatedPolyCommitment, x, &y, sidecar.AggregatedProof)
+	b, err := kzg.VerifyKZGProof(bytesutil.ToBytes48(aggregatedPolyCommitment), x, &y, bytesutil.ToBytes48(sidecar.AggregatedProof))
 	if err != nil {
 		return err
 	}
@@ -183,6 +183,38 @@ func computePowers(x *bls.Fr, n int) []bls.Fr {
 	return powers
 }
 
+// polyLinComb interpret the input `blobs` as a 2D matrix and compute the linear combination with `scalars`.
+//
+// spce code:
+// def poly_lincomb(polys: Sequence[Polynomial],
+//
+//	             scalars: Sequence[BLSFieldElement]) -> Polynomial:
+//	"""
+//	Given a list of ``polynomials``, interpret it as a 2D matrix and compute the linear combination
+//	of each column with `scalars`: return the resulting polynomials.
+//	"""
+//	result = [0] * len(polys[0])
+//	for v, s in zip(polys, scalars):
+//	    for i, x in enumerate(v):
+//	        result[i] = (result[i] + int(s) * int(x)) % BLS_MODULUS
+//	return [BLSFieldElement(x) for x in result]
+func polyLinComb(blobs []*v1.Blob, scalars []bls.Fr) ([]bls.Fr, error) {
+	out := make([][]bls.Fr, len(blobs))
+	for i := range blobs {
+		r := make([]bls.Fr, params.FieldElementsPerBlob)
+		blob := blobs[i].Data
+		for j := 0; j <= params.FieldElementsPerBlob; j++ {
+			b := blob[j*32 : j*32+31]
+			ok := bls.FrFrom32(&r[j], bytesutil.ToBytes32(b))
+			if !ok {
+				return nil, errors.New("invalid value in blob")
+			}
+		}
+		out[i] = r
+	}
+	return bls.PolyLinComb(out, scalars)
+}
+
 // g1LinComb performs BLS multi-scalar multiplication for input `points` to `scalars`.
 //
 // spec code:
@@ -209,73 +241,6 @@ func g1LinComb(points [][]byte, scalars []bls.Fr) ([]byte, error) {
 		g1s[i] = *g1
 	}
 	return bls.ToCompressedG1(bls.LinCombG1(g1s, scalars)), nil
-}
-
-// vectorLinComb interpret the input `vectors` as a 2D matrix and compute the linear combination
-// of each column with the input `scalars`.
-//
-// spec code:
-// def vector_lincomb(vectors: Sequence[Sequence[BLSFieldElement]],
-//
-//	               scalars: Sequence[BLSFieldElement]) -> Sequence[BLSFieldElement]:
-//	result = [0] * len(vectors[0])
-//	for v, s in zip(vectors, scalars):
-//	    for i, x in enumerate(v):
-//	        result[i] = (result[i] + int(s) * int(x)) % BLS_MODULUS
-//	return [BLSFieldElement(x) for x in result]
-func vectorLinComb(vectors []*v1.Blob, scalars []bls.Fr) ([]bls.Fr, error) {
-	if len(vectors) != len(scalars) {
-		return nil, errors.New("vectors and scalars are not the same length")
-	}
-
-	results := make([]bls.Fr, params.FieldElementsPerBlob)
-	x := bls.Fr{}
-	for i, v := range vectors {
-		b := v.Data
-		if len(b) != params.FieldElementsPerBlob*32 {
-			return nil, errors.New("blob is the wrong size")
-		}
-		s := scalars[i]
-		for j := 0; j < params.FieldElementsPerBlob; j++ { // iterate over a blob's field elements
-			ok := bls.FrFrom32(&x, bytesutil.ToBytes32(b[j*32:j*32+31]))
-			if !ok {
-				return nil, errors.New("could not convert blob data to field element")
-			}
-			bls.MulModFr(&x, &x, &s)
-			bls.AddModFr(&results[i], &results[i], &x)
-		}
-	}
-	return results, nil
-}
-
-// verifyKZGProof implements verify_kzg_proof from the EIP-4844 spec
-//
-// Spec code:
-// def verify_kzg_proof(polynomial_kzg: KZGCommitment,
-//
-//	                 z: BLSFieldElement,
-//	                 y: BLSFieldElement,
-//	                 kzg_proof: KZGProof) -> bool:
-//	"""
-//	Verify KZG proof that ``p(z) == y`` where ``p(z)`` is the polynomial represented by ``polynomial_kzg``.
-//	"""
-//	# Verify: P - y = Q * (X - z)
-//	X_minus_z = bls.add(bls.bytes96_to_G2(KZG_SETUP_G2[1]), bls.multiply(bls.G2, BLS_MODULUS - z))
-//	P_minus_y = bls.add(bls.bytes48_to_G1(polynomial_kzg), bls.multiply(bls.G1, BLS_MODULUS - y))
-//	return bls.pairing_check([
-//	    [P_minus_y, bls.neg(bls.G2)],
-//	    [bls.bytes48_to_G1(kzg_proof), X_minus_z]
-//	])
-func verifyKZGProof(polynomialKZG []byte, x *bls.Fr, y *bls.Fr, quotientKZG []byte) (bool, error) {
-	commitment, err := bls.FromCompressedG1(polynomialKZG)
-	if err != nil {
-		return false, err
-	}
-	proof, err := bls.FromCompressedG1(quotientKZG)
-	if err != nil {
-		return false, err
-	}
-	return kzg.VerifyKzgProof(commitment, x, y, proof), nil
 }
 
 // bigToFr converts the big.Int represented BLS field element b to the go-kzg library
