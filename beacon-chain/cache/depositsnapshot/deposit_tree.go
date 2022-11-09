@@ -35,6 +35,7 @@ func NewDepositTreeFromSnapshotIter(finalized [][32]byte, deposits uint64, final
 }
 
 // AddDeposit adds a new deposit to the tree.
+// Renamed from push_leaf for clarity as it is unrelated to MerkleTreeNode's push_leaf.
 func (d *DepositTree) AddDeposit(leaf [32]byte, deposits uint64) error {
 	var err error
 	d.depositCount += 1
