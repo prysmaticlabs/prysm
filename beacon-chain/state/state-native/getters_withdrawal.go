@@ -3,6 +3,7 @@ package state_native
 import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -36,6 +37,52 @@ func (b *BeaconState) LastWithdrawalValidatorIndex() (types.ValidatorIndex, erro
 	return b.lastWithdrawalValidatorIndex, nil
 }
 
+// ExpectedWithdrawals returns the withdrawals that a proposer will need to pack in the next block
+// applied to the current state. It is also used by validators to check that the execution payload carried
+// the right number of withdrawals
+func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
+	if b.version < version.Capella {
+		return nil, errNotSupported("ExpectedWithdrawals", b.version)
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
+	validatorIndex := b.lastWithdrawalValidatorIndex
+	withdrawalIndex := b.nextWithdrawalIndex
+	epoch := slots.ToEpoch(b.slot)
+	for range b.validators {
+		validatorIndex += 1
+		if uint64(validatorIndex) == uint64(len(b.validators)) {
+			validatorIndex = types.ValidatorIndex(0)
+		}
+		val := b.validators[validatorIndex]
+		balance := b.balances[validatorIndex]
+		if isFullyWithdrawableValidator(val, epoch) {
+			withdrawals = append(withdrawals, &enginev1.Withdrawal{
+				WithdrawalIndex:  withdrawalIndex,
+				ValidatorIndex:   validatorIndex,
+				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:           balance,
+			})
+			withdrawalIndex++
+		} else if isPartiallyWithdrawableValidator(val, balance) {
+			withdrawals = append(withdrawals, &enginev1.Withdrawal{
+				WithdrawalIndex:  withdrawalIndex,
+				ValidatorIndex:   validatorIndex,
+				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
+			})
+			withdrawalIndex++
+		}
+		if uint64(len(withdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
+			break
+		}
+	}
+	return withdrawals, nil
+}
+
 // hasETH1WithdrawalCredential returns whether the validator has an ETH1
 // Withdrawal prefix. It assumes that the caller has a lock on the state
 func hasETH1WithdrawalCredential(val *ethpb.Validator) bool {
@@ -65,50 +112,4 @@ func isPartiallyWithdrawableValidator(val *ethpb.Validator, balance uint64) bool
 	hasMaxBalance := val.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 	hasExcessBalance := balance > params.BeaconConfig().MaxEffectiveBalance
 	return hasETH1WithdrawalCredential(val) && hasExcessBalance && hasMaxBalance
-}
-
-// ExpectedWithdrawals returns the withdrawals that a proposer will need to pack in the next block
-// applied to the current state. It is also used by validators to check that the execution payload carried
-// the right number of withdrawals
-func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
-	if b.version < version.Capella {
-		return nil, errNotSupported("ExpectedWithdrawals", b.version)
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
-	validatorIndex := b.lastWithdrawalValidatorIndex
-	withdrawalIndex := b.nextWithdrawalIndex
-	epoch := slots.ToEpoch(b.slot)
-	for range b.validators {
-		validatorIndex += 1
-		if uint64(validatorIndex) == uint64(len(b.validators)) {
-			validatorIndex = types.ValidatorIndex(0)
-		}
-		val := b.validators[validatorIndex]
-		balance := b.balances[validatorIndex]
-		if isFullyWithdrawableValidator(val, epoch) {
-			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: val.WithdrawalCredentials[ETH1AddressOffset:],
-				Amount:           balance,
-			})
-			withdrawalIndex++
-		} else if isPartiallyWithdrawableValidator(val, balance) {
-			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: val.WithdrawalCredentials[ETH1AddressOffset:],
-				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
-			})
-			withdrawalIndex++
-		}
-		if uint64(len(withdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
-			break
-		}
-	}
-	return withdrawals, nil
 }

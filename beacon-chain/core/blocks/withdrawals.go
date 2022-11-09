@@ -86,20 +86,20 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 	if len(expected) != len(withdrawals) {
-		return nil, errors.New("invalid number of withdrawals")
+		return nil, errInvalidWithdrawalNumber
 	}
 	for i, withdrawal := range withdrawals {
 		if withdrawal.WithdrawalIndex != expected[i].WithdrawalIndex {
-			return nil, errors.New("invalid withdrawal index")
+			return nil, errInvalidWithdrawalIndex
 		}
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
-			return nil, errors.New("invalid validator index")
+			return nil, errInvalidValidatorIndex
 		}
-		if bytesutil.ToBytes20(withdrawal.ExecutionAddress) != bytesutil.ToBytes20(expected[i].ExecutionAddress) {
-			return nil, errors.New("invalid execution address")
+		if !bytes.Equal(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) {
+			return nil, errInvalidExecutionAddress
 		}
 		if withdrawal.Amount != expected[i].Amount {
-			return nil, errors.New("invalid withdrawal amount")
+			return nil, errInvalidWithdrawalAmount
 		}
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
 		if err != nil {
@@ -108,7 +108,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	}
 	if len(withdrawals) > 0 {
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
-			return nil, errors.Wrap(err, "could not set withdrawal index")
+			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
 		if err := st.SetLastWithdrawalValidatorIndex(withdrawals[len(withdrawals)-1].ValidatorIndex); err != nil {
 			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
