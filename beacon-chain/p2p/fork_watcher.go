@@ -28,7 +28,8 @@ func (s *Service) forkWatcher() {
 				}
 
 				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10Mb.
-				if currEpoch == params.BeaconConfig().BellatrixForkEpoch {
+				if currEpoch == params.BeaconConfig().BellatrixForkEpoch ||
+					currEpoch == params.BeaconConfig().CapellaForkEpoch {
 					encoder.SetMaxGossipSizeForBellatrix()
 					encoder.SetMaxChunkSizeForBellatrix()
 				}
