@@ -473,6 +473,13 @@ func (b *BeaconBlock) StateRoot() [field_params.RootLength]byte {
 	return b.stateRoot
 }
 
+// SetStateRoot sets the state root of the underlying beacon block
+// This function is not thread safe, it is only used during block
+// proposal to set the state root of a new block
+func (b *BeaconBlock) SetStateRoot(root []byte) {
+	copy(b.stateRoot[:], root)
+}
+
 // Body returns the underlying block body.
 func (b *BeaconBlock) Body() interfaces.BeaconBlockBody {
 	return b.body
