@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
 	e "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
@@ -255,7 +256,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix:
+			case version.Altair, version.Bellatrix, version.Capella:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -280,6 +281,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 		if time.CanUpgradeToBellatrix(state.Slot()) {
 			state, err = execution.UpgradeToBellatrix(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if time.CanUpgradeToCapella(state.Slot()) {
+			state, err = capella.UpgradeToCapella(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err
