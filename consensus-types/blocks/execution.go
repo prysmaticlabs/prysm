@@ -140,8 +140,18 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// TransactionsRoot --
+func (e executionPayload) TransactionsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // Withdrawals --
 func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// WithdrawalsRoot --
+func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -271,8 +281,18 @@ func (executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// TransactionsRoot --
+func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
 // Withdrawals --
 func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -430,6 +450,11 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
+// TransactionsRoot --
+func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // Withdrawals --
 func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return e.p.Withdrawals, nil
@@ -438,6 +463,11 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 // ExcessiveBlobs --
 func (e executionPayloadCapella) ExcessiveBlobs() uint64 {
 	return e.p.ExcessBlobs
+}
+
+// WithdrawalsRoot --
+func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
 }
 
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
@@ -566,6 +596,11 @@ func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// TransactionsRoot --
+func (e executionPayloadHeaderCapella) TransactionsRoot() ([]byte, error) {
+	return e.p.TransactionsRoot, nil
+}
+
 // Withdrawals --
 func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedGetter
@@ -574,6 +609,11 @@ func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, er
 // ExcessiveBlobs --
 func (e executionPayloadHeaderCapella) ExcessiveBlobs() uint64 {
 	return e.p.ExcessBlobs
+}
+
+// WitdrawalsRoot --
+func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
+	return e.p.WithdrawalsRoot, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
