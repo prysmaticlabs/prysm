@@ -16,7 +16,8 @@ func (s *Service) forkWatcher() {
 		case currSlot := <-slotTicker.C():
 			currEpoch := slots.ToEpoch(currSlot)
 			if currEpoch == params.BeaconConfig().AltairForkEpoch ||
-				currEpoch == params.BeaconConfig().BellatrixForkEpoch {
+				currEpoch == params.BeaconConfig().BellatrixForkEpoch ||
+				currEpoch == params.BeaconConfig().CapellaForkEpoch {
 				// If we are in the fork epoch, we update our enr with
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
@@ -27,7 +28,8 @@ func (s *Service) forkWatcher() {
 				}
 
 				// from Bellatrix Epoch, the MaxGossipSize and the MaxChunkSize is changed to 10Mb.
-				if currEpoch == params.BeaconConfig().BellatrixForkEpoch {
+				if currEpoch == params.BeaconConfig().BellatrixForkEpoch ||
+					currEpoch == params.BeaconConfig().CapellaForkEpoch {
 					encoder.SetMaxGossipSizeForBellatrix()
 					encoder.SetMaxChunkSizeForBellatrix()
 				}
