@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"reflect"
 	"strconv"
 	"strings"
@@ -145,7 +146,11 @@ var beaconPathsAndObjects = map[string]metadata{
 	"/beacon/headers/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, e types.Epoch) []string {
-			return []string{"head"}
+			slot := uint64(0)
+			if uint64(e) > uint64(0) {
+				slot = (uint64(e) * uint64(params.BeaconConfig().SlotsPerEpoch)) - 1
+			}
+			return []string{fmt.Sprintf("%v", slot)}
 		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.BlockHeaderResponseJson{},
@@ -288,6 +293,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return errors.New("failed to cast type")
 	}
 	if prysmHeader.Data.Root != prysmDuties.DependentRoot {
+		fmt.Println(fmt.Sprintf("current slot: %v", slots.CurrentSlot(uint64(genesisData.Data.GenesisTime.AsTime().Unix()))))
 		return fmt.Errorf("header root %s does not match duties root %s ", prysmHeader.Data.Root, prysmDuties.DependentRoot)
 	}
 
