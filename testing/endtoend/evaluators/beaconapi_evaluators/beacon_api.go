@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
@@ -157,6 +158,30 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 		lighthouseResps: map[string]interface{}{
 			"json": &apimiddleware.BlockHeaderResponseJson{},
+		},
+	},
+	"/node/identity": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"skip"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.IdentityResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.IdentityResponseJson{},
+		},
+	},
+	"/node/peers": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, _ types.Epoch) []string {
+			return []string{"skip"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &apimiddleware.PeersResponseJson{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &apimiddleware.PeersResponseJson{},
 		},
 	},
 }
