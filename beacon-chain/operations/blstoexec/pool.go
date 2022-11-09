@@ -24,7 +24,8 @@ type changesList struct {
 // PoolManager maintains pending and seen BLS-to-execution-change objects.
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
-	PendingBLSToExecChanges(returnAll bool) []*ethpb.SignedBLSToExecutionChange
+	PendingBLSToExecChanges() []*ethpb.SignedBLSToExecutionChange
+	BLSToExecChangesForInclusion() []*ethpb.SignedBLSToExecutionChange
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange)
 }
@@ -44,26 +45,30 @@ func NewPool() *Pool {
 	}
 }
 
-// PendingBLSToExecChanges returns objects that are ready for inclusion at the given slot.
-// Without returnAll, this method will not return more than the block enforced MaxBlsToExecutionChanges.
-func (p *Pool) PendingBLSToExecChanges(returnAll bool) []*ethpb.SignedBLSToExecutionChange {
+// PendingBLSToExecChanges returns all objects from the pool.
+func (p *Pool) PendingBLSToExecChanges() []*ethpb.SignedBLSToExecutionChange {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	if returnAll {
-		result := make([]*ethpb.SignedBLSToExecutionChange, p.pending.len)
-		node := p.pending.first
-		for i := 0; node != nil; i++ {
-			result[i] = node.value
-			node = node.next
-		}
-		return result
+	result := make([]*ethpb.SignedBLSToExecutionChange, p.pending.len)
+	node := p.pending.first
+	for i := 0; node != nil; i++ {
+		result[i] = node.value
+		node = node.next
 	}
+	return result
+}
+
+// BLSToExecChangesForInclusion returns objects that are ready for inclusion at the given slot.
+// This method will not return more than the block enforced MaxBlsToExecutionChanges.
+func (p *Pool) BLSToExecChangesForInclusion() []*ethpb.SignedBLSToExecutionChange {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 
 	length := int(math.Min(float64(params.BeaconConfig().MaxBlsToExecutionChanges), float64(p.pending.len)))
 	result := make([]*ethpb.SignedBLSToExecutionChange, length)
 	node := p.pending.first
-	for i := 0; i < length; i++ {
+	for i := 0; node != nil && i < length; i++ {
 		result[i] = node.value
 		node = node.next
 	}
@@ -124,7 +129,7 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) {
 			node.next.prev = node.prev
 		}
 	}
-	delete(p.m, node.value.Message.ValidatorIndex)
+	p.m[node.value.Message.ValidatorIndex] = nil
 	node = nil
 	p.pending.len--
 }
