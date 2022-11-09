@@ -93,6 +93,7 @@ func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) 
 				node.left = &FinalizedNode{split, finalized[0]}
 				node.right = &ZeroNode{depth: depth - 1}
 				finalized = finalized[1:]
+				break
 			}
 		}
 		return node
