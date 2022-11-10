@@ -2,19 +2,15 @@ package evaluators
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/grpc"
 )
 
@@ -34,11 +30,9 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
 func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	validatorConn := validatorHelpers.NewNodeConnection(conn, fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort), 30*time.Second)
-	client := validatorClientFactory.NewValidatorClient(validatorConn)
+	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
@@ -78,11 +72,9 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-// TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
 func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	validatorConn := validatorHelpers.NewNodeConnection(conn, fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort), 30*time.Second)
-	client := validatorClientFactory.NewValidatorClient(validatorConn)
+	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
