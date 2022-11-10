@@ -263,3 +263,38 @@ func TestAltairCompatible(t *testing.T) {
 		})
 	}
 }
+
+func TestCanUpgradeToCapella(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bc := params.BeaconConfig()
+	bc.CapellaForkEpoch = 5
+	params.OverrideBeaconConfig(bc)
+	tests := []struct {
+		name string
+		slot types.Slot
+		want bool
+	}{
+		{
+			name: "not epoch start",
+			slot: 1,
+			want: false,
+		},
+		{
+			name: "not capella epoch",
+			slot: params.BeaconConfig().SlotsPerEpoch,
+			want: false,
+		},
+		{
+			name: "capella epoch",
+			slot: types.Slot(params.BeaconConfig().CapellaForkEpoch) * params.BeaconConfig().SlotsPerEpoch,
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := time.CanUpgradeToCapella(tt.slot); got != tt.want {
+				t.Errorf("CanUpgradeToCapella() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
