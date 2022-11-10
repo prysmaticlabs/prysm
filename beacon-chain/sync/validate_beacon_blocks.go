@@ -8,6 +8,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
@@ -55,6 +56,18 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, errors.Wrap(err, "Could not decode message")
 	}
+
+	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, m)
+	if err != nil || result != pubsub.ValidationAccept {
+		return result, err
+	}
+
+	return pubsub.ValidationAccept, nil
+}
+
+func (s *Service) validateBlockPubsubHelper(ctx context.Context, receivedTime time.Time, msg *pubsub.Message, m ssz.Unmarshaler) (pubsub.ValidationResult, error) {
+	ctx, span := trace.StartSpan(ctx, "sync.validateBlockPubsubHelper")
+	defer span.End()
 
 	s.validateBlockLock.Lock()
 	defer s.validateBlockLock.Unlock()

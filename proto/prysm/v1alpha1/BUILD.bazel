@@ -123,6 +123,7 @@ ssz_gen_marshal(
         "BlobsAndCommitments",
         "PolynomialAndCommitment",
         "BlobsSidecar",
+        "SignedBeaconBlockAndBlobsSidecar",
     ],
 )
 
