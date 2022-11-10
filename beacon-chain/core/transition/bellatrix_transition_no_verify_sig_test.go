@@ -257,3 +257,43 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 	beaconState, _ := util.DeterministicGenesisStateBellatrix(t, 32)
 	return beaconState, blk
 }
+
+func createFullCapellaBlockWithOperations(t *testing.T) (state.BeaconState,
+	*ethpb.SignedBeaconBlockCapella) {
+	_, bellatrixBlk := createFullBellatrixBlockWithOperations(t)
+	blk := &ethpb.SignedBeaconBlockCapella{
+		Block: &ethpb.BeaconBlockCapella{
+			Slot:          bellatrixBlk.Block.Slot,
+			ProposerIndex: bellatrixBlk.Block.ProposerIndex,
+			ParentRoot:    bellatrixBlk.Block.ParentRoot,
+			StateRoot:     bellatrixBlk.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyCapella{
+				RandaoReveal:      bellatrixBlk.Block.Body.RandaoReveal,
+				Eth1Data:          bellatrixBlk.Block.Body.Eth1Data,
+				Graffiti:          bellatrixBlk.Block.Body.Graffiti,
+				ProposerSlashings: bellatrixBlk.Block.Body.ProposerSlashings,
+				AttesterSlashings: bellatrixBlk.Block.Body.AttesterSlashings,
+				Attestations:      bellatrixBlk.Block.Body.Attestations,
+				Deposits:          bellatrixBlk.Block.Body.Deposits,
+				VoluntaryExits:    bellatrixBlk.Block.Body.VoluntaryExits,
+				SyncAggregate:     bellatrixBlk.Block.Body.SyncAggregate,
+				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+					Transactions:  make([][]byte, 0),
+					Withdrawals:   make([]*enginev1.Withdrawal, 0),
+					ExtraData:     make([]byte, 0),
+				},
+			},
+		},
+		Signature: nil,
+	}
+	beaconState, _ := util.DeterministicGenesisStateCapella(t, 32)
+	return beaconState, blk
+}
