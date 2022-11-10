@@ -112,7 +112,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 // TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
 func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	validatorConn := validatorHelpers.NewNodeConnection(conn, fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort), 30*time.Second)
 	valClient := validatorClientFactory.NewValidatorClient(validatorConn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
@@ -202,7 +202,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 // TODO: pass validatorHelpers.NodeConnection as a parameter once the Beacon API usage becomes more stable
 func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	validatorConn := validatorHelpers.NewNodeConnection(conn, "http://127.0.0.1:3500", 30*time.Second)
+	validatorConn := validatorHelpers.NewNodeConnection(conn, fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort), 30*time.Second)
 	valClient := validatorClientFactory.NewValidatorClient(validatorConn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
@@ -245,7 +245,7 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	// If the proposer index is in the second validator client, we connect to
 	// the corresponding beacon node instead.
 	if proposerIndex >= types.ValidatorIndex(uint64(validatorsPerNode)) {
-		validatorConn1 := validatorHelpers.NewNodeConnection(conns[1], "http://127.0.0.1:3500", 30*time.Second)
+		validatorConn1 := validatorHelpers.NewNodeConnection(conns[1], fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort), 30*time.Second)
 		valClient = validatorClientFactory.NewValidatorClient(validatorConn1)
 	}
 
