@@ -330,9 +330,13 @@ func (s *Service) updateConnectedETH1(state bool) {
 func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	latestBlockTime := uint64(0)
+
+	s.latestEth1DataLock.RLock()
 	if s.latestEth1Data.BlockTime > followTime {
 		latestBlockTime = s.latestEth1Data.BlockTime - followTime
 	}
+	s.latestEth1DataLock.RUnlock()
+
 	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
 	if err != nil {
 		return 0, err
@@ -401,14 +405,17 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 func (s *Service) processBlockHeader(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
+	// we create a local copy of blockHeight and blockHash so that we don't have to hold the lock while logging
+	blockHeight := header.Number.Uint64()
+	blockHash := header.Hash().Bytes()
 	s.latestEth1DataLock.Lock()
-	s.latestEth1Data.BlockHeight = header.Number.Uint64()
-	s.latestEth1Data.BlockHash = header.Hash().Bytes()
+	s.latestEth1Data.BlockHeight = blockHeight
+	s.latestEth1Data.BlockHash = blockHash
 	s.latestEth1Data.BlockTime = header.Time
 	s.latestEth1DataLock.Unlock()
 	log.WithFields(logrus.Fields{
-		"blockNumber": s.latestEth1Data.BlockHeight,
-		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
+		"blockNumber": blockHeight,
+		"blockHash":   hexutil.Encode(blockHash),
 		"difficulty":  header.Difficulty.String(),
 	}).Debug("Latest eth1 chain event")
 }
@@ -476,6 +483,7 @@ func (s *Service) handleETH1FollowDistance() {
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := prysmTime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
+	s.latestEth1DataLock.RLock()
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("Execution client is not syncing")
 	}
@@ -483,6 +491,7 @@ func (s *Service) handleETH1FollowDistance() {
 		if err := s.processChainStartFromBlockNum(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
+			s.latestEth1DataLock.RUnlock()
 			return
 		}
 	}
@@ -492,8 +501,10 @@ func (s *Service) handleETH1FollowDistance() {
 	// failure condition as would mean we have not respected the protocol threshold.
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
 		log.Error("Beacon node is not respecting the follow distance")
+		s.latestEth1DataLock.RUnlock()
 		return
 	}
+	s.latestEth1DataLock.RUnlock()
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
 		s.runError = err
 		log.Error(err)
@@ -624,7 +635,9 @@ func (s *Service) logTillChainStart(ctx context.Context) {
 	if s.chainStartData.Chainstarted {
 		return
 	}
+	s.latestEth1DataLock.RLock()
 	_, blockTime, err := s.retrieveBlockHashAndTime(s.ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock)))
+	s.latestEth1DataLock.RUnlock()
 	if err != nil {
 		log.Error(err)
 		return

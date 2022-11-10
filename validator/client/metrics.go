@@ -256,6 +256,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 	return nil
 }
 
+// logForEachValidator assumes a lock on `v.prevBalanceLock`
 func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.ValidatorPerformanceResponse, slot types.Slot, prevEpoch types.Epoch) {
 	truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 	pubKeyBytes := bytesutil.ToBytes48(pubKey)

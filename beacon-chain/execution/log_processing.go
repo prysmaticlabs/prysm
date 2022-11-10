@@ -275,7 +275,10 @@ func createGenesisTime(timeStamp uint64) uint64 {
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
+	s.latestEth1DataLock.RLock()
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
+	s.latestEth1DataLock.RUnlock()
+
 	deploymentBlock := params.BeaconNetworkConfig().ContractDeploymentBlock
 	// Start from the deployment block if our last requested block
 	// is behind it. This is as the deposit logs can only start from the
@@ -452,12 +455,20 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	s.latestEth1DataLock.RLock()
 	if requestedBlock > s.latestEth1Data.LastRequestedBlock &&
 		requestedBlock-s.latestEth1Data.LastRequestedBlock > maxTolerableDifference {
 		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
+		s.latestEth1DataLock.RUnlock()
 		return s.processPastLogs(ctx)
 	}
-	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
+
+	// Create a local copy of s.latestEth1Data.LastRequestedBlock before we release the latestEth1DataLock.
+	// This makes is so we do not have to hold the lock through the entire for loop.
+	lastRequestedBlock := s.latestEth1Data.LastRequestedBlock
+	s.latestEth1DataLock.RUnlock()
+
+	for i := lastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
 		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
 		if err != nil {
