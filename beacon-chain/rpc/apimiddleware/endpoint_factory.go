@@ -197,7 +197,10 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v2/debug/beacon/heads":
 		endpoint.GetResponse = &V2ForkChoiceHeadsResponseJson{}
 	case "/eth/v1/debug/beacon/forkchoice":
-		endpoint.GetResponse = &ForkchoiceResponse{}
+		endpoint.GetResponse = &ForkChoiceResponseJson{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: prepareForkChoiceResponse,
+		}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &ForkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
