@@ -280,10 +280,10 @@ func TestGetRandao(t *testing.T) {
 	require.NoError(t, headSt.UpdateRandaoMixesAtIndex(uint64(headEpoch), headRandao))
 
 	db := dbTest.SetupDB(t)
-	chainService := &chainMock.ChainService{State: headSt}
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
-			BeaconState: headSt,
+			BeaconState: st,
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
@@ -306,6 +306,9 @@ func TestGetRandao(t *testing.T) {
 		assert.DeepEqual(t, mixOld, resp.Data.Randao)
 	})
 	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
+		server.StateFetcher = &testutil.MockFetcher{
+			BeaconState: headSt,
+		}
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
 		require.NoError(t, err)
 		assert.DeepEqual(t, headRandao, resp.Data.Randao)
