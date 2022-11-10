@@ -1,156 +1,305 @@
 package blstoexec
 
 import (
-	"sync"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestPendingBLSToExecChanges(t *testing.T) {
-	pool := &Pool{
-		lock:    sync.RWMutex{},
-		pending: make([]*eth.SignedBLSToExecutionChange, params.BeaconConfig().MaxBlsToExecutionChanges*2),
-	}
-	for i := range pool.pending {
-		pool.pending[i] = &eth.SignedBLSToExecutionChange{}
-	}
-	t.Run("return MaxBlsToExecutionChanges", func(t *testing.T) {
-		changes := pool.PendingBLSToExecChanges(false)
+	t.Run("empty pool", func(t *testing.T) {
+		pool := NewPool()
+		changes := pool.PendingBLSToExecChanges()
+		assert.Equal(t, 0, len(changes))
+	})
+	t.Run("non-empty pool", func(t *testing.T) {
+		pool := NewPool()
+		pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: 0,
+			},
+		})
+		pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: 1,
+			},
+		})
+		assert.Equal(t, 2, len(pool.PendingBLSToExecChanges()))
+	})
+}
+
+func TestBLSToExecChangesForInclusion(t *testing.T) {
+	t.Run("empty pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges-1; i++ {
+			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
+				Message: &eth.BLSToExecutionChange{
+					ValidatorIndex: types.ValidatorIndex(i),
+				},
+			})
+		}
+		changes := pool.BLSToExecChangesForInclusion()
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges-1), len(changes))
+	})
+	t.Run("MaxBlsToExecutionChanges in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges; i++ {
+			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
+				Message: &eth.BLSToExecutionChange{
+					ValidatorIndex: types.ValidatorIndex(i),
+				},
+			})
+		}
+		changes := pool.BLSToExecChangesForInclusion()
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 	})
-	t.Run("return all", func(t *testing.T) {
-		changes := pool.PendingBLSToExecChanges(true)
-		assert.Equal(t, len(pool.pending), len(changes))
+	t.Run("more than MaxBlsToExecutionChanges in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges+1; i++ {
+			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
+				Message: &eth.BLSToExecutionChange{
+					ValidatorIndex: types.ValidatorIndex(i),
+				},
+			})
+		}
+		changes := pool.BLSToExecChangesForInclusion()
+		// We want FIFO semantics, which means validator with index 16 shouldn't be returned
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
+		for _, ch := range changes {
+			assert.NotEqual(t, types.ValidatorIndex(16), ch.Message.ValidatorIndex)
+		}
 	})
 }
 
 func TestInsertBLSToExecChange(t *testing.T) {
-	st, err := util.NewBeaconStateCapella()
-	require.NoError(t, err)
-	require.NoError(t, st.AppendValidator(&eth.Validator{
-		WithdrawalCredentials: []byte{0},
-	}))
-	require.NoError(t, st.AppendValidator(&eth.Validator{
-		WithdrawalCredentials: []byte{1},
-	}))
-	pubkey := bytesutil.PadTo([]byte("pubkey"), fieldparams.BLSPubkeyLength)
-	address := bytesutil.PadTo([]byte("address"), fieldparams.ExecutionAddressLength)
-	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
-
-	t.Run("ok", func(t *testing.T) {
+	t.Run("empty pool", func(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     0,
-				FromBlsPubkey:      pubkey,
-				ToExecutionAddress: address,
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			Signature: sig,
 		}
-		pool.InsertBLSToExecChange(st, change)
-		pending := pool.PendingBLSToExecChanges(true)
-		require.Equal(t, 1, len(pending))
-		assert.DeepEqual(t, change, pending[0])
+		pool.InsertBLSToExecChange(change)
+		require.Equal(t, 1, pool.pending.len)
+		require.NotNil(t, pool.pending.first)
+		assert.DeepEqual(t, change, pool.pending.first.value)
+		require.NotNil(t, pool.pending.last)
+		assert.DeepEqual(t, change, pool.pending.last.value)
+		require.Equal(t, 1, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, change, n.value)
 	})
-	t.Run("nil change", func(t *testing.T) {
+	t.Run("one item in pool", func(t *testing.T) {
 		pool := NewPool()
-		pool.InsertBLSToExecChange(st, nil)
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
-	})
-	t.Run("nil message", func(t *testing.T) {
-		pool := NewPool()
-		pool.InsertBLSToExecChange(st, &eth.SignedBLSToExecutionChange{
-			Message:   nil,
-			Signature: sig,
-		})
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
-	})
-	t.Run("wrong signature length", func(t *testing.T) {
-		pool := NewPool()
-		pool.InsertBLSToExecChange(st, &eth.SignedBLSToExecutionChange{
+		old := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     0,
-				FromBlsPubkey:      pubkey,
-				ToExecutionAddress: address,
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			Signature: make([]byte, 50),
-		})
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
-	})
-	t.Run("wrong pubkey length", func(t *testing.T) {
-		pool := NewPool()
-		pool.InsertBLSToExecChange(st, &eth.SignedBLSToExecutionChange{
-			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     0,
-				FromBlsPubkey:      make([]byte, 50),
-				ToExecutionAddress: address,
-			},
-			Signature: sig,
-		})
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
-	})
-	t.Run("wrong address length", func(t *testing.T) {
-		pool := NewPool()
-		pool.InsertBLSToExecChange(st, &eth.SignedBLSToExecutionChange{
-			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     0,
-				FromBlsPubkey:      pubkey,
-				ToExecutionAddress: make([]byte, 50),
-			},
-			Signature: sig,
-		})
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
-	})
-	t.Run("change for validator already exists", func(t *testing.T) {
-		pool := NewPool()
+		}
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     0,
-				FromBlsPubkey:      pubkey,
-				ToExecutionAddress: address,
+				ValidatorIndex: types.ValidatorIndex(1),
 			},
-			Signature: sig,
 		}
-		// Insert twice
-		pool.InsertBLSToExecChange(st, change)
-		pool.InsertBLSToExecChange(st, change)
-		assert.Equal(t, 1, len(pool.PendingBLSToExecChanges(true)))
+		pool.InsertBLSToExecChange(old)
+		pool.InsertBLSToExecChange(change)
+		require.Equal(t, 2, pool.pending.len)
+		require.NotNil(t, pool.pending.first)
+		assert.DeepEqual(t, old, pool.pending.first.value)
+		require.NotNil(t, pool.pending.first.next)
+		assert.Equal(t, change, pool.pending.first.next.value)
+		require.NotNil(t, pool.pending.last)
+		assert.DeepEqual(t, change, pool.pending.last.value)
+		require.NotNil(t, pool.pending.last.prev)
+		assert.Equal(t, old, pool.pending.last.prev.value)
+		require.Equal(t, 2, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, old, n.value)
+		n, ok = pool.m[1]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, change, n.value)
 	})
-	t.Run("validator already has ETH1 creds", func(t *testing.T) {
+	t.Run("multiple items in pool", func(t *testing.T) {
 		pool := NewPool()
-		pool.InsertBLSToExecChange(st, &eth.SignedBLSToExecutionChange{
+		first := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex:     1,
-				FromBlsPubkey:      pubkey,
-				ToExecutionAddress: address,
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			Signature: sig,
-		})
-		assert.Equal(t, 0, len(pool.PendingBLSToExecChanges(true)))
+		}
+		second := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(1),
+			},
+		}
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(2),
+			},
+		}
+		pool.InsertBLSToExecChange(first)
+		pool.InsertBLSToExecChange(second)
+		pool.InsertBLSToExecChange(change)
+		require.Equal(t, 3, pool.pending.len)
+		require.NotNil(t, pool.pending.first)
+		assert.DeepEqual(t, first, pool.pending.first.value)
+		require.NotNil(t, pool.pending.first.next)
+		assert.Equal(t, second, pool.pending.first.next.value)
+		assert.Equal(t, first, pool.pending.first.next.prev.value)
+		require.NotNil(t, pool.pending.last)
+		assert.DeepEqual(t, change, pool.pending.last.value)
+		require.NotNil(t, pool.pending.first.next.next)
+		assert.DeepEqual(t, change, pool.pending.first.next.next.value)
+		require.NotNil(t, pool.pending.last.prev)
+		assert.Equal(t, second, pool.pending.last.prev.value)
+		require.Equal(t, 3, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, first, n.value)
+		n, ok = pool.m[1]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, second, n.value)
+		n, ok = pool.m[2]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, change, n.value)
+	})
+	t.Run("validator index already exists", func(t *testing.T) {
+		pool := NewPool()
+		old := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			},
+			Signature: []byte("old"),
+		}
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			},
+			Signature: []byte("change"),
+		}
+		pool.InsertBLSToExecChange(old)
+		pool.InsertBLSToExecChange(change)
+		assert.Equal(t, 1, pool.pending.len)
+		require.Equal(t, 1, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, old, n.value)
 	})
 }
 
 func TestMarkIncluded(t *testing.T) {
-	pool := &Pool{
-		lock:    sync.RWMutex{},
-		pending: make([]*eth.SignedBLSToExecutionChange, 3),
-	}
-	change0 := &eth.SignedBLSToExecutionChange{Message: &eth.BLSToExecutionChange{ValidatorIndex: 0}}
-	change1 := &eth.SignedBLSToExecutionChange{Message: &eth.BLSToExecutionChange{ValidatorIndex: 1}}
-	change2 := &eth.SignedBLSToExecutionChange{Message: &eth.BLSToExecutionChange{ValidatorIndex: 2}}
-	pool.pending[0] = change0
-	pool.pending[1] = change1
-	pool.pending[2] = change2
-	pool.MarkIncluded(change1)
-	pending := pool.PendingBLSToExecChanges(true)
-	require.Equal(t, 2, len(pending))
-	assert.DeepEqual(t, change0, pending[0])
-	assert.DeepEqual(t, change2, pending[1])
+	t.Run("one element in pool", func(t *testing.T) {
+		pool := NewPool()
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertBLSToExecChange(change)
+		pool.MarkIncluded(change)
+		assert.Equal(t, 0, pool.pending.len)
+		assert.Equal(t, (*listNode)(nil), pool.pending.first)
+		assert.Equal(t, (*listNode)(nil), pool.pending.last)
+		assert.Equal(t, (*listNode)(nil), pool.m[0])
+	})
+	t.Run("first of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertBLSToExecChange(first)
+		pool.InsertBLSToExecChange(second)
+		pool.InsertBLSToExecChange(third)
+		pool.MarkIncluded(first)
+		require.Equal(t, 2, pool.pending.len)
+		require.NotNil(t, pool.pending.first)
+		assert.Equal(t, second, pool.pending.first.value)
+		assert.Equal(t, (*listNode)(nil), pool.pending.first.prev)
+		assert.Equal(t, (*listNode)(nil), pool.m[0])
+	})
+	t.Run("last of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertBLSToExecChange(first)
+		pool.InsertBLSToExecChange(second)
+		pool.InsertBLSToExecChange(third)
+		pool.MarkIncluded(third)
+		require.Equal(t, 2, pool.pending.len)
+		require.NotNil(t, pool.pending.last)
+		assert.Equal(t, second, pool.pending.last.value)
+		assert.Equal(t, (*listNode)(nil), pool.pending.last.next)
+		assert.Equal(t, (*listNode)(nil), pool.m[2])
+	})
+	t.Run("in the middle of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertBLSToExecChange(first)
+		pool.InsertBLSToExecChange(second)
+		pool.InsertBLSToExecChange(third)
+		pool.MarkIncluded(second)
+		require.Equal(t, 2, pool.pending.len)
+		require.NotNil(t, pool.pending.first)
+		require.NotNil(t, pool.pending.last)
+		assert.Equal(t, first, pool.pending.first.value)
+		assert.Equal(t, third, pool.pending.last.value)
+		assert.Equal(t, third, pool.pending.first.next.value)
+		assert.Equal(t, first, pool.pending.last.prev.value)
+		assert.Equal(t, (*listNode)(nil), pool.m[1])
+	})
+	t.Run("not in pool", func(t *testing.T) {
+		pool := NewPool()
+		first := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertBLSToExecChange(first)
+		pool.InsertBLSToExecChange(second)
+		pool.MarkIncluded(change)
+		require.Equal(t, 2, pool.pending.len)
+		assert.NotNil(t, pool.m[0])
+		assert.NotNil(t, pool.m[1])
+	})
 }
