@@ -131,9 +131,6 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 	if err != nil {
 		return err
 	}
-	if 1 > 0 {
-		panic("pingo")
-	}
 	if !bytes.Equal(payload.ParentHash(), header.BlockHash()) {
 		return ErrInvalidPayloadBlockHash
 	}
