@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -430,6 +431,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
+		BeaconApiTimeout:           time.Second * 30,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
