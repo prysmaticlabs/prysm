@@ -117,8 +117,14 @@ func (c *grpcValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.V
 }
 
 // Deprecated: Do not use.
-func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.Empty) (ethpb.BeaconNodeValidator_WaitForChainStartClient, error) {
-	return c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
+func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.Empty) (*ethpb.ChainStartResponse, error) {
+	stream, err := c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return stream.Recv()
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {

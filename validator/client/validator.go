@@ -236,16 +236,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err != nil {
-		return errors.Wrap(
-			iface.ErrConnectionIssue,
-			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
-		)
-	}
-
 	log.Info("Syncing with beacon node to align on chain genesis info")
-	chainStartRes, err := stream.Recv()
+	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
