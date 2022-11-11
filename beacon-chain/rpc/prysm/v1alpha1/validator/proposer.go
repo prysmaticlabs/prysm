@@ -22,6 +22,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -35,8 +36,8 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
-// before the Altair fork epoch and Altair blocks post-fork epoch.
+// by passing in the slot and the signed randao reveal of the slot. Returns a full block
+// corresponding to the fork epoch
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
@@ -178,25 +179,56 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		})
 	}()
 
-	// Broadcast the new block to the network.
-	blkPb, err := blk.Proto()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get protobuf block")
-	}
-	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
-		return nil, fmt.Errorf("could not broadcast block: %v", err)
-	}
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
+	if blk.Version() == version.Capella {
+		if err := vs.proposeBlockAndBlobs(ctx, root, blk); err != nil {
+			return nil, errors.Wrap(err, "could not propose block and blob")
+		}
+	} else {
+		// Broadcast the new block to the network.
+		blkPb, err := blk.Proto()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get protobuf block")
+		}
+		if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
+			return nil, fmt.Errorf("could not broadcast block: %v", err)
+		}
+		log.WithFields(logrus.Fields{
+			"blockRoot": hex.EncodeToString(root[:]),
+		}).Debug("Broadcasting block")
 
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
+		if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+			return nil, fmt.Errorf("could not process beacon block: %v", err)
+		}
+
 	}
 
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
+}
+
+func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.SignedBeaconBlock) error {
+	blkPb, err := blk.PbCapellaBlock()
+	if err != nil {
+		return errors.Wrap(err, "could not get protobuf block")
+	}
+	sc, err := vs.BlobsCache.Get(blk.Block().Slot())
+	if err != nil {
+		return errors.Wrap(err, "could not get blobs from cache")
+	}
+	if err := vs.P2P.Broadcast(ctx, &ethpb.SignedBeaconBlockAndBlobsSidecar{
+		BeaconBlock:  blkPb,
+		BlobsSidecar: sc,
+	}); err != nil {
+		return fmt.Errorf("could not broadcast block: %v", err)
+	}
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+		return fmt.Errorf("could not process beacon block: %v", err)
+	}
+	if err := vs.BeaconDB.SaveBlobsSidecar(ctx, sc); err != nil {
+		return errors.Wrap(err, "could not save sidecar to DB")
+	}
+	return nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and

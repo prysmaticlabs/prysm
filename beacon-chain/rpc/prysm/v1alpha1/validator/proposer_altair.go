@@ -15,26 +15,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) BuildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildAltairBeaconBlock")
-	defer span.End()
-	blkData, err := vs.buildPhase0BlockData(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not build block data: %v", err)
-	}
-
+func buildAltairBeaconBlockFromBlockData(blkData *blockData) *ethpb.BeaconBlockAltair {
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
-	// an error in the first validity check of this endpoint.
-	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
-	if err != nil {
-		return nil, err
-	}
-
 	return &ethpb.BeaconBlockAltair{
-		Slot:          req.Slot,
+		Slot:          blkData.Slot,
 		ParentRoot:    blkData.ParentRoot,
 		StateRoot:     stateRoot,
 		ProposerIndex: blkData.ProposerIdx,
@@ -42,14 +28,24 @@ func (vs *Server) BuildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRe
 			Eth1Data:          blkData.Eth1Data,
 			Deposits:          blkData.Deposits,
 			Attestations:      blkData.Attestations,
-			RandaoReveal:      req.RandaoReveal,
+			RandaoReveal:      blkData.RandaoReveal,
 			ProposerSlashings: blkData.ProposerSlashings,
 			AttesterSlashings: blkData.AttesterSlashings,
 			VoluntaryExits:    blkData.VoluntaryExits,
 			Graffiti:          blkData.Graffiti[:],
-			SyncAggregate:     syncAggregate,
+			SyncAggregate:     blkData.SyncAggregate,
 		},
-	}, nil
+	}
+}
+
+func (vs *Server) BuildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildAltairBeaconBlock")
+	defer span.End()
+	blkData, err := vs.buildPhase0BlockData(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not build block data: %v", err)
+	}
+	return buildAltairBeaconBlockFromBlockData(blkData), nil
 }
 
 func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
