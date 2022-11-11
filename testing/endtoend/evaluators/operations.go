@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"strings"
 
@@ -24,10 +25,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-// exitedIndex holds the exited index from ProposeVoluntaryExit in memory so other functions don't confuse it
-// for a normal validator.
-var exitedIndex types.ValidatorIndex
 
 var exitedVals = make(map[[48]byte]bool)
 
@@ -251,6 +248,7 @@ func getAllValidators(c ethpb.BeaconChainClient) ([]*ethpb.Validator, error) {
 	for pageToken != "" {
 		validatorRequest := &ethpb.ListValidatorsRequest{
 			PageSize: 100,
+			PageToken: pageToken,
 		}
 		validators, err := c.ListValidators(context.Background(), validatorRequest)
 		if err != nil {
@@ -260,6 +258,7 @@ func getAllValidators(c ethpb.BeaconChainClient) ([]*ethpb.Validator, error) {
 			vals = append(vals, v.Validator)
 		}
 		pageToken = validators.NextPageToken
+		log.WithField("len", len(vals)).WithField("pageToken", pageToken).Info("getAllValidators")
 	}
 	return vals, nil
 }

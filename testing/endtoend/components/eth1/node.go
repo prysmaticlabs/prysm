@@ -72,6 +72,7 @@ func (node *Node) Start(ctx context.Context) error {
 	}
 
 	args := []string{
+		"--nat=none", // disable nat traversal in e2e, it is failure prone and not needed
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort+node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
@@ -110,6 +111,10 @@ func (node *Node) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to start eth1 chain: %w", err)
 		}
 		if err = helpers.WaitForTextInFile(errLog, "Started P2P networking"); err != nil {
+			kerr := runCmd.Process.Kill()
+			if kerr != nil {
+				log.WithError(kerr).Error("error sending kill to failed node command process")
+			}
 			retryErr = fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
 			continue
 		}

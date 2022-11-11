@@ -75,26 +75,24 @@ func (m *Miner) initDataDir() error {
 	return nil
 }
 
-// Start runs a mining ETH1 node.
-// The miner is responsible for moving the ETH1 chain forward and for deploying the deposit contract.
-func (m *Miner) Start(ctx context.Context) error {
+func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) {
 	if err := m.initDataDir(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// find geth so we can run it.
 	binaryPath, found := bazel.FindBinary("cmd/geth", "geth")
 	if !found {
-		return errors.New("go-ethereum binary not found")
+		return nil, errors.New("go-ethereum binary not found")
 	}
 
 	staticGenesis, err := e2e.TestParams.Paths.Eth1Runfile("genesis.json")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	genesisPath := path.Join(path.Dir(binaryPath), "genesis.json")
 	if err := io.CopyFile(staticGenesis, genesisPath); err != nil {
-		return errors.Wrapf(err, "error copying %s to %s", staticGenesis, genesisPath)
+		return nil, errors.Wrapf(err, "error copying %s to %s", staticGenesis, genesisPath)
 	}
 
 	initCmd := exec.CommandContext(
@@ -107,20 +105,21 @@ func (m *Miner) Start(ctx context.Context) error {
 	// redirect stderr to a log file
 	initFile, err := helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1-init_miner.log"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	initCmd.Stderr = initFile
 
 	// run init command and wait until it exits. this will initialize the geth node (required before starting).
 	if err = initCmd.Start(); err != nil {
-		return err
+		return nil, err
 	}
 	if err = initCmd.Wait(); err != nil {
-		return err
+		return nil, err
 	}
 
 	pwFile := m.DataDir("keystore", minerPasswordFile)
 	args := []string{
+		"--nat=none", // disable nat traversal in e2e, it is failure prone and not needed
 		fmt.Sprintf("--datadir=%s", m.DataDir()),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort),
@@ -150,43 +149,58 @@ func (m *Miner) Start(ctx context.Context) error {
 
 	keystorePath, err := e2e.TestParams.Paths.MinerKeyPath()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = io.CopyFile(keystorePath, m.DataDir("keystore", minerFile)); err != nil {
-		return errors.Wrapf(err, "error copying %s to %s", keystorePath, m.DataDir("keystore", minerFile))
+		return nil, errors.Wrapf(err, "error copying %s to %s", keystorePath, m.DataDir("keystore", minerFile))
 	}
 	err = io.WriteFile(pwFile, []byte(KeystorePassword))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
+	// redirect miner stderr to a log file
+	minerLog, err := helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1_miner.log"))
+	if err != nil {
+		return nil, err
+	}
+	runCmd.Stderr = minerLog
+	log.Infof("Starting eth1 miner, attempt %d, with flags: %s", attempt, strings.Join(args[2:], " "))
+	if err = runCmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start eth1 chain: %w", err)
+	}
+	// check logs for common issues that prevent the EL miner from starting up.
+	if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
+		kerr := runCmd.Process.Kill()
+		if kerr != nil {
+			log.WithError(kerr).Error("error sending kill to failed miner command process")
+		}
+		return nil, fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
+	}
+	if err = helpers.WaitForTextInFile(minerLog, "Started P2P networking"); err != nil {
+		kerr := runCmd.Process.Kill()
+		if kerr != nil {
+			log.WithError(kerr).Error("error sending kill to failed miner command process")
+		}
+		return nil, fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
+	}
+	m.cmd = runCmd
+	return minerLog, nil
+}
+
+// Start runs a mining ETH1 node.
+// The miner is responsible for moving the ETH1 chain forward and for deploying the deposit contract.
+func (m *Miner) Start(ctx context.Context) error {
 	// give the miner start a couple of tries, since the p2p networking check is flaky
-	var minerLog *os.File
 	var retryErr error
-	for retries := 0; retries < 3; retries++ {
-		runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-		// redirect miner stderr to a log file
-		minerLog, err = helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1_miner.log"))
-		if err != nil {
-			return err
+	var minerLog *os.File
+	for attempt := 0; attempt < 3; attempt++ {
+		minerLog, retryErr = m.initAttempt(ctx, attempt)
+		if retryErr == nil {
+			log.Infof("miner started after %d retries", attempt)
+			break
 		}
-		runCmd.Stderr = minerLog
-		retryErr = nil
-		log.Infof("Starting eth1 miner, attempt %d, with flags: %s", retries, strings.Join(args[2:], " "))
-		if err = runCmd.Start(); err != nil {
-			return fmt.Errorf("failed to start eth1 chain: %w", err)
-		}
-		// check logs for common issues that prevent the EL miner from starting up.
-		if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
-			return fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
-		}
-		if err = helpers.WaitForTextInFile(minerLog, "Started P2P networking"); err != nil {
-			retryErr = fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
-			continue
-		}
-		m.cmd = runCmd
-		log.Infof("miner started after %d retries", retries)
-		break
 	}
 	if retryErr != nil {
 		return retryErr
@@ -206,6 +220,10 @@ func (m *Miner) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to connect to ipc: %w", err)
 	}
 	web3 := ethclient.NewClient(client)
+	keystorePath, err := e2e.TestParams.Paths.MinerKeyPath()
+	if err != nil {
+		return err
+	}
 	// this is the key for the miner account. miner account balance is pre-mined in genesis.json.
 	key, err := helpers.KeyFromPath(keystorePath, KeystorePassword)
 	if err != nil {
