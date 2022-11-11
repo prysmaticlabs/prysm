@@ -64,7 +64,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 
 	// If the validator was not registered then we computed already an execution payload
-	if !req.SkipMevBoost && blkData.ExecutionPayload == nil {
+	if !req.SkipMevBoost && blkData.ExecutionPayload == nil && blkData.ExecutionPayloadV2 == nil {
 		altairBlk := buildAltairBeaconBlockFromBlockData(blkData)
 		b, err := vs.getBlockFromBuilder(ctx, altairBlk)
 		if err == nil {
