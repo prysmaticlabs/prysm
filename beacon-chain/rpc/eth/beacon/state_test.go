@@ -272,6 +272,13 @@ func TestGetRandao(t *testing.T) {
 	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochCurrent%params.BeaconConfig().EpochsPerHistoricalVector), mixCurrent))
 	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochOld%params.BeaconConfig().EpochsPerHistoricalVector), mixOld))
 
+	headEpoch := types.Epoch(1)
+	headSt, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	headRandao := bytesutil.PadTo([]byte("head"), 32)
+	require.NoError(t, headSt.UpdateRandaoMixesAtIndex(uint64(headEpoch), headRandao))
+
 	db := dbTest.SetupDB(t)
 	chainService := &chainMock.ChainService{}
 	server := &Server{
@@ -297,6 +304,14 @@ func TestGetRandao(t *testing.T) {
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochOld})
 		require.NoError(t, err)
 		assert.DeepEqual(t, mixOld, resp.Data.Randao)
+	})
+	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
+		server.StateFetcher = &testutil.MockFetcher{
+			BeaconState: headSt,
+		}
+		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
+		require.NoError(t, err)
+		assert.DeepEqual(t, headRandao, resp.Data.Randao)
 	})
 	t.Run("epoch too old", func(t *testing.T) {
 		epochTooOld := types.Epoch(100000 - st.RandaoMixesLength())
