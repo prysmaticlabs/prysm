@@ -432,7 +432,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		nextSyncCommittee:                   st.NextSyncCommittee,
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		lastWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
+		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -498,7 +498,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		slot:                         b.slot,
 		eth1DepositIndex:             b.eth1DepositIndex,
 		nextWithdrawalIndex:          b.nextWithdrawalIndex,
-		lastWithdrawalValidatorIndex: b.lastWithdrawalValidatorIndex,
+		nextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
@@ -832,7 +832,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
 	case nativetypes.LastWithdrawalValidatorIndex:
-		return ssz.Uint64Root(uint64(b.lastWithdrawalValidatorIndex)), nil
+		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
