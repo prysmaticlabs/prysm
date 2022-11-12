@@ -127,7 +127,6 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 	if !complete {
 		return nil
 	}
-
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return err
