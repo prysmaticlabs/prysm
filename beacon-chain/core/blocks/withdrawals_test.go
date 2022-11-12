@@ -563,7 +563,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			require.NoError(t, err)
 			spb := &ethpb.BeaconStateCapella{
 				Slot:                         slot,
-				LastWithdrawalValidatorIndex: test.Args.LastWithdrawalValidatorIndex,
+				NextWithdrawalValidatorIndex: test.Args.LastWithdrawalValidatorIndex,
 				NextWithdrawalIndex:          test.Args.NextWithdrawalIndex,
 			}
 			st, err := prepareValidators(spb, test.Args)

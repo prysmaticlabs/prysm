@@ -432,7 +432,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		nextSyncCommittee:                   st.NextSyncCommittee,
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		lastWithdrawalValidatorIndex:        st.LastWithdrawalValidatorIndex,
+		lastWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
