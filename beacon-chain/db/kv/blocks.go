@@ -269,6 +269,7 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
+	log.Errorf("Saving blockroot %#x", bytesutil.Trunc(blockRoot[:]))
 	return s.SaveBlocks(ctx, []interfaces.SignedBeaconBlock{signed})
 }
 
