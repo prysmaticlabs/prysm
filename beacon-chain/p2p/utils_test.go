@@ -52,6 +52,10 @@ func TestSerializeENR(t *testing.T) {
 		s, err := SerializeENR(record)
 		require.NoError(t, err)
 		assert.NotEqual(t, "", s)
+		s = "enr:" + s
+		newRec, err := enode.Parse(enode.ValidSchemes, s)
+		require.NoError(t, err)
+		assert.Equal(t, s, newRec.String())
 	})
 
 	t.Run("Nil record", func(t *testing.T) {
