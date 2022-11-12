@@ -81,7 +81,7 @@ var capellaFields = append(
 	altairFields,
 	nativetypes.LatestExecutionPayloadHeaderCapella,
 	nativetypes.NextWithdrawalIndex,
-	nativetypes.LastWithdrawalValidatorIndex,
+	nativetypes.NextWithdrawalValidatorIndex,
 )
 
 const (
@@ -831,7 +831,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
-	case nativetypes.LastWithdrawalValidatorIndex:
+	case nativetypes.NextWithdrawalValidatorIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")

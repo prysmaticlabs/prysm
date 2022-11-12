@@ -254,7 +254,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		// Next partial withdrawal validator index root.
 		nextPartialWithdrawalValidatorIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextPartialWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
-		fieldRoots[nativetypes.LastWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot
+		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot
 	}
 
 	return fieldRoots, nil
