@@ -34,7 +34,7 @@ func (b *BeaconState) LastWithdrawalValidatorIndex() (types.ValidatorIndex, erro
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.lastWithdrawalValidatorIndex, nil
+	return b.nextWithdrawalValidatorIndex, nil
 }
 
 // ExpectedWithdrawals returns the withdrawals that a proposer will need to pack in the next block
@@ -49,14 +49,13 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	defer b.lock.RUnlock()
 
 	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
-	validatorIndex := b.lastWithdrawalValidatorIndex
+	validatorIndex := b.nextWithdrawalValidatorIndex + 1
+	if uint64(validatorIndex) == uint64(len(b.validators)) {
+		validatorIndex = 0
+	}
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
 	for range b.validators {
-		validatorIndex += 1
-		if uint64(validatorIndex) == uint64(len(b.validators)) {
-			validatorIndex = types.ValidatorIndex(0)
-		}
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
 		if isFullyWithdrawableValidator(val, epoch) {
@@ -78,6 +77,10 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 		}
 		if uint64(len(withdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
 			break
+		}
+		validatorIndex += 1
+		if uint64(validatorIndex) == uint64(len(b.validators)) {
+			validatorIndex = 0
 		}
 	}
 	return withdrawals, nil
