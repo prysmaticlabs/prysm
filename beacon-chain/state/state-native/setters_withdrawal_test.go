@@ -19,8 +19,8 @@ func TestSetNextWithdrawalIndex(t *testing.T) {
 func TestSetLastWithdrawalValidatorIndex(t *testing.T) {
 	s := BeaconState{
 		version:                      version.Capella,
-		lastWithdrawalValidatorIndex: 3,
+		nextWithdrawalValidatorIndex: 3,
 	}
-	require.NoError(t, s.SetLastWithdrawalValidatorIndex(5))
-	require.Equal(t, types.ValidatorIndex(5), s.lastWithdrawalValidatorIndex)
+	require.NoError(t, s.SetNextWithdrawalValidatorIndex(5))
+	require.Equal(t, types.ValidatorIndex(5), s.nextWithdrawalValidatorIndex)
 }

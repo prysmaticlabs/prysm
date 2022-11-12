@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -110,7 +111,11 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
-		if err := st.SetLastWithdrawalValidatorIndex(withdrawals[len(withdrawals)-1].ValidatorIndex); err != nil {
+		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
+			nextValidatorIndex = 0
+		}
+		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
 		}
 	}

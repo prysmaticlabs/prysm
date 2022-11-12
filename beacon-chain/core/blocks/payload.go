@@ -33,6 +33,9 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if IsPreBellatrixVersion(st.Version()) {
 		return false, nil
 	}
+	if st.Version() > version.Bellatrix {
+		return true, nil
+	}
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return false, err
@@ -81,6 +84,9 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 	if IsPreBellatrixVersion(st.Version()) {
 		return false, nil
 	}
+	if st.Version() > version.Bellatrix {
+		return true, nil
+	}
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return false, err
@@ -121,7 +127,6 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 	if !complete {
 		return nil
 	}
-
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return err
@@ -192,21 +197,23 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
 func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
+	if st.Version() >= version.Capella {
+		withdrawals, err := payload.Withdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get payload withdrawals")
+		}
+		st, err = ProcessWithdrawals(st, withdrawals)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process withdrawals")
+		}
+	}
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-	header, err := blocks.PayloadToHeader(payload)
-	if err != nil {
-		return nil, err
-	}
-	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(header)
-	if err != nil {
-		return nil, err
-	}
-	if err := st.SetLatestExecutionPayloadHeader(wrappedHeader); err != nil {
+	if err := st.SetLatestExecutionPayloadHeader(payload); err != nil {
 		return nil, err
 	}
 	return st, nil

@@ -89,7 +89,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 			WithdrawalsRoot:  make([]byte, 32),
 		},
 		NextWithdrawalIndex:          0,
-		LastWithdrawalValidatorIndex: 0,
+		NextWithdrawalValidatorIndex: 0,
 	}
 
 	return state_native.InitializeFromProtoUnsafeCapella(s)
