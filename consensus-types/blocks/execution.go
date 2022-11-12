@@ -647,6 +647,10 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
+	_, ok := data.Proto().(*enginev1.ExecutionPayloadCapella)
+	if ok {
+		return false, nil
+	}
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
