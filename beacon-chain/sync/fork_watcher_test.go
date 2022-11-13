@@ -138,6 +138,47 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "capella fork in the next epoch",
+			svcCreator: func(t *testing.T) *Service {
+				peer2peer := p2ptest.NewTestP2P(t)
+				chainService := &mockChain.ChainService{
+					Genesis:        time.Now().Add(-4 * oneEpoch()),
+					ValidatorsRoot: [32]byte{'A'},
+				}
+				bCfg := params.BeaconConfig().Copy()
+				bCfg.BellatrixForkEpoch = 3
+				bCfg.CapellaForkEpoch = 5
+				params.OverrideBeaconConfig(bCfg)
+				params.BeaconConfig().InitializeForkSchedule()
+				ctx, cancel := context.WithCancel(context.Background())
+				r := &Service{
+					ctx:    ctx,
+					cancel: cancel,
+					cfg: &config{
+						p2p:           peer2peer,
+						chain:         chainService,
+						stateNotifier: chainService.StateNotifier(),
+						initialSync:   &mockSync.Sync{IsSyncing: false},
+					},
+					chainStarted: abool.New(),
+					subHandler:   newSubTopicHandler(),
+				}
+				return r
+			},
+			currEpoch: 4,
+			wantErr:   false,
+			postSvcCheck: func(t *testing.T, s *Service) {
+				genRoot := s.cfg.chain.GenesisValidatorsRoot()
+				digest, err := forks.ForkDigestFromEpoch(5, genRoot[:])
+				assert.NoError(t, err)
+				assert.Equal(t, true, s.subHandler.digestExists(digest))
+				rpcMap := make(map[string]bool)
+				for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
+					rpcMap[p] = true
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
