@@ -15,5 +15,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/bellatrix/sanity:go_default_library"],
+    deps = ["//testing/spectest/shared/capella/sanity:go_default_library"],
 )

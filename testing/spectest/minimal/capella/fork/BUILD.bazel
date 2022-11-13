@@ -13,5 +13,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/bellatrix/fork:go_default_library"],
+    deps = ["//testing/spectest/shared/capella/fork:go_default_library"],
 )

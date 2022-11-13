@@ -3,9 +3,9 @@ package sanity
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/bellatrix/sanity"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/capella/sanity"
 )
 
-func TestMinimal_Bellatrix_Sanity_Slots(t *testing.T) {
+func TestMinimal_Capella_Sanity_Slots(t *testing.T) {
 	sanity.RunSlotProcessingTests(t, "minimal")
 }
