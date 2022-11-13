@@ -8,17 +8,38 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 const executionToBLSPadding = 12
 
-// ProcessBLSToExecutionChange validates a SignedBLSToExecution message and
+func ProcessBLSToExecutionChanges(
+	st state.BeaconState,
+	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	if signed.Version() < version.Capella {
+		return st, nil
+	}
+	changes, err := signed.Block().Body().BLSToExecutionChanges()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		st, err = processBLSToExecutionChange(st, change)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process BLSToExecutionChange")
+		}
+	}
+	return st, nil
+}
+
+// processBLSToExecutionChange validates a SignedBLSToExecution message and
 // changes the validator's withdrawal address accordingly.
 //
 // Spec pseudocode definition:
@@ -39,7 +60,7 @@ const executionToBLSPadding = 12
 //        + address_change.to_execution_address
 //    )
 //
-func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
+func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
 	if signed == nil {
 		return st, errNilSignedWithdrawalMessage
 	}

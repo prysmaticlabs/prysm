@@ -11,6 +11,7 @@ go_test(
         "proposer_slashing_test.go",
         "sync_committee_test.go",
         "voluntary_exit_test.go",
+        "withdrawals_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "@consensus_spec_tests_minimal//:test_data",

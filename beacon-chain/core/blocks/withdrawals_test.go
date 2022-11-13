@@ -60,7 +60,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			Signature: signature,
 		}
 
-		st, err = blocks.ProcessBLSToExecutionChange(st, signed)
+		st, err = blocks.processBLSToExecutionChange(st, signed)
 		require.NoError(t, err)
 
 		val, err := st.ValidatorAtIndex(0)
@@ -108,7 +108,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			Signature: signature,
 		}
 
-		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
+		_, err = blocks.processBLSToExecutionChange(st, signed)
 		require.ErrorContains(t, "out of range", err)
 	})
 
@@ -146,7 +146,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			Signature: signature,
 		}
 
-		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
+		_, err = blocks.processBLSToExecutionChange(st, signed)
 		require.ErrorContains(t, "withdrawal credentials do not match", err)
 	})
 
@@ -191,7 +191,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			Signature: signature,
 		}
 
-		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
+		_, err = blocks.processBLSToExecutionChange(st, signed)
 		require.ErrorContains(t, "withdrawal credential prefix is not a BLS prefix", err)
 
 	})
