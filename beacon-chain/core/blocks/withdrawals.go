@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -80,10 +80,9 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 
 	// hash the public key and verify it matches the withdrawal credentials
 	fromPubkey := message.FromBlsPubkey
-	pubkeyChunks := [][32]byte{bytesutil.ToBytes32(fromPubkey[:32]), bytesutil.ToBytes32(fromPubkey[32:])}
-	digest := make([][32]byte, 1)
-	htr.VectorizedSha256(pubkeyChunks, digest)
-	if !bytes.Equal(digest[0][1:], cred[1:]) {
+	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+	digest := hashFn.Hash(fromPubkey)
+	if !bytes.Equal(digest[1:], cred[1:]) {
 		return nil, errInvalidWithdrawalCredentials
 	}
 
