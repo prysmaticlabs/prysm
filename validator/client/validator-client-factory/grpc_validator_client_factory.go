@@ -6,9 +6,9 @@ package validator_client_factory
 import (
 	grpcApi "github.com/prysmaticlabs/prysm/v3/validator/client/grpc-api"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
-	"google.golang.org/grpc"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 )
 
-func NewValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
-	return grpcApi.NewGrpcValidatorClient(cc)
+func NewValidatorClient(validatorConn validatorHelpers.NodeConnection) iface.ValidatorClient {
+	return grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
 }

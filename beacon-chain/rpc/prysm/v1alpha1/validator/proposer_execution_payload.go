@@ -141,7 +141,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 
 	f := &enginev1.ForkchoiceState{
 		HeadBlockHash:      parentHash,
-		SafeBlockHash:      parentHash,
+		SafeBlockHash:      finalizedBlockHash,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
 
