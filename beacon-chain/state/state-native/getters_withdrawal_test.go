@@ -202,6 +202,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 				WithdrawableEpoch:     types.Epoch(1),
 			}
 			val.WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+			val.WithdrawalCredentials[31] = byte(i)
 			s.validators[i] = val
 		}
 		s.balances[3] += params.BeaconConfig().MinDepositAmount
@@ -246,7 +247,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
 			WithdrawalIndex:  0,
-			ValidatorIndex:   1,
+			ValidatorIndex:   0,
 			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
 			Amount:           1,
 		}
@@ -273,7 +274,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
 			WithdrawalIndex:  0,
-			ValidatorIndex:   1,
+			ValidatorIndex:   0,
 			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
 			Amount:           params.BeaconConfig().MaxEffectiveBalance,
 		}
@@ -300,10 +301,33 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
 			WithdrawalIndex:  0,
-			ValidatorIndex:   1,
+			ValidatorIndex:   0,
 			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
 			Amount:           params.BeaconConfig().MaxEffectiveBalance + 1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
+	})
+	t.Run("one fully withdrawable but zero balance", func(t *testing.T) {
+		s := BeaconState{
+			version:                      version.Capella,
+			validators:                   make([]*ethpb.Validator, 100),
+			balances:                     make([]uint64, 100),
+			nextWithdrawalValidatorIndex: 20,
+		}
+		for i := range s.validators {
+			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
+			val := &ethpb.Validator{
+				WithdrawalCredentials: make([]byte, 32),
+				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:     types.Epoch(1),
+			}
+			val.WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+			s.validators[i] = val
+		}
+		s.validators[3].WithdrawableEpoch = types.Epoch(0)
+		s.balances[3] = 0
+		expected, err := s.ExpectedWithdrawals()
+		require.NoError(t, err)
+		require.Equal(t, 0, len(expected))
 	})
 }
