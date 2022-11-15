@@ -10,7 +10,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -39,7 +40,7 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 	return chainStartResponse, nil
 }
 
-func (c beaconApiValidatorClient) getGenesis() (*apimiddleware.GenesisResponseJson, error) {
+func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, error) {
 	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
 	if err != nil {
 		return nil, err
@@ -51,16 +52,16 @@ func (c beaconApiValidatorClient) getGenesis() (*apimiddleware.GenesisResponseJs
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		errorJson := apimiddleware.EventErrorJson{}
+		errorJson := apimiddleware.DefaultErrorJson{}
 		err = json.NewDecoder(resp.Body).Decode(&errorJson)
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, errors.Errorf("error %d: %s", errorJson.StatusCode, errorJson.Message)
+		return nil, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
 	}
 
-	genesisJson := &apimiddleware.GenesisResponseJson{}
+	genesisJson := &rpcmiddleware.GenesisResponseJson{}
 	err = json.NewDecoder(resp.Body).Decode(genesisJson)
 	if err != nil {
 		return nil, err
