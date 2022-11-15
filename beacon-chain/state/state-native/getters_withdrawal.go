@@ -49,16 +49,13 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	defer b.lock.RUnlock()
 
 	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
-	validatorIndex := b.nextWithdrawalValidatorIndex + 1
-	if uint64(validatorIndex) == uint64(len(b.validators)) {
-		validatorIndex = 0
-	}
+	validatorIndex := b.nextWithdrawalValidatorIndex
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
 	for range b.validators {
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
-		if isFullyWithdrawableValidator(val, epoch) {
+		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				WithdrawalIndex:  withdrawalIndex,
 				ValidatorIndex:   validatorIndex,
