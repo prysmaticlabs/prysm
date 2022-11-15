@@ -229,7 +229,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.NextSyncCommittee.RealPosition()] = nextSyncCommitteeRoot[:]
 	}
 
-	if state.version == version.Bellatrix {
+	if state.version >= version.Bellatrix {
 		// Execution payload root.
 		executionPayloadRoot, err := state.latestExecutionPayloadHeader.HashTreeRoot()
 		if err != nil {
@@ -239,13 +239,6 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 
 	if state.version == version.Capella {
-		// Execution payload root.
-		executionPayloadRoot, err := state.latestExecutionPayloadHeaderCapella.HashTreeRoot()
-		if err != nil {
-			return nil, err
-		}
-		fieldRoots[nativetypes.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
-
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)

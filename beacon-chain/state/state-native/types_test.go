@@ -26,7 +26,9 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
-	custom := customState.ToProto()
+	customStateProto, err := customState.ToProto()
+	require.NoError(t, err)
+	custom := customStateProto
 	assert.DeepSSZEqual(t, cloned, custom)
 
 	r1, err := customState.HashTreeRoot(ctx)
@@ -141,7 +143,8 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = st.ToProto()
+		_, err = st.ToProto()
+		require.NoError(b, err)
 	}
 }
 

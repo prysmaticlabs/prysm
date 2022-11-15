@@ -142,7 +142,11 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayload) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	txRoot, err := ssz.TransactionsRoot(e.p.Transactions)
+	if err != nil {
+		return nil, err
+	}
+	return txRoot[:], nil
 }
 
 // Withdrawals --
@@ -324,6 +328,104 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 	}, nil
 }
 
+// CopyExecutionDataHeader copies only the execution header fields into a payload header interface.
+func CopyExecutionDataHeader(header interfaces.ExecutionDataHeader) (interfaces.ExecutionDataHeader, error) {
+	switch payload := header.Proto().(type) {
+	case *enginev1.ExecutionPayload:
+		txRoot, err := ssz.TransactionsRoot(payload.Transactions)
+		if err != nil {
+			return nil, err
+		}
+		h := &enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+			BlockNumber:      payload.BlockNumber,
+			GasLimit:         payload.GasLimit,
+			GasUsed:          payload.GasUsed,
+			Timestamp:        payload.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+			TransactionsRoot: txRoot[:],
+		}
+		return WrappedExecutionPayloadHeader(h)
+	case *enginev1.ExecutionPayloadHeader:
+		h := &enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+			BlockNumber:      payload.BlockNumber,
+			GasLimit:         payload.GasLimit,
+			GasUsed:          payload.GasUsed,
+			Timestamp:        payload.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+			TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+		}
+		return WrappedExecutionPayloadHeader(h)
+	case *enginev1.ExecutionPayloadCapella:
+		txRoot, err := ssz.TransactionsRoot(payload.Transactions)
+		if err != nil {
+			return nil, err
+		}
+		var withdrawalsRoot []byte
+		if len(payload.Withdrawals) != 0 {
+			root, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), payload.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			if err != nil {
+				return nil, err
+			}
+			withdrawalsRoot = root[:]
+		}
+		h := &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+			BlockNumber:      payload.BlockNumber,
+			GasLimit:         payload.GasLimit,
+			GasUsed:          payload.GasUsed,
+			Timestamp:        payload.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+			TransactionsRoot: txRoot[:],
+			WithdrawalsRoot:  withdrawalsRoot,
+		}
+		return WrappedExecutionPayloadHeaderCapella(h)
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		h := &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
+			BlockNumber:      payload.BlockNumber,
+			GasLimit:         payload.GasLimit,
+			GasUsed:          payload.GasUsed,
+			Timestamp:        payload.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
+			TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+			WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		}
+		return WrappedExecutionPayloadHeaderCapella(h)
+	default:
+		return nil, errUnsupportedExecutionPayload
+	}
+}
+
 // executionPayloadCapella is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -452,7 +554,11 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 
 // TransactionsRoot --
 func (e executionPayloadCapella) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedGetter
+	txRoot, err := ssz.TransactionsRoot(e.p.Transactions)
+	if err != nil {
+		return nil, err
+	}
+	return txRoot[:], nil
 }
 
 // Withdrawals --
@@ -647,8 +753,10 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
-	_, ok := data.Proto().(*enginev1.ExecutionPayloadCapella)
-	if ok {
+	switch data.Proto().(type) {
+	case *enginev1.ExecutionPayloadCapella:
+		return false, nil
+	case *enginev1.ExecutionPayloadHeaderCapella:
 		return false, nil
 	}
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
@@ -702,5 +810,70 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	if data.Timestamp() != 0 {
 		return false, nil
 	}
+	return true, nil
+}
+
+// IsEmptyExecutionDataHeader checks if an execution data header is empty underneath. If a single
+// field has a non-zero value, this function will return false.
+func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, error) {
+	switch data.Proto().(type) {
+	case *enginev1.ExecutionPayloadCapella:
+		return false, nil
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		return false, nil
+	}
+	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.FeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.LogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.PrevRandao(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BaseFeePerGas(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BlockHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+
+	// Do not compare against the computed TransactionsRoot if we're dealing with a full payload
+	switch data.(type) {
+	case *executionPayloadHeader, *executionPayloadHeaderCapella:
+		txRoot, err := data.TransactionsRoot()
+		if err != nil {
+			return false, err
+		}
+		if !bytes.Equal(txRoot, make([]byte, fieldparams.RootLength)) {
+			return false, nil
+		}
+	}
+
+	if len(data.ExtraData()) != 0 {
+		return false, nil
+	}
+	if data.BlockNumber() != 0 {
+		return false, nil
+	}
+	if data.GasLimit() != 0 {
+		return false, nil
+	}
+	if data.GasUsed() != 0 {
+		return false, nil
+	}
+	if data.Timestamp() != 0 {
+		return false, nil
+	}
+
 	return true, nil
 }

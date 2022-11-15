@@ -33,11 +33,12 @@ var (
 	// ErrUnsupportedVersion for beacon block methods.
 	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
-	ErrNilObjectWrapped      = errors.New("attempted to wrap nil object")
-	errNilBlock              = errors.New("received nil beacon block")
-	errNilBlockBody          = errors.New("received nil beacon block body")
-	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
-	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
+	ErrNilObjectWrapped            = errors.New("attempted to wrap nil object")
+	errNilBlock                    = errors.New("received nil beacon block")
+	errNilBlockBody                = errors.New("received nil beacon block body")
+	errIncorrectBlockVersion       = errors.New(incorrectBlockVersion)
+	errIncorrectBodyVersion        = errors.New(incorrectBodyVersion)
+	errUnsupportedExecutionPayload = errors.New("unsupported execution payload")
 )
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.

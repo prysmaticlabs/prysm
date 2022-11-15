@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -70,6 +71,11 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextSyncCommittee:           b.nextSyncCommittee,
 		}
 	case version.Bellatrix:
+		// TODO: may panic!
+		execHeader, ok := b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
+		if !ok {
+			panic("unexpected execution payload")
+		}
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -95,9 +101,14 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
+			LatestExecutionPayloadHeader: execHeader,
 		}
 	case version.Capella:
+		// TODO: may panic!
+		execHeader, ok := b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+		if !ok {
+			panic("unexpected execution payload")
+		}
 		return &ethpb.BeaconStateCapella{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -123,7 +134,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
+			LatestExecutionPayloadHeader: execHeader,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 		}
@@ -133,9 +144,9 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 }
 
 // ToProto the beacon state into a protobuf for usage.
-func (b *BeaconState) ToProto() interface{} {
+func (b *BeaconState) ToProto() (interface{}, error) {
 	if b == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
@@ -167,7 +178,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:         b.finalizedCheckpointVal(),
-		}
+		}, nil
 	case version.Altair:
 		return &ethpb.BeaconStateAltair{
 			GenesisTime:                 b.genesisTime,
@@ -194,8 +205,16 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:            b.inactivityScoresVal(),
 			CurrentSyncCommittee:        b.currentSyncCommitteeVal(),
 			NextSyncCommittee:           b.nextSyncCommitteeVal(),
-		}
+		}, nil
 	case version.Bellatrix:
+		execHeader, err := b.latestExecutionPayloadHeaderVal()
+		if err != nil {
+			return nil, err
+		}
+		headerProto, ok := execHeader.Proto().(*enginev1.ExecutionPayloadHeader)
+		if !ok {
+			return nil, errors.New("unexpected execution payload")
+		}
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -221,9 +240,17 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
-		}
+			LatestExecutionPayloadHeader: headerProto,
+		}, nil
 	case version.Capella:
+		execHeader, err := b.latestExecutionPayloadHeaderVal()
+		if err != nil {
+			return nil, err
+		}
+		headerProto, ok := execHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+		if !ok {
+			return nil, errors.New("unexpected execution payload")
+		}
 		return &ethpb.BeaconStateCapella{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
@@ -249,12 +276,12 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapellaVal(),
+			LatestExecutionPayloadHeader: headerProto,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
-		}
+		}, nil
 	default:
-		return nil
+		return nil, nil
 	}
 }
 

@@ -27,7 +27,11 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 
 	res := c.get(root)
 	assert.NotNil(t, s)
-	assert.DeepEqual(t, res.ToProto(), s.ToProto(), "Expected equal protos to return from cache")
+	resProto, err := res.ToProto()
+	require.NoError(t, err)
+	sProto, err := s.ToProto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, resProto, sProto, "Expected equal protos to return from cache")
 
 	c.delete(root)
 	assert.Equal(t, false, c.has(root), "Cache not supposed to have the object")

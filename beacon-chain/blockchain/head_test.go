@@ -89,7 +89,11 @@ func TestSaveHead_Different(t *testing.T) {
 	pb, err := headBlock.Proto()
 	require.NoError(t, err)
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
-	assert.DeepSSZEqual(t, headState.ToProto(), service.headState(ctx).ToProto(), "Head did not change")
+	headStateProto, err := headState.ToProto()
+	require.NoError(t, err)
+	serviceHeadStateProto, err := service.headState(ctx).ToProto()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, headStateProto, serviceHeadStateProto, "Head did not change")
 }
 
 func TestSaveHead_Different_Reorg(t *testing.T) {
@@ -147,7 +151,11 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	pb, err := headBlock.Proto()
 	require.NoError(t, err)
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
-	assert.DeepSSZEqual(t, headState.ToProto(), service.headState(ctx).ToProto(), "Head did not change")
+	headStateProto, err := headState.ToProto()
+	require.NoError(t, err)
+	serviceHeadStateProto, err := service.headState(ctx).ToProto()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, headStateProto, serviceHeadStateProto, "Head did not change")
 	require.LogsContain(t, hook, "Chain reorg occurred")
 	require.LogsContain(t, hook, "distance=1")
 	require.LogsContain(t, hook, "depth=1")

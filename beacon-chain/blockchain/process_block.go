@@ -277,11 +277,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return nil
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionData, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionDataHeader, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
-	var preStateHeader interfaces.ExecutionData
+	var preStateHeader interfaces.ExecutionDataHeader
 	var err error
 	preStateVersion := st.Version()
 	switch preStateVersion {
@@ -339,7 +339,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	type versionAndHeader struct {
 		version int
-		header  interfaces.ExecutionData
+		header  interfaces.ExecutionDataHeader
 	}
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
@@ -606,7 +606,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader interfaces.ExecutionData, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader interfaces.ExecutionDataHeader, blk interfaces.SignedBeaconBlock) error {
 	// Skip validation if block is older than Bellatrix.
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return nil
@@ -633,7 +633,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	empty, err := consensusblocks.IsEmptyExecutionData(stateHeader)
+	empty, err := consensusblocks.IsEmptyExecutionDataHeader(stateHeader)
 	if err != nil {
 		return err
 	}
