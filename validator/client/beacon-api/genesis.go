@@ -14,7 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse, error) {
+func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse, error) {
 	genesis, err := c.getGenesis()
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (c *beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartRespons
 	return chainStartResponse, nil
 }
 
-func (c *beaconApiValidatorClient) getGenesis() (*apimiddleware.GenesisResponseJson, error) {
+func (c beaconApiValidatorClient) getGenesis() (*apimiddleware.GenesisResponseJson, error) {
 	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (c *beaconApiValidatorClient) getGenesis() (*apimiddleware.GenesisResponseJ
 	}
 
 	genesisJson := &apimiddleware.GenesisResponseJson{}
-	err = json.NewDecoder(resp.Body).Decode(&genesisJson)
+	err = json.NewDecoder(resp.Body).Decode(genesisJson)
 	if err != nil {
 		return nil, err
 	}
