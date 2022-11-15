@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/d4l3k/messagediff"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
