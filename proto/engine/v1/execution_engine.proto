@@ -167,7 +167,6 @@ message BlobsBundle {
 	bytes block_hash = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes kzgs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
 	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
-	bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 message Blob {

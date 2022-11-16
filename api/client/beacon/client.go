@@ -143,6 +143,12 @@ func withSSZEncoding() reqOption {
 	}
 }
 
+func withJSONEncoding() reqOption {
+	return func(req *http.Request) {
+		req.Header.Set("Accept", "application/json")
+	}
+}
+
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
@@ -183,6 +189,15 @@ func renderGetBlockPath(id StateOrBlockId) string {
 func (c *Client) GetBlock(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
 	blockPath := renderGetBlockPath(blockId)
 	b, err := c.get(ctx, blockPath, withSSZEncoding())
+	if err != nil {
+		return nil, errors.Wrapf(err, "error requesting state by id = %s", blockId)
+	}
+	return b, nil
+}
+
+func (c *Client) GetBlockJSON(ctx context.Context, blockId StateOrBlockId) ([]byte, error) {
+	blockPath := renderGetBlockPath(blockId)
+	b, err := c.get(ctx, blockPath, withJSONEncoding())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting state by id = %s", blockId)
 	}

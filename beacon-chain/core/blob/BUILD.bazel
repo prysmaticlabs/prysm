@@ -16,7 +16,5 @@ go_library(
         "@com_github_ethereum_go_ethereum//crypto/kzg:go_default_library",
         "@com_github_ethereum_go_ethereum//params:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_protolambda_go_kzg//bls:go_default_library",
-        "@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
 )

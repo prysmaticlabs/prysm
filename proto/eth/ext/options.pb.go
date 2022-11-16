@@ -7,9 +7,9 @@
 package ext
 
 import (
-	descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 	reflect "reflect"
 )
 
@@ -22,7 +22,7 @@ const (
 
 var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 	{
-		ExtendedType:  (*descriptor.FieldOptions)(nil),
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
 		ExtensionType: (*string)(nil),
 		Field:         50000,
 		Name:          "ethereum.eth.ext.cast_type",
@@ -30,7 +30,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
-		ExtendedType:  (*descriptor.FieldOptions)(nil),
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
 		ExtensionType: (*string)(nil),
 		Field:         50001,
 		Name:          "ethereum.eth.ext.ssz_size",
@@ -38,7 +38,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
-		ExtendedType:  (*descriptor.FieldOptions)(nil),
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
 		ExtensionType: (*string)(nil),
 		Field:         50002,
 		Name:          "ethereum.eth.ext.ssz_max",
@@ -46,7 +46,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 		Filename:      "proto/eth/ext/options.proto",
 	},
 	{
-		ExtendedType:  (*descriptor.FieldOptions)(nil),
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
 		ExtensionType: (*string)(nil),
 		Field:         50003,
 		Name:          "ethereum.eth.ext.spec_name",
@@ -55,7 +55,7 @@ var file_proto_eth_ext_options_proto_extTypes = []protoimpl.ExtensionInfo{
 	},
 }
 
-// Extension fields to descriptor.FieldOptions.
+// Extension fields to descriptorpb.FieldOptions.
 var (
 	// optional string cast_type = 50000;
 	E_CastType = &file_proto_eth_ext_options_proto_extTypes[0]
@@ -102,7 +102,7 @@ var file_proto_eth_ext_options_proto_rawDesc = []byte{
 }
 
 var file_proto_eth_ext_options_proto_goTypes = []interface{}{
-	(*descriptor.FieldOptions)(nil), // 0: google.protobuf.FieldOptions
+	(*descriptorpb.FieldOptions)(nil), // 0: google.protobuf.FieldOptions
 }
 var file_proto_eth_ext_options_proto_depIdxs = []int32{
 	0, // 0: ethereum.eth.ext.cast_type:extendee -> google.protobuf.FieldOptions

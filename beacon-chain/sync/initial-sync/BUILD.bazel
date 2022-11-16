@@ -18,6 +18,8 @@ go_library(
     deps = [
         "//async/abool:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/core/blob:go_default_library",
+        "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
