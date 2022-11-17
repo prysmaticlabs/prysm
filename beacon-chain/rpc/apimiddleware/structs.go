@@ -452,17 +452,17 @@ type blindedBeaconBlockBodyBellatrixJson struct {
 }
 
 type beaconBlockBodyEip4844Json struct {
-	RandaoReveal      string                     `json:"randao_reveal" hex:"true"`
-	Eth1Data          *eth1DataJson              `json:"eth1_data"`
-	Graffiti          string                     `json:"graffiti" hex:"true"`
-	ProposerSlashings []*proposerSlashingJson    `json:"proposer_slashings"`
-	AttesterSlashings []*attesterSlashingJson    `json:"attester_slashings"`
-	Attestations      []*attestationJson         `json:"attestations"`
-	Deposits          []*depositJson             `json:"deposits"`
-	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
-	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
-	ExecutionPayload  *executionPayload4844Json  `json:"execution_payload"`
-	BlobKzgs          []string                   `json:"blob_kzgs" hex:"true"`
+	RandaoReveal       string                     `json:"randao_reveal" hex:"true"`
+	Eth1Data           *eth1DataJson              `json:"eth1_data"`
+	Graffiti           string                     `json:"graffiti" hex:"true"`
+	ProposerSlashings  []*proposerSlashingJson    `json:"proposer_slashings"`
+	AttesterSlashings  []*attesterSlashingJson    `json:"attester_slashings"`
+	Attestations       []*attestationJson         `json:"attestations"`
+	Deposits           []*depositJson             `json:"deposits"`
+	VoluntaryExits     []*signedVoluntaryExitJson `json:"voluntary_exits"`
+	SyncAggregate      *syncAggregateJson         `json:"sync_aggregate"`
+	ExecutionPayload   *executionPayload4844Json  `json:"execution_payload"`
+	BlobKzgCommitments []string                   `json:"blob_kzg_commitments" hex:"true"`
 }
 
 type blindedBeaconBlockBodyEip4844Json struct {
@@ -476,7 +476,7 @@ type blindedBeaconBlockBodyEip4844Json struct {
 	VoluntaryExits         []*signedVoluntaryExitJson  `json:"voluntary_exits"`
 	SyncAggregate          *syncAggregateJson          `json:"sync_aggregate"`
 	ExecutionPayloadHeader *executionPayloadHeaderJson `json:"execution_payload_header"`
-	BlobKzgs               []string                    `json:"blob_kzgs" hex:"true"`
+	BlobKzgCommitments     []string                    `json:"blob_kzg_commitments" hex:"true"`
 }
 
 type executionPayloadJson struct {
