@@ -49,12 +49,18 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedBlock := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+		blk := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
 			Block: &eth.BeaconBlock{
 				Slot: 8,
 			},
 		})
-		wantedBlockRoot, err := wantedBlock.HashTreeRoot()
+		bodyRoot, err := blk.Block.Body.HashTreeRoot()
+		require.NoError(t, err)
+		wantedHeader := util.HydrateBeaconHeader(&eth.BeaconBlockHeader{
+			Slot:     8,
+			BodyRoot: bodyRoot[:],
+		})
+		wantedBlockRoot, err := wantedHeader.HashTreeRoot()
 		require.NoError(t, err)
 		genericResponse, err := anypb.New(&ethpb.EventBlock{
 			Slot:                8,
@@ -66,7 +72,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			Event: BlockTopic,
 			Data:  genericResponse,
 		}
-		wsb, err := blocks.NewSignedBeaconBlock(wantedBlock)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
