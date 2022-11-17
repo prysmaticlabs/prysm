@@ -251,10 +251,9 @@ func TestServer_GetEip4844BeaconBlock_WithBlobKZGs(t *testing.T) {
 			PayloadIDBytes:       &v1.PayloadIDBytes{1},
 			ExecutionPayload4844: payload,
 			BlobsBundle: &v1.BlobsBundle{
-				BlockHash:       payload.BlockHash,
-				Blobs:           blobs,
-				Kzgs:            kzgs,
-				AggregatedProof: make([]byte, 48),
+				BlockHash: payload.BlockHash,
+				Blobs:     blobs,
+				Kzgs:      kzgs,
 			},
 		},
 		BeaconDB:               db,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto/kzg"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	gcache "github.com/patrickmn/go-cache"
@@ -1430,11 +1431,11 @@ func TestValidateBeaconBlockPubSub_ValidBlobKzgs(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
 
 	blob := gethTypes.Blob{[32]byte{0x10, 0x11}}
-	commitment, ok := blob.ComputeCommitment()
+	commitment, ok := kzg.BlobToKZGCommitment(blob)
 	require.Equal(t, ok, true)
 	sbt := gethTypes.SignedBlobTx{
 		Message: gethTypes.BlobTxMessage{
-			BlobVersionedHashes: []common.Hash{commitment.ComputeVersionedHash()},
+			BlobVersionedHashes: []common.Hash{common.Hash(kzg.KZGToVersionedHash(commitment))},
 		},
 	}
 	var txbuf bytes.Buffer
@@ -1564,5 +1565,7 @@ func TestValidateBeaconBlockPubSub_InvalidBlobKzgs(t *testing.T) {
 
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
 	assert.Equal(t, pubsub.ValidationReject, res, "block with invalid parent should be ignored")
-	require.ErrorContains(t, "invalid blob kzg encoding", err)
+	// none of the transactions in this block are blob tx type, so the number of versioned hashes won't match the
+	// number of kzgs we have provided.
+	require.ErrorContains(t, "invalid number of blob versioned hashes", err)
 }
