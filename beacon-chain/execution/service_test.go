@@ -1,9 +1,7 @@
 package execution
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -78,56 +77,6 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 		g.MockStateFeed = new(event.Feed)
 	}
 	return g.MockStateFeed
-}
-
-type goodFetcher struct {
-	backend     *backends.SimulatedBackend
-	blockNumMap map[uint64]*gethTypes.Header
-}
-
-func (_ *goodFetcher) Close() {}
-
-func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTypes.Header, error) {
-	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
-		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
-	}
-	if g.backend == nil {
-		return &gethTypes.Header{
-			Number: big.NewInt(0),
-		}, nil
-	}
-	header := g.backend.Blockchain().GetHeaderByHash(hash)
-	if header == nil {
-		return nil, errors.New("nil header returned")
-	}
-	return header, nil
-
-}
-
-func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
-	if g.backend == nil && g.blockNumMap == nil {
-		return &gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		}, nil
-	}
-	if g.blockNumMap != nil {
-		return g.blockNumMap[number.Uint64()], nil
-	}
-	var header *gethTypes.Header
-	if number == nil {
-		header = g.backend.Blockchain().CurrentHeader()
-	} else {
-		header = g.backend.Blockchain().GetHeaderByNumber(number.Uint64())
-	}
-	if header == nil {
-		return nil, errors.New("nil header returned")
-	}
-	return header, nil
-}
-
-func (_ *goodFetcher) SyncProgress(_ context.Context) (*ethereum.SyncProgress, error) {
-	return nil, nil
 }
 
 var depositsReqForChainStart = 64
@@ -229,7 +178,6 @@ func TestService_Eth1Synced(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 
 	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
 	now := time.Now()
@@ -261,7 +209,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	params.OverrideBeaconConfig(conf)
 
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
@@ -330,7 +278,7 @@ func TestHandlePanic_OK(t *testing.T) {
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	// nil eth1DataFetcher would panic if cached value not used
-	web3Service.eth1DataFetcher = nil
+	web3Service.rpcClient = nil
 	web3Service.processBlockHeader(nil)
 	require.LogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }
@@ -371,7 +319,6 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	for i := 0; i < 30; i++ {
 		testAcc.Backend.Commit()
@@ -506,7 +453,6 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
@@ -800,18 +746,23 @@ func TestService_CacheBlockHeaders(t *testing.T) {
 func TestService_FollowBlock(t *testing.T) {
 	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	followTime += 10000
-	bMap := make(map[uint64]*gethTypes.Header)
+	bMap := make(map[uint64]*types.HeaderInfo)
 	for i := uint64(3000); i > 0; i-- {
-		bMap[i] = &gethTypes.Header{
+		h := &gethTypes.Header{
 			Number: big.NewInt(int64(i)),
 			Time:   followTime + (i * 40),
 		}
+		bMap[i] = &types.HeaderInfo{
+			Number: h.Number,
+			Hash:   h.Hash(),
+			Time:   h.Time,
+		}
 	}
 	s := &Service{
-		cfg:             &config{eth1HeaderReqLimit: 1000},
-		eth1DataFetcher: &goodFetcher{blockNumMap: bMap},
-		headerCache:     newHeaderCache(),
-		latestEth1Data:  &ethpb.LatestETH1Data{BlockTime: (3000 * 40) + followTime, BlockHeight: 3000},
+		cfg:            &config{eth1HeaderReqLimit: 1000},
+		rpcClient:      &mockExecution.RPCClient{BlockNumMap: bMap},
+		headerCache:    newHeaderCache(),
+		latestEth1Data: &ethpb.LatestETH1Data{BlockTime: (3000 * 40) + followTime, BlockHeight: 3000},
 	}
 	h, err := s.followedBlockHeight(context.Background())
 	assert.NoError(t, err)
@@ -839,7 +790,7 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 			return err
 		}
 		h := &gethTypes.Header{Number: num}
-		*e.Result.(*gethTypes.Header) = *h
+		*e.Result.(*types.HeaderInfo) = types.HeaderInfo{Number: h.Number, Hash: h.Hash()}
 	}
 	return nil
 }
