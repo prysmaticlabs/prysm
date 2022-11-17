@@ -11,10 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
@@ -24,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
@@ -35,6 +38,18 @@ var (
 	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
+
+type RPCClientBad struct {
+}
+
+func (RPCClientBad) Close() {}
+func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
+	return errors.New("rpc client is not initialized")
+}
+
+func (RPCClientBad) CallContext(context.Context, interface{}, string, ...interface{}) error {
+	return ethereum.NotFound
+}
 
 func TestClient_IPC(t *testing.T) {
 	server := newTestIPCServer(t)
@@ -1211,6 +1226,78 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 				t.Fatalf("Wanted err %s got %v", tt.err, err)
 			}
 			require.DeepEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestHeaderByHash_NotFound(t *testing.T) {
+	srv := &Service{}
+	srv.rpcClient = RPCClientBad{}
+
+	_, err := srv.HeaderByHash(context.Background(), common.Hash([32]byte{}))
+	assert.Equal(t, ethereum.NotFound, err)
+}
+
+func TestHeaderByNumber_NotFound(t *testing.T) {
+	srv := &Service{}
+	srv.rpcClient = RPCClientBad{}
+
+	_, err := srv.HeaderByNumber(context.Background(), big.NewInt(100))
+	assert.Equal(t, ethereum.NotFound, err)
+}
+
+func TestToBlockNumArg(t *testing.T) {
+	tests := []struct {
+		name   string
+		number *big.Int
+		want   string
+	}{
+		{
+			name:   "genesis",
+			number: big.NewInt(0),
+			want:   "0x0",
+		},
+		{
+			name:   "near genesis block",
+			number: big.NewInt(300),
+			want:   "0x12c",
+		},
+		{
+			name:   "current block",
+			number: big.NewInt(15838075),
+			want:   "0xf1ab7b",
+		},
+		{
+			name:   "far off block",
+			number: big.NewInt(12032894823020),
+			want:   "0xaf1a06bea6c",
+		},
+		{
+			name:   "latest block",
+			number: nil,
+			want:   "latest",
+		},
+		{
+			name:   "pending block",
+			number: big.NewInt(-1),
+			want:   "pending",
+		},
+		{
+			name:   "finalized block",
+			number: big.NewInt(-3),
+			want:   "finalized",
+		},
+		{
+			name:   "safe block",
+			number: big.NewInt(-4),
+			want:   "safe",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := toBlockNumArg(tt.number); got != tt.want {
+				t.Errorf("toBlockNumArg() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
