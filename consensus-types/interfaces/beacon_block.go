@@ -66,7 +66,7 @@ type BeaconBlockBody interface {
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() (proto.Message, error)
-	BlobKzgs() ([][]byte, error)
+	BlobKzgCommitments() ([][]byte, error)
 	Execution() (ExecutionData, error)
 }
 

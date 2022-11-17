@@ -53,7 +53,7 @@ type BeaconBlockBody struct {
 	syncAggregate       *eth.SyncAggregate
 	executionData       interfaces.ExecutionData
 	executionDataHeader interfaces.ExecutionDataHeader
-	blobKzgs            [][]byte
+	blobKzgCommitments  [][]byte
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.

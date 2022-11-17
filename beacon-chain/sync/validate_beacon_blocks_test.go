@@ -1448,7 +1448,7 @@ func TestValidateBeaconBlockPubSub_ValidBlobKzgs(t *testing.T) {
 	tx = append(tx, txbuf.Bytes()...)
 
 	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, tx)
-	msg.Block.Body.BlobKzgs = [][]byte{commitment[:]}
+	msg.Block.Body.BlobKzgCommitments = [][]byte{commitment[:]}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -1524,7 +1524,7 @@ func TestValidateBeaconBlockPubSub_InvalidBlobKzgs(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
 	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
 	kzg := [48]byte{'a'}
-	msg.Block.Body.BlobKzgs = [][]byte{kzg[:]}
+	msg.Block.Body.BlobKzgCommitments = [][]byte{kzg[:]}
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 

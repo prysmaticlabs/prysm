@@ -697,12 +697,12 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	}
 }
 
-func (b *BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix:
-		return nil, errNotSupported("BlobKzgs", b.version)
+		return nil, errNotSupported("BlobKzgCommitments", b.version)
 	case version.EIP4844:
-		return b.blobKzgs, nil
+		return b.blobKzgCommitments, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}

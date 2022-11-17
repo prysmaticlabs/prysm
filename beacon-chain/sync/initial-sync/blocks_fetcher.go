@@ -440,7 +440,7 @@ func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sideca
 		if blocks.IsPreEIP4844Version(b.Version()) {
 			continue
 		}
-		blobKzgs, err := b.Block().Body().BlobKzgs()
+		blobKzgs, err := b.Block().Body().BlobKzgCommitments()
 		if err != nil {
 			log.WithError(err).Error("Could not get blob kzgs")
 		}
@@ -471,7 +471,7 @@ func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidec
 			if blocks.IsPreEIP4844Version(b.Version()) {
 				continue
 			}
-			blobKzgs, err := b.Block().Body().BlobKzgs()
+			blobKzgs, err := b.Block().Body().BlobKzgCommitments()
 			if err != nil {
 				return err
 			}

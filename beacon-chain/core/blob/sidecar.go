@@ -59,7 +59,7 @@ func BlockContainsKZGs(b interfaces.BeaconBlock) bool {
 	if blocks.IsPreEIP4844Version(b.Version()) {
 		return false
 	}
-	blobKzgs, err := b.Body().BlobKzgs()
+	blobKzgs, err := b.Body().BlobKzgCommitments()
 	if err != nil {
 		// cannot happen!
 		return false

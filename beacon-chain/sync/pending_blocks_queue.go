@@ -202,7 +202,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				}
 
 				sidecar = queuedSidecar.s
-				kzgs, err := b.Block().Body().BlobKzgs()
+				kzgs, err := b.Block().Body().BlobKzgCommitments()
 				// an error shouldn't happen! A non-nil sidecar means we're dealing with a EIP-4844 block
 				if err != nil {
 					log.WithError(err).Errorf("Could not retrieve blob kzgs from block %d", b.Block().Slot())

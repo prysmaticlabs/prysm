@@ -259,17 +259,17 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			return nil, err
 		}
 		return &eth.BeaconBlockBodyWithBlobKZGs{
-			RandaoReveal:      b.randaoReveal[:],
-			Eth1Data:          b.eth1Data,
-			Graffiti:          b.graffiti[:],
-			ProposerSlashings: b.proposerSlashings,
-			AttesterSlashings: b.attesterSlashings,
-			Attestations:      b.attestations,
-			Deposits:          b.deposits,
-			VoluntaryExits:    b.voluntaryExits,
-			SyncAggregate:     b.syncAggregate,
-			ExecutionPayload:  payload,
-			BlobKzgs:          b.blobKzgs,
+			RandaoReveal:       b.randaoReveal[:],
+			Eth1Data:           b.eth1Data,
+			Graffiti:           b.graffiti[:],
+			ProposerSlashings:  b.proposerSlashings,
+			AttesterSlashings:  b.attesterSlashings,
+			Attestations:       b.attestations,
+			Deposits:           b.deposits,
+			VoluntaryExits:     b.voluntaryExits,
+			SyncAggregate:      b.syncAggregate,
+			ExecutionPayload:   payload,
+			BlobKzgCommitments: b.blobKzgCommitments,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
@@ -567,19 +567,19 @@ func initBlockBodyFromProtoEip4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*Beacon
 	}
 
 	b := &BeaconBlockBody{
-		version:           version.EIP4844,
-		isBlinded:         false,
-		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
-		eth1Data:          pb.Eth1Data,
-		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
-		proposerSlashings: pb.ProposerSlashings,
-		attesterSlashings: pb.AttesterSlashings,
-		attestations:      pb.Attestations,
-		deposits:          pb.Deposits,
-		voluntaryExits:    pb.VoluntaryExits,
-		syncAggregate:     pb.SyncAggregate,
-		executionData:     executionData,
-		blobKzgs:          pb.BlobKzgs,
+		version:            version.EIP4844,
+		isBlinded:          false,
+		randaoReveal:       bytesutil.ToBytes96(pb.RandaoReveal),
+		eth1Data:           pb.Eth1Data,
+		graffiti:           bytesutil.ToBytes32(pb.Graffiti),
+		proposerSlashings:  pb.ProposerSlashings,
+		attesterSlashings:  pb.AttesterSlashings,
+		attestations:       pb.Attestations,
+		deposits:           pb.Deposits,
+		voluntaryExits:     pb.VoluntaryExits,
+		syncAggregate:      pb.SyncAggregate,
+		executionData:      executionData,
+		blobKzgCommitments: pb.BlobKzgCommitments,
 	}
 	return b, nil
 }

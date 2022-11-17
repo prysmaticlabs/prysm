@@ -592,17 +592,17 @@ func CopyBeaconBlockBodyWithBlobKZGs(body *BeaconBlockBodyWithBlobKZGs) *BeaconB
 		return nil
 	}
 	return &BeaconBlockBodyWithBlobKZGs{
-		RandaoReveal:      bytesutil.SafeCopyBytes(body.RandaoReveal),
-		Eth1Data:          CopyETH1Data(body.Eth1Data),
-		Graffiti:          bytesutil.SafeCopyBytes(body.Graffiti),
-		ProposerSlashings: CopyProposerSlashings(body.ProposerSlashings),
-		AttesterSlashings: CopyAttesterSlashings(body.AttesterSlashings),
-		Attestations:      CopyAttestations(body.Attestations),
-		Deposits:          CopyDeposits(body.Deposits),
-		VoluntaryExits:    CopySignedVoluntaryExits(body.VoluntaryExits),
-		SyncAggregate:     CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:  CopyExecutionPayload4844(body.ExecutionPayload),
-		BlobKzgs:          CopyBlobKZGs(body.BlobKzgs),
+		RandaoReveal:       bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:           CopyETH1Data(body.Eth1Data),
+		Graffiti:           bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:  CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:  CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:       CopyAttestations(body.Attestations),
+		Deposits:           CopyDeposits(body.Deposits),
+		VoluntaryExits:     CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:      CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayload:   CopyExecutionPayload4844(body.ExecutionPayload),
+		BlobKzgCommitments: CopyBlobKZGs(body.BlobKzgCommitments),
 	}
 }
 

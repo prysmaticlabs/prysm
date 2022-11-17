@@ -653,7 +653,7 @@ message BeaconBlockBodyWithBlobKZGs {
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
     SyncAggregate sync_aggregate = 9;
     ethereum.engine.v1.ExecutionPayload4844 execution_payload = 10;
-    repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+    repeated bytes blob_kzg_commitments = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 
 message BlindedBeaconBlockBodyWithBlobKZGs {
@@ -667,7 +667,7 @@ message BlindedBeaconBlockBodyWithBlobKZGs {
     repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
     SyncAggregate sync_aggregate = 9;
     ethereum.engine.v1.ExecutionPayloadHeader4844 execution_payload_header = 10;
-    repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+    repeated bytes blob_kzg_commitments = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
 }
 
 message BlobsSidecar {

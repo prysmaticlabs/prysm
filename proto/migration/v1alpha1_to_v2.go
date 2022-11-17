@@ -438,7 +438,7 @@ func V1Alpha1BeaconBlockEip4844ToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlock
 			BlockHash:        bytesutil.SafeCopyBytes(v1alpha1Block.Body.ExecutionPayload.BlockHash),
 			TransactionsRoot: transactionsRoot[:],
 		},
-		BlobKzgs: bytesutil.SafeCopy2dBytes(v1alpha1Block.Body.BlobKzgs),
+		BlobKzgCommitments: bytesutil.SafeCopy2dBytes(v1alpha1Block.Body.BlobKzgCommitments),
 	}
 	v2Block := &ethpbv2.BlindedBeaconBlockEip4844{
 		Slot:          v1alpha1Block.Slot,

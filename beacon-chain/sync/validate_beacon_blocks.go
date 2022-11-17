@@ -289,7 +289,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return nil
 	}
 
-	blobKzgs, err := body.BlobKzgs()
+	blobKzgs, err := body.BlobKzgCommitments()
 	if err != nil {
 		return err
 	}
