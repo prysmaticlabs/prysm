@@ -93,5 +93,7 @@ type ExecutionData interface {
 	BaseFeePerGas() []byte
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
+	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
+	WithdrawalsRoot() ([]byte, error)
 }

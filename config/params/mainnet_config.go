@@ -149,11 +149,12 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	ProportionalSlashingMultiplier: 1,
 
 	// Max operations per block constants.
-	MaxProposerSlashings: 16,
-	MaxAttesterSlashings: 2,
-	MaxAttestations:      128,
-	MaxDeposits:          16,
-	MaxVoluntaryExits:    16,
+	MaxProposerSlashings:     16,
+	MaxAttesterSlashings:     2,
+	MaxAttestations:          128,
+	MaxDeposits:              16,
+	MaxVoluntaryExits:        16,
+	MaxWithdrawalsPerPayload: 16,
 
 	// BLS domain values.
 	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
@@ -188,7 +189,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,
-	BeaconStateCapellaFieldCount:   28,
+	BeaconStateCapellaFieldCount:   27,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,

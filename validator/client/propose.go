@@ -145,7 +145,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
 
-	if blk.Version() == version.Bellatrix {
+	if blk.Version() >= version.Bellatrix {
 		p, err := blk.Block().Body().Execution()
 		if err != nil {
 			log.WithError(err).Error("Failed to get execution payload")
@@ -166,6 +166,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		}
 		if p.GasLimit() != 0 {
 			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
+		}
+		if blk.Version() >= version.Capella && !blk.IsBlinded() {
+			withdrawals, err := p.Withdrawals()
+			if err != nil {
+				log.WithError(err).Error("Failed to get execution payload withdrawals")
+				return
+			}
+			log = log.WithField("withdrawalCount", len(withdrawals))
 		}
 	}
 
@@ -189,7 +197,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 // The exit is signed by the validator before being sent to the beacon node for broadcasting.
 func ProposeExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	nodeClient ethpb.NodeClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
@@ -291,7 +299,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 // Sign voluntary exit with proposer domain and private key.
 func signVoluntaryExit(
 	ctx context.Context,
-	validatorClient ethpb.BeaconNodeValidatorClient,
+	validatorClient iface.ValidatorClient,
 	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
