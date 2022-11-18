@@ -30,6 +30,11 @@ func amtInGwei(deposit *eth.Deposit) *big.Int {
 	return amt.Mul(amt, gweiPerEth)
 }
 
+// computeDeposits uses the deterministic validator generator to generate deposits for `nvals` (number of validators).
+// To control which validators should receive deposits, so that we can generate deposits at different stages of e2e,
+// the `offset` parameter skips the first N validators in the deterministic list.
+// In order to test the requirement that our deposit follower is able to handle multiple partial deposits,
+// the `partial` flag specifies that half of the deposits should be broken up into 2 transactions.
 func computeDeposits(offset, nvals int, partial bool) ([]*eth.Deposit, error) {
 	balances := make([]uint64, offset+nvals)
 	partialIndex := len(balances) // set beyond loop invariant so by default nothing gets partial
@@ -130,6 +135,9 @@ type SentDeposit struct {
 // the `offset` parameter skips the first N validators in the deterministic list.
 // In order to test the requirement that our deposit follower is able to handle multiple partial deposits,
 // the `partial` flag specifies that half of the deposits should be broken up into 2 transactions.
+// Once the set of deposits has been generated, it submits a transaction for each deposit
+// (using 2 transactions for partial deposits) and then uses WaitForBlocks (which spams the miner node with transactions
+// to and from its own address) to advance the chain until it has moved forward ETH1_FOLLOW_DISTANCE blocks.
 func (d *Depositor) SendAndMine(ctx context.Context, offset, nvals int, batch types.DepositBatch, partial bool) error {
 	// This is the "Send" part of the function. Compute deposits for `nvals` validators,
 	// with half of those deposits being split over 2 transactions if the `partial` flag is true,
