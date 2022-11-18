@@ -13,16 +13,15 @@ import (
 // We test the algorithm to update a node from SYNCING to INVALID
 // We start with the same diagram as above:
 //
-//                E -- F
-//               /
-//         C -- D
-//        /      \
-//  A -- B        G -- H -- I
-//        \        \
-//         J        -- K -- L
+//	              E -- F
+//	             /
+//	       C -- D
+//	      /      \
+//	A -- B        G -- H -- I
+//	      \        \
+//	       J        -- K -- L
 //
 // And every block in the Fork choice is optimistic.
-//
 func TestPruneInvalid(t *testing.T) {
 	tests := []struct {
 		root             [32]byte // the root of the new INVALID block
@@ -286,12 +285,12 @@ func TestSetOptimisticToInvalid_CorrectChildren(t *testing.T) {
 
 // Pow       |      Pos
 //
-//  CA -- A -- B -- C-----D
-//   \          \--------------E
-//    \
-//     ----------------------F -- G
-// B is INVALID
+//	CA -- A -- B -- C-----D
+//	 \          \--------------E
+//	  \
+//	   ----------------------F -- G
 //
+// B is INVALID
 func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
@@ -339,12 +338,12 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 
 // Pow       |      Pos
 //
-//  CA -------- B -- C-----D
-//   \           \--------------E
-//    \
-//     --A -------------------------F -- G
-// B is INVALID
+//	CA -------- B -- C-----D
+//	 \           \--------------E
+//	  \
+//	   --A -------------------------F -- G
 //
+// B is INVALID
 func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
