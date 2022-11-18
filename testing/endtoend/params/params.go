@@ -5,6 +5,7 @@ package params
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path"
@@ -56,7 +57,7 @@ type paths struct{}
 // Eth1StaticFile abstracts the location of the eth1 static file folder in the e2e directory, so that
 // a relative path can be used.
 // The relative path is specified as a variadic slice of path parts, in the same way as path.Join.
-func (p *paths) Eth1StaticFile(rel ...string) string {
+func (*paths) Eth1StaticFile(rel ...string) string {
 	parts := append([]string{Eth1StaticFilesPath}, rel...)
 	return path.Join(parts...)
 }
@@ -77,7 +78,7 @@ var TestParams *params
 
 // Logfile gives the full path to a file in the bazel test environment log directory.
 // The relative path is specified as a variadic slice of path parts, in the same style as path.Join.
-func (p *params) Logfile(rel...string) string {
+func (p *params) Logfile(rel ...string) string {
 	return path.Join(append([]string{p.LogPath}, rel...)...)
 }
 
@@ -88,7 +89,7 @@ func (p *params) Logfile(rel...string) string {
 func (p *params) Eth1RPCURL(index int) *url.URL {
 	return &url.URL{
 		Scheme: baseELScheme,
-		Host:   fmt.Sprintf("%s:%d", baseELHost, p.Ports.Eth1RPCPort+index),
+		Host:   net.JoinHostPort(baseELHost, fmt.Sprintf("%d", p.Ports.Eth1RPCPort+index)),
 	}
 }
 

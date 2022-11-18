@@ -12,33 +12,33 @@ type EmptyComponent struct {
 	startc chan struct{}
 }
 
-func (b *EmptyComponent) Start(ctx context.Context) error {
-	b.chanInit()
-	close(b.startc)
+func (c *EmptyComponent) Start(context.Context) error {
+	c.chanInit()
+	close(c.startc)
 	return nil
 }
 
-func (b *EmptyComponent) chanInit() {
-	b.Lock()
-	defer b.Unlock()
-	if b.startc == nil {
-		b.startc = make(chan struct{})
+func (c *EmptyComponent) chanInit() {
+	c.Lock()
+	defer c.Unlock()
+	if c.startc == nil {
+		c.startc = make(chan struct{})
 	}
 }
 
-func (b *EmptyComponent) Started() <-chan struct{} {
-	b.chanInit()
-	return b.startc
+func (c *EmptyComponent) Started() <-chan struct{} {
+	c.chanInit()
+	return c.startc
 }
 
-func (b *EmptyComponent) Pause() error {
+func (*EmptyComponent) Pause() error {
 	return nil
 }
 
-func (m *EmptyComponent) Resume() error {
+func (*EmptyComponent) Resume() error {
 	return nil
 }
 
-func (m *EmptyComponent) Stop() error {
+func (*EmptyComponent) Stop() error {
 	return nil
 }

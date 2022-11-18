@@ -55,12 +55,12 @@ func (m *Miner) SetBootstrapENR(bootstrapEnr string) {
 	m.bootstrapEnr = bootstrapEnr
 }
 
-func (m *Miner) DataDir(sub ...string) string {
+func (*Miner) DataDir(sub ...string) string {
 	parts := append([]string{e2e.TestParams.TestPath, "eth1data/miner"}, sub...)
 	return path.Join(parts...)
 }
 
-func (m *Miner) Password() string {
+func (*Miner) Password() string {
 	return KeystorePassword
 }
 

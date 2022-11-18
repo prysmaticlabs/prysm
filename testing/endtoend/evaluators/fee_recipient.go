@@ -68,8 +68,7 @@ func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn)
 	}
 
 	for _, ctr := range blks.BlockContainers {
-		switch ctr.Block.(type) {
-		case *ethpb.BeaconBlockContainer_BellatrixBlock:
+		if fr := ctr.GetBellatrixBlock(); fr != nil {
 			var account common.Address
 
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient

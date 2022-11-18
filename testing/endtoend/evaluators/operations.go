@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -142,7 +143,7 @@ func processesDepositsInBlocks(ec e2etypes.EvaluationContext, conns ...*grpc.Cli
 		}
 	}
 	if len(mismatches) != 0 {
-		return fmt.Errorf("Not all expected deposits observed on chain, len(expected)=%d, len(observed)=%d, mismatches=%d; details(key:expected:observed): %s", len(expected), len(observed), len(mismatches), strings.Join(mismatches, ","))
+		return fmt.Errorf("not all expected deposits observed on chain, len(expected)=%d, len(observed)=%d, mismatches=%d; details(key:expected:observed): %s", len(expected), len(observed), len(mismatches), strings.Join(mismatches, ","))
 	}
 	return nil
 }
@@ -221,7 +222,7 @@ func activatesDepositedValidators(ec e2etypes.EvaluationContext, conns ...*grpc.
 
 	// Make sure every post-genesis deposit has been proecssed, resulting in a validator.
 	if len(expected) > 0 {
-		return fmt.Errorf("Missing %d validators for post-genesis deposits", len(expected))
+		return fmt.Errorf("missing %d validators for post-genesis deposits", len(expected))
 	}
 
 	if deposits != churnLimit {
@@ -247,7 +248,7 @@ func getAllValidators(c ethpb.BeaconChainClient) ([]*ethpb.Validator, error) {
 	pageToken := "0"
 	for pageToken != "" {
 		validatorRequest := &ethpb.ListValidatorsRequest{
-			PageSize: 100,
+			PageSize:  100,
 			PageToken: pageToken,
 		}
 		validators, err := c.ListValidators(context.Background(), validatorRequest)
@@ -303,7 +304,7 @@ func depositedValidatorsAreActive(ec e2etypes.EvaluationContext, conns ...*grpc.
 	}
 	if len(expected) > 0 {
 		mk := make([]string, 0)
-		for k, _ := range expected {
+		for k := range expected {
 			mk = append(mk, fmt.Sprintf("%#x", k))
 		}
 		return fmt.Errorf("API response missing %d validators, based on deposits; keys=%s", len(expected), strings.Join(mk, ","))
@@ -367,7 +368,7 @@ func proposeVoluntaryExit(_ e2etypes.EvaluationContext, conns ...*grpc.ClientCon
 func validatorsHaveExited(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
-	for k, _ := range exitedVals {
+	for k := range exitedVals {
 		validatorRequest := &ethpb.GetValidatorRequest{
 			QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
 				PublicKey: k[:],

@@ -72,6 +72,7 @@ type Depositor struct {
 	cd        *contracts.DepositContract
 	sent      *DepositHistory
 }
+
 var _ types.ComponentRunner = &Depositor{}
 
 // History exposes the DepositHistory value for a Depositor.
@@ -84,7 +85,7 @@ func (d *Depositor) History() *DepositHistory {
 
 // DepositHistory is a type used by Depositor to keep track of batches of deposit for test assertion purposes.
 type DepositHistory struct {
-	byBatch map[types.DepositBatch][]*SentDeposit
+	byBatch  map[types.DepositBatch][]*SentDeposit
 	deposits []*SentDeposit
 }
 

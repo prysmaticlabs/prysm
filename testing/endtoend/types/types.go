@@ -54,18 +54,18 @@ type E2EConfig struct {
 // Evaluator defines the structure of the evaluators used to
 // conduct the current beacon state during the E2E.
 type Evaluator struct {
-	Name       string
-	Policy     func(currentEpoch types.Epoch) bool
+	Name   string
+	Policy func(currentEpoch types.Epoch) bool
 	// Evaluation accepts one or many/all conns, depending on what is needed by the set of evaluators.
 	Evaluation func(ec EvaluationContext, conn ...*grpc.ClientConn) error
 }
 
-// DepositsBatch represents a group of deposits that are sent together during an e2e run.
+// DepositBatch represents a group of deposits that are sent together during an e2e run.
 type DepositBatch int
 
 const (
 	// reserved zero value
-	undefinedBatch DepositBatch = iota
+	_ DepositBatch = iota
 	// GenesisDepositBatch deposits are sent to populate the initial set of validators for genesis.
 	GenesisDepositBatch
 	// PostGenesisDepositBatch deposits are sent to test that deposits appear in blocks as expected
@@ -73,7 +73,7 @@ const (
 	PostGenesisDepositBatch
 )
 
-// DepositBalances represents a type that can sum, by validator, all deposits made in E2E prior to the function call.
+// DepositBalancer represents a type that can sum, by validator, all deposits made in E2E prior to the function call.
 type DepositBalancer interface {
 	Balances(DepositBatch) map[[48]byte]uint64
 }

@@ -10,11 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-type partialindices struct {
-	low  int
-	high int
-}
-
 func TestComputeDeposits(t *testing.T) {
 	cases := []struct {
 		nvals   int
