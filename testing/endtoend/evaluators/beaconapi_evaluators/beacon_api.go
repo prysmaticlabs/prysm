@@ -230,7 +230,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
 
 	for path, meta := range beaconPathsAndObjects {
-		for key, _ := range meta.prysmResps {
+		for key := range meta.prysmResps {
 			switch key {
 			case "json":
 				jsonparams := meta.params("json", currentEpoch)
@@ -352,7 +352,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return errors.New("failed to cast type")
 	}
 	if prysmHeader.Data.Root != prysmDuties.DependentRoot {
-		fmt.Println(fmt.Sprintf("current slot: %v", slots.CurrentSlot(uint64(genesisData.Data.GenesisTime.AsTime().Unix()))))
+		fmt.Printf("current slot: %v\n", slots.CurrentSlot(uint64(genesisData.Data.GenesisTime.AsTime().Unix())))
 		return fmt.Errorf("header root %s does not match duties root %s ", prysmHeader.Data.Root, prysmDuties.DependentRoot)
 	}
 
@@ -433,7 +433,7 @@ func compareResponseObjects(prysmResp interface{}, lighthouseResp interface{}) e
 
 func pathFromParams(path string, params []string) string {
 	var apiPath string
-	for index, _ := range params {
+	for index := range params {
 		apiPath = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
 	}
 	return apiPath
