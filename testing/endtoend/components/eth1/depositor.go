@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -15,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -88,11 +88,14 @@ func (d *Depositor) History() *DepositHistory {
 
 // DepositHistory is a type used by Depositor to keep track of batches of deposit for test assertion purposes.
 type DepositHistory struct {
+	sync.RWMutex
 	byBatch  map[types.DepositBatch][]*SentDeposit
 	deposits []*SentDeposit
 }
 
 func (h *DepositHistory) record(sd *SentDeposit) {
+	h.Lock()
+	defer h.Unlock()
 	h.deposits = append(h.deposits, sd)
 	h.updateByBatch(sd)
 }
@@ -108,6 +111,8 @@ func (h *DepositHistory) updateByBatch(sd *SentDeposit) {
 // This can be used in e2e evaluators to check that the results of deposit transactions are visible on chain.
 func (h *DepositHistory) Balances(batch types.DepositBatch) map[[48]byte]uint64 {
 	balances := make(map[[48]byte]uint64)
+	h.RLock()
+	defer h.RUnlock()
 	for _, d := range h.byBatch[batch] {
 		k := bytesutil.ToBytes48(d.deposit.Data.PublicKey)
 		if _, ok := balances[k]; !ok {
