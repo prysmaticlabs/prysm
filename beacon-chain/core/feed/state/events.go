@@ -26,6 +26,10 @@ const (
 	FinalizedCheckpoint
 	// NewHead of the chain event.
 	NewHead
+	// LightClientFinalityUpdate event
+	LightClientFinalityUpdate
+	// LightClientOptimisticUpdate event
+	LightClientOptimisticUpdate
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.

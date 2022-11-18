@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -24,11 +26,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // A custom slot deadline for processing state slots in our cache.
@@ -213,6 +216,55 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		},
 	})
 
+	func() {
+		// Send notification of light client optimistic update to the state feed.
+		// Get the attestedHeader
+		prevSlot := slots.PrevSlot(postState.Slot())
+		prevBlockRoot := bytesutil.ToBytes32(postState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
+		prevBlock, err := s.cfg.BeaconDB.Block(ctx, prevBlockRoot)
+		if err != nil {
+			log.WithError(err).Error("Could not get previous block")
+			return
+		}
+
+		prevBlockSignedHeader, err := prevBlock.Header()
+		if err != nil {
+			log.WithError(err).Error("Could not get previous block header")
+			return
+		}
+
+		attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
+
+		// Get SyncAggregate
+		syncAggregate, err := signed.Block().Body().SyncAggregate()
+		if err != nil {
+			log.WithError(err).Error("Could not get sync aggregate")
+			return
+		}
+
+		syncAggregateV1 := ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
+			SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
+		}
+
+		data := ethpbv2.OptimisticUpdate{
+			AttestedHeader: attestedHeader,
+			SyncAggregate:  &syncAggregateV1,
+			SignatureSlot:  uint64(prevSlot),
+		}
+
+		// Return the result
+		result := &ethpbv2.LightClientOptimisticUpdateResponse{
+			Version: ethpbv2.Version(signed.Version()),
+			Data:    &data,
+		}
+
+		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.LightClientOptimisticUpdate,
+			Data: result,
+		})
+	}()
+
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	go func() {
 		// Use a custom deadline here, since this method runs asynchronously.
@@ -246,18 +298,95 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
+
 		go func() {
-			// Send an event regarding the new finalized checkpoint over a common event feed.
-			stateRoot := signed.Block().StateRoot()
-			s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-				Type: statefeed.FinalizedCheckpoint,
-				Data: &ethpbv1.EventFinalizedCheckpoint{
-					Epoch:               postState.FinalizedCheckpoint().Epoch,
-					Block:               postState.FinalizedCheckpoint().Root,
-					State:               stateRoot[:],
-					ExecutionOptimistic: isOptimistic,
-				},
-			})
+			func() {
+				// Send an event regarding the new finalized checkpoint over a common event feed.
+				stateRoot := signed.Block().StateRoot()
+				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.FinalizedCheckpoint,
+					Data: &ethpbv1.EventFinalizedCheckpoint{
+						Epoch:               postState.FinalizedCheckpoint().Epoch,
+						Block:               postState.FinalizedCheckpoint().Root,
+						State:               stateRoot[:],
+						ExecutionOptimistic: isOptimistic,
+					},
+				})
+			}()
+
+			func() {
+				// Send an event regarding the new light client finality update over a common event feed.
+				// Get the attestedHeader
+				prevSlot := slots.PrevSlot(postState.Slot())
+				prevBlockRoot := bytesutil.ToBytes32(postState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
+				prevBlock, err := s.cfg.BeaconDB.Block(ctx, prevBlockRoot)
+				if err != nil {
+					log.WithError(err).Error("Could not get previous block")
+					return
+				}
+				prevBlockSignedHeader, err := prevBlock.Header()
+				if err != nil {
+					log.WithError(err).Error("Could not get previous block header")
+					return
+				}
+
+				attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
+
+				// Get finalized header
+				finalizedRoot := postState.FinalizedCheckpoint().GetRoot()
+				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedRoot))
+				if err != nil {
+					log.WithError(err).Error("Could not get finalized block")
+					return
+				}
+
+				signedFinalizedHeader, err := finalizedBlock.Header()
+				if err != nil {
+					log.WithError(err).Error("Could not get finalized header")
+					return
+				}
+
+				finalizedHeader := migration.V1Alpha1SignedHeaderToV1(signedFinalizedHeader).GetMessage()
+
+				// Get finalityBranch
+				finalityBranch, err := postState.FinalizedRootProof(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not get finality branch")
+					return
+				}
+
+				// Get SyncAggregate
+				syncAggregate, err := signed.Block().Body().SyncAggregate()
+				if err != nil {
+					log.WithError(err).Error("Could not get sync aggregate")
+					return
+				}
+
+				syncAggregateV1 := ethpbv1.SyncAggregate{
+					SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
+					SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
+				}
+
+				data := ethpbv2.FinalityUpdate{
+					AttestedHeader:  attestedHeader,
+					FinalizedHeader: finalizedHeader,
+					FinalityBranch:  finalityBranch,
+					SyncAggregate:   &syncAggregateV1,
+					SignatureSlot:   uint64(signed.Block().Slot()),
+				}
+
+				// Return the result
+				result := &ethpbv2.LightClientFinalityUpdateResponse{
+					Version: ethpbv2.Version(signed.Version()),
+					Data:    &data,
+				}
+
+				// Send event
+				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+					Type: statefeed.LightClientFinalityUpdate,
+					Data: result,
+				})
+			}()
 
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
@@ -268,7 +397,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 				log.WithError(err).Error("Could not insert finalized deposits.")
 			}
 		}()
-
 	}
 	defer reportAttestationInclusion(b)
 	if err := s.handleEpochBoundary(ctx, postState); err != nil {

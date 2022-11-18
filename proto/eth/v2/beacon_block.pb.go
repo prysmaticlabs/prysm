@@ -7,15 +7,14 @@
 package eth
 
 import (
-	reflect "reflect"
-	sync "sync"
-
-	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -204,6 +203,7 @@ type BeaconBlockContainerV2 struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to Block:
+	//
 	//	*BeaconBlockContainerV2_Phase0Block
 	//	*BeaconBlockContainerV2_AltairBlock
 	//	*BeaconBlockContainerV2_BellatrixBlock
@@ -298,6 +298,7 @@ type SignedBeaconBlockContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to Message:
+	//
 	//	*SignedBeaconBlockContainer_Phase0Block
 	//	*SignedBeaconBlockContainer_AltairBlock
 	//	*SignedBeaconBlockContainer_BellatrixBlock
@@ -400,6 +401,7 @@ type BlindedBeaconBlockContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to Block:
+	//
 	//	*BlindedBeaconBlockContainer_Phase0Block
 	//	*BlindedBeaconBlockContainer_AltairBlock
 	//	*BlindedBeaconBlockContainer_BellatrixBlock
@@ -494,6 +496,7 @@ type SignedBlindedBeaconBlockContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to Message:
+	//
 	//	*SignedBlindedBeaconBlockContainer_Phase0Block
 	//	*SignedBlindedBeaconBlockContainer_AltairBlock
 	//	*SignedBlindedBeaconBlockContainer_BellatrixBlock
