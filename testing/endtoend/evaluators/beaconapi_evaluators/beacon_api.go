@@ -171,6 +171,23 @@ var beaconPathsAndObjects = map[string]metadata{
 		lighthouseResps: map[string]interface{}{
 			"json": &apimiddleware.IdentityResponseJson{},
 		},
+		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
+			castedp, ok := prysmResp.(*apimiddleware.IdentityResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			castedl, ok := lhouseResp.(*apimiddleware.IdentityResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			if castedp.Data == nil {
+				return errors.New("prysm node identity was empty")
+			}
+			if castedl.Data == nil {
+				return errors.New("lighthouse node identity was empty")
+			}
+			return nil
+		},
 	},
 	"/node/peers": {
 		basepath: v1MiddlewarePathTemplate,
@@ -182,6 +199,23 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 		lighthouseResps: map[string]interface{}{
 			"json": &apimiddleware.PeersResponseJson{},
+		},
+		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
+			castedp, ok := prysmResp.(*apimiddleware.PeersResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			castedl, ok := lhouseResp.(*apimiddleware.PeersResponseJson)
+			if !ok {
+				return errors.New("failed to cast type")
+			}
+			if castedp.Data == nil {
+				return errors.New("prysm node identity was empty")
+			}
+			if castedl.Data == nil {
+				return errors.New("lighthouse node identity was empty")
+			}
+			return nil
 		},
 	},
 }
@@ -199,11 +233,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		for key, _ := range meta.prysmResps {
 			switch key {
 			case "json":
-				params := meta.params("json", currentEpoch)
-				if len(params) == 0 {
+				jsonparams := meta.params("json", currentEpoch)
+				if len(jsonparams) == 0 {
 					continue
 				}
-				apipath := pathFromParams(path, params)
+				apipath := pathFromParams(path, jsonparams)
 				fmt.Printf("json api path: %s", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx,
 					meta.basepath,
@@ -217,11 +251,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				fmt.Printf("prysm ob: %v/n", beaconPathsAndObjects[path].prysmResps[key])
 				fmt.Printf("lighthouse ob: %v", beaconPathsAndObjects[path].prysmResps[key])
 			case "ssz":
-				params := meta.params("ssz", currentEpoch)
-				if len(params) == 0 {
+				sszparams := meta.params("ssz", currentEpoch)
+				if len(sszparams) == 0 {
 					continue
 				}
-				apipath := pathFromParams(path, params)
+				apipath := pathFromParams(path, sszparams)
 				fmt.Printf("ssz api path: %s", apipath)
 				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
 				if err != nil {

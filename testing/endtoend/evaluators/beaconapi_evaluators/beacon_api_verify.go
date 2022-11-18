@@ -24,7 +24,6 @@ type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 func beaconAPIVerify(conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconAPIs,
-		withCompareNodeMetaData,
 	}
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
