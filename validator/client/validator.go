@@ -95,7 +95,7 @@ type validator struct {
 	beaconClient                       ethpb.BeaconChainClient
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
-	validatorClient                    ethpb.BeaconNodeValidatorClient
+	validatorClient                    iface.ValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats

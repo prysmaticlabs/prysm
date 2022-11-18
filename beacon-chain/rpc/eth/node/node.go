@@ -283,12 +283,13 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 
 // GetHealth returns node health status in http status codes. Useful for load balancers.
 // Response Usage:
-//    "200":
-//      description: Node is ready
-//    "206":
-//      description: Node is syncing but can serve incomplete data
-//    "503":
-//      description: Node not initialized or having issues
+//
+//	"200":
+//	  description: Node is ready
+//	"206":
+//	  description: Node is syncing but can serve incomplete data
+//	"503":
+//	  description: Node not initialized or having issues
 func (ns *Server) GetHealth(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "node.GetHealth")
 	defer span.End()

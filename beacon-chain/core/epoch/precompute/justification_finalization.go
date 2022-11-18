@@ -42,17 +42,18 @@ func UnrealizedCheckpoints(st state.BeaconState) (uint64, *ethpb.Checkpoint, *et
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
 //
 // Spec pseudocode definition:
-//  def process_justification_and_finalization(state: BeaconState) -> None:
-//    # Initial FFG checkpoint values have a `0x00` stub for `root`.
-//    # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-//    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
-//        return
-//    previous_attestations = get_matching_target_attestations(state, get_previous_epoch(state))
-//    current_attestations = get_matching_target_attestations(state, get_current_epoch(state))
-//    total_active_balance = get_total_active_balance(state)
-//    previous_target_balance = get_attesting_balance(state, previous_attestations)
-//    current_target_balance = get_attesting_balance(state, current_attestations)
-//    weigh_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
+//
+//	def process_justification_and_finalization(state: BeaconState) -> None:
+//	  # Initial FFG checkpoint values have a `0x00` stub for `root`.
+//	  # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
+//	  if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+//	      return
+//	  previous_attestations = get_matching_target_attestations(state, get_previous_epoch(state))
+//	  current_attestations = get_matching_target_attestations(state, get_current_epoch(state))
+//	  total_active_balance = get_total_active_balance(state)
+//	  previous_target_balance = get_attesting_balance(state, previous_attestations)
+//	  current_target_balance = get_attesting_balance(state, current_attestations)
+//	  weigh_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
 func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal *Balance) (state.BeaconState, error) {
 	canProcessSlot, err := slots.EpochStart(2 /*epoch*/)
 	if err != nil {
@@ -113,41 +114,42 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 // checkpoints at epoch transition
 // Spec pseudocode definition:
 // def weigh_justification_and_finalization(state: BeaconState,
-//                                         total_active_balance: Gwei,
-//                                         previous_epoch_target_balance: Gwei,
-//                                         current_epoch_target_balance: Gwei) -> None:
-//    previous_epoch = get_previous_epoch(state)
-//    current_epoch = get_current_epoch(state)
-//    old_previous_justified_checkpoint = state.previous_justified_checkpoint
-//    old_current_justified_checkpoint = state.current_justified_checkpoint
 //
-//    # Process justifications
-//    state.previous_justified_checkpoint = state.current_justified_checkpoint
-//    state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
-//    state.justification_bits[0] = 0b0
-//    if previous_epoch_target_balance * 3 >= total_active_balance * 2:
-//        state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
-//                                                        root=get_block_root(state, previous_epoch))
-//        state.justification_bits[1] = 0b1
-//    if current_epoch_target_balance * 3 >= total_active_balance * 2:
-//        state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
-//                                                        root=get_block_root(state, current_epoch))
-//        state.justification_bits[0] = 0b1
+//	                                     total_active_balance: Gwei,
+//	                                     previous_epoch_target_balance: Gwei,
+//	                                     current_epoch_target_balance: Gwei) -> None:
+//	previous_epoch = get_previous_epoch(state)
+//	current_epoch = get_current_epoch(state)
+//	old_previous_justified_checkpoint = state.previous_justified_checkpoint
+//	old_current_justified_checkpoint = state.current_justified_checkpoint
 //
-//    # Process finalizations
-//    bits = state.justification_bits
-//    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-//    if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
-//        state.finalized_checkpoint = old_previous_justified_checkpoint
-//    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-//    if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
-//        state.finalized_checkpoint = old_previous_justified_checkpoint
-//    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-//    if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
-//        state.finalized_checkpoint = old_current_justified_checkpoint
-//    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-//    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
-//        state.finalized_checkpoint = old_current_justified_checkpoint
+//	# Process justifications
+//	state.previous_justified_checkpoint = state.current_justified_checkpoint
+//	state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
+//	state.justification_bits[0] = 0b0
+//	if previous_epoch_target_balance * 3 >= total_active_balance * 2:
+//	    state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
+//	                                                    root=get_block_root(state, previous_epoch))
+//	    state.justification_bits[1] = 0b1
+//	if current_epoch_target_balance * 3 >= total_active_balance * 2:
+//	    state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+//	                                                    root=get_block_root(state, current_epoch))
+//	    state.justification_bits[0] = 0b1
+//
+//	# Process finalizations
+//	bits = state.justification_bits
+//	# The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+//	if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
+//	    state.finalized_checkpoint = old_previous_justified_checkpoint
+//	# The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+//	if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
+//	    state.finalized_checkpoint = old_previous_justified_checkpoint
+//	# The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+//	if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
+//	    state.finalized_checkpoint = old_current_justified_checkpoint
+//	# The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+//	if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
+//	    state.finalized_checkpoint = old_current_justified_checkpoint
 func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)

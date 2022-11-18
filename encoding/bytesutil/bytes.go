@@ -117,6 +117,16 @@ func ToBytes48(x []byte) [48]byte {
 	return y
 }
 
+// ToBytes48Array is a convenience method for converting an array of
+// byte slices to an array of fixed-sized byte arrays.
+func ToBytes48Array(x [][]byte) [][48]byte {
+	y := make([][48]byte, len(x))
+	for i := range x {
+		y[i] = ToBytes48(x[i])
+	}
+	return y
+}
+
 // ToBytes64 is a convenience method for converting a byte slice to a fix
 // sized 64 byte array. This method will truncate the input if it is larger
 // than 64 bytes.

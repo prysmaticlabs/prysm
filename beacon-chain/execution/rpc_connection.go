@@ -26,7 +26,6 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	fetcher := ethclient.NewClient(client)
 	s.rpcClient = client
 	s.httpLogger = fetcher
-	s.eth1DataFetcher = fetcher
 
 	depositContractCaller, err := contracts.NewDepositContractCaller(s.cfg.depositContractAddr, fetcher)
 	if err != nil {
