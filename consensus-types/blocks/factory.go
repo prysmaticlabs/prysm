@@ -292,17 +292,16 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 // BeaconBlockContainerToSignedBeaconBlock converts BeaconBlockContainer (API response) to a SignedBeaconBlock.
 // This is particularly useful for using the values from API calls.
 func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.SignedBeaconBlock, error) {
-	if obj.GetPhase0Block() != nil {
-		return NewSignedBeaconBlock(obj.GetPhase0Block())
-	}
-	if obj.GetAltairBlock() != nil {
-		return NewSignedBeaconBlock(obj.GetAltairBlock())
-	}
-	if obj.GetBellatrixBlock() != nil {
-		return NewSignedBeaconBlock(obj.GetBellatrixBlock())
-	}
-	if obj.GetBlindedBellatrixBlock() != nil {
+	switch obj.Block.(type) {
+	case *eth.BeaconBlockContainer_BlindedBellatrixBlock:
 		return NewSignedBeaconBlock(obj.GetBlindedBellatrixBlock())
+	case *eth.BeaconBlockContainer_BellatrixBlock:
+		return NewSignedBeaconBlock(obj.GetBellatrixBlock())
+	case *eth.BeaconBlockContainer_AltairBlock:
+		return NewSignedBeaconBlock(obj.GetAltairBlock())
+	case *eth.BeaconBlockContainer_Phase0Block:
+		return NewSignedBeaconBlock(obj.GetPhase0Block())
+	default:
+		return nil, errors.New("container block type not recognized")
 	}
-	return nil, errors.New("container has no block")
 }
