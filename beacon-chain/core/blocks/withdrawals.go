@@ -3,11 +3,15 @@ package blocks
 import (
 	"bytes"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -75,4 +79,45 @@ func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
 	err = st.UpdateValidatorAtIndex(message.ValidatorIndex, val)
 	return st, err
+}
+
+func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
+	expected, err := st.ExpectedWithdrawals()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get expected withdrawals")
+	}
+	if len(expected) != len(withdrawals) {
+		return nil, errInvalidWithdrawalNumber
+	}
+	for i, withdrawal := range withdrawals {
+		if withdrawal.WithdrawalIndex != expected[i].WithdrawalIndex {
+			return nil, errInvalidWithdrawalIndex
+		}
+		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
+			return nil, errInvalidValidatorIndex
+		}
+		if !bytes.Equal(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) {
+			return nil, errInvalidExecutionAddress
+		}
+		if withdrawal.Amount != expected[i].Amount {
+			return nil, errInvalidWithdrawalAmount
+		}
+		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not decrease balance")
+		}
+	}
+	if len(withdrawals) > 0 {
+		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
+			return nil, errors.Wrap(err, "could not set next withdrawal index")
+		}
+		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
+			nextValidatorIndex = 0
+		}
+		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
+			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
+		}
+	}
+	return st, nil
 }

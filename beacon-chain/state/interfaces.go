@@ -18,6 +18,7 @@ import (
 type BeaconState interface {
 	SpecParametersProvider
 	ReadOnlyBeaconState
+	ReadOnlyWithdrawals
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
@@ -63,8 +64,6 @@ type ReadOnlyBeaconState interface {
 	IsNil() bool
 	Version() int
 	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
-	LastWithdrawalValidatorIndex() (types.ValidatorIndex, error)
-	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -88,7 +87,7 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetNextWithdrawalIndex(i uint64) error
-	SetLastWithdrawalValidatorIndex(i types.ValidatorIndex) error
+	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -166,6 +165,13 @@ type ReadOnlyEth1Data interface {
 type ReadOnlyAttestations interface {
 	PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error)
 	CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error)
+}
+
+// ReadOnlyWithdrawals defines a struct which only has read access to withdrawal methods.
+type ReadOnlyWithdrawals interface {
+	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
+	LastWithdrawalValidatorIndex() (types.ValidatorIndex, error)
+	NextWithdrawalIndex() (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.

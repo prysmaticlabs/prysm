@@ -46,6 +46,7 @@ go_library(
         "//validator/client/iface:go_default_library",
         "//validator/client/validator-client-factory:go_default_library",
         "//validator/db:go_default_library",
+        "//validator/helpers:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/local:go_default_library",

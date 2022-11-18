@@ -132,6 +132,14 @@ func TestWrapExecutionPayloadHeaderCapella(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, data, payload.Proto())
+
+	txRoot, err := payload.TransactionsRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, txRoot, data.TransactionsRoot)
+
+	wrRoot, err := payload.WithdrawalsRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, wrRoot, data.WithdrawalsRoot)
 }
 
 func TestWrapExecutionPayloadCapella_IsNil(t *testing.T) {

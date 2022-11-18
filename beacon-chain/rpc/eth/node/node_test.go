@@ -208,7 +208,7 @@ func TestGetPeer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, rawId, resp.Data.PeerId)
 		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
-		assert.Equal(t, "enr:yoABgmlwhAcHBwc=", resp.Data.Enr)
+		assert.Equal(t, "enr:yoABgmlwhAcHBwc", resp.Data.Enr)
 		assert.Equal(t, ethpb.ConnectionState_DISCONNECTED, resp.Data.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, resp.Data.Direction)
 	})
