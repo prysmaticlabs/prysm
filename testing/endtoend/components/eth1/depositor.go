@@ -21,8 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
-const depositGasLimit = 4000000
-
 var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
 
 func amtInGwei(deposit *eth.Deposit) *big.Int {
@@ -194,7 +192,7 @@ func (d *Depositor) txops(ctx context.Context) (*bind.TransactOpts, error) {
 		return nil, err
 	}
 	txo.Context = ctx
-	txo.GasLimit = depositGasLimit
+	txo.GasLimit = e2e.DepositGasLimit
 	nonce, err := d.Client.PendingNonceAt(ctx, txo.From)
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 )
 
@@ -46,7 +47,7 @@ func WaitForBlocks(web3 *ethclient.Client, key *keystore.Key, blocksToWait uint6
 	finishBlock := block.NumberU64() + blocksToWait
 
 	for block.NumberU64() <= finishBlock {
-		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
+		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), params.SpamTxGasLimit, big.NewInt(1e6), []byte{})
 		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), key.PrivateKey)
 		if err != nil {
 			return err
