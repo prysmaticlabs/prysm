@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto/kzg"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -210,11 +212,15 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
 
 				blk.BlobsKzg = blobsBundle.KzgCommitments
+				aggregatedProof, err := kzg.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(blobsBundle.Blobs))
+				if err != nil {
+					return nil, fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
+				}
 				vs.BlobsCache.Put(&ethpb.BlobsSidecar{
 					BeaconBlockRoot: blobsBundle.BlockHash,
 					BeaconBlockSlot: blk.Slot,
 					Blobs:           blobsBundle.Blobs,
-					AggregatedProof: blobsBundle.AggregatedProof,
+					AggregatedProof: aggregatedProof[:],
 				})
 			} else {
 				executionPayload, err := vs.getExecutionPayload(

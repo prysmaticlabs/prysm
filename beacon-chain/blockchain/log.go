@@ -63,7 +63,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 
 	}
 	if b.Version() == version.Capella {
-		k, err := b.Body().BlobKzgs()
+		k, err := b.Body().BlobKzgCommitments()
 		if err != nil {
 			return err
 		}

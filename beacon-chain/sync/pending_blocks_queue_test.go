@@ -31,9 +31,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
-//    /- b1 - b2
+//	/- b1 - b2
+//
 // b0
-//    \- b3
+//
+//	\- b3
+//
 // Test b1 was missing then received and we can process b0 -> b1 -> b2
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	db := dbtest.SetupDB(t)
@@ -348,9 +351,12 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
-//    /- b1 - b2 - b5
+//	/- b1 - b2 - b5
+//
 // b0
-//    \- b3 - b4
+//
+//	\- b3 - b4
+//
 // Test b2 and b3 were missed, after receiving them we can process 2 chains.
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testing.T) {
 	db := dbtest.SetupDB(t)

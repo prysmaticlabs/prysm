@@ -851,13 +851,13 @@ func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionCh
 	return b.blsToExecutionChanges, nil
 }
 
-// BlobKzgs returns the blob kzgs in the block.
-func (b *BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+// BlobKzgCommitments returns the blob kzg commitments in the block.
+func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix:
-		return nil, errNotSupported("BlobKzgs", b.version)
+		return nil, errNotSupported("BlobKzgCommitments", b.version)
 	case version.Capella:
-		return b.blogKzgs, nil
+		return b.blobKzgCommitments, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}

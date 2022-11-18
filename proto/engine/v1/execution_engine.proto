@@ -160,8 +160,6 @@ message BlobsBundle {
 	repeated bytes kzg_commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
 	// The blobs itself.
 	repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
-	// The aggregated proof of the blobs to enable fast validation for commitments and blobs.
-	bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 // Blob contains the data that is to be committed on chain.

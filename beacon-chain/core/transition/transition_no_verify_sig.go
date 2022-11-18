@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto/kzg"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -371,20 +371,20 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) erro
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload from block")
 	}
-	blobKzgs, err := body.BlobKzgs()
+	blobKzgs, err := body.BlobKzgCommitments()
 	if err != nil {
 		return errors.Wrap(err, "could not get blob kzgs from block")
 	}
-	blobKzgsInput := make([][48]byte, len(blobKzgs))
+	blobKzgsInput := make(kzg.KZGCommitmentSequenceImpl, len(blobKzgs))
 	for i := range blobKzgs {
-		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
+		blobKzgsInput[i] = kzg.KZGCommitment(bytesutil.ToBytes48(blobKzgs[i]))
 	}
 
 	txs, err := payload.Transactions()
 	if err != nil {
 		return errors.Wrap(err, "could not get transactions from payload")
 	}
-	if err := blobs.VerifyKzgsAgainstTxs(txs, blobKzgsInput); err != nil {
+	if err := kzg.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput); err != nil {
 		return err
 	}
 	return nil

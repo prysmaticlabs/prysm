@@ -464,6 +464,7 @@ func CopyBeaconBlockBodyCapella(body *BeaconBlockBodyCapella) *BeaconBlockBodyCa
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
 		ExecutionPayload:      CopyExecutionPayloadCapella(body.ExecutionPayload),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
+		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
 	}
 }
 
@@ -509,6 +510,7 @@ func CopyBlindedBeaconBlockBodyCapella(body *BlindedBeaconBlockBodyCapella) *Bli
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
 		ExecutionPayloadHeader: CopyExecutionPayloadHeaderCapella(body.ExecutionPayloadHeader),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
+		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
 	}
 }
 
@@ -699,4 +701,9 @@ func CopyBLSToExecutionChanges(changes []*SignedBLSToExecutionChange) []*SignedB
 	}
 
 	return res
+}
+
+// CopyBlobKZGs copies the provided blob kzgs object.
+func CopyBlobKZGs(b [][]byte) [][]byte {
+	return bytesutil.SafeCopy2dBytes(b)
 }

@@ -3,15 +3,14 @@ package sync
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/crypto/kzg"
 	gethParams "github.com/ethereum/go-ethereum/params"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/protolambda/go-kzg/bls"
 	kbls "github.com/protolambda/go-kzg/bls"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -69,20 +68,14 @@ func (s *Service) validateBeaconBlockKzgs(blk *eth.BeaconBlockCapella) error {
 		return errors.New("execution payload is nil")
 	}
 
-	blobKzgs := body.BlobKzgs
-	blobKzgsInput := make([][48]byte, len(blobKzgs))
+	blobKzgs := body.BlobKzgCommitments
+	blobKzgsInput := make(kzg.KZGCommitmentSequenceImpl, len(blobKzgs))
 	for i := range blobKzgs {
-		if len(blobKzgs[i]) != 48 {
-			return errors.New("invalid blob kzg length")
-		}
-		if _, err := bls.FromCompressedG1(blobKzgs[i]); err != nil {
-			return errors.Wrap(err, "invalid blob kzg encoding")
-		}
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
 
 	txs := payload.Transactions
-	return blobs.VerifyKzgsAgainstTxs(txs, blobKzgsInput)
+	return kzg.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput)
 }
 
 func (s *Service) validateBlobsSidecar(b *eth.BlobsSidecar) error {

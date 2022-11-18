@@ -398,10 +398,9 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(blobBundleJSON{
-		BlockHash:       bytesutil.ToBytes32(b.BlockHash),
-		Kzgs:            kzgs,
-		Blobs:           blobs,
-		AggregatedProof: bytesutil.ToBytes48(b.AggregatedProof),
+		BlockHash: bytesutil.ToBytes32(b.BlockHash),
+		Kzgs:      kzgs,
+		Blobs:     blobs,
 	})
 }
 
@@ -427,6 +426,5 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 		blobs[i].Data = bytesutil.SafeCopyBytes(b)
 	}
 	e.Blobs = blobs
-	e.AggregatedProof = bytesutil.PadTo(dec.AggregatedProof[:], fieldparams.BLSPubkeyLength)
 	return nil
 }
