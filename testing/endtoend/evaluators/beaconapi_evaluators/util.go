@@ -1,7 +1,6 @@
 package beaconapi_evaluators
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -76,36 +75,4 @@ func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
 		log.WithError(err).Error("could not close response body")
 	}
-}
-
-func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
-	var port int
-	if len(bnType) > 0 {
-		switch bnType[0] {
-		case "lighthouse":
-			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-		default:
-			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
-		}
-	} else {
-		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
-	}
-	b, err := json.Marshal(postData)
-	if err != nil {
-		return err
-	}
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, port+beaconNodeIdx)
-	httpResp, err := http.Post(
-		basePath+requestPath,
-		"application/json",
-		bytes.NewBuffer(b),
-	)
-	if err != nil {
-		return err
-	}
-	return json.NewDecoder(httpResp.Body).Decode(&dst)
-}
-
-func buildFieldError(field, expected, actual string) error {
-	return fmt.Errorf("value of '%s' was expected to be '%s' but was '%s'", field, expected, actual)
 }

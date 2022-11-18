@@ -6,7 +6,6 @@ go_library(
     srcs = [
         "beacon_api.go",
         "beacon_api_verify.go",
-        "types.go",
         "util.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators",
