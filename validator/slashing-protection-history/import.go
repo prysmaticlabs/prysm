@@ -174,18 +174,19 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 // We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
-//  },
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
-//  }
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
-//  }
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
+//	 }
 func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
 	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
 	for _, validatorData := range data {
@@ -206,18 +207,19 @@ func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldpa
 // We create a map of pubKey -> []*SignedAttestation. Then, for each public key we observe,
 // we append to this map. This allows us to handle valid input JSON data such as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  },
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}],
-//  }
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}],
+//	 }
 //
 // Which should be properly parsed as:
 //
-// "0x2932232930: {
-//   SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
-//  }
+//	"0x2932232930: {
+//	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
+//	 }
 func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation, error) {
 	signedAttestationsByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
