@@ -2301,7 +2301,7 @@ func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.fillMissingBlockPayloadId(ctx, time.Unix(int64(params.BeaconConfig().SecondsPerSlot/2), 0))
+	require.NoError(t, service.fillMissingBlockPayloadId(ctx, time.Unix(int64(params.BeaconConfig().SecondsPerSlot/2), 0)))
 }
 
 // Helper function to simulate the block being on time or delayed for proposer
