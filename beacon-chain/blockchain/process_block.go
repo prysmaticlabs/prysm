@@ -693,6 +693,7 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 	if has && id == [8]byte{} {
+		missedPayloadIDFilledCount.Inc()
 		headBlock, err := s.headBlock()
 		if err != nil {
 			return err
@@ -705,7 +706,6 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 				return err
 			}
 		}
-		missedPayloadIDFilledCount.Inc()
 	}
 	return nil
 }
