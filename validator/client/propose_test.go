@@ -561,6 +561,30 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				},
 			},
 		},
+		{
+			name: "capella",
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_Capella{
+					Capella: func() *ethpb.BeaconBlockCapella {
+						blk := util.NewBeaconBlockCapella()
+						blk.Block.Body.Graffiti = graffiti
+						return blk.Block
+					}(),
+				},
+			},
+		},
+		{
+			name: "capella blind block",
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_BlindedCapella{
+					BlindedCapella: func() *ethpb.BlindedBeaconBlockCapella {
+						blk := util.NewBlindedBeaconBlockCapella()
+						blk.Block.Body.Graffiti = graffiti
+						return blk.Block
+					}(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

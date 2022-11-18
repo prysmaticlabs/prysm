@@ -23,7 +23,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//validator/client/iface:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
+        "//validator/helpers:go_default_library",
     ] + select({
         ":beacon_api_usage": ["//validator/client/beacon-api:go_default_library"],
         "//conditions:default": ["//validator/client/grpc-api:go_default_library"],

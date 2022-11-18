@@ -111,6 +111,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	}
 
 	args := []string{
+		"--nat=none",
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort),
