@@ -173,6 +173,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/beacon/light_client/bootstrap/{block_root}":
 		endpoint.GetResponse = &LightClientBootstrapResponseJson{}
+	case "/eth/v1/beacon/light_client/updates":
+		endpoint.GetResponse = &LightClientUpdatesByRangeResponseJson{}
 	case "/eth/v1/beacon/light_client/finality_update":
 		endpoint.GetResponse = &LightClientFinalityUpdateResponseJson{}
 	case "/eth/v1/beacon/light_client/optimistic_update":
