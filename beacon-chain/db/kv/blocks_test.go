@@ -67,6 +67,28 @@ var blockTests = []struct {
 			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "capella",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBeaconBlockCapella()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "capella blind",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockCapella()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return blocks.NewSignedBeaconBlock(b)
+		},
+	},
 }
 
 func TestStore_SaveBackfillBlockRoot(t *testing.T) {
@@ -332,6 +354,10 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 				wanted, err = blk.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := blk.PbCapellaBlock(); err == nil {
+				wanted, err = blk.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err := wanted.Proto()
 			require.NoError(t, err)
 			retrievedPb, err := retrievedBlock.Proto()
@@ -551,6 +577,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block1.PbCapellaBlock(); err == nil {
+				wanted, err = wanted.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err := wanted.Proto()
 			require.NoError(t, err)
 			bPb, err := b.Proto()
@@ -569,6 +599,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 				wanted2, err = block2.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block2.PbCapellaBlock(); err == nil {
+				wanted2, err = block2.ToBlinded()
+				require.NoError(t, err)
+			}
 			wanted2Pb, err := wanted2.Proto()
 			require.NoError(t, err)
 			bPb, err = b.Proto()
@@ -584,6 +618,10 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted = block3
 			if _, err := block3.PbBellatrixBlock(); err == nil {
+				wanted, err = wanted.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := block3.PbCapellaBlock(); err == nil {
 				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -623,6 +661,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = block1.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := block1.PbCapellaBlock(); err == nil {
+				wanted, err = block1.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err := wanted.Proto()
 			require.NoError(t, err)
 			bPb, err := b.Proto()
@@ -640,6 +682,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := genesisBlock.PbCapellaBlock(); err == nil {
+				wanted, err = genesisBlock.ToBlinded()
+				require.NoError(t, err)
+			}
 			wantedPb, err = wanted.Proto()
 			require.NoError(t, err)
 			bPb, err = b.Proto()
@@ -654,6 +700,10 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted = genesisBlock
 			if _, err := genesisBlock.PbBellatrixBlock(); err == nil {
+				wanted, err = genesisBlock.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := genesisBlock.PbCapellaBlock(); err == nil {
 				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
@@ -753,6 +803,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				wanted, err = b1.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := b1.PbCapellaBlock(); err == nil {
+				wanted, err = b1.ToBlinded()
+				require.NoError(t, err)
+			}
 			retrieved0Pb, err := retrievedBlocks[0].Proto()
 			require.NoError(t, err)
 			wantedPb, err := wanted.Proto()
@@ -769,6 +823,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 				wanted, err = b2.ToBlinded()
 				require.NoError(t, err)
 			}
+			if _, err := b2.PbCapellaBlock(); err == nil {
+				wanted, err = b2.ToBlinded()
+				require.NoError(t, err)
+			}
 			retrieved0Pb, err = retrievedBlocks[0].Proto()
 			require.NoError(t, err)
 			wantedPb, err = wanted.Proto()
@@ -776,6 +834,10 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			assert.Equal(t, true, proto.Equal(wantedPb, retrieved0Pb), "Wanted: %v, received: %v", retrievedBlocks[0], wanted)
 			wanted = b3
 			if _, err := b3.PbBellatrixBlock(); err == nil {
+				wanted, err = b3.ToBlinded()
+				require.NoError(t, err)
+			}
+			if _, err := b3.PbCapellaBlock(); err == nil {
 				wanted, err = b3.ToBlinded()
 				require.NoError(t, err)
 			}

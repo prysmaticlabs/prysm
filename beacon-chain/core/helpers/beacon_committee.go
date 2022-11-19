@@ -35,14 +35,15 @@ var (
 // count.
 //
 // Spec pseudocode definition:
-//   def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
-//    """
-//    Return the number of committees in each slot for the given ``epoch``.
-//    """
-//    return max(uint64(1), min(
-//        MAX_COMMITTEES_PER_SLOT,
-//        uint64(len(get_active_validator_indices(state, epoch))) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
-//    ))
+//
+//	def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
+//	 """
+//	 Return the number of committees in each slot for the given ``epoch``.
+//	 """
+//	 return max(uint64(1), min(
+//	     MAX_COMMITTEES_PER_SLOT,
+//	     uint64(len(get_active_validator_indices(state, epoch))) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
+//	 ))
 func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	var committeesPerSlot = activeValidatorCount / uint64(params.BeaconConfig().SlotsPerEpoch) / params.BeaconConfig().TargetCommitteeSize
 
@@ -61,18 +62,19 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 // becomes expensive, consider using BeaconCommittee below.
 //
 // Spec pseudocode definition:
-//   def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
-//    """
-//    Return the beacon committee at ``slot`` for ``index``.
-//    """
-//    epoch = compute_epoch_at_slot(slot)
-//    committees_per_slot = get_committee_count_per_slot(state, epoch)
-//    return compute_committee(
-//        indices=get_active_validator_indices(state, epoch),
-//        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
-//        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
-//        count=committees_per_slot * SLOTS_PER_EPOCH,
-//    )
+//
+//	def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
+//	 """
+//	 Return the beacon committee at ``slot`` for ``index``.
+//	 """
+//	 epoch = compute_epoch_at_slot(slot)
+//	 committees_per_slot = get_committee_count_per_slot(state, epoch)
+//	 return compute_committee(
+//	     indices=get_active_validator_indices(state, epoch),
+//	     seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
+//	     index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
+//	     count=committees_per_slot * SLOTS_PER_EPOCH,
+//	 )
 func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
 	epoch := slots.ToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
@@ -101,18 +103,19 @@ func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconSta
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
 //
 // Spec pseudocode definition:
-//   def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
-//    """
-//    Return the beacon committee at ``slot`` for ``index``.
-//    """
-//    epoch = compute_epoch_at_slot(slot)
-//    committees_per_slot = get_committee_count_per_slot(state, epoch)
-//    return compute_committee(
-//        indices=get_active_validator_indices(state, epoch),
-//        seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
-//        index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
-//        count=committees_per_slot * SLOTS_PER_EPOCH,
-//    )
+//
+//	def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
+//	 """
+//	 Return the beacon committee at ``slot`` for ``index``.
+//	 """
+//	 epoch = compute_epoch_at_slot(slot)
+//	 committees_per_slot = get_committee_count_per_slot(state, epoch)
+//	 return compute_committee(
+//	     indices=get_active_validator_indices(state, epoch),
+//	     seed=get_seed(state, epoch, DOMAIN_BEACON_ATTESTER),
+//	     index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
+//	     count=committees_per_slot * SLOTS_PER_EPOCH,
+//	 )
 func BeaconCommittee(
 	ctx context.Context,
 	validatorIndices []types.ValidatorIndex,
@@ -381,16 +384,17 @@ func ClearCache() {
 // validator indices and seed.
 //
 // Spec pseudocode definition:
-//  def compute_committee(indices: Sequence[ValidatorIndex],
-//                      seed: Bytes32,
-//                      index: uint64,
-//                      count: uint64) -> Sequence[ValidatorIndex]:
-//    """
-//    Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
-//    """
-//    start = (len(indices) * index) // count
-//    end = (len(indices) * uint64(index + 1)) // count
-//    return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
+//
+//	def compute_committee(indices: Sequence[ValidatorIndex],
+//	                    seed: Bytes32,
+//	                    index: uint64,
+//	                    count: uint64) -> Sequence[ValidatorIndex]:
+//	  """
+//	  Return the committee corresponding to ``indices``, ``seed``, ``index``, and committee ``count``.
+//	  """
+//	  start = (len(indices) * index) // count
+//	  end = (len(indices) * uint64(index + 1)) // count
+//	  return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
 func computeCommittee(
 	indices []types.ValidatorIndex,
 	seed [32]byte,

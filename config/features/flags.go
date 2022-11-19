@@ -179,3 +179,11 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 var E2EBeaconChainFlags = []string{
 	"--dev",
 }
+
+// NetworkFlags contains a list of network flags.
+var NetworkFlags = []cli.Flag{
+	Mainnet,
+	PraterTestnet,
+	RopstenTestnet,
+	SepoliaTestnet,
+}

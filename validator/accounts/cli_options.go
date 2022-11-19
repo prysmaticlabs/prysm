@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -91,6 +93,15 @@ func WithBeaconRPCProvider(provider string) Option {
 	}
 }
 
+// WithBeaconRESTApiProvider provides a beacon node REST API endpoint to the accounts cli manager.
+func WithBeaconRESTApiProvider(beaconApiEndpoint string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.beaconApiEndpoint = beaconApiEndpoint
+		acc.beaconApiTimeout = time.Second * 30
+		return nil
+	}
+}
+
 // WithWalletKeyCount tracks the number of keys in a wallet.
 func WithWalletKeyCount(walletKeyCount int) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -127,6 +138,14 @@ func WithImportPrivateKeys(importPrivateKeys bool) Option {
 func WithSkipMnemonicConfirm(s bool) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.skipMnemonicConfirm = s
+		return nil
+	}
+}
+
+// WithMnemonicLanguage specifies the language used for the mnemonic passphrase.
+func WithMnemonicLanguage(mnemonicLanguage string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.mnemonicLanguage = mnemonicLanguage
 		return nil
 	}
 }

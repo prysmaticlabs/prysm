@@ -14,10 +14,6 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
 
-	if b.latestExecutionPayloadHeader == nil {
-		return nil, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
