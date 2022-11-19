@@ -47,6 +47,30 @@ message Bootstrap {
     repeated bytes current_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "current_sync_committee_branch.depth,32"];
 }
 
+message LightClientUpdatesByRangeRequest {
+    uint64 start_period = 1;
+    uint32 count = 2;
+}
+
+message LightClientUpdatesByRangeResponse {
+    repeated Update update = 1;
+}
+
+message Update {
+    v2.Version version = 1;
+    UpdateData data = 2;
+}
+
+message UpdateData {
+    v1.BeaconBlockHeader attested_header = 1;
+    SyncCommittee next_sync_committee = 2;
+    repeated bytes next_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "next_sync_committee_branch.depth,32"];
+    v1.BeaconBlockHeader finalized_header = 4;
+    repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "finality_branch.depth,32"];
+    v1.SyncAggregate sync_aggregate = 6;
+    uint64 signature_slot = 7;
+}
+
 message LightClientFinalityUpdateResponse {
     v2.Version version = 1;
     FinalityUpdate data = 2;
