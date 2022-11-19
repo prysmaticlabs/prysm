@@ -7,6 +7,7 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"os"
 	"path"
 	"strings"
@@ -60,6 +61,7 @@ type testRunner struct {
 	t          *testing.T
 	config     *e2etypes.E2EConfig
 	comHandler *componentHandler
+	depositor  *eth1.Depositor
 }
 
 // newTestRunner creates E2E test runner.
@@ -70,13 +72,46 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 	}
 }
 
-// run executes configured E2E test.
-func (r *testRunner) run() {
+type runEvent func() error
+
+func (r *testRunner) runBase(runEvents []runEvent) {
 	r.comHandler = NewComponentHandler(r.config, r.t)
+	r.comHandler.group.Go(func() error {
+		miner, ok := r.comHandler.eth1Miner.(*eth1.Miner)
+		if !ok {
+			return errors.New("in runBase, comHandler.eth1Miner fails type assertion to *eth1.Miner")
+		}
+		if err := helpers.ComponentsStarted(r.comHandler.ctx, []e2etypes.ComponentRunner{miner}); err != nil {
+			return errors.Wrap(err, "eth1Miner component never started - cannot send deposits")
+		}
+		// refactored send and mine goes here
+		minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+		keyPath, err := e2e.TestParams.Paths.MinerKeyPath()
+		if err != nil {
+			return errors.Wrap(err, "error getting miner key file from bazel static files")
+		}
+		key, err := helpers.KeyFromPath(keyPath, miner.Password())
+		if err != nil {
+			return errors.Wrap(err, "failed to read key from miner wallet")
+		}
+		client, err := helpers.MinerRPCClient()
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize a client to connect to the miner EL node")
+		}
+		r.depositor = &eth1.Depositor{Key: key, Client: client, NetworkId: big.NewInt(eth1.NetworkId)}
+		if err := r.depositor.SendAndMine(r.comHandler.ctx, 0, minGenesisActiveCount, e2etypes.GenesisDepositBatch, true); err != nil {
+			return errors.Wrap(err, "failed to send and mine deposits")
+		}
+		if err := r.depositor.Start(r.comHandler.ctx); err != nil {
+			return errors.Wrap(err, "depositor.Start failed")
+		}
+		return nil
+	})
 	r.comHandler.setup()
 
-	// Run E2E evaluators and tests.
-	r.addEvent(r.defaultEndToEndRun)
+	for _, re := range runEvents {
+		r.addEvent(re)
+	}
 
 	if err := r.comHandler.group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
@@ -87,20 +122,14 @@ func (r *testRunner) run() {
 	}
 }
 
+// run is the stock test runner
+func (r *testRunner) run() {
+	r.runBase([]runEvent{r.defaultEndToEndRun})
+}
+
+// scenarioRunner runs more complex scenarios to exercise error handling for unhappy paths
 func (r *testRunner) scenarioRunner() {
-	r.comHandler = NewComponentHandler(r.config, r.t)
-	r.comHandler.setup()
-
-	// Run E2E evaluators and tests.
-	r.addEvent(r.scenarioRun)
-
-	if err := r.comHandler.group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
-		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
-		if strings.Contains(err.Error(), "signal: killed") {
-			return
-		}
-		r.t.Fatalf("E2E test ended in error: %v", err)
-	}
+	r.runBase([]runEvent{r.scenarioRun})
 }
 
 func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, extra types.Epoch) error {
@@ -177,10 +206,16 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{r.depositor}); err != nil {
+			return errors.Wrap(err, "testDepositsAndTx unable to run, depositor did not Start")
+		}
 		go func() {
 			if r.config.TestDeposits {
 				log.Info("Running deposit tests")
-				err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
+				// The validators with an index < minGenesisActiveCount all have deposits already from the chain start.
+				// Skip all of those chain start validators by seeking to minGenesisActiveCount in the validator list
+				// for further deposit testing.
+				err := r.depositor.SendAndMine(ctx, minGenesisActiveCount, int(e2e.DepositCount), e2etypes.PostGenesisDepositBatch, false)
 				if err != nil {
 					r.t.Fatal(err)
 				}
@@ -295,7 +330,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
 		r.t.Run(evaluator.Name, func(t *testing.T) {
-			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+			assert.NoError(t, evaluator.Evaluation(nil, conns...), "Evaluation failed for sync node")
 		})
 	}
 	return nil
@@ -352,7 +387,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
 		t.Run(evaluator.Name, func(t *testing.T) {
-			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+			assert.NoError(t, evaluator.Evaluation(nil, conns...), "Evaluation failed for sync node")
 		})
 	}
 	return nil
@@ -444,7 +479,11 @@ func (r *testRunner) defaultEndToEndRun() error {
 		return errors.New("incorrect component type")
 	}
 
-	r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+	keypath, err := e2e.TestParams.Paths.MinerKeyPath()
+	if err != nil {
+		return errors.Wrap(err, "error getting miner key path from bazel static files in defaultEndToEndRun")
+	}
+	r.testDepositsAndTx(ctx, g, keypath, []e2etypes.ComponentRunner{beaconNodes})
 
 	// Create GRPC connection to beacon nodes.
 	conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
@@ -489,7 +528,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 		for _, evaluator := range syncEvaluators {
 			t.Run(evaluator.Name, func(t *testing.T) {
-				assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+				assert.NoError(t, evaluator.Evaluation(nil, conns...), "Evaluation failed for sync node")
 			})
 		}
 	}
@@ -554,8 +593,9 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grp
 			continue
 		}
 		wg.Add(1)
+		var ec e2etypes.EvaluationContext = r.depositor.History()
 		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-			err := evaluator.Evaluation(conns...)
+			err := evaluator.Evaluation(ec, conns...)
 			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
 			wg.Done()
 		})
