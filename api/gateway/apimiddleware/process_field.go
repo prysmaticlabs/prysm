@@ -26,51 +26,62 @@ func processField(s interface{}, processors []fieldProcessor) error {
 	t := reflect.TypeOf(s).Elem()
 	v := reflect.Indirect(reflect.ValueOf(s))
 
-	for i := 0; i < t.NumField(); i++ {
-		switch v.Field(i).Kind() {
-		case reflect.Slice:
-			sliceElem := t.Field(i).Type.Elem()
-			kind := sliceElem.Kind()
-			// Recursively process slices to struct pointers.
-			switch {
-			case kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct:
-				for j := 0; j < v.Field(i).Len(); j++ {
-					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
+	if t.Kind() == reflect.Struct {
+		for i := 0; i < t.NumField(); i++ {
+			switch v.Field(i).Kind() {
+			case reflect.Slice:
+				sliceElem := t.Field(i).Type.Elem()
+				kind := sliceElem.Kind()
+				// Recursively process slices to struct pointers.
+				switch {
+				case kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct:
+					for j := 0; j < v.Field(i).Len(); j++ {
+						if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
+							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
+						}
+					}
+				// Process each string in string slices.
+				case kind == reflect.String:
+					for _, proc := range processors {
+						_, hasTag := t.Field(i).Tag.Lookup(proc.tag)
+						if !hasTag {
+							continue
+						}
+						for j := 0; j < v.Field(i).Len(); j++ {
+							if err := proc.f(v.Field(i).Index(j)); err != nil {
+								return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
+							}
+						}
+					}
+				}
+			// Recursively process struct pointers.
+			case reflect.Ptr:
+				if v.Field(i).Elem().Kind() == reflect.Struct {
+					if err := processField(v.Field(i).Interface(), processors); err != nil {
 						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
-			// Process each string in string slices.
-			case kind == reflect.String:
+			default:
+				field := t.Field(i)
 				for _, proc := range processors {
-					_, hasTag := t.Field(i).Tag.Lookup(proc.tag)
-					if !hasTag {
-						continue
-					}
-					for j := 0; j < v.Field(i).Len(); j++ {
-						if err := proc.f(v.Field(i).Index(j)); err != nil {
+					if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
+						if err := proc.f(v.Field(i)); err != nil {
 							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 						}
 					}
 				}
 			}
-		// Recursively process struct pointers.
-		case reflect.Ptr:
-			if v.Field(i).Elem().Kind() == reflect.Struct {
-				if err := processField(v.Field(i).Interface(), processors); err != nil {
-					return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
-				}
-			}
-		default:
-			field := t.Field(i)
-			for _, proc := range processors {
-				if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
-					if err := proc.f(v.Field(i)); err != nil {
-						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
-					}
-				}
+		}
+	} else if t.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			if err := processField(v.Index(i).Interface(), processors); err != nil {
+				return errors.Wrapf(err, "could not process field '%s'", t.Name())
 			}
 		}
+	} else {
+		return fmt.Errorf("processing fields of kind '%v' is unsupported", t.Kind())
 	}
+
 	return nil
 }
 
