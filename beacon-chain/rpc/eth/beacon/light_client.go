@@ -76,8 +76,41 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 
 // GetLightClientUpdatesByRange -
 func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2.LightClientUpdatesByRangeRequest) (*ethpbv2.LightClientUpdatesByRangeResponse, error) {
-	// TODO:
-	return nil, nil
+	update1 := ethpbv2.Update{
+		Version: 1,
+		Data: &ethpbv2.UpdateData{
+			AttestedHeader:          &ethpbv1.BeaconBlockHeader{},
+			NextSyncCommittee:       &ethpbv2.SyncCommittee{},
+			NextSyncCommitteeBranch: [][]byte{},
+			FinalizedHeader:         &ethpbv1.BeaconBlockHeader{},
+			FinalityBranch:          [][]byte{},
+			SyncAggregate:           &ethpbv1.SyncAggregate{},
+			SignatureSlot:           2,
+		},
+	}
+
+	update2 := ethpbv2.Update{
+		Version: 1,
+		Data: &ethpbv2.UpdateData{
+			AttestedHeader:          &ethpbv1.BeaconBlockHeader{},
+			NextSyncCommittee:       &ethpbv2.SyncCommittee{},
+			NextSyncCommitteeBranch: [][]byte{},
+			FinalizedHeader:         &ethpbv1.BeaconBlockHeader{},
+			FinalityBranch:          [][]byte{},
+			SyncAggregate:           &ethpbv1.SyncAggregate{},
+			SignatureSlot:           3,
+		},
+	}
+
+	var updates []*ethpbv2.Update
+	updates = append(updates, &update1)
+	updates = append(updates, &update2)
+
+	result := ethpbv2.LightClientUpdatesByRangeResponse{
+		Update: updates,
+	}
+
+	return &result, nil
 }
 
 // GetLightClientFinalityUpdate - implements https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientFinalityUpdate

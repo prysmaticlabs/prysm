@@ -104,7 +104,7 @@ type LightClientBootstrapJson struct {
 }
 
 type LightClientUpdatesByRangeResponseJson struct {
-	Update []*LightClientUpdateJson `json:"updates"` // TODO: This isn't the way spec describe, it describes as a JSON array directly, not a good idea
+	Update []*LightClientUpdateJson `json:"update"` // TODO: This isn't the way spec describe, it describes as a JSON array directly, not a good idea
 }
 
 type LightClientUpdateJson struct {

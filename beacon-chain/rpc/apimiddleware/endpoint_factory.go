@@ -43,6 +43,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/beacon/light_client/bootstrap/{block_root}",
+		"/eth/v1/beacon/light_client/updates",
 		"/eth/v1/beacon/light_client/finality_update",
 		"/eth/v1/beacon/light_client/optimistic_update",
 		"/eth/v1/node/identity",
