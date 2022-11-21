@@ -152,8 +152,14 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 	if req.Epoch != nil {
 		epoch = *req.Epoch
 	}
-	// future epochs and epochs too far back are not supported
-	if epoch > stEpoch || uint64(epoch) < uint64(stEpoch)-uint64(st.RandaoMixesLength())+1 {
+
+	// future epochs and epochs too far back are not supported.
+	randaoEpochLowerBound := uint64(0)
+	// Lower bound should not underflow.
+	if uint64(stEpoch) > uint64(st.RandaoMixesLength()) {
+		randaoEpochLowerBound = uint64(stEpoch) - uint64(st.RandaoMixesLength())
+	}
+	if epoch > stEpoch || uint64(epoch) < randaoEpochLowerBound+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Epoch is out of range for the randao mixes of the state")
 	}
 	idx := epoch % params.BeaconConfig().EpochsPerHistoricalVector

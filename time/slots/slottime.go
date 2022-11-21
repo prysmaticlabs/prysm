@@ -65,11 +65,12 @@ func AbsoluteValueSlotDifference(x, y types.Slot) uint64 {
 // ToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//  def compute_epoch_at_slot(slot: Slot) -> Epoch:
-//    """
-//    Return the epoch number at ``slot``.
-//    """
-//    return Epoch(slot // SLOTS_PER_EPOCH)
+//
+//	def compute_epoch_at_slot(slot: Slot) -> Epoch:
+//	  """
+//	  Return the epoch number at ``slot``.
+//	  """
+//	  return Epoch(slot // SLOTS_PER_EPOCH)
 func ToEpoch(slot types.Slot) types.Epoch {
 	return types.Epoch(slot.DivSlot(params.BeaconConfig().SlotsPerEpoch))
 }
@@ -78,11 +79,12 @@ func ToEpoch(slot types.Slot) types.Epoch {
 // current epoch.
 //
 // Spec pseudocode definition:
-//  def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
-//    """
-//    Return the start slot of ``epoch``.
-//    """
-//    return Slot(epoch * SLOTS_PER_EPOCH)
+//
+//	def compute_start_slot_at_epoch(epoch: Epoch) -> Slot:
+//	  """
+//	  Return the start slot of ``epoch``.
+//	  """
+//	  return Slot(epoch * SLOTS_PER_EPOCH)
 func EpochStart(epoch types.Epoch) (types.Slot, error) {
 	slot, err := params.BeaconConfig().SlotsPerEpoch.SafeMul(uint64(epoch))
 	if err != nil {
@@ -213,7 +215,8 @@ func PrevSlot(slot types.Slot) types.Slot {
 //
 // Spec code:
 // def compute_sync_committee_period(epoch: Epoch) -> uint64:
-//    return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+//
+//	return epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 func SyncCommitteePeriod(e types.Epoch) uint64 {
 	return uint64(e / params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 }

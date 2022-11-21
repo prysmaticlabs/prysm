@@ -1,4 +1,5 @@
-/**
+/*
+*
 Tool for replaying http requests from a file of base64 encoded, line-delimited
 Go http raw requests. Credits to https://gist.github.com/kasey/c9e663eae5baebbf8fbe548c2b1d961b.
 */

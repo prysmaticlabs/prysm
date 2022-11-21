@@ -125,7 +125,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
-			LastWithdrawalValidatorIndex: b.lastWithdrawalValidatorIndex,
+			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 		}
 	default:
 		return nil
@@ -251,7 +251,7 @@ func (b *BeaconState) ToProto() interface{} {
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapellaVal(),
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
-			LastWithdrawalValidatorIndex: b.lastWithdrawalValidatorIndex,
+			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 		}
 	default:
 		return nil

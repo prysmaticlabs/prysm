@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	"google.golang.org/grpc"
 )
 
@@ -31,9 +30,9 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-func altairForkOccurs(conns ...*grpc.ClientConn) error {
+func altairForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := validatorClientFactory.NewValidatorClient(conn)
+	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
@@ -73,9 +72,9 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
+func bellatrixForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	client := validatorClientFactory.NewValidatorClient(conn)
+	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
 	defer cancel()
 	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -22,22 +23,22 @@ const executionToBLSPadding = 12
 //
 // Spec pseudocode definition:
 //
-//def process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) -> None:
-//    validator = state.validators[address_change.validator_index]
+// def process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) -> None:
 //
-//    assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
-//    assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
+//	validator = state.validators[address_change.validator_index]
 //
-//    domain = get_domain(state, DOMAIN_BLS_TO_EXECUTION_CHANGE)
-//    signing_root = compute_signing_root(address_change, domain)
-//    assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
+//	assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
+//	assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
 //
-//    validator.withdrawal_credentials = (
-//        ETH1_ADDRESS_WITHDRAWAL_PREFIX
-//        + b'\x00' * 11
-//        + address_change.to_execution_address
-//    )
+//	domain = get_domain(state, DOMAIN_BLS_TO_EXECUTION_CHANGE)
+//	signing_root = compute_signing_root(address_change, domain)
+//	assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
 //
+//	validator.withdrawal_credentials = (
+//	    ETH1_ADDRESS_WITHDRAWAL_PREFIX
+//	    + b'\x00' * 11
+//	    + address_change.to_execution_address
+//	)
 func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
 	if signed == nil {
 		return st, errNilSignedWithdrawalMessage
@@ -110,7 +111,11 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
-		if err := st.SetLastWithdrawalValidatorIndex(withdrawals[len(withdrawals)-1].ValidatorIndex); err != nil {
+		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
+			nextValidatorIndex = 0
+		}
+		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
 			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
 		}
 	}

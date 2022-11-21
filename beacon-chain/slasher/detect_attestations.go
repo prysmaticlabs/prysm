@@ -72,11 +72,11 @@ func (s *Service) checkSlashableAttestations(
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
 //
-// 1. Check for attester double votes using the list of attestations.
-// 2. Group the attestations by chunk index.
-// 3. Update the min and max spans for those grouped attestations, check if any slashings are
-//    found in the process
-// 4. Update the latest written epoch for all validators involved to the current epoch.
+//  1. Check for attester double votes using the list of attestations.
+//  2. Group the attestations by chunk index.
+//  3. Update the min and max spans for those grouped attestations, check if any slashings are
+//     found in the process
+//  4. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) detectAllAttesterSlashings(
@@ -239,13 +239,13 @@ func (s *Service) epochUpdateForValidator(
 }
 
 // Updates spans and detects any slashable attester offenses along the way.
-// 1. Determine the chunks we need to use for updating for the validator indices
-//    in a validator chunk index, then retrieve those chunks from the database.
-// 2. Using the chunks from step (1):
-//      for every attestation by chunk index:
-//        for each validator in the attestation's attesting indices:
-//          - Check if the attestation is slashable, if so return a slashing object.
-// 3. Save the updated chunks to disk.
+//  1. Determine the chunks we need to use for updating for the validator indices
+//     in a validator chunk index, then retrieve those chunks from the database.
+//  2. Using the chunks from step (1):
+//     for every attestation by chunk index:
+//     for each validator in the attestation's attesting indices:
+//     - Check if the attestation is slashable, if so return a slashing object.
+//  3. Save the updated chunks to disk.
 func (s *Service) updateSpans(
 	ctx context.Context,
 	updatedChunks map[uint64]Chunker,

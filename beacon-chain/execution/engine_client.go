@@ -8,11 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -212,15 +214,16 @@ func (s *Service) ExchangeTransitionConfiguration(
 //
 // Spec code:
 // def get_pow_block_at_terminal_total_difficulty(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
-//    # `pow_chain` abstractly represents all blocks in the PoW chain
-//    for block in pow_chain:
-//        parent = pow_chain[block.parent_hash]
-//        block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
-//        parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
-//        if block_reached_ttd and not parent_reached_ttd:
-//            return block
 //
-//    return None
+//	# `pow_chain` abstractly represents all blocks in the PoW chain
+//	for block in pow_chain:
+//	    parent = pow_chain[block.parent_hash]
+//	    block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//	    parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//	    if block_reached_ttd and not parent_reached_ttd:
+//	        return block
+//
+//	return None
 func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
@@ -352,6 +355,26 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 		}
 	}
 	return execBlks, nil
+}
+
+// HeaderByHash returns the relevant header details for the provided block hash.
+func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
+	var hdr *types.HeaderInfo
+	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByHashMethod, hash, false /* no transactions */)
+	if err == nil && hdr == nil {
+		err = ethereum.NotFound
+	}
+	return hdr, err
+}
+
+// HeaderByNumber returns the relevant header details for the provided block number.
+func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
+	var hdr *types.HeaderInfo
+	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
+	if err == nil && hdr == nil {
+		err = ethereum.NotFound
+	}
+	return hdr, err
 }
 
 // ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
@@ -609,4 +632,23 @@ func buildEmptyExecutionPayload() *pb.ExecutionPayload {
 		Transactions:  make([][]byte, 0),
 		ExtraData:     make([]byte, 0),
 	}
+}
+
+func toBlockNumArg(number *big.Int) string {
+	if number == nil {
+		return "latest"
+	}
+	pending := big.NewInt(-1)
+	if number.Cmp(pending) == 0 {
+		return "pending"
+	}
+	finalized := big.NewInt(int64(gethRPC.FinalizedBlockNumber))
+	if number.Cmp(finalized) == 0 {
+		return "finalized"
+	}
+	safe := big.NewInt(int64(gethRPC.SafeBlockNumber))
+	if number.Cmp(safe) == 0 {
+		return "safe"
+	}
+	return hexutil.EncodeBig(number)
 }
