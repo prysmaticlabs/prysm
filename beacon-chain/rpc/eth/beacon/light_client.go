@@ -324,7 +324,7 @@ func createLightClientUpdate(
 	// 		else:
 	// 			assert attested_state.finalized_checkpoint.root == Bytes32()
 	// 			finalized_header = BeaconBlockHeader()
-	// 			finality_branch = compute_merkle_proof_for_state(attested_state, FINALIZED_ROOT_INDEX)
+	// 		finality_branch = compute_merkle_proof_for_state(attested_state, FINALIZED_ROOT_INDEX)
 	// 	else:
 	// 		finalized_header = BeaconBlockHeader()
 	// 		finality_branch = [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
@@ -358,11 +358,12 @@ func createLightClientUpdate(
 				StateRoot:     make([]byte, 32),
 				BodyRoot:      make([]byte, 32),
 			}
+			``
+		}
 
-			finalityBranch, err = attestedState.FinalizedRootProof(ctx)
-			if err != nil {
-				return nil
-			}
+		finalityBranch, err = attestedState.FinalizedRootProof(ctx)
+		if err != nil {
+			return nil
 		}
 	} else {
 		finalizedHeader = &ethpbv1.BeaconBlockHeader{

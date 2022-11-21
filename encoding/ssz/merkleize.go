@@ -1,6 +1,8 @@
 package ssz
 
 import (
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 )
@@ -218,4 +220,28 @@ func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 		elements = elements[:outputLen]
 	}
 	return elements[0]
+}
+
+// VerifyMerkleBranch verifies a merkle-branch of the given depth, at the given index (at that depth),
+func VerifyMerkleBranch(hasher Hasher, leaf [32]byte, proof [][32]byte, depth uint64, index uint64, root [32]byte) error {
+	if depth != uint64(len(proof)) {
+		return fmt.Errorf("depth and proof length do not match")
+	}
+
+	var powerOfTwo uint64 = 1
+	for i := uint64(0); i < depth; i++ {
+		if (index/powerOfTwo)%2 == 1 {
+			leaf = hasher.Combi(proof[i], leaf)
+		} else {
+			leaf = hasher.Combi(leaf, proof[i])
+		}
+
+		powerOfTwo <<= 1
+	}
+
+	if leaf != root {
+		return fmt.Errorf("invalid merkle proof")
+	}
+
+	return nil
 }
