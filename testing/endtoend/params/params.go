@@ -5,6 +5,8 @@ package params
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,6 +27,7 @@ type params struct {
 	LighthouseBeaconNodeCount int
 	ContractAddress           common.Address
 	Ports                     *ports
+	Paths                     *paths
 }
 
 type ports struct {
@@ -49,8 +52,46 @@ type ports struct {
 	JaegerTracingPort               int
 }
 
+type paths struct{}
+
+// Eth1StaticFile abstracts the location of the eth1 static file folder in the e2e directory, so that
+// a relative path can be used.
+// The relative path is specified as a variadic slice of path parts, in the same way as path.Join.
+func (*paths) Eth1StaticFile(rel ...string) string {
+	parts := append([]string{Eth1StaticFilesPath}, rel...)
+	return path.Join(parts...)
+}
+
+// Eth1Runfile returns the full path to a file in the eth1 static directory, within bazel's run context.
+// The relative path is specified as a variadic slice of path parts, in the same style as path.Join.
+func (p *paths) Eth1Runfile(rel ...string) (string, error) {
+	return bazel.Runfile(p.Eth1StaticFile(rel...))
+}
+
+// MinerKeyPath returns the full path to the file containing the miner's cryptographic keys.
+func (p *paths) MinerKeyPath() (string, error) {
+	return p.Eth1Runfile(minerKeyFilename)
+}
+
 // TestParams is the globally accessible var for getting config elements.
 var TestParams *params
+
+// Logfile gives the full path to a file in the bazel test environment log directory.
+// The relative path is specified as a variadic slice of path parts, in the same style as path.Join.
+func (p *params) Logfile(rel ...string) string {
+	return path.Join(append([]string{p.LogPath}, rel...)...)
+}
+
+// Eth1RPCURL gives the full url to use to connect to the given eth1 client's RPC endpoint.
+// The `index` param corresponds to the `index` field of the `eth1.Node` e2e component.
+// These are are off by one compared to corresponding beacon nodes, because the miner is assigned index 0.
+// eg instance the index of the EL instance associated with beacon node index `0` would typically be `1`.
+func (p *params) Eth1RPCURL(index int) *url.URL {
+	return &url.URL{
+		Scheme: baseELScheme,
+		Host:   net.JoinHostPort(baseELHost, fmt.Sprintf("%d", p.Ports.Eth1RPCPort+index)),
+	}
+}
 
 // BootNodeLogFileName is the file name used for the beacon chain node logs.
 var BootNodeLogFileName = "bootnode.log"
@@ -70,7 +111,7 @@ var StandardBeaconCount = 2
 // StandardLighthouseNodeCount is a global constant for the count of lighthouse beacon nodes of standard E2E tests.
 var StandardLighthouseNodeCount = 2
 
-// DepositCount is the amount of deposits E2E makes on a separate validator client.
+// DepositCount is the number of deposits the E2E runner should make to evaluate post-genesis deposit processing.
 var DepositCount = uint64(64)
 
 // NumOfExecEngineTxs is the number of transaction sent to the execution engine.

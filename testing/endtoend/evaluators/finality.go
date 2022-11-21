@@ -23,7 +23,7 @@ var FinalizationOccurs = func(epoch ethtypes.Epoch) types.Evaluator {
 	}
 }
 
-func finalizationOccurs(conns ...*grpc.ClientConn) error {
+func finalizationOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})

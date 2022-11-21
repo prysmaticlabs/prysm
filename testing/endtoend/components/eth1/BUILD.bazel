@@ -1,9 +1,10 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "depositor.go",
         "helpers.go",
         "miner.go",
         "node.go",
@@ -15,13 +16,17 @@ go_library(
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//config/params:go_default_library",
+        "//contracts/deposit:go_default_library",
         "//contracts/deposit/mock:go_default_library",
         "//crypto/rand:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/endtoend/helpers:go_default_library",
         "//testing/endtoend/params:go_default_library",
         "//testing/endtoend/types:go_default_library",
         "//testing/middleware/engine-api-proxy:go_default_library",
+        "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
@@ -34,5 +39,15 @@ go_library(
         "@com_github_sirupsen_logrus//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@org_golang_x_sync//errgroup:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["depositor_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//config/params:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )
