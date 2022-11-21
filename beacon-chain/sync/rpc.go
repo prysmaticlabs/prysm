@@ -48,10 +48,10 @@ func (s *Service) registerRPCHandlers() {
 			p2p.RPCPingTopicV1,
 			s.pingHandler,
 		)
+		s.registerRPCHandlersAltair()
 		if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
 			s.registerRPCHandlersCapella()
 		}
-		s.registerRPCHandlersAltair()
 		return
 	}
 	s.registerRPC(
@@ -100,6 +100,10 @@ func (s *Service) registerRPCHandlersCapella() {
 	s.registerRPC(
 		p2p.RPCBlobsSidecarsByRangeTopicV1,
 		s.blobsSidecarsByRangeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCBeaconBlockAndBlobsSidecarByRootV1,
+		s.beaconBlockAndBlobsSidecarByRootRPCHandler,
 	)
 }
 

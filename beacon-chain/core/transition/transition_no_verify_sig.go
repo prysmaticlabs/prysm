@@ -364,27 +364,26 @@ func ProcessBlockForStateRoot(
 //
 //	assert verify_kzg_commitments_against_transactions(body.execution_payload.transactions, body.blob_kzg_commitments)
 func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) error {
-	_, span := trace.StartSpan(ctx, "core.state.ProocessBlobKzgs")
+	_, span := trace.StartSpan(ctx, "core.state.ValidateBlobKzgs")
 	defer span.End()
 
 	payload, err := body.Execution()
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload from block")
 	}
-	blobKzgs, err := body.BlobKzgCommitments()
+	blkKzgs, err := body.BlobKzgCommitments()
 	if err != nil {
-		return errors.Wrap(err, "could not get blob kzgs from block")
+		return errors.Wrap(err, "could not get blob kzg commitments from block")
 	}
-	blobKzgsInput := make(kzg.KZGCommitmentSequenceImpl, len(blobKzgs))
-	for i := range blobKzgs {
-		blobKzgsInput[i] = kzg.KZGCommitment(bytesutil.ToBytes48(blobKzgs[i]))
+	kzgs := make(kzg.KZGCommitmentSequenceImpl, len(blkKzgs))
+	for i := range blkKzgs {
+		kzgs[i] = bytesutil.ToBytes48(blkKzgs[i])
 	}
-
 	txs, err := payload.Transactions()
 	if err != nil {
 		return errors.Wrap(err, "could not get transactions from payload")
 	}
-	if err := kzg.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput); err != nil {
+	if err := kzg.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs); err != nil {
 		return err
 	}
 	return nil

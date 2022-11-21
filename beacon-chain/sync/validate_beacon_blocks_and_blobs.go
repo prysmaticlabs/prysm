@@ -11,6 +11,8 @@ import (
 	kbls "github.com/protolambda/go-kzg/bls"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -42,19 +44,30 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
-	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, signed.BeaconBlock)
+	sb := signed.BeaconBlock
+	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, sb)
 	if err != nil || result != pubsub.ValidationAccept {
 		return result, err
 	}
 
-	err = s.validateBeaconBlockKzgs(signed.BeaconBlock.Block)
+	b := sb.Block
+	err = s.validateBeaconBlockKzgs(b)
 	if err != nil {
-		// TODO(EIP4844): Differentiate better between ignore and reject
 		return pubsub.ValidationReject, err
 	}
 
-	err = s.validateBlobsSidecar(signed.BlobsSidecar)
+	sc := signed.BlobsSidecar
+	status, err := s.validateBlobsSidecar(signed.BlobsSidecar)
 	if err != nil {
+		return status, err
+	}
+
+	// [REJECT] The KZG commitments in the block are valid against the provided blobs sidecar.
+	r, err := b.HashTreeRoot()
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := blobs.ValidateBlobsSidecar(b.Slot, r, b.Body.BlobKzgCommitments, sc); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -71,25 +84,38 @@ func (s *Service) validateBeaconBlockKzgs(blk *eth.BeaconBlockCapella) error {
 	blobKzgs := body.BlobKzgCommitments
 	blobKzgsInput := make(kzg.KZGCommitmentSequenceImpl, len(blobKzgs))
 	for i := range blobKzgs {
+		// [REJECT] The KZG commitments of the blobs are all correctly encoded compressed BLS G1 Points.
+		_, err := bls.PublicKeyFromBytes(blobKzgs[i])
+		if err != nil {
+			return errors.Wrap(err, "invalid blob kzg public key")
+		}
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
 
+	// [REJECT] The KZG commitments correspond to the versioned hashes in the transactions list.
 	txs := payload.Transactions
 	return kzg.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput)
 }
 
-func (s *Service) validateBlobsSidecar(b *eth.BlobsSidecar) error {
+func (s *Service) validateBlobsSidecar(b *eth.BlobsSidecar) (pubsub.ValidationResult, error) {
+	// [IGNORE] the sidecar.beacon_block_slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
 	if err := altair.ValidateSyncMessageTime(b.BeaconBlockSlot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-		return err
+		return pubsub.ValidationIgnore, err
 	}
+
+	// [REJECT] the sidecar.blobs are all well formatted, i.e. the BLSFieldElement in valid range
 	if err := validateBlobFr(b.Blobs); err != nil {
 		log.WithError(err).WithField("slot", b.BeaconBlockSlot).Warn("Sidecar contains invalid BLS field elements")
-		return err
+		return pubsub.ValidationReject, err
 	}
 
-	// TODO(EIP4844): The KZG proof is a correctly encoded compressed BLS G1 Point -- i.e. bls.KeyValidate(blobs_sidecar.kzg_aggregated_proof)
+	// [REJECT] The KZG proof is a correctly encoded compressed BLS G1 Point
+	_, err := bls.PublicKeyFromBytes(b.AggregatedProof)
+	if err != nil {
+		return pubsub.ValidationReject, errors.Wrap(err, "invalid blob kzg public key")
+	}
 
-	return nil
+	return pubsub.ValidationAccept, nil
 }
 
 func validateBlobFr(blobs []*enginev1.Blob) error {

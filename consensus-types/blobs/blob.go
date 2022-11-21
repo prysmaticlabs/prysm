@@ -50,5 +50,5 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 		Blobs:              BlobsSequenceImpl(sidecar.Blobs),
 		KZGAggregatedProof: kzg.KZGProof(bytesutil.ToBytes48(sidecar.AggregatedProof)),
 	}
-	return kzg.ValidateBlobsSidecar(kzg.Slot(slot), kzg.Root(root), commitmentSequenceImpl(commitments), kzgSidecar)
+	return kzg.ValidateBlobsSidecar(kzg.Slot(slot), root, commitmentSequenceImpl(commitments), kzgSidecar)
 }
