@@ -19,7 +19,10 @@ import (
 )
 
 func TestWaitForChainStart_GetValidGenesis(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(validGenesisHandler))
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "1234",
+		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+	}))
 	defer server.Close()
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
@@ -37,13 +40,7 @@ func TestWaitForChainStart_GetValidGenesis(t *testing.T) {
 }
 
 func TestWaitForChainStart_NilData(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: nil}
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		require.NoError(t, err)
-		_, err = w.Write(marshalledResponse)
-		require.NoError(t, err)
-	}))
+	server := httptest.NewServer(createGenesisHandler(nil))
 	defer server.Close()
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
@@ -52,18 +49,9 @@ func TestWaitForChainStart_NilData(t *testing.T) {
 }
 
 func TestWaitForChainStart_InvalidTime(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{
-			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
-				GenesisTime:           "foo",
-				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			},
-		}
-
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		require.NoError(t, err)
-		_, err = w.Write(marshalledResponse)
-		require.NoError(t, err)
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "foo",
+		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 	}))
 	defer server.Close()
 
@@ -73,18 +61,9 @@ func TestWaitForChainStart_InvalidTime(t *testing.T) {
 }
 
 func TestWaitForChainStart_EmptyTime(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{
-			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
-				GenesisTime:           "",
-				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			},
-		}
-
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		require.NoError(t, err)
-		_, err = w.Write(marshalledResponse)
-		require.NoError(t, err)
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "",
+		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 	}))
 	defer server.Close()
 
@@ -94,19 +73,11 @@ func TestWaitForChainStart_EmptyTime(t *testing.T) {
 }
 
 func TestWaitForChainStart_InvalidRoot(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{
-			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
-				GenesisTime:           "1234",
-				GenesisValidatorsRoot: "0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
-			},
-		}
-
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		require.NoError(t, err)
-		_, err = w.Write(marshalledResponse)
-		require.NoError(t, err)
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "1234",
+		GenesisValidatorsRoot: "0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
 	}))
+	defer server.Close()
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
@@ -114,19 +85,11 @@ func TestWaitForChainStart_InvalidRoot(t *testing.T) {
 }
 
 func TestWaitForChainStart_EmptyRoot(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{
-			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
-				GenesisTime:           "1234",
-				GenesisValidatorsRoot: "",
-			},
-		}
-
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		require.NoError(t, err)
-		_, err = w.Write(marshalledResponse)
-		require.NoError(t, err)
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "1234",
+		GenesisValidatorsRoot: "",
 	}))
+	defer server.Close()
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
@@ -135,6 +98,8 @@ func TestWaitForChainStart_EmptyRoot(t *testing.T) {
 
 func TestWaitForChainStart_InternalServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(internalServerErrHandler))
+	defer server.Close()
+
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "500: Internal server error", err)
@@ -142,6 +107,8 @@ func TestWaitForChainStart_InternalServerError(t *testing.T) {
 
 func TestWaitForChainStart_NotFoundError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(notFoundErrHandler))
+	defer server.Close()
+
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "404: Not found", err)
@@ -150,33 +117,36 @@ func TestWaitForChainStart_NotFoundError(t *testing.T) {
 // This test makes sure that we handle even errors not specified in the Beacon API spec
 func TestWaitForChainStart_UnknownError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(invalidErr999Handler))
+	defer server.Close()
+
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "999: Invalid error", err)
 }
 
 func TestWaitForChainStart_Timeout(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(validGenesisHandler))
+	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
+		GenesisTime:           "1234",
+		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+	}))
+	defer server.Close()
+
 	validatorClient := NewBeaconApiValidatorClient(server.URL, 1)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "context deadline exceeded", err)
 }
 
-func validGenesisHandler(w http.ResponseWriter, r *http.Request) {
-	genesisResponseJson := &rpcmiddleware.GenesisResponseJson{
-		Data: &rpcmiddleware.GenesisResponse_GenesisJson{
-			GenesisTime:           "1234",
-			GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-		},
-	}
+func createGenesisHandler(data *rpcmiddleware.GenesisResponse_GenesisJson) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: data}
+		marshalledResponse, err := json.Marshal(genesisResponseJson)
+		if err != nil {
+			panic(err)
+		}
 
-	marshalledResponse, err := json.Marshal(genesisResponseJson)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = w.Write(marshalledResponse)
-	if err != nil {
-		panic(err)
-	}
+		_, err = w.Write(marshalledResponse)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
