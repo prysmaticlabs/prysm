@@ -85,7 +85,7 @@ var metricComparisonTests = []comparisonTest{
 	},
 }
 
-func metricsTest(conns ...*grpc.ClientConn) error {
+func metricsTest(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err

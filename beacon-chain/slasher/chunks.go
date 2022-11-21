@@ -56,29 +56,29 @@ type Chunker interface {
 // Under ideal network conditions, where every target epoch immediately follows its source,
 // min spans for a validator will look as follows:
 //
-//  min_spans = [2, 2, 2, ..., 2]
+//	min_spans = [2, 2, 2, ..., 2]
 //
 // Next, we can chunk this list of min spans into chunks of length C. For C = 2, for example:
 //
-//                       chunk0  chunk1       chunkN
-//                        {  }   {   }         {  }
-//  chunked_min_spans = [[2, 2], [2, 2], ..., [2, 2]]
+//	                     chunk0  chunk1       chunkN
+//	                      {  }   {   }         {  }
+//	chunked_min_spans = [[2, 2], [2, 2], ..., [2, 2]]
 //
 // Finally, we can store each chunk index for K validators into a single flat slice. For K = 3:
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
-//                            ...
+//	                         ...
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 // MinSpanChunksSlice represents the data structure above for a single chunk index.
 type MinSpanChunksSlice struct {
@@ -175,7 +175,7 @@ func (m *MaxSpanChunksSlice) Chunk() []uint16 {
 // within the min span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
-//  B surrounds A if and only if B.target > min_spans[B.source]
+//	B surrounds A if and only if B.target > min_spans[B.source]
 //
 // That is, this condition is sufficient to check if an incoming attestation
 // is surrounding a previous one. We also check if we indeed have an existing
@@ -222,7 +222,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 // within the max span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
-//  B surrounds A if and only if B.target < max_spans[B.source]
+//	B surrounds A if and only if B.target < max_spans[B.source]
 //
 // That is, this condition is sufficient to check if an incoming attestation
 // is surrounded by a previous one. We also check if we indeed have an existing
@@ -278,19 +278,19 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // Recall that a MinSpanChunksSlice struct represents a single slice for a chunk index
 // from the collection below:
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_0_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_1_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
-//                            ...
+//	                         ...
 //
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_N_for_validators_0_to_2 = [[2, 2], [2, 2], [2, 2]]
 //
 // Let's take a look at how this update will look for a real set of min span chunk:
 // For the purposes of a simple example, let's set H = 2, meaning a min span
@@ -301,12 +301,11 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // 4 down to 3. First, we find out which chunk epoch 4 falls into, which is calculated as:
 // chunk_idx = (epoch % H) / C = (4 % 2) / 2 = 0
 //
-//
-//                                     val0    val1    val2
-//                                     {  }    {  }    {  }
-//   chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
-//                                     |
-//                                     |-> epoch 4 for validator 0
+//	                                  val0    val1    val2
+//	                                  {  }    {  }    {  }
+//	chunk_0_for_validators_0_to_3 = [[2, 2], [2, 2], [2, 2]]
+//	                                  |
+//	                                  |-> epoch 4 for validator 0
 //
 // Next up, we proceed with the update process for validator index 0, starting at epoch 4
 // all the way down to epoch 2. We will need to go down the array as far as we can get. If the
@@ -452,18 +451,18 @@ func (_ *MaxSpanChunksSlice) StartEpoch(
 // NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For min
 // span chunks, this will be the last epoch of chunk index = (current chunk - 1). For example:
 //
-//                       chunk0     chunk1     chunk2
-//                         |          |          |
-//  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
+//	                     chunk0     chunk1     chunk2
+//	                       |          |          |
+//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3 then the next start
 // epoch is the last epoch of chunk 0, which is epoch 2. This is computed as:
 //
-//  last_epoch(chunkIndex(startEpoch)-1)
-//  last_epoch(chunkIndex(3) - 1)
-//  last_epoch(1 - 1)
-//  last_epoch(0)
-//  2
+//	last_epoch(chunkIndex(startEpoch)-1)
+//	last_epoch(chunkIndex(3) - 1)
+//	last_epoch(1 - 1)
+//	last_epoch(0)
+//	2
 func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	prevChunkIdx := m.params.chunkIndex(startEpoch)
 	if prevChunkIdx > 0 {
@@ -475,18 +474,18 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 // NextChunkStartEpoch given an epoch, determines the start epoch of the next chunk. For max
 // span chunks, this will be the start epoch of chunk index = (current chunk + 1). For example:
 //
-//                       chunk0     chunk1     chunk2
-//                         |          |          |
-//  max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
+//	                     chunk0     chunk1     chunk2
+//	                       |          |          |
+//	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
 // epoch is the start epoch of chunk 2, which is epoch 4. This is computed as:
 //
-//  first_epoch(chunkIndex(startEpoch)+1)
-//  first_epoch(chunkIndex(3)+1)
-//  first_epoch(1 + 1)
-//  first_epoch(2)
-//  4
+//	first_epoch(chunkIndex(startEpoch)+1)
+//	first_epoch(chunkIndex(3)+1)
+//	first_epoch(1 + 1)
+//	first_epoch(2)
+//	4
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }

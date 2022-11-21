@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -97,14 +96,6 @@ type Chain interface {
 	POWBlockFetcher
 }
 
-// RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
-// fetching eth1 data from the clients.
-type RPCDataFetcher interface {
-	Close()
-	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
-	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
-}
-
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	Close()
@@ -154,7 +145,6 @@ type Service struct {
 	cancel                  context.CancelFunc
 	eth1HeadTicker          *time.Ticker
 	httpLogger              bind.ContractFilterer
-	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -263,9 +253,6 @@ func (s *Service) Stop() error {
 	}
 	if s.rpcClient != nil {
 		s.rpcClient.Close()
-	}
-	if s.eth1DataFetcher != nil {
-		s.eth1DataFetcher.Close()
 	}
 	return nil
 }
@@ -398,36 +385,35 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 
 // processBlockHeader adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
-func (s *Service) processBlockHeader(header *gethTypes.Header) {
+func (s *Service) processBlockHeader(header *types.HeaderInfo) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
-	s.latestEth1Data.BlockHash = header.Hash().Bytes()
+	s.latestEth1Data.BlockHash = header.Hash.Bytes()
 	s.latestEth1Data.BlockTime = header.Time
 	s.latestEth1DataLock.Unlock()
 	log.WithFields(logrus.Fields{
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
-		"difficulty":  header.Difficulty.String(),
 	}).Debug("Latest eth1 chain event")
 }
 
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
-func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
+func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.HeaderInfo, error) {
 	if startBlock > endBlock {
 		return nil, fmt.Errorf("start block height %d cannot be > end block height %d", startBlock, endBlock)
 	}
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
-	headers := make([]*gethTypes.Header, 0, requestRange)
+	headers := make([]*types.HeaderInfo, 0, requestRange)
 	errs := make([]error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
 	for i := startBlock; i <= endBlock; i++ {
-		header := &gethTypes.Header{}
+		header := &types.HeaderInfo{}
 		err := error(nil)
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
@@ -523,7 +509,7 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
+			header, err := s.HeaderByNumber(ctx, nil)
 			if err != nil {
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(err, "Unable to retrieve latest execution client header")
@@ -532,7 +518,7 @@ func (s *Service) initPOWService() {
 
 			s.latestEth1DataLock.Lock()
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
-			s.latestEth1Data.BlockHash = header.Hash().Bytes()
+			s.latestEth1Data.BlockHash = header.Hash.Bytes()
 			s.latestEth1Data.BlockTime = header.Time
 			s.latestEth1DataLock.Unlock()
 
@@ -562,7 +548,7 @@ func (s *Service) initPOWService() {
 				// In the event our provided chainstart data references a non-existent block hash,
 				// we assume the genesis block to be 0.
 				if genHash != [32]byte{} {
-					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
+					genHeader, err := s.HeaderByHash(ctx, genHash)
 					if err != nil {
 						s.retryExecutionClientConnection(ctx, err)
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
@@ -601,7 +587,7 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.eth1HeadTicker.C:
-			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
+			head, err := s.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				s.pollConnectionStatus(s.ctx)
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
