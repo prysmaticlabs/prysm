@@ -27,6 +27,7 @@ go_test(
     size = "small",
     srcs = [
         "beacon_api_helpers_test.go",
+        "genesis_test.go",
         "handlers_test.go",
         "wait_for_chain_start_test.go",
     ],

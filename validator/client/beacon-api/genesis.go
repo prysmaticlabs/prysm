@@ -34,7 +34,6 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.Data.GenesisValidatorsRoot)
 	}
 
-	// Remove the leading 0x from the string before decoding it to bytes
 	genesisValidatorRoot, err := hexutil.Decode(genesis.Data.GenesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")

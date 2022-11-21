@@ -5,7 +5,6 @@ package beacon_api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func TestWaitForChainStart_GetValidGenesis(t *testing.T) {
+func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
 		GenesisTime:           "1234",
 		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
@@ -46,7 +45,6 @@ func TestWaitForChainStart_NilData(t *testing.T) {
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "failed to get genesis data", err)
-	assert.ErrorContains(t, "GenesisResponseJson.Data is nil", err)
 }
 
 func TestWaitForChainStart_InvalidTime(t *testing.T) {
@@ -107,7 +105,6 @@ func TestWaitForChainStart_InvalidJsonGenesis(t *testing.T) {
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "failed to get genesis data", err)
-	assert.ErrorContains(t, "failed to decode response body genesis json", err)
 }
 
 func TestWaitForChainStart_InternalServerError(t *testing.T) {
@@ -146,7 +143,6 @@ func TestWaitForChainStart_InvalidJsonError(t *testing.T) {
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "failed to get genesis data", err)
-	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
 }
 
 func TestWaitForChainStart_Timeout(t *testing.T) {
@@ -158,21 +154,5 @@ func TestWaitForChainStart_Timeout(t *testing.T) {
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, 1)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
-	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
-	assert.ErrorContains(t, "context deadline exceeded", err)
-}
-
-func createGenesisHandler(data *rpcmiddleware.GenesisResponse_GenesisJson) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: data}
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = w.Write(marshalledResponse)
-		if err != nil {
-			panic(err)
-		}
-	})
+	assert.ErrorContains(t, "failed to get genesis data", err)
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
 func internalServerErrHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,4 +71,19 @@ func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func createGenesisHandler(data *rpcmiddleware.GenesisResponse_GenesisJson) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: data}
+		marshalledResponse, err := json.Marshal(genesisResponseJson)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = w.Write(marshalledResponse)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
