@@ -422,7 +422,7 @@ func compareResponseObjects(prysmResp interface{}, lighthouseResp interface{}) e
 		}
 		l, err := json.Marshal(lighthouseResp)
 		if err != nil {
-			return errors.Wrap(err, "lighthouse json")
+			return errors.Wrap(err, "failed to marshal Lighthouse response to JSON")
 		}
 		return fmt.Errorf("prysm response %s does not match lighthouse response %s",
 			string(p),
