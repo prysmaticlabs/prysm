@@ -22,7 +22,7 @@ const (
 // TODO: move this to prysm and implement
 type LightClientUpdate struct{}
 
-type lightClientStore struct {
+type Store struct {
 	finalizedHeader               *ethpbv1.BeaconBlockHeader
 	currentSyncCommittee          *ethpbv2.SyncCommittee
 	nextSyncCommittee             *ethpbv2.SyncCommittee
@@ -40,8 +40,9 @@ func getSubtreeIndex(index uint64) uint64 {
 	return index % uint64(math.Pow(2, float64(floorLog2(index-1))))
 }
 
-func initializeLightClientStore(trustedBlockRoot [32]byte,
-	bootstrap ethpbv2.Bootstrap) *lightClientStore {
+// NewStore implements initialize_light_client_store from the spec.
+func NewStore(trustedBlockRoot [32]byte,
+	bootstrap ethpbv2.Bootstrap) *Store {
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
 		panic(err)
@@ -62,7 +63,7 @@ func initializeLightClientStore(trustedBlockRoot [32]byte,
 		uint64(floorLog2(currentSyncCommitteeIndex))) {
 		panic("current sync committee merkle proof is invalid")
 	}
-	return &lightClientStore{
+	return &Store{
 		finalizedHeader:      bootstrap.Header,
 		currentSyncCommittee: bootstrap.CurrentSyncCommittee,
 		nextSyncCommittee:    &ethpbv2.SyncCommittee{},
