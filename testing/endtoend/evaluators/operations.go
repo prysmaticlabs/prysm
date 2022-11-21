@@ -5,13 +5,15 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -25,15 +27,10 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// exitedIndex holds the exited index from ProposeVoluntaryExit in memory so other functions don't confuse it
-// for a normal validator.
-var exitedIndex types.ValidatorIndex
-
-// valExited is used to know if exitedIndex is set, since default value is 0.
-var valExited bool
+var exitedVals = make(map[[48]byte]bool)
 
 // churnLimit is normally 4 unless the validator set is extremely large.
-var churnLimit = uint64(4)
+var churnLimit = 4
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
@@ -78,11 +75,11 @@ var ProposeVoluntaryExit = e2etypes.Evaluator{
 	Evaluation: proposeVoluntaryExit,
 }
 
-// ValidatorHasExited checks the beacon state for the exited validator and ensures its marked as exited.
-var ValidatorHasExited = e2etypes.Evaluator{
+// ValidatorsHaveExited checks the beacon state for the exited validator and ensures its marked as exited.
+var ValidatorsHaveExited = e2etypes.Evaluator{
 	Name:       "voluntary_has_exited_%d",
 	Policy:     policies.OnEpoch(8),
-	Evaluation: validatorIsExited,
+	Evaluation: validatorsHaveExited,
 }
 
 // ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
@@ -92,7 +89,18 @@ var ValidatorsVoteWithTheMajority = e2etypes.Evaluator{
 	Evaluation: validatorsVoteWithTheMajority,
 }
 
-func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
+type mismatch struct {
+	k [48]byte
+	e uint64
+	o uint64
+}
+
+func (m mismatch) String() string {
+	return fmt.Sprintf("(%#x:%d:%d)", m.k, m.e, m.o)
+}
+
+func processesDepositsInBlocks(ec e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	expected := ec.Balances(e2etypes.PostGenesisDepositBatch)
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
@@ -105,40 +113,42 @@ func processesDepositsInBlocks(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
-	var numDeposits uint64
+	observed := make(map[[48]byte]uint64)
 	for _, blk := range blks.BlockContainers {
-		var slot types.Slot
-		var eth1Data *ethpb.Eth1Data
-		var deposits []*ethpb.Deposit
-		switch blk.Block.(type) {
-		case *ethpb.BeaconBlockContainer_Phase0Block:
-			b := blk.GetPhase0Block().Block
-			slot = b.Slot
-			eth1Data = b.Body.Eth1Data
-			deposits = b.Body.Deposits
-		case *ethpb.BeaconBlockContainer_AltairBlock:
-			b := blk.GetAltairBlock().Block
-			slot = b.Slot
-			eth1Data = b.Body.Eth1Data
-			deposits = b.Body.Deposits
-		default:
-			return errors.New("block neither phase0 nor altair")
+		sb, err := blocks.BeaconBlockContainerToSignedBeaconBlock(blk)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert api response type to SignedBeaconBlock interface")
 		}
+		b := sb.Block()
+		slot := b.Slot()
+		eth1Data := b.Body().Eth1Data()
+		deposits := b.Body().Deposits()
 		fmt.Printf(
 			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
 			slot,
 			len(deposits),
 			eth1Data.BlockHash, eth1Data.DepositCount,
 		)
-		numDeposits += uint64(len(deposits))
+		for _, d := range deposits {
+			k := bytesutil.ToBytes48(d.Data.PublicKey)
+			v := observed[k]
+			observed[k] = v + d.Data.Amount
+		}
 	}
-	if numDeposits != depositValCount {
-		return fmt.Errorf("expected %d deposits to be processed, received %d", depositValCount, numDeposits)
+	mismatches := []string{}
+	for k, ev := range expected {
+		ov := observed[k]
+		if ev != ov {
+			mismatches = append(mismatches, mismatch{k: k, e: ev, o: ov}.String())
+		}
+	}
+	if len(mismatches) != 0 {
+		return fmt.Errorf("not all expected deposits observed on chain, len(expected)=%d, len(observed)=%d, mismatches=%d; details(key:expected:observed): %s", len(expected), len(observed), len(mismatches), strings.Join(mismatches, ","))
 	}
 	return nil
 }
 
-func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
+func verifyGraffitiInBlocks(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
@@ -151,7 +161,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 	for _, ctr := range blks.BlockContainers {
-		blk, err := convertToBlockInterface(ctr)
+		blk, err := blocks.BeaconBlockContainerToSignedBeaconBlock(ctr)
 		if err != nil {
 			return err
 		}
@@ -172,7 +182,7 @@ func verifyGraffitiInBlocks(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
+func activatesDepositedValidators(ec e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 
@@ -180,108 +190,133 @@ func activatesDepositedValidators(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
+	epoch := chainHead.HeadEpoch
 
-	validatorRequest := &ethpb.ListValidatorsRequest{
-		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
-		PageToken: "1",
-	}
-	validators, err := client.ListValidators(context.Background(), validatorRequest)
+	validators, err := getAllValidators(client)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validators")
 	}
+	expected := ec.Balances(e2etypes.PostGenesisDepositBatch)
 
-	expectedCount := depositValCount
-	receivedCount := uint64(len(validators.ValidatorList))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
-	}
-
-	epoch := chainHead.HeadEpoch
-	depositsInEpoch := uint64(0)
-	var effBalanceLowCount, exitEpochWrongCount, withdrawEpochWrongCount uint64
-	for _, item := range validators.ValidatorList {
-		if item.Validator.ActivationEpoch == epoch {
-			depositsInEpoch++
-			if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
-				effBalanceLowCount++
-			}
-			if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-				exitEpochWrongCount++
-			}
-			if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
-				withdrawEpochWrongCount++
-			}
+	var deposits, lowBalance, wrongExit, wrongWithdraw int
+	for _, v := range validators {
+		key := bytesutil.ToBytes48(v.PublicKey)
+		if _, ok := expected[key]; !ok {
+			continue
+		}
+		delete(expected, key)
+		if v.ActivationEpoch != epoch {
+			continue
+		}
+		deposits++
+		if v.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			lowBalance++
+		}
+		if v.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			wrongExit++
+		}
+		if v.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+			wrongWithdraw++
 		}
 	}
-	if depositsInEpoch != churnLimit {
-		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", churnLimit, epoch, depositsInEpoch)
+
+	// Make sure every post-genesis deposit has been proecssed, resulting in a validator.
+	if len(expected) > 0 {
+		return fmt.Errorf("missing %d validators for post-genesis deposits", len(expected))
 	}
 
-	if effBalanceLowCount > 0 {
+	if deposits != churnLimit {
+		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", churnLimit, epoch, deposits)
+	}
+
+	if lowBalance > 0 {
 		return fmt.Errorf(
 			"%d validators did not have genesis validator effective balance of %d",
-			effBalanceLowCount,
+			lowBalance,
 			params.BeaconConfig().MaxEffectiveBalance,
 		)
-	} else if exitEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have an exit epoch of far future epoch", exitEpochWrongCount)
-	} else if withdrawEpochWrongCount > 0 {
-		return fmt.Errorf("%d validators did not have a withdrawable epoch of far future epoch", withdrawEpochWrongCount)
+	} else if wrongExit > 0 {
+		return fmt.Errorf("%d validators did not have an exit epoch of far future epoch", wrongExit)
+	} else if wrongWithdraw > 0 {
+		return fmt.Errorf("%d validators did not have a withdrawable epoch of far future epoch", wrongWithdraw)
 	}
 	return nil
 }
 
-func depositedValidatorsAreActive(conns ...*grpc.ClientConn) error {
+func getAllValidators(c ethpb.BeaconChainClient) ([]*ethpb.Validator, error) {
+	vals := make([]*ethpb.Validator, 0)
+	pageToken := "0"
+	for pageToken != "" {
+		validatorRequest := &ethpb.ListValidatorsRequest{
+			PageSize:  100,
+			PageToken: pageToken,
+		}
+		validators, err := c.ListValidators(context.Background(), validatorRequest)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get validators")
+		}
+		for _, v := range validators.ValidatorList {
+			vals = append(vals, v.Validator)
+		}
+		pageToken = validators.NextPageToken
+		log.WithField("len", len(vals)).WithField("pageToken", pageToken).Info("getAllValidators")
+	}
+	return vals, nil
+}
+
+func depositedValidatorsAreActive(ec e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
-	validatorRequest := &ethpb.ListValidatorsRequest{
-		PageSize:  int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
-		PageToken: "1",
-	}
-	validators, err := client.ListValidators(context.Background(), validatorRequest)
-	if err != nil {
-		return errors.Wrap(err, "failed to get validators")
-	}
-
-	expectedCount := depositValCount
-	receivedCount := uint64(len(validators.ValidatorList))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
-	}
 
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	inactiveCount, belowBalanceCount := 0, 0
-	for _, item := range validators.ValidatorList {
-		if !corehelpers.IsActiveValidator(item.Validator, chainHead.HeadEpoch) {
-			inactiveCount++
+	vals, err := getAllValidators(client)
+	if err != nil {
+		return errors.Wrap(err, "error retrieving validator list from API")
+	}
+	inactive := 0
+	lowBalance := 0
+	nexits := 0
+	expected := ec.Balances(e2etypes.PostGenesisDepositBatch)
+	nexpected := len(expected)
+	for _, v := range vals {
+		key := bytesutil.ToBytes48(v.PublicKey)
+		if _, ok := expected[key]; !ok {
+			continue // we aren't checking for this validator
 		}
-		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
-			belowBalanceCount++
+		// ignore voluntary exits when checking balance and active status
+		exited := exitedVals[key]
+		if exited {
+			nexits++
+			delete(expected, key)
+			continue
 		}
+		if !corehelpers.IsActiveValidator(v, chainHead.HeadEpoch) {
+			inactive++
+		}
+		if v.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			lowBalance++
+		}
+		delete(expected, key)
+	}
+	if len(expected) > 0 {
+		mk := make([]string, 0)
+		for k := range expected {
+			mk = append(mk, fmt.Sprintf("%#x", k))
+		}
+		return fmt.Errorf("API response missing %d validators, based on deposits; keys=%s", len(expected), strings.Join(mk, ","))
+	}
+	if inactive != 0 || lowBalance != 0 {
+		return fmt.Errorf("active validator set does not match %d total deposited. %d exited, %d inactive, %d low balance", nexpected, nexits, inactive, lowBalance)
 	}
 
-	if inactiveCount > 0 {
-		return fmt.Errorf(
-			"%d validators were not active, expected %d active validators from deposits",
-			inactiveCount,
-			params.BeaconConfig().MinGenesisActiveValidatorCount,
-		)
-	}
-	if belowBalanceCount > 0 {
-		return fmt.Errorf(
-			"%d validators did not have a proper balance, expected %d validators to have 32 ETH",
-			belowBalanceCount,
-			params.BeaconConfig().MinGenesisActiveValidatorCount,
-		)
-	}
 	return nil
 }
 
-func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
+func proposeVoluntaryExit(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	valClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	beaconClient := ethpb.NewBeaconChainClient(conn)
@@ -292,13 +327,12 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not get chain head")
 	}
 
-	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
 		return err
 	}
 
-	exitedIndex = types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
-	valExited = true
+	exitedIndex := types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	voluntaryExit := &ethpb.VoluntaryExit{
 		Epoch:          chainHead.HeadEpoch,
@@ -325,28 +359,33 @@ func proposeVoluntaryExit(conns ...*grpc.ClientConn) error {
 	if _, err = valClient.ProposeExit(ctx, signedExit); err != nil {
 		return errors.Wrap(err, "could not propose exit")
 	}
+	pubk := bytesutil.ToBytes48(deposits[exitedIndex].Data.PublicKey)
+	exitedVals[pubk] = true
+
 	return nil
 }
 
-func validatorIsExited(conns ...*grpc.ClientConn) error {
+func validatorsHaveExited(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
-	validatorRequest := &ethpb.GetValidatorRequest{
-		QueryFilter: &ethpb.GetValidatorRequest_Index{
-			Index: exitedIndex,
-		},
-	}
-	validator, err := client.GetValidator(context.Background(), validatorRequest)
-	if err != nil {
-		return errors.Wrap(err, "failed to get validators")
-	}
-	if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("expected validator %d to be submitted for exit", exitedIndex)
+	for k := range exitedVals {
+		validatorRequest := &ethpb.GetValidatorRequest{
+			QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+				PublicKey: k[:],
+			},
+		}
+		validator, err := client.GetValidator(context.Background(), validatorRequest)
+		if err != nil {
+			return errors.Wrap(err, "failed to get validators")
+		}
+		if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf("expected validator %#x to be submitted for exit", k)
+		}
 	}
 	return nil
 }
 
-func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
+func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
@@ -412,19 +451,3 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 }
 
 var expectedEth1DataVote []byte
-
-func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (interfaces.SignedBeaconBlock, error) {
-	if obj.GetPhase0Block() != nil {
-		return blocks.NewSignedBeaconBlock(obj.GetPhase0Block())
-	}
-	if obj.GetAltairBlock() != nil {
-		return blocks.NewSignedBeaconBlock(obj.GetAltairBlock())
-	}
-	if obj.GetBellatrixBlock() != nil {
-		return blocks.NewSignedBeaconBlock(obj.GetBellatrixBlock())
-	}
-	if obj.GetBlindedBellatrixBlock() != nil {
-		return blocks.NewSignedBeaconBlock(obj.GetBlindedBellatrixBlock())
-	}
-	return nil, errors.New("container has no block")
-}

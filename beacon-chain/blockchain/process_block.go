@@ -45,52 +45,53 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 // computation in this method and methods it calls into.
 //
 // Spec pseudocode definition:
-//   def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
-//    block = signed_block.message
-//    # Parent block must be known
-//    assert block.parent_root in store.block_states
-//    # Make a copy of the state to avoid mutability issues
-//    pre_state = copy(store.block_states[block.parent_root])
-//    # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-//    assert get_current_slot(store) >= block.slot
 //
-//    # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
-//    finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-//    assert block.slot > finalized_slot
-//    # Check block is a descendant of the finalized block at the checkpoint finalized slot
-//    assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
+//	def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
+//	 block = signed_block.message
+//	 # Parent block must be known
+//	 assert block.parent_root in store.block_states
+//	 # Make a copy of the state to avoid mutability issues
+//	 pre_state = copy(store.block_states[block.parent_root])
+//	 # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
+//	 assert get_current_slot(store) >= block.slot
 //
-//    # Check the block is valid and compute the post-state
-//    state = pre_state.copy()
-//    state_transition(state, signed_block, True)
-//    # Add new block to the store
-//    store.blocks[hash_tree_root(block)] = block
-//    # Add new state for this block to the store
-//    store.block_states[hash_tree_root(block)] = state
+//	 # Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
+//	 finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//	 assert block.slot > finalized_slot
+//	 # Check block is a descendant of the finalized block at the checkpoint finalized slot
+//	 assert get_ancestor(store, block.parent_root, finalized_slot) == store.finalized_checkpoint.root
 //
-//    # Update justified checkpoint
-//    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
-//            store.best_justified_checkpoint = state.current_justified_checkpoint
-//        if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
-//            store.justified_checkpoint = state.current_justified_checkpoint
+//	 # Check the block is valid and compute the post-state
+//	 state = pre_state.copy()
+//	 state_transition(state, signed_block, True)
+//	 # Add new block to the store
+//	 store.blocks[hash_tree_root(block)] = block
+//	 # Add new state for this block to the store
+//	 store.block_states[hash_tree_root(block)] = state
 //
-//    # Update finalized checkpoint
-//    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
-//        store.finalized_checkpoint = state.finalized_checkpoint
+//	 # Update justified checkpoint
+//	 if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//	     if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
+//	         store.best_justified_checkpoint = state.current_justified_checkpoint
+//	     if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
+//	         store.justified_checkpoint = state.current_justified_checkpoint
 //
-//        # Potentially update justified if different from store
-//        if store.justified_checkpoint != state.current_justified_checkpoint:
-//            # Update justified if new justified is later than store justified
-//            if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//                store.justified_checkpoint = state.current_justified_checkpoint
-//                return
+//	 # Update finalized checkpoint
+//	 if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
+//	     store.finalized_checkpoint = state.finalized_checkpoint
 //
-//            # Update justified if store justified is not in chain with finalized checkpoint
-//            finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
-//            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
-//            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
-//                store.justified_checkpoint = state.current_justified_checkpoint
+//	     # Potentially update justified if different from store
+//	     if store.justified_checkpoint != state.current_justified_checkpoint:
+//	         # Update justified if new justified is later than store justified
+//	         if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+//	             store.justified_checkpoint = state.current_justified_checkpoint
+//	             return
+//
+//	         # Update justified if store justified is not in chain with finalized checkpoint
+//	         finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+//	         ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
+//	         if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
+//	             store.justified_checkpoint = state.current_justified_checkpoint
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
@@ -664,26 +665,8 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case ti := <-ticker.C:
-				if !atHalfSlot(ti) {
-					continue
-				}
-				// Head root should be empty when retrieving proposer index for the next slot.
-				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
-				// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-				if has && id == [8]byte{} {
-					headBlock, err := s.headBlock()
-					if err != nil {
-						log.WithError(err).Error("Could not get head block")
-					} else {
-						if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-							headState: s.headState(ctx),
-							headRoot:  s.headRoot(),
-							headBlock: headBlock.Block(),
-						}); err != nil {
-							log.WithError(err).Error("Could not prepare payload on empty ID")
-						}
-					}
-					missedPayloadIDFilledCount.Inc()
+				if err := s.fillMissingBlockPayloadId(ctx, ti); err != nil {
+					log.WithError(err).Error("Could not fill missing payload ID")
 				}
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
@@ -697,4 +680,32 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 func atHalfSlot(t time.Time) bool {
 	s := params.BeaconConfig().SecondsPerSlot
 	return uint64(t.Second())%s == s/2
+}
+
+func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) error {
+	if !atHalfSlot(ti) {
+		return nil
+	}
+	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+		return nil
+	}
+	// Head root should be empty when retrieving proposer index for the next slot.
+	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
+	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
+	if has && id == [8]byte{} {
+		missedPayloadIDFilledCount.Inc()
+		headBlock, err := s.headBlock()
+		if err != nil {
+			return err
+		} else {
+			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+				headState: s.headState(ctx),
+				headRoot:  s.headRoot(),
+				headBlock: headBlock.Block(),
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
@@ -133,14 +132,11 @@ func (c *headerCache) HeaderInfoByHeight(height *big.Int) (bool, *types.HeaderIn
 // size limit. This method should be called in sequential header number order if
 // the desired behavior is that the blocks with the highest header number should
 // be present in the cache.
-func (c *headerCache) AddHeader(hdr *gethTypes.Header) error {
+func (c *headerCache) AddHeader(hdr *types.HeaderInfo) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	hInfo, err := types.HeaderToHeaderInfo(hdr)
-	if err != nil {
-		return err
-	}
+	hInfo := hdr.Copy()
 
 	if err := c.hashCache.AddIfNotPresent(hInfo); err != nil {
 		return err
