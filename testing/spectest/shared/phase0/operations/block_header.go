@@ -64,10 +64,12 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &ethpb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProto())
+				beaconStateProto, err := beaconState.ToProto()
+				require.NoError(t, err)
+				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconStateProto)
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState.ToProto(), postBeaconState)
+					diff, _ := messagediff.PrettyDiff(beaconStateProto, postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}
