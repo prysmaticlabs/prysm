@@ -51,7 +51,7 @@ const (
 	v1MiddlewarePathTemplate = "http://localhost:%d/eth/v1"
 )
 
-func apiMiddlewareVerify(conns ...*grpc.ClientConn) error {
+func apiMiddlewareVerify(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,

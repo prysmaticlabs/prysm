@@ -446,9 +446,12 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling(t *testing.T) {
 }
 
 // blockTree1 constructs the following tree:
-//    /- B1
+//
+//	/- B1
+//
 // B0           /- B5 - B7
-//    \- B3 - B4 - B6 - B8
+//
+//	\- B3 - B4 - B6 - B8
 func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byte, error) {
 	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
 	b0 := util.NewBeaconBlock()

@@ -18,27 +18,27 @@ import (
 //
 // Spec pseudocode definition:
 //
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//    # Verify that the block is newer than latest block header
-//    assert block.slot > state.latest_block_header.slot
-//    # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Cache current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        proposer_index=block.proposer_index,
-//        parent_root=block.parent_root,
-//        state_root=Bytes32(),  # Overwritten in the next process_slot call
-//        body_root=hash_tree_root(block.body),
-//    )
+//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	  # Verify that the slots match
+//	  assert block.slot == state.slot
+//	  # Verify that the block is newer than latest block header
+//	  assert block.slot > state.latest_block_header.slot
+//	  # Verify that proposer index is the correct index
+//	  assert block.proposer_index == get_beacon_proposer_index(state)
+//	  # Verify that the parent matches
+//	  assert block.parent_root == hash_tree_root(state.latest_block_header)
+//	  # Cache current block as the new latest block
+//	  state.latest_block_header = BeaconBlockHeader(
+//	      slot=block.slot,
+//	      proposer_index=block.proposer_index,
+//	      parent_root=block.parent_root,
+//	      state_root=Bytes32(),  # Overwritten in the next process_slot call
+//	      body_root=hash_tree_root(block.body),
+//	  )
 //
-//    # Verify proposer is not slashed
-//    proposer = state.validators[block.proposer_index]
-//    assert not proposer.slashed
+//	  # Verify proposer is not slashed
+//	  proposer = state.validators[block.proposer_index]
+//	  assert not proposer.slashed
 func ProcessBlockHeader(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -73,27 +73,28 @@ func ProcessBlockHeader(
 // using a unsigned block.
 //
 // Spec pseudocode definition:
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//    # Verify that the block is newer than latest block header
-//    assert block.slot > state.latest_block_header.slot
-//    # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Cache current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        proposer_index=block.proposer_index,
-//        parent_root=block.parent_root,
-//        state_root=Bytes32(),  # Overwritten in the next process_slot call
-//        body_root=hash_tree_root(block.body),
-//    )
 //
-//    # Verify proposer is not slashed
-//    proposer = state.validators[block.proposer_index]
-//    assert not proposer.slashed
+//	def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+//	  # Verify that the slots match
+//	  assert block.slot == state.slot
+//	  # Verify that the block is newer than latest block header
+//	  assert block.slot > state.latest_block_header.slot
+//	  # Verify that proposer index is the correct index
+//	  assert block.proposer_index == get_beacon_proposer_index(state)
+//	  # Verify that the parent matches
+//	  assert block.parent_root == hash_tree_root(state.latest_block_header)
+//	  # Cache current block as the new latest block
+//	  state.latest_block_header = BeaconBlockHeader(
+//	      slot=block.slot,
+//	      proposer_index=block.proposer_index,
+//	      parent_root=block.parent_root,
+//	      state_root=Bytes32(),  # Overwritten in the next process_slot call
+//	      body_root=hash_tree_root(block.body),
+//	  )
+//
+//	  # Verify proposer is not slashed
+//	  proposer = state.validators[block.proposer_index]
+//	  assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
 	ctx context.Context,
 	beaconState state.BeaconState,
