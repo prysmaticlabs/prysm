@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	finalizedRootIndex = uint64(105) // Precomputed value.
+	finalizedRootIndex        = uint64(105) // Precomputed value.
+	currentSyncCommitteeIndex = uint64(54)  // Precomputed value.
+	nextSyncCommitteeIndex    = uint64(55)  // Precomputed value.
 )
 
 // FinalizedRootGeneralizedIndex for the beacon state.
@@ -25,7 +27,7 @@ func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 		return 0, errNotSupported("CurrentSyncCommitteeGeneralizedIndex", b.version)
 	}
 
-	return uint64(nativetypes.CurrentSyncCommittee.RealPosition()), nil
+	return uint64(currentSyncCommitteeIndex), nil
 }
 
 // NextSyncCommitteeGeneralizedIndex for the beacon state.
@@ -34,7 +36,7 @@ func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 		return 0, errNotSupported("NextSyncCommitteeGeneralizedIndex", b.version)
 	}
 
-	return uint64(nativetypes.NextSyncCommittee.RealPosition()), nil
+	return uint64(nextSyncCommitteeIndex), nil
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
