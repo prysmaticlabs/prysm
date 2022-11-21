@@ -17,6 +17,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
@@ -57,6 +60,16 @@ func DeleteAndCreateFile(tmpPath, fileName string) (*os.File, error) {
 		return nil, err
 	}
 	return newFile, nil
+}
+
+// DeleteAndCreatePath replaces DeleteAndCreateFile where a full path is more convenient than dir,file params.
+func DeleteAndCreatePath(fp string) (*os.File, error) {
+	if _, err := os.Stat(fp); os.IsExist(err) {
+		if err = os.Remove(fp); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(filepath.Clean(fp))
 }
 
 // WaitForTextInFile checks a file every polling interval for the text requested.
@@ -332,4 +345,12 @@ func WaitOnNodes(ctx context.Context, nodes []e2etypes.ComponentRunner, nodesSta
 	}()
 
 	return g.Wait()
+}
+
+func MinerRPCClient() (*ethclient.Client, error) {
+	client, err := rpc.DialHTTP(e2e.TestParams.Eth1RPCURL(e2e.MinerComponentOffset).String())
+	if err != nil {
+		return nil, err
+	}
+	return ethclient.NewClient(client), nil
 }
