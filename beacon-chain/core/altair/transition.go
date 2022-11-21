@@ -15,18 +15,19 @@ import (
 //
 // Spec code:
 // def process_epoch(state: BeaconState) -> None:
-//    process_justification_and_finalization(state)  # [Modified in Altair]
-//    process_inactivity_updates(state)  # [New in Altair]
-//    process_rewards_and_penalties(state)  # [Modified in Altair]
-//    process_registry_updates(state)
-//    process_slashings(state)  # [Modified in Altair]
-//    process_eth1_data_reset(state)
-//    process_effective_balance_updates(state)
-//    process_slashings_reset(state)
-//    process_randao_mixes_reset(state)
-//    process_historical_roots_update(state)
-//    process_participation_flag_updates(state)  # [New in Altair]
-//    process_sync_committee_updates(state)  # [New in Altair]
+//
+//	process_justification_and_finalization(state)  # [Modified in Altair]
+//	process_inactivity_updates(state)  # [New in Altair]
+//	process_rewards_and_penalties(state)  # [Modified in Altair]
+//	process_registry_updates(state)
+//	process_slashings(state)  # [Modified in Altair]
+//	process_eth1_data_reset(state)
+//	process_effective_balance_updates(state)
+//	process_slashings_reset(state)
+//	process_randao_mixes_reset(state)
+//	process_historical_roots_update(state)
+//	process_participation_flag_updates(state)  # [New in Altair]
+//	process_sync_committee_updates(state)  # [New in Altair]
 func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpoch")
 	defer span.End()

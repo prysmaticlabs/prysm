@@ -67,7 +67,8 @@ func IsZero(sKey []byte) bool {
 //
 // In IETF draft BLS specification:
 // Sign(SK, message) -> signature: a signing algorithm that generates
-//      a deterministic signature given a secret key SK and a message.
+//
+//	a deterministic signature given a secret key SK and a message.
 //
 // In Ethereum proof of stake specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
