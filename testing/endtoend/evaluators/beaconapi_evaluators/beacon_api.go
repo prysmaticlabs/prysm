@@ -418,7 +418,7 @@ func compareResponseObjects(prysmResp interface{}, lighthouseResp interface{}) e
 	if !reflect.DeepEqual(prysmResp, lighthouseResp) {
 		p, err := json.Marshal(prysmResp)
 		if err != nil {
-			return errors.Wrap(err, "prysm json")
+			return errors.Wrap(err, "failed to marshal Prysm response to JSON")
 		}
 		l, err := json.Marshal(lighthouseResp)
 		if err != nil {
