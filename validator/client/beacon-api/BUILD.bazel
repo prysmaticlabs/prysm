@@ -1,4 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 # Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
 # keep
@@ -17,5 +18,25 @@ go_library(
         "//validator/client/iface:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+    ],
+)
+
+# Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
+# keep
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = [
+        "beacon_api_helpers.go",
+        "test_handlers.go",
+        "wait_for_chain_start_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//testing/assert:go_default_library",
+        "//testing/mock:go_default_library",
+        "//testing/require:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

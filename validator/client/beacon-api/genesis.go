@@ -30,6 +30,10 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 	chainStartResponse.Started = true
 	chainStartResponse.GenesisTime = genesisTime
 
+	if !validRoot(genesis.Data.GenesisValidatorsRoot) {
+		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.Data.GenesisValidatorsRoot)
+	}
+
 	// Remove the leading 0x from the string before decoding it to bytes
 	genesisValidatorRoot, err := hex.DecodeString(genesis.Data.GenesisValidatorsRoot[2:])
 	if err != nil {
@@ -65,6 +69,10 @@ func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJs
 	err = json.NewDecoder(resp.Body).Decode(genesisJson)
 	if err != nil {
 		return nil, err
+	}
+
+	if genesisJson.Data == nil {
+		return nil, errors.New("GenesisResponseJson.Data is nil")
 	}
 
 	return genesisJson, nil
