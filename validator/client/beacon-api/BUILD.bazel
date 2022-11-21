@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 # Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
 # keep
+# gazelle:build_tag use_beacon_api
 go_library(
     name = "go_default_library",
     srcs = [
@@ -24,6 +25,7 @@ go_library(
 
 # Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
 # keep
+# gazelle:build_tag use_beacon_api
 go_test(
     name = "go_default_test",
     size = "small",
