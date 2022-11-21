@@ -23,22 +23,22 @@ const executionToBLSPadding = 12
 //
 // Spec pseudocode definition:
 //
-//def process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) -> None:
-//    validator = state.validators[address_change.validator_index]
+// def process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) -> None:
 //
-//    assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
-//    assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
+//	validator = state.validators[address_change.validator_index]
 //
-//    domain = get_domain(state, DOMAIN_BLS_TO_EXECUTION_CHANGE)
-//    signing_root = compute_signing_root(address_change, domain)
-//    assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
+//	assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
+//	assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]
 //
-//    validator.withdrawal_credentials = (
-//        ETH1_ADDRESS_WITHDRAWAL_PREFIX
-//        + b'\x00' * 11
-//        + address_change.to_execution_address
-//    )
+//	domain = get_domain(state, DOMAIN_BLS_TO_EXECUTION_CHANGE)
+//	signing_root = compute_signing_root(address_change, domain)
+//	assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature)
 //
+//	validator.withdrawal_credentials = (
+//	    ETH1_ADDRESS_WITHDRAWAL_PREFIX
+//	    + b'\x00' * 11
+//	    + address_change.to_execution_address
+//	)
 func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
 	if signed == nil {
 		return st, errNilSignedWithdrawalMessage

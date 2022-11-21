@@ -87,12 +87,12 @@ type StateProvider struct {
 }
 
 // State returns the BeaconState for a given identifier. The identifier can be one of:
-//  - "head" (canonical head in node's view)
-//  - "genesis"
-//  - "finalized"
-//  - "justified"
-//  - <slot>
-//  - <hex encoded state root with '0x' prefix>
+//   - "head" (canonical head in node's view)
+//   - "genesis"
+//   - "finalized"
+//   - "justified"
+//   - <slot>
+//   - <hex encoded state root with '0x' prefix>
 func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	var (
 		s   state.BeaconState
@@ -141,12 +141,12 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 }
 
 // StateRoot returns a beacon state root for a given identifier. The identifier can be one of:
-//  - "head" (canonical head in node's view)
-//  - "genesis"
-//  - "finalized"
-//  - "justified"
-//  - <slot>
-//  - <hex encoded state root with '0x' prefix>
+//   - "head" (canonical head in node's view)
+//   - "genesis"
+//   - "finalized"
+//   - "justified"
+//   - <slot>
+//   - <hex encoded state root with '0x' prefix>
 func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []byte, err error) {
 	stateIdString := strings.ToLower(string(stateId))
 	switch stateIdString {
