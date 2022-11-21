@@ -63,3 +63,11 @@ func invalidErr999Handler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 }
+
+func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	_, err := w.Write([]byte("foo"))
+	if err != nil {
+		panic(err)
+	}
+}

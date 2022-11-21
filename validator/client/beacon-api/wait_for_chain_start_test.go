@@ -5,13 +5,13 @@ package beacon_api
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -34,7 +34,7 @@ func TestWaitForChainStart_GetValidGenesis(t *testing.T) {
 	assert.Equal(t, true, resp.Started)
 	assert.Equal(t, uint64(1234), resp.GenesisTime)
 
-	expectedRoot, err := hex.DecodeString("cf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	expectedRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedRoot, resp.GenesisValidatorsRoot)
 }
@@ -45,6 +45,7 @@ func TestWaitForChainStart_NilData(t *testing.T) {
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
+	assert.ErrorContains(t, "failed to get genesis data", err)
 	assert.ErrorContains(t, "GenesisResponseJson.Data is nil", err)
 }
 
@@ -57,7 +58,7 @@ func TestWaitForChainStart_InvalidTime(t *testing.T) {
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
-	assert.ErrorContains(t, "strconv.ParseUint", err)
+	assert.ErrorContains(t, "failed to parse genesis time", err)
 }
 
 func TestWaitForChainStart_EmptyTime(t *testing.T) {
@@ -69,7 +70,7 @@ func TestWaitForChainStart_EmptyTime(t *testing.T) {
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
-	assert.ErrorContains(t, "strconv.ParseUint", err)
+	assert.ErrorContains(t, "failed to parse genesis time", err)
 }
 
 func TestWaitForChainStart_InvalidRoot(t *testing.T) {
@@ -94,6 +95,19 @@ func TestWaitForChainStart_EmptyRoot(t *testing.T) {
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	assert.ErrorContains(t, "invalid genesis validators root", err)
+}
+
+func TestWaitForChainStart_InvalidJsonGenesis(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("foo"))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
+	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
+	assert.ErrorContains(t, "failed to get genesis data", err)
+	assert.ErrorContains(t, "failed to decode response body genesis json", err)
 }
 
 func TestWaitForChainStart_InternalServerError(t *testing.T) {
@@ -124,6 +138,17 @@ func TestWaitForChainStart_UnknownError(t *testing.T) {
 	assert.ErrorContains(t, "999: Invalid error", err)
 }
 
+// Make sure that we fail gracefully if the error json is not valid json
+func TestWaitForChainStart_InvalidJsonError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(invalidJsonErrHandler))
+	defer server.Close()
+
+	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
+	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
+	assert.ErrorContains(t, "failed to get genesis data", err)
+	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
+}
+
 func TestWaitForChainStart_Timeout(t *testing.T) {
 	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
 		GenesisTime:           "1234",
@@ -133,6 +158,7 @@ func TestWaitForChainStart_Timeout(t *testing.T) {
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, 1)
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
+	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
 	assert.ErrorContains(t, "context deadline exceeded", err)
 }
 

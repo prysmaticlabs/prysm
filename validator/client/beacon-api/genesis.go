@@ -4,11 +4,11 @@
 package beacon_api
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
@@ -18,12 +18,12 @@ import (
 func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse, error) {
 	genesis, err := c.getGenesis()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get genesis data")
 	}
 
 	genesisTime, err := strconv.ParseUint(genesis.Data.GenesisTime, 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.Data.GenesisTime)
 	}
 
 	chainStartResponse := &ethpb.ChainStartResponse{}
@@ -35,9 +35,9 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 	}
 
 	// Remove the leading 0x from the string before decoding it to bytes
-	genesisValidatorRoot, err := hex.DecodeString(genesis.Data.GenesisValidatorsRoot[2:])
+	genesisValidatorRoot, err := hexutil.Decode(genesis.Data.GenesisValidatorsRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
 	chainStartResponse.GenesisValidatorsRoot = genesisValidatorRoot
 
@@ -47,7 +47,7 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, error) {
 	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to query REST API genesis endpoint")
 	}
 	defer func() {
 		if err = resp.Body.Close(); err != nil {
@@ -57,18 +57,16 @@ func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJs
 
 	if resp.StatusCode != http.StatusOK {
 		errorJson := apimiddleware.DefaultErrorJson{}
-		err = json.NewDecoder(resp.Body).Decode(&errorJson)
-		if err != nil {
-			return nil, err
+		if err := json.NewDecoder(resp.Body).Decode(&errorJson); err != nil {
+			return nil, errors.Wrap(err, "failed to decode response body genesis error json")
 		}
 
 		return nil, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
 	}
 
 	genesisJson := &rpcmiddleware.GenesisResponseJson{}
-	err = json.NewDecoder(resp.Body).Decode(genesisJson)
-	if err != nil {
-		return nil, err
+	if err := json.NewDecoder(resp.Body).Decode(&genesisJson); err != nil {
+		return nil, errors.Wrap(err, "failed to decode response body genesis json")
 	}
 
 	if genesisJson.Data == nil {
