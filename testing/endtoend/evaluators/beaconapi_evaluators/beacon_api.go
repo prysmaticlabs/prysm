@@ -138,7 +138,7 @@ var beaconPathsAndObjects = map[string]metadata{
 				// remove the first item from lighthouse data as it's from slot 0
 				castedl.Data = castedl.Data[1:]
 			}
-			return compareResponseObjects(castedp, castedl)
+			return compareJSONResponseObjects(castedp, castedl)
 		},
 	},
 	"/beacon/headers/{param1}": {
@@ -378,7 +378,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSO
 	if customEvaluator != nil {
 		return customEvaluator(respJSONPrysm, respJSONLighthouse)
 	} else {
-		return compareResponseObjects(respJSONPrysm, respJSONLighthouse)
+		return compareJSONResponseObjects(respJSONPrysm, respJSONLighthouse)
 	}
 }
 
@@ -409,7 +409,7 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 	return sszrspP, sszrspL, nil
 }
 
-func compareResponseObjects(prysmResp interface{}, lighthouseResp interface{}) error {
+func compareJSONResponseObjects(prysmResp interface{}, lighthouseResp interface{}) error {
 	if !reflect.DeepEqual(prysmResp, lighthouseResp) {
 		p, err := json.Marshal(prysmResp)
 		if err != nil {
