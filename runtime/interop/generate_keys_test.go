@@ -39,6 +39,6 @@ func TestKeyGenerator(t *testing.T) {
 			continue
 		}
 		assert.DeepEqual(t, key.Marshal(), nKey)
-		fmt.Println(fmt.Sprintf("pubkey: %s privkey: %s ", hexutil.Encode(pubkeys[i].Marshal()), hexutil.Encode(key.Marshal())))
+		fmt.Printf("pubkey: %s privkey: %s \n", hexutil.Encode(pubkeys[i].Marshal()), hexutil.Encode(key.Marshal()))
 	}
 }
