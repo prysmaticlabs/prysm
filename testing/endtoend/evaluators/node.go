@@ -101,7 +101,6 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	for _, conn := range conns {
 		nodeClient := eth.NewNodeClient(conn)
-		time.Sleep(connTimeDelay * 3)
 		peersResp, err := nodeClient.ListPeers(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err

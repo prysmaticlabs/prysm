@@ -73,16 +73,13 @@ var beaconPathsAndObjects = map[string]metadata{
 		basepath: v2MiddlewarePathTemplate,
 		params: func(t string, e types.Epoch) []string {
 			if t == "ssz" {
-				var check string
 				if e < 4 {
-					check = "genesis"
-				} else {
-					check = "finalized"
+					return []string{"genesis"}
 				}
-				return []string{check}
-			} else {
-				return []string{"head"}
+				return []string{"finalized"}
 			}
+			return []string{"head"}
+
 		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.BlockResponseJson{},
@@ -409,8 +406,6 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 			hexutil.Encode(sszrspP),
 			hexutil.Encode(sszrspL))
 	}
-	fmt.Printf("prysm ssz: %v", sszrspP)
-	fmt.Printf("lighthouse ssz: %v", sszrspL)
 	return sszrspP, sszrspL, nil
 }
 
