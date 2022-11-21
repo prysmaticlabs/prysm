@@ -2289,6 +2289,21 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
 }
 
+func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
+	fc := doublylinkedtree.New()
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithForkChoiceStore(fc),
+		WithStateGen(stategen.New(beaconDB, fc)),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	require.NoError(t, service.fillMissingBlockPayloadId(ctx, time.Unix(int64(params.BeaconConfig().SecondsPerSlot/2), 0)))
+}
+
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
 func driftGenesisTime(s *Service, slot int64, delay int64) {
