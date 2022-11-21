@@ -77,7 +77,7 @@ readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 
 # for Apple M1s
 if [ "$(uname -s)" == "Darwin" ] && [ "$(uname -m)" == "arm64" ]; then
-    arch="amd64"
+    arch="arm64"
 else
     arch=$(uname -m)
     arch=${arch/x86_64/amd64}
