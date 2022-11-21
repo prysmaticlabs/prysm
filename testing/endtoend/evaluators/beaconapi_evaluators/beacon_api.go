@@ -402,9 +402,7 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 		return nil, nil, errors.Wrap(err, "prysm json error")
 	}
 	if !bytes.Equal(sszrspL, sszrspP) {
-		return nil, nil, fmt.Errorf("prysm ssz response %s does not match lighthouse ssz response %s",
-			hexutil.Encode(sszrspP),
-			hexutil.Encode(sszrspL))
+		return nil, nil, errors.New("prysm ssz response does not match lighthouse ssz response")
 	}
 	return sszrspP, sszrspL, nil
 }
