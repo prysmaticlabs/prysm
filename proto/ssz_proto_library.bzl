@@ -20,9 +20,7 @@ mainnet = {
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
     "sync_committee_aggregate_bytes.size": "16",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
-    "current_sync_committee_branch.depth": "5",  # CURRENT_SYNC_COMMITTEE_INDEX = 54, configured value is floorlog2(CURRENT_SYNC_COMMITTEE_INDEX)
-    "next_sync_committee_branch.depth": "5",  # NEXT_SYNC_COMMITTEE_INDEX = 55, configured value is floorlog2(NEXT_SYNC_COMMITTEE_INDEX)
-    "finality_branch.depth": "6",  # FINALIZED_ROOT_INDEX = 105, configured value is floorlog2(FINALIZED_ROOT_INDEX)
+    "withdrawal.size": "16",
 }
 
 minimal = {
@@ -38,6 +36,7 @@ minimal = {
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector32",
     "sync_committee_aggregate_bytes.size": "1",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector8",
+    "withdrawal.size": "4",
 }
 
 ###### Rules definitions #######
