@@ -287,6 +287,10 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/validator/liveness":
 		endpoint.PostRequest = &LivenessRequestJson{}
 		endpoint.PostResponse = &LivenessResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
+		}
 	default:
 		return nil, errors.New("invalid path")
 	}

@@ -296,7 +296,6 @@ type ForkchoiceResponse struct {
 }
 
 type LivenessRequestJson struct {
-	Epoch   string   `json:"epoch"`
 	Indices []string `json:"indices"`
 }
 
