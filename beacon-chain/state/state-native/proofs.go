@@ -21,13 +21,23 @@ func FinalizedRootGeneralizedIndex() uint64 {
 	return finalizedRootIndex
 }
 
+// CurrentSyncCommitteeRootGeneralizedIndex for the beacon state.
+func CurrentSyncCommitteeRootGeneralizedIndex() uint64 {
+	return currentSyncCommitteeIndex
+}
+
+// NextSyncCommitteeRootGeneralizedIndex for the beacon state.
+func NextSyncCommitteeRootGeneralizedIndex() uint64 {
+	return nextSyncCommitteeIndex
+}
+
 // CurrentSyncCommitteeGeneralizedIndex for the beacon state.
 func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 	if b.version == version.Phase0 {
 		return 0, errNotSupported("CurrentSyncCommitteeGeneralizedIndex", b.version)
 	}
 
-	return uint64(currentSyncCommitteeIndex), nil
+	return uint64(nativetypes.CurrentSyncCommittee.RealPosition()), nil
 }
 
 // NextSyncCommitteeGeneralizedIndex for the beacon state.
@@ -36,7 +46,7 @@ func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 		return 0, errNotSupported("NextSyncCommitteeGeneralizedIndex", b.version)
 	}
 
-	return uint64(nextSyncCommitteeIndex), nil
+	return uint64(nativetypes.NextSyncCommittee.RealPosition()), nil
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
