@@ -165,7 +165,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		FinalizedHeader: finalizedHeader,
 		FinalityBranch:  finalityBranch,
 		SyncAggregate:   &syncAggregateV1,
-		SignatureSlot:   uint64(prevSlot),
+		SignatureSlot:   prevSlot,
 	}
 
 	// Return the result
@@ -223,7 +223,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 	data := ethpbv2.OptimisticUpdate{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  &syncAggregateV1,
-		SignatureSlot:  uint64(prevSlot),
+		SignatureSlot:  prevSlot,
 	}
 
 	// Return the result
