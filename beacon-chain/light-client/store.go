@@ -6,7 +6,7 @@ package light_client
 import (
 	"bytes"
 	"errors"
-	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -76,7 +76,7 @@ func (s *Store) getSafetyThreshold() uint64 {
 }
 
 func (s *Store) ValidateUpdate(update *Update,
-	currentSlot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot,
+	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.GetSyncAggregate()
@@ -84,13 +84,13 @@ func (s *Store) ValidateUpdate(update *Update,
 		return errors.New("sync committee does not have sufficient participants")
 	}
 
-	// TODO: resume here
-	/*
-		// Verify update does not skip a sync committee period
-		if !(currentSlot >= update.GetSignatureSlot() > update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
-			return errors.New("update skips a sync committee period")
-		}
-	*/
+	// Verify update does not skip a sync committee period
+	if !(currentSlot >= update.GetSignatureSlot() &&
+		update.GetSignatureSlot() > update.GetAttestedHeader().Slot &&
+		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
+		return errors.New("update skips a sync committee period")
+	}
+	// TODO: resume
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (s *Store) ProcessForceUpdate(update *Update) error {
 }
 
 func (s *Store) processUpdate(update *Update,
-	currentSlot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot, genesisValidatorsRoot []byte) error {
+	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	if err := s.ValidateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (s *Store) processUpdate(update *Update,
 }
 
 func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
-	currentSlot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot,
+	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.processUpdate(&Update{finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }

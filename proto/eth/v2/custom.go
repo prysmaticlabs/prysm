@@ -1,6 +1,7 @@
 package eth
 
 import (
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
@@ -15,7 +16,7 @@ type Update interface {
 	GetFinalizedHeader() *ethpbv1.BeaconBlockHeader
 	GetFinalityBranch() [][]byte
 	GetSyncAggregate() *ethpbv1.SyncAggregate
-	GetSignatureSlot() uint64
+	GetSignatureSlot() types.Slot
 }
 
 var _ Update = (*FinalityUpdate)(nil)

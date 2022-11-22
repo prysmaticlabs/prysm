@@ -2,7 +2,7 @@ package light_client
 
 import (
 	"bytes"
-	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"math"
 	"math/bits"
@@ -35,7 +35,7 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
-func computeEpochAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
+func computeEpochAtSlot(slot types.Slot) uint64 {
 	return uint64(math.Floor(float64(slot) / float64(slotsPerEpoch)))
 }
 
@@ -43,7 +43,7 @@ func computeSyncCommitteePeriod(epoch uint64) uint64 {
 	return uint64(math.Floor(float64(epoch) / float64(epochsPerSyncCommitteePeriod)))
 }
 
-func computeSyncCommitteePeriodAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
+func computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
 	return computeSyncCommitteePeriod(computeEpochAtSlot(slot))
 }
 
@@ -58,7 +58,7 @@ func (u *Update) IsFinalityUpdate() bool {
 func (u *Update) hasRelevantSyncCommittee() bool {
 	return u.IsSyncCommiteeUpdate() && computeSyncCommitteePeriodAtSlot(u.
 		GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(
-		github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(u.GetSignatureSlot()))
+		types.Slot(u.GetSignatureSlot()))
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {
