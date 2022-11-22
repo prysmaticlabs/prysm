@@ -24,6 +24,7 @@ const (
 	// TODO: read these from the config
 	minSyncCommitteeParticipants = uint64(1)
 	genesisSlot                  = types.Slot(0)
+	updateTimeout                = slotsPerEpoch + epochsPerSyncCommitteePeriod
 )
 
 type Store struct {
@@ -245,9 +246,21 @@ func (s *Store) ApplyUpdate(update *Update) error {
 	return nil
 }
 
-func (s *Store) ProcessForceUpdate(update *Update) error {
-	// TODO: implement
-	panic("not implemented")
+func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
+	if currentSlot > s.finalizedHeader.Slot+types.Slot(updateTimeout) && s.bestValidUpdate != nil {
+		// Forced best update when the update timeout has elapsed.
+		// Because the apply logic waits for `finalized_header.slot` to indicate sync committee finality,
+		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
+		// to guarantee progression into later sync committee periods according to `is_better_update`.
+		if s.bestValidUpdate.GetFinalizedHeader().Slot <= s.finalizedHeader.Slot {
+			s.bestValidUpdate.SetFinalizedHeader(s.bestValidUpdate.GetAttestedHeader())
+		}
+		if err := s.ApplyUpdate(s.bestValidUpdate); err != nil {
+			return err
+		}
+		s.bestValidUpdate = nil
+	}
+	return nil
 }
 
 func (s *Store) processUpdate(update *Update,

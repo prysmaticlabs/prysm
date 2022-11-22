@@ -16,9 +16,15 @@ type Update interface {
 	GetNextSyncCommittee() *SyncCommittee
 	GetNextSyncCommitteeBranch() [][]byte
 	GetFinalizedHeader() *ethpbv1.BeaconBlockHeader
+	SetFinalizedHeader(*ethpbv1.BeaconBlockHeader)
 	GetFinalityBranch() [][]byte
 	GetSyncAggregate() *ethpbv1.SyncAggregate
 	GetSignatureSlot() types.Slot
+}
+
+// TODO: move this somewhere common
+func FloorLog2(x uint64) int {
+	return bits.Len64(uint64(x - 1))
 }
 
 var _ Update = (*FinalityUpdate)(nil)
@@ -27,13 +33,12 @@ func (x *FinalityUpdate) GetNextSyncCommittee() *SyncCommittee {
 	return &SyncCommittee{}
 }
 
-// TODO: move this somewhere common
-func FloorLog2(x uint64) int {
-	return bits.Len64(uint64(x - 1))
-}
-
 func (x *FinalityUpdate) GetNextSyncCommitteeBranch() [][]byte {
 	return make([][]byte, FloorLog2(NextSyncCommitteeIndex))
+}
+
+func (x *FinalityUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
+	x.FinalizedHeader = header
 }
 
 var _ Update = (*OptimisticUpdate)(nil)
@@ -53,3 +58,5 @@ func (x *OptimisticUpdate) GetFinalizedHeader() *ethpbv1.BeaconBlockHeader {
 func (x *OptimisticUpdate) GetFinalityBranch() [][]byte {
 	return make([][]byte, FloorLog2(FinalizedRootIndex))
 }
+
+func (x *OptimisticUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {}
