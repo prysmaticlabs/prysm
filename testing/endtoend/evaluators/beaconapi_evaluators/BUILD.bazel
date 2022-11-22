@@ -15,6 +15,7 @@ go_library(
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/eth/service:go_default_library",
+        "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/endtoend/helpers:go_default_library",
         "//testing/endtoend/params:go_default_library",
