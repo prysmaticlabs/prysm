@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	"reflect"
 	"strconv"
 	"strings"
@@ -290,7 +291,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	if finalizedEpoch < helpers.AltairE2EForkEpoch + 2 {
+	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
@@ -304,7 +305,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockP,
 				blockL)
 		}
-	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch + 2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
+	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockAltair{}
 		blockL := &ethpb.SignedBeaconBlockAltair{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
