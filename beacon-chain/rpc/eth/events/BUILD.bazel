@@ -15,6 +15,7 @@ go_library(
         "//beacon-chain/core/feed/state:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//proto/migration:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

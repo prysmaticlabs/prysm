@@ -5,17 +5,19 @@ import (
 
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -33,16 +35,22 @@ const (
 	ChainReorgTopic = "chain_reorg"
 	// SyncCommitteeContributionTopic represents a new sync committee contribution event topic.
 	SyncCommitteeContributionTopic = "contribution_and_proof"
+	// LightClientFinalityUpdateTopic represents a new light client finality update event topic.
+	LightClientFinalityUpdateTopic = "light_client_finality_update"
+	// LightClientOptimisticUpdateTopic represents a new light client optimistic update event topic.
+	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 )
 
 var casesHandled = map[string]bool{
-	HeadTopic:                      true,
-	BlockTopic:                     true,
-	AttestationTopic:               true,
-	VoluntaryExitTopic:             true,
-	FinalizedCheckpointTopic:       true,
-	ChainReorgTopic:                true,
-	SyncCommitteeContributionTopic: true,
+	HeadTopic:                        true,
+	BlockTopic:                       true,
+	AttestationTopic:                 true,
+	VoluntaryExitTopic:               true,
+	FinalizedCheckpointTopic:         true,
+	ChainReorgTopic:                  true,
+	SyncCommitteeContributionTopic:   true,
+	LightClientFinalityUpdateTopic:   true,
+	LightClientOptimisticUpdateTopic: true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -205,6 +213,24 @@ func handleStateEvents(
 			return nil
 		}
 		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+	case statefeed.LightClientFinalityUpdate:
+		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
+			return nil
+		}
+		update, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateResponse)
+		if !ok {
+			return nil
+		}
+		return streamData(stream, LightClientFinalityUpdateTopic, update)
+	case statefeed.LightClientOptimisticUpdate:
+		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
+			return nil
+		}
+		update, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateResponse)
+		if !ok {
+			return nil
+		}
+		return streamData(stream, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil

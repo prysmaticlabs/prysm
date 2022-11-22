@@ -11,10 +11,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/r3labs/sse"
+
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
-	"github.com/r3labs/sse"
 )
 
 const (
@@ -403,6 +404,10 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &EventChainReorgJson{}
 			case events.SyncCommitteeContributionTopic:
 				data = &SignedContributionAndProofJson{}
+			case events.LightClientFinalityUpdateTopic:
+				data = &LightClientFinalityUpdateResponseJson{}
+			case events.LightClientOptimisticUpdateTopic:
+				data = &LightClientOptimisticUpdateResponseJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:

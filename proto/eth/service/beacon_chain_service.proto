@@ -21,6 +21,7 @@ import "google/protobuf/empty.proto";
 
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
+import "proto/eth/v2/beacon_lightclient.proto";
 import "proto/eth/v2/beacon_block.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
@@ -418,6 +419,33 @@ service BeaconChain {
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Config/getDepositContract
   rpc GetDepositContract(google.protobuf.Empty) returns (v1.DepositContractResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/config/deposit_contract"};
+  }
+
+  // GetLightClientBootstrap retrieves the LightClientBootstrap structure corresponding to a given post-Altair beacon block root
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientBootstrap
+  rpc GetLightClientBootstrap(v2.LightClientBootstrapRequest) returns (v2.LightClientBootstrapResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/light_client/bootstrap/{block_root}"
+    };
+  }
+
+  // GetLightClientFinalityUpdate retrieves the latest finality update for light client
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientFinalityUpdate
+  rpc GetLightClientFinalityUpdate(google.protobuf.Empty) returns (v2.LightClientFinalityUpdateResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/light_client/finality_update"
+    };
+  }
+
+  // GetLightClientOptimisticUpdate retrieves the latest finality update for light client
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientOptimisticUpdate
+  rpc GetLightClientOptimisticUpdate(google.protobuf.Empty) returns (v2.LightClientOptimisticUpdateResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/light_client/optimistic_update"
+    };
   }
 }
 

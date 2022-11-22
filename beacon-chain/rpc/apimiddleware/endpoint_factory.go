@@ -2,6 +2,7 @@ package apimiddleware
 
 import (
 	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 )
 
@@ -41,6 +42,9 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/voluntary_exits",
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/weak_subjectivity",
+		"/eth/v1/beacon/light_client/bootstrap/{block_root}",
+		"/eth/v1/beacon/light_client/finality_update",
+		"/eth/v1/beacon/light_client/optimistic_update",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -167,6 +171,12 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
+	case "/eth/v1/beacon/light_client/bootstrap/{block_root}":
+		endpoint.GetResponse = &LightClientBootstrapResponseJson{}
+	case "/eth/v1/beacon/light_client/finality_update":
+		endpoint.GetResponse = &LightClientFinalityUpdateResponseJson{}
+	case "/eth/v1/beacon/light_client/optimistic_update":
+		endpoint.GetResponse = &LightClientOptimisticUpdateResponseJson{}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &IdentityResponseJson{}
 	case "/eth/v1/node/peers":
