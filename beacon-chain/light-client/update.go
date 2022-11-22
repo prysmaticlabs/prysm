@@ -14,7 +14,7 @@ const (
 )
 
 type Update struct {
-	ethpbv2.Update
+	ethpbv2.Update `json:"update,omitempty"`
 }
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
@@ -42,16 +42,16 @@ func computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
 	return computeSyncCommitteePeriod(computeEpochAtSlot(slot))
 }
 
-func (u *Update) IsSyncCommiteeUpdate() bool {
+func (u *Update) isSyncCommiteeUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.NextSyncCommitteeIndex)
 }
 
-func (u *Update) IsFinalityUpdate() bool {
+func (u *Update) isFinalityUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.FinalizedRootIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {
-	return u.IsSyncCommiteeUpdate() &&
+	return u.isSyncCommiteeUpdate() &&
 		computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(u.GetSignatureSlot())
 }
 
@@ -60,7 +60,7 @@ func (u *Update) hasSyncCommitteeFinality() bool {
 		GetAttestedHeader().Slot)
 }
 
-func (u *Update) IsBetterUpdate(newUpdate *Update) bool {
+func (u *Update) isBetterUpdate(newUpdate *Update) bool {
 	maxActiveParticipants := uint64(len(newUpdate.GetSyncAggregate().SyncCommitteeBits))
 	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()
 	oldNumActiveParticipants := u.GetSyncAggregate().SyncCommitteeBits.Count()
@@ -81,8 +81,8 @@ func (u *Update) IsBetterUpdate(newUpdate *Update) bool {
 	}
 
 	// Compare indication of any finality
-	newHasFinality := newUpdate.IsFinalityUpdate()
-	oldHasFinality := u.IsFinalityUpdate()
+	newHasFinality := newUpdate.isFinalityUpdate()
+	oldHasFinality := u.isFinalityUpdate()
 	if newHasFinality != oldHasFinality {
 		return newHasFinality
 	}

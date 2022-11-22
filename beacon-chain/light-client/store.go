@@ -28,13 +28,13 @@ const (
 )
 
 type Store struct {
-	finalizedHeader               *ethpbv1.BeaconBlockHeader
-	currentSyncCommittee          *ethpbv2.SyncCommittee
-	nextSyncCommittee             *ethpbv2.SyncCommittee
-	bestValidUpdate               *Update
-	optimisticHeader              *ethpbv1.BeaconBlockHeader
-	previousMaxActiveParticipants uint64
-	currentMaxActiveParticipants  uint64
+	FinalizedHeader               *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
+	CurrentSyncCommittee          *ethpbv2.SyncCommittee     `json:"current_sync_committeeu,omitempty"`
+	NextSyncCommittee             *ethpbv2.SyncCommittee     `json:"next_sync_committee,omitempty"`
+	BestValidUpdate               *Update                    `json:"best_valid_update,omitempty"`
+	OptimisticHeader              *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
+	PreviousMaxActiveParticipants uint64                     `json:"previous_max_active_participants,omitempty"`
+	CurrentMaxActiveParticipants  uint64                     `json:"current_max_active_participants,omitempty"`
 }
 
 func getSubtreeIndex(index uint64) uint64 {
@@ -73,20 +73,20 @@ func NewStore(trustedBlockRoot [32]byte,
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
-		finalizedHeader:      bootstrap.Header,
-		currentSyncCommittee: bootstrap.CurrentSyncCommittee,
-		nextSyncCommittee:    &ethpbv2.SyncCommittee{},
-		optimisticHeader:     bootstrap.Header,
+		FinalizedHeader:      bootstrap.Header,
+		CurrentSyncCommittee: bootstrap.CurrentSyncCommittee,
+		NextSyncCommittee:    &ethpbv2.SyncCommittee{},
+		OptimisticHeader:     bootstrap.Header,
 	}
 }
 
 func (s *Store) isNextSyncCommitteeKnown() bool {
-	return s.nextSyncCommittee != &ethpbv2.SyncCommittee{}
+	return s.NextSyncCommittee != &ethpbv2.SyncCommittee{}
 }
 
 func (s *Store) getSafetyThreshold() uint64 {
-	return uint64(math.Floor(math.Max(float64(s.previousMaxActiveParticipants),
-		float64(s.currentMaxActiveParticipants)) / 2))
+	return uint64(math.Floor(math.Max(float64(s.PreviousMaxActiveParticipants),
+		float64(s.CurrentMaxActiveParticipants)) / 2))
 }
 
 func computeForkVersion(epoch uint64) [4]byte {
@@ -99,7 +99,7 @@ func computeForkVersion(epoch uint64) [4]byte {
 	return genesisForkVersion
 }
 
-func (s *Store) ValidateUpdate(update *Update,
+func (s *Store) validateUpdate(update *Update,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
@@ -114,7 +114,7 @@ func (s *Store) ValidateUpdate(update *Update,
 		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
 		return errors.New("update skips a sync committee period")
 	}
-	storePeriod := computeSyncCommitteePeriodAtSlot(s.finalizedHeader.Slot)
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
 	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(update.GetSignatureSlot())
 	if s.isNextSyncCommitteeKnown() {
 		if !(updateSignaturePeriod == storePeriod || updateSignaturePeriod == storePeriod+1) {
@@ -128,15 +128,15 @@ func (s *Store) ValidateUpdate(update *Update,
 
 	// Verify update is relevant
 	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
-	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.IsSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
-	if !(update.GetAttestedHeader().Slot > s.finalizedHeader.Slot || updateHasNextSyncCommittee) {
+	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.isSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
+	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
 	}
 
 	// Verify that the finality branch, if present, confirms finalized header to match the finalized checkpoint root
 	// saved in the state of attested header. Note that the genesis finalized checkpoint root is represented as a zero
 	// hash.
-	if !update.IsFinalityUpdate() {
+	if !update.isFinalityUpdate() {
 		if update.GetFinalizedHeader() != &(ethpbv1.BeaconBlockHeader{}) {
 			return errors.New("finality branch is present but update is not finality")
 		}
@@ -165,13 +165,13 @@ func (s *Store) ValidateUpdate(update *Update,
 
 	// Verify that the next sync committee, if present, actually is the next sync committee saved in the state of the
 	// attested header
-	if !update.IsSyncCommiteeUpdate() {
+	if !update.isSyncCommiteeUpdate() {
 		if update.GetNextSyncCommittee() != &(ethpbv2.SyncCommittee{}) {
 			return errors.New("sync committee branch is present but update is not sync committee")
 		}
 	} else {
 		if updateAttestedPeriod == storePeriod && s.isNextSyncCommitteeKnown() {
-			if update.GetNextSyncCommittee() != s.nextSyncCommittee {
+			if update.GetNextSyncCommittee() != s.NextSyncCommittee {
 				return errors.New("next sync committee is not known")
 			}
 		}
@@ -188,9 +188,9 @@ func (s *Store) ValidateUpdate(update *Update,
 	var syncCommittee *ethpbv2.SyncCommittee
 	// Verify sync committee aggregate signature
 	if updateSignaturePeriod == storePeriod {
-		syncCommittee = s.currentSyncCommittee
+		syncCommittee = s.CurrentSyncCommittee
 	} else {
-		syncCommittee = s.nextSyncCommittee
+		syncCommittee = s.NextSyncCommittee
 	}
 	participantPubkeys := []common.PublicKey{}
 	for i, bit := range syncAggregate.SyncCommitteeBits {
@@ -223,77 +223,77 @@ func (s *Store) ValidateUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) ApplyUpdate(update *Update) error {
-	storePeriod := computeSyncCommitteePeriodAtSlot(s.finalizedHeader.Slot)
+func (s *Store) applyUpdate(update *Update) error {
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
 	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
 		}
-		s.nextSyncCommittee = update.GetNextSyncCommittee()
+		s.NextSyncCommittee = update.GetNextSyncCommittee()
 	} else if updateFinalizedPeriod == storePeriod+1 {
-		s.currentSyncCommittee = s.nextSyncCommittee
-		s.nextSyncCommittee = update.GetNextSyncCommittee()
-		s.previousMaxActiveParticipants = s.currentMaxActiveParticipants
-		s.currentMaxActiveParticipants = 0
+		s.CurrentSyncCommittee = s.NextSyncCommittee
+		s.NextSyncCommittee = update.GetNextSyncCommittee()
+		s.PreviousMaxActiveParticipants = s.CurrentMaxActiveParticipants
+		s.CurrentMaxActiveParticipants = 0
 	}
-	if update.GetFinalizedHeader().Slot > s.finalizedHeader.Slot {
-		s.finalizedHeader = update.GetFinalizedHeader()
-		if s.finalizedHeader.Slot > s.optimisticHeader.Slot {
-			s.optimisticHeader = s.finalizedHeader
+	if update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot {
+		s.FinalizedHeader = update.GetFinalizedHeader()
+		if s.FinalizedHeader.Slot > s.OptimisticHeader.Slot {
+			s.OptimisticHeader = s.FinalizedHeader
 		}
 	}
 	return nil
 }
 
 func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
-	if currentSlot > s.finalizedHeader.Slot+types.Slot(updateTimeout) && s.bestValidUpdate != nil {
+	if currentSlot > s.FinalizedHeader.Slot+types.Slot(updateTimeout) && s.BestValidUpdate != nil {
 		// Forced best update when the update timeout has elapsed.
 		// Because the apply logic waits for `finalized_header.slot` to indicate sync committee finality,
 		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
 		// to guarantee progression into later sync committee periods according to `is_better_update`.
-		if s.bestValidUpdate.GetFinalizedHeader().Slot <= s.finalizedHeader.Slot {
-			s.bestValidUpdate.SetFinalizedHeader(s.bestValidUpdate.GetAttestedHeader())
+		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
+			s.BestValidUpdate.SetFinalizedHeader(s.BestValidUpdate.GetAttestedHeader())
 		}
-		if err := s.ApplyUpdate(s.bestValidUpdate); err != nil {
+		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
 			return err
 		}
-		s.bestValidUpdate = nil
+		s.BestValidUpdate = nil
 	}
 	return nil
 }
 
 func (s *Store) processUpdate(update *Update,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
-	if err := s.ValidateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
+	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 		return err
 	}
 	syncCommiteeBits := update.GetSyncAggregate().SyncCommitteeBits
 
 	// Update the best update in case we have to force-update to it if the timeout elapses
-	if s.bestValidUpdate == nil || update.IsBetterUpdate(s.bestValidUpdate) {
-		s.bestValidUpdate = update
+	if s.BestValidUpdate == nil || update.isBetterUpdate(s.BestValidUpdate) {
+		s.BestValidUpdate = update
 	}
 
 	// Track the maximum number of active participants in the committee signature
-	s.currentMaxActiveParticipants = uint64(math.Max(float64(s.currentMaxActiveParticipants),
+	s.CurrentMaxActiveParticipants = uint64(math.Max(float64(s.CurrentMaxActiveParticipants),
 		float64(syncCommiteeBits.Count())))
 
 	// Update the optimistic header
-	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.optimisticHeader.Slot {
-		s.optimisticHeader = update.GetAttestedHeader()
+	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.OptimisticHeader.Slot {
+		s.OptimisticHeader = update.GetAttestedHeader()
 	}
 
 	// Update finalized header
-	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.IsSyncCommiteeUpdate() &&
-		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
+	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
+		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
 		Slot) == computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 || updateHasFinalizedNextSyncCommittee {
 		// Normal update throught 2/3 threshold
-		if err := s.ApplyUpdate(update); err != nil {
+		if err := s.applyUpdate(update); err != nil {
 			return err
 		}
-		s.bestValidUpdate = nil
+		s.BestValidUpdate = nil
 	}
 	return nil
 }
