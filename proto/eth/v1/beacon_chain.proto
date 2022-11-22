@@ -292,10 +292,10 @@ message WeakSubjectivityData {
 }
 
 message ForkChoiceDump {
-    // Latest justified epoch in forkchoice store.
-    uint64 justified_epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-    // Latest finalized epoch in forkchoice store.
-    uint64 finalized_epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+    // Latest justified checkpoint in forkchoice store.
+    Checkpoint justified_checkpoint = 1;
+    // Latest finalized checkpoint in forkchoice store.
+    Checkpoint finalized_checkpoint = 2;
     // Best justified checkpoint in forkchoice store.
     Checkpoint best_justified_checkpoint = 3;
     // Unrealized justified checkpoint in forkchoice store.

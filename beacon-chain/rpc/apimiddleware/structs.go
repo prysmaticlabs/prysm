@@ -311,10 +311,10 @@ type ForkChoiceNodeExtraDataJson struct {
 }
 
 type ForkChoiceResponseJson struct {
-	JustifiedEpoch  string                           `json:"justified_epoch"`
-	FinalizedEpoch  string                           `json:"finalized_epoch"`
-	ForkChoiceNodes []*ForkChoiceNodeResponseJson    `json:"fork_choice_nodes"`
-	ExtraData       *ForkChoiceResponseExtraDataJson `json:"extra_data"`
+	JustifiedCheckpoint *CheckpointJson                  `json:"justified_checkpoint"`
+	FinalizedEpoch      *CheckpointJson                  `json:"finalized_checkpoint"`
+	ForkChoiceNodes     []*ForkChoiceNodeResponseJson    `json:"fork_choice_nodes"`
+	ExtraData           *ForkChoiceResponseExtraDataJson `json:"extra_data"`
 }
 
 type ForkChoiceResponseExtraDataJson struct {

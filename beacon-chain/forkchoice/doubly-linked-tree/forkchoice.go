@@ -618,6 +618,10 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 
 // ForkChoiceDump returns a full dump of forkchoice.
 func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, error) {
+	jc := &v1.Checkpoint{
+		Epoch: f.store.justifiedCheckpoint.Epoch,
+		Root:  f.store.justifiedCheckpoint.Root[:],
+	}
 	bjc := &v1.Checkpoint{
 		Epoch: f.store.bestJustifiedCheckpoint.Epoch,
 		Root:  f.store.bestJustifiedCheckpoint.Root[:],
@@ -625,6 +629,10 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 	ujc := &v1.Checkpoint{
 		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
 		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
+	}
+	fc := &v1.Checkpoint{
+		Epoch: f.store.finalizedCheckpoint.Epoch,
+		Root:  f.store.finalizedCheckpoint.Root[:],
 	}
 	ufc := &v1.Checkpoint{
 		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
@@ -643,10 +651,10 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 		headRoot = f.store.headNode.root
 	}
 	resp := &v1.ForkChoiceDump{
-		JustifiedEpoch:                f.store.justifiedCheckpoint.Epoch,
+		JustifiedCheckpoint:           jc,
 		BestJustifiedCheckpoint:       bjc,
 		UnrealizedJustifiedCheckpoint: ujc,
-		FinalizedEpoch:                f.store.finalizedCheckpoint.Epoch,
+		FinalizedCheckpoint:           fc,
 		UnrealizedFinalizedCheckpoint: ufc,
 		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
 		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
