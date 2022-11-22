@@ -275,9 +275,9 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		return errors.New("failed to cast type")
 	}
 	if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
-		return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-			prysmForkData,
-			lighthouseForkData)
+		return fmt.Errorf("prysm epoch %v does not match lighthouse epoch %v",
+			prysmForkData.Data.Epoch,
+			lighthouseForkData.Data.Epoch)
 	}
 
 	finalizedEpoch, err := strconv.ParseUint(prysmForkData.Data.Epoch, 10, 64)
