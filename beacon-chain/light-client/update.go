@@ -5,7 +5,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"math"
-	"math/bits"
 )
 
 const (
@@ -18,12 +17,8 @@ type Update struct {
 	ethpbv2.Update
 }
 
-func floorLog2(x uint64) int {
-	return bits.Len64(uint64(x - 1))
-}
-
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
-	l := floorLog2(length)
+	l := ethpbv2.FloorLog2(length)
 	if len(bb) != l {
 		return false
 	}
@@ -52,13 +47,12 @@ func (u *Update) IsSyncCommiteeUpdate() bool {
 }
 
 func (u *Update) IsFinalityUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), finalizedRootIndex)
+	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.FinalizedRootIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {
-	return u.IsSyncCommiteeUpdate() && computeSyncCommitteePeriodAtSlot(u.
-		GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(
-		types.Slot(u.GetSignatureSlot()))
+	return u.IsSyncCommiteeUpdate() &&
+		computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(u.GetSignatureSlot())
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {

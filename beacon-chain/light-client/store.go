@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	finalizedRootIndex        = uint64(105)
 	currentSyncCommitteeIndex = uint64(54)
 	altairForkEpoch           = 74240
 	// TODO: read these from the config
@@ -38,7 +37,7 @@ type Store struct {
 }
 
 func getSubtreeIndex(index uint64) uint64 {
-	return index % uint64(math.Pow(2, float64(floorLog2(index-1))))
+	return index % uint64(math.Pow(2, float64(ethpbv2.FloorLog2(index-1))))
 }
 
 // TODO: this should be in the proto
@@ -69,7 +68,7 @@ func NewStore(trustedBlockRoot [32]byte,
 		hashTreeRoot(bootstrap.CurrentSyncCommittee),
 		getSubtreeIndex(currentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch,
-		uint64(floorLog2(currentSyncCommitteeIndex))) {
+		uint64(ethpbv2.FloorLog2(currentSyncCommitteeIndex))) {
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
@@ -156,9 +155,9 @@ func (s *Store) ValidateUpdate(update *Update,
 		if !trie.VerifyMerkleProofWithDepth(
 			update.GetAttestedHeader().StateRoot,
 			finalizedRoot[:],
-			getSubtreeIndex(finalizedRootIndex),
+			getSubtreeIndex(ethpbv2.FinalizedRootIndex),
 			update.GetFinalityBranch(),
-			uint64(floorLog2(finalizedRootIndex))) {
+			uint64(ethpbv2.FloorLog2(ethpbv2.FinalizedRootIndex))) {
 			return errors.New("finality branch is invalid")
 		}
 	}
@@ -180,7 +179,7 @@ func (s *Store) ValidateUpdate(update *Update,
 			hashTreeRoot(update.GetNextSyncCommittee())[:],
 			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
 			update.GetNextSyncCommitteeBranch(),
-			uint64(floorLog2(ethpbv2.NextSyncCommitteeIndex))) {
+			uint64(ethpbv2.FloorLog2(ethpbv2.NextSyncCommitteeIndex))) {
 			return errors.New("sync committee branch is invalid")
 		}
 	}
@@ -292,7 +291,9 @@ func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
 	return s.processUpdate(&Update{finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }
 
-func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.OptimisticUpdate) error {
+func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.OptimisticUpdate,
+	currentSlot types.Slot,
+	genesisValidatorsRoot []byte) error {
 	// TODO: implement
-	panic("not implemented")
+	return s.processUpdate(&Update{optimisticUpdate}, currentSlot, genesisValidatorsRoot)
 }
