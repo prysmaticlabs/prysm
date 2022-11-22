@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"google.golang.org/grpc"
@@ -117,8 +118,16 @@ func (c *grpcValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.V
 }
 
 // Deprecated: Do not use.
-func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.Empty) (ethpb.BeaconNodeValidator_WaitForChainStartClient, error) {
-	return c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
+func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.Empty) (*ethpb.ChainStartResponse, error) {
+	stream, err := c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
+	if err != nil {
+		return nil, errors.Wrap(
+			iface.ErrConnectionIssue,
+			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
+		)
+	}
+
+	return stream.Recv()
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
