@@ -17,7 +17,6 @@ import (
 const (
 	finalizedRootIndex        = uint64(105)
 	currentSyncCommitteeIndex = uint64(54)
-	nextSyncCommitteeIndex    = uint64(55)
 )
 
 type Store struct {
@@ -86,20 +85,20 @@ func (s *Store) ValidateUpdate(update *Update) error {
 
 func (s *Store) ApplyUpdate(update *Update) error {
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.finalizedHeader.Slot)
-	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(update.FinalizedHeader.Slot)
+	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
 		}
-		s.nextSyncCommittee = update.NextSyncCommittee
+		s.nextSyncCommittee = update.GetNextSyncCommittee()
 	} else if updateFinalizedPeriod == storePeriod+1 {
 		s.currentSyncCommittee = s.nextSyncCommittee
-		s.nextSyncCommittee = update.NextSyncCommittee
+		s.nextSyncCommittee = update.GetNextSyncCommittee()
 		s.previousMaxActiveParticipants = s.currentMaxActiveParticipants
 		s.currentMaxActiveParticipants = 0
 	}
-	if update.FinalizedHeader.Slot > s.finalizedHeader.Slot {
-		s.finalizedHeader = update.FinalizedHeader
+	if update.GetFinalizedHeader().Slot > s.finalizedHeader.Slot {
+		s.finalizedHeader = update.GetFinalizedHeader()
 		if s.finalizedHeader.Slot > s.optimisticHeader.Slot {
 			s.optimisticHeader = s.finalizedHeader
 		}
@@ -116,18 +115,18 @@ func (s *Store) processUpdate(update *Update, currentSlot uint64, genesisValidat
 	if err := s.ValidateUpdate(update); err != nil {
 		return err
 	}
-	syncCommiteeBits := update.SyncAggregate.SyncCommitteeBits
+	syncCommiteeBits := update.GetSyncAggregate().SyncCommitteeBits
 	if s.bestValidUpdate == nil || update.IsBetterUpdate(s.bestValidUpdate) {
 		s.bestValidUpdate = update
 	}
 	s.currentMaxActiveParticipants = uint64(math.Max(float64(s.currentMaxActiveParticipants),
 		float64(syncCommiteeBits.Count())))
-	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.AttestedHeader.Slot > s.optimisticHeader.Slot {
-		s.optimisticHeader = update.AttestedHeader
+	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.optimisticHeader.Slot {
+		s.optimisticHeader = update.GetAttestedHeader()
 	}
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.IsSyncCommiteeUpdate() &&
-		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.FinalizedHeader.
-		Slot) == computeSyncCommitteePeriodAtSlot(update.AttestedHeader.Slot)
+		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
+		Slot) == computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 || updateHasFinalizedNextSyncCommittee {
 		if err := s.ApplyUpdate(update); err != nil {
 			return err
@@ -139,16 +138,7 @@ func (s *Store) processUpdate(update *Update, currentSlot uint64, genesisValidat
 
 func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate, currentSlot uint64,
 	genesisValidatorsRoot []byte) error {
-	update := &Update{
-		AttestedHeader:          finalityUpdate.AttestedHeader,
-		NextSyncCommittee:       &ethpbv2.SyncCommittee{},
-		NextSyncCommitteeBranch: make([][]byte, nextSyncCommitteeIndex),
-		FinalizedHeader:         finalityUpdate.FinalizedHeader,
-		FinalityBranch:          finalityUpdate.FinalityBranch,
-		SyncAggregate:           finalityUpdate.SyncAggregate,
-		SignatureSlot:           finalityUpdate.SignatureSlot,
-	}
-	return s.processUpdate(update, currentSlot, genesisValidatorsRoot)
+	return s.processUpdate(&Update{finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.OptimisticUpdate) error {
