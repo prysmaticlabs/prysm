@@ -44,6 +44,11 @@ func (u *Update) IsFinalityUpdate() bool {
 }
 
 func (u *Update) IsBetterUpdate(newUpdate *Update) bool {
-	// TODO: implement
-	panic("not implemented")
+	maxActiveParticipants := uint64(len(newUpdate.SyncAggregate.SyncCommitteeBits))
+	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	oldNumActiveParticipants := u.SyncAggregate.SyncCommitteeBits.Count()
+	_ = newNumActiveParticipants*3 >= maxActiveParticipants*2
+	_ = oldNumActiveParticipants*3 >= maxActiveParticipants*2
+	// TODO: resume here
+	return false
 }
