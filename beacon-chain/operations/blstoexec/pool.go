@@ -103,7 +103,7 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
 		return nil
 	}
 
-	p.m[change.Message.ValidatorIndex] = nil
+	delete(p.m, change.Message.ValidatorIndex)
 	p.pending.Remove(node)
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -162,7 +161,8 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(change)
 		require.NoError(t, pool.MarkIncluded(change))
 		assert.Equal(t, 0, pool.pending.Len())
-		assert.Equal(t, (*doublylinkedlist.Node[*eth.SignedBLSToExecutionChange])(nil), pool.m[0])
+		_, ok := pool.m[0]
+		assert.Equal(t, false, ok)
 	})
 	t.Run("first of multiple elements", func(t *testing.T) {
 		pool := NewPool()
@@ -183,7 +183,8 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(third)
 		require.NoError(t, pool.MarkIncluded(first))
 		require.Equal(t, 2, pool.pending.Len())
-		assert.Equal(t, (*doublylinkedlist.Node[*eth.SignedBLSToExecutionChange])(nil), pool.m[0])
+		_, ok := pool.m[0]
+		assert.Equal(t, false, ok)
 	})
 	t.Run("last of multiple elements", func(t *testing.T) {
 		pool := NewPool()
@@ -204,7 +205,8 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(third)
 		require.NoError(t, pool.MarkIncluded(third))
 		require.Equal(t, 2, pool.pending.Len())
-		assert.Equal(t, (*doublylinkedlist.Node[*eth.SignedBLSToExecutionChange])(nil), pool.m[2])
+		_, ok := pool.m[2]
+		assert.Equal(t, false, ok)
 	})
 	t.Run("in the middle of multiple elements", func(t *testing.T) {
 		pool := NewPool()
@@ -225,7 +227,8 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(third)
 		require.NoError(t, pool.MarkIncluded(second))
 		require.Equal(t, 2, pool.pending.Len())
-		assert.Equal(t, (*doublylinkedlist.Node[*eth.SignedBLSToExecutionChange])(nil), pool.m[1])
+		_, ok := pool.m[1]
+		assert.Equal(t, false, ok)
 	})
 	t.Run("not in pool", func(t *testing.T) {
 		pool := NewPool()
@@ -245,7 +248,11 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(second)
 		require.NoError(t, pool.MarkIncluded(change))
 		require.Equal(t, 2, pool.pending.Len())
+		_, ok := pool.m[0]
+		require.Equal(t, true, ok)
 		assert.NotNil(t, pool.m[0])
+		_, ok = pool.m[1]
+		require.Equal(t, true, ok)
 		assert.NotNil(t, pool.m[1])
 	})
 }
