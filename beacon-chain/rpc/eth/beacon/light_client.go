@@ -205,6 +205,9 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 		if finalizedCheckPoint != nil {
 			finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
 			finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+			if err != nil {
+				finalizedBlock = nil
+			}
 		}
 
 		update, err := createLightClientUpdate(
@@ -365,7 +368,7 @@ func createLightClientUpdate(
 
 	// assert hash_tree_root(attested_header) == block.message.parent_root
 	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
-	if attestedHeaderRoot != block.Block().ParentRoot() {
+	if err != nil || attestedHeaderRoot != block.Block().ParentRoot() {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested header root: %v", attestedHeaderRoot)
 	}
 
@@ -409,7 +412,7 @@ func createLightClientUpdate(
 	// Indicate finality whenever possible
 	var finalizedHeader *ethpbv1.BeaconBlockHeader
 	var finalityBranch [][]byte
-	if finalizedBlock != nil {
+	if finalizedBlock != nil && !finalizedBlock.IsNil() {
 		if finalizedBlock.Block().Slot() != 0 {
 			tempFinalizedHeader, err := finalizedBlock.Header()
 			if err != nil {
@@ -509,6 +512,9 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 	}
 
 	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get latest block: %v", err)
+	}
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
@@ -529,6 +535,9 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 	if finalizedCheckPoint != nil {
 		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
 		finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
 	}
 
 	update, err := createLightClientUpdate(
@@ -600,6 +609,9 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 	}
 
 	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get latest block: %v", err)
+	}
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
@@ -620,6 +632,9 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 	if finalizedCheckPoint != nil {
 		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
 		finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
 	}
 
 	update, err := createLightClientUpdate(
