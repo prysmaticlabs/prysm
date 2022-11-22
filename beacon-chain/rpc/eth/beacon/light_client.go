@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-// GetLightClientBootstrap -
+// GetLightClientBootstrap - implements https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientBootstrap
 func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.LightClientBootstrapRequest) (*ethpbv2.LightClientBootstrapResponse, error) {
 	// Prepare
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientBootstrap")
@@ -44,23 +44,6 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get block header: %v", err)
 	}
 	header := migration.V1Alpha1SignedHeaderToV1(signedBeaconHeader).GetMessage()
-
-	// Alternative way to prepare header (by not using migration pkg)
-	// parentRoot := blk.Block().ParentRoot()
-	// stateRoot := blk.Block().StateRoot()
-	//
-	// bodyRoot, err := blk.Block().Body().HashTreeRoot()
-	// if err != nil {
-	//	return nil, status.Errorf(codes.Internal, "Could not get body hash: %v", err)
-	// }
-	//
-	// header := ethpbv1.BeaconBlockHeader{
-	//	Slot:          blk.Block().Slot(),
-	//	ProposerIndex: blk.Block().ProposerIndex(),
-	//	ParentRoot:    parentRoot[:],
-	//	StateRoot:     stateRoot[:],
-	//	BodyRoot:      bodyRoot[:],
-	// }
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
@@ -91,7 +74,7 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 	return result, nil
 }
 
-// GetLightClientFinalityUpdate -
+// GetLightClientFinalityUpdate - implements https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientFinalityUpdate
 func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientFinalityUpdateResponse, error) {
 	// Prepare
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientFinalityUpdate")
@@ -177,7 +160,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 	return result, nil
 }
 
-// GetLightClientOptimisticUpdate -
+// GetLightClientOptimisticUpdate - implements https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientOptimisticUpdate
 func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientOptimisticUpdateResponse, error) {
 	// Prepare
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientOptimisticUpdate")

@@ -408,11 +408,6 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				data = &LightClientFinalityUpdateResponseJson{}
 			case events.LightClientOptimisticUpdateTopic:
 				data = &LightClientOptimisticUpdateResponseJson{}
-			// Below is ChainSafe's format
-			// case events.LightClientFinalityUpdateTopic:
-			// 	data = &LightClientFinalityUpdateJson{}
-			// case events.LightClientOptimisticUpdateTopic:
-			// 	data = &LightClientOptimisticUpdateJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:

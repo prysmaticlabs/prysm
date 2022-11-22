@@ -231,25 +231,6 @@ func handleStateEvents(
 			return nil
 		}
 		return streamData(stream, LightClientOptimisticUpdateTopic, update)
-	// Below is ChainSafe's format
-	// case statefeed.LightClientFinalityUpdate:
-	// 	if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
-	// 		return nil
-	// 	}
-	// 	update, ok := event.Data.(*ethpbv2.FinalityUpdate)
-	// 	if !ok {
-	// 		return nil
-	// 	}
-	// 	return streamData(stream, LightClientFinalityUpdateTopic, update)
-	// case statefeed.LightClientOptimisticUpdate:
-	// 	if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
-	// 		return nil
-	// 	}
-	// 	update, ok := event.Data.(*ethpbv2.OptimisticUpdate)
-	// 	if !ok {
-	// 		return nil
-	// 	}
-	// 	return streamData(stream, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
