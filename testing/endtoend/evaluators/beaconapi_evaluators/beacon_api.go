@@ -245,7 +245,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				); err != nil {
 					return err
 				}
-				fmt.Printf("prysm ob: %v/n", beaconPathsAndObjects[path].prysmResps[key])
+				fmt.Printf("prysm object: %v/n", beaconPathsAndObjects[path].prysmResps[key])
 				fmt.Printf("lighthouse ob: %v", beaconPathsAndObjects[path].prysmResps[key])
 			case "ssz":
 				sszparams := meta.params("ssz", currentEpoch)
