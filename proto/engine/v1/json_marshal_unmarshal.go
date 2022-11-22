@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
@@ -595,21 +595,21 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type blobBundleJSON struct {
-	BlockHash       common.Hash           `json:"blockHash"`
-	Kzgs            []types.KZGCommitment `json:"kzgs"`
-	Blobs           []types.Blob          `json:"blobs"`
-	AggregatedProof types.KZGProof        `json:"aggregatedProof"`
+	BlockHash       common.Hash               `json:"blockHash"`
+	Kzgs            []gethTypes.KZGCommitment `json:"kzgs"`
+	Blobs           []gethTypes.Blob          `json:"blobs"`
+	AggregatedProof gethTypes.KZGProof        `json:"aggregatedProof"`
 }
 
 // MarshalJSON --
 func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
-	kzgs := make([]types.KZGCommitment, len(b.KzgCommitments))
+	kzgs := make([]gethTypes.KZGCommitment, len(b.KzgCommitments))
 	for i, kzg := range b.KzgCommitments {
 		kzgs[i] = bytesutil.ToBytes48(kzg)
 	}
-	blobs := make([]types.Blob, len(b.Blobs))
+	blobs := make([]gethTypes.Blob, len(b.Blobs))
 	for i, b1 := range b.Blobs {
-		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
+		var blob [params.FieldElementsPerBlob]gethTypes.BLSFieldElement
 		for j := 0; j < params.FieldElementsPerBlob; j++ {
 			blob[j] = bytesutil.ToBytes32(b1.Data[j*32 : j*32+31])
 		}

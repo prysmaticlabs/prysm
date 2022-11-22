@@ -215,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.2.0"
+consensus_spec_version = "v1.3.0-alpha.1"
 
 bls_test_version = "v0.1.1"
 
@@ -231,8 +231,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "42f66a2b8c139c07843ac2898f2cb61729ea6eb7a080d151e3bac78e207bfe52",
-    urls = ["file:///tmp/general-f5c7cf78.tar.gz"],
+    #sha256 = "42f66a2b8c139c07843ac2898f2cb61729ea6eb7a080d151e3bac78e207bfe52",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -247,8 +247,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "ec762b0cede38c8edc93a2c215053fa7834a906004333cd2e2a44a6247e0338b",
-    urls = ["file:///tmp/minimal-f5c7cf78.tar.gz"],
+    #sha256 = "ec762b0cede38c8edc93a2c215053fa7834a906004333cd2e2a44a6247e0338b",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -263,8 +263,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2a98e39e5729a2e364492a7b82d710010eaee8f7a4968c91023dd4ae58f7c3d6",
-    urls = ["file:///tmp/mainnet-f5c7cf78.tar.gz"],
+    #sha256 = "2a98e39e5729a2e364492a7b82d710010eaee8f7a4968c91023dd4ae58f7c3d6",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -278,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f1a33b7459391716defa4c2b6f0c1bd7ccc38471ce9126d752d3bad767bebf2b",
+    #sha256 = "f1a33b7459391716defa4c2b6f0c1bd7ccc38471ce9126d752d3bad767bebf2b",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
