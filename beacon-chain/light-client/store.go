@@ -64,13 +64,12 @@ func NewStore(trustedBlockRoot [32]byte,
 }
 
 func (s *Store) isNextSyncCommitteeKnown() bool {
-	// TODO: implement
-	panic("not implemented")
+	return s.nextSyncCommittee != &ethpbv2.SyncCommittee{}
 }
 
 func (s *Store) getSafetyThreshold() uint64 {
-	// TODO: implement
-	panic("not implemented")
+	return uint64(math.Floor(math.Max(float64(s.previousMaxActiveParticipants),
+		float64(s.currentMaxActiveParticipants)) / 2))
 }
 
 func (s *Store) ValidateUpdate(update *Update) error {
