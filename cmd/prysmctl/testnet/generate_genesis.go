@@ -92,7 +92,7 @@ var (
 			},
 			flags.EnumValue{
 				Name:        "fork",
-				Usage:       fmt.Sprintf("Name of the BeaconState schema to use in output encoding. [%s]", strings.Join(versionNames(), ",")),
+				Usage:       fmt.Sprintf("Name of the BeaconState schema to use in output encoding [%s]", strings.Join(versionNames(), ",")),
 				Enum:        versionNames(),
 				Value:       versionNames()[0],
 				Destination: &generateGenesisStateFlags.ForkName,
