@@ -12,7 +12,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"math"
-	"math/bits"
 )
 
 const (
@@ -29,10 +28,6 @@ type Store struct {
 	optimisticHeader              *ethpbv1.BeaconBlockHeader
 	previousMaxActiveParticipants uint64
 	currentMaxActiveParticipants  uint64
-}
-
-func floorLog2(x uint64) int {
-	return bits.Len64(uint64(x - 1))
 }
 
 func getSubtreeIndex(index uint64) uint64 {
