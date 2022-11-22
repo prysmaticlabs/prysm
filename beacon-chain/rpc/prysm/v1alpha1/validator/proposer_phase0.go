@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto/kzg"
 	"github.com/pkg/errors"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -212,7 +212,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
 
 				blk.BlobsKzg = blobsBundle.KzgCommitments
-				aggregatedProof, err := kzg.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(blobsBundle.Blobs))
+				aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(blobsBundle.Blobs))
 				if err != nil {
 					return nil, fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
 				}

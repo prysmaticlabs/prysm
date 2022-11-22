@@ -3,19 +3,19 @@ package sync
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/crypto/kzg"
 	gethParams "github.com/ethereum/go-ethereum/params"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	kbls "github.com/protolambda/go-kzg/bls"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"go.opencensus.io/trace"
 )
@@ -39,7 +39,7 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	if err != nil {
 		return pubsub.ValidationReject, errors.Wrap(err, "Could not decode message")
 	}
-	signed, ok := m.(*eth.SignedBeaconBlockAndBlobsSidecar)
+	signed, ok := m.(*ethpb.SignedBeaconBlockAndBlobsSidecar)
 	if !ok {
 		return pubsub.ValidationReject, errWrongMessage
 	}
@@ -74,7 +74,7 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBeaconBlockKzgs(blk *eth.BeaconBlockCapella) error {
+func (s *Service) validateBeaconBlockKzgs(blk *ethpb.BeaconBlockCapella) error {
 	body := blk.Body
 	payload := body.ExecutionPayload
 	if payload == nil {
@@ -82,7 +82,7 @@ func (s *Service) validateBeaconBlockKzgs(blk *eth.BeaconBlockCapella) error {
 	}
 
 	blobKzgs := body.BlobKzgCommitments
-	blobKzgsInput := make(kzg.KZGCommitmentSequenceImpl, len(blobKzgs))
+	blobKzgsInput := make(eth.KZGCommitmentSequenceImpl, len(blobKzgs))
 	for i := range blobKzgs {
 		// [REJECT] The KZG commitments of the blobs are all correctly encoded compressed BLS G1 Points.
 		_, err := bls.PublicKeyFromBytes(blobKzgs[i])
@@ -94,10 +94,10 @@ func (s *Service) validateBeaconBlockKzgs(blk *eth.BeaconBlockCapella) error {
 
 	// [REJECT] The KZG commitments correspond to the versioned hashes in the transactions list.
 	txs := payload.Transactions
-	return kzg.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput)
+	return eth.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput)
 }
 
-func (s *Service) validateBlobsSidecar(b *eth.BlobsSidecar) (pubsub.ValidationResult, error) {
+func (s *Service) validateBlobsSidecar(b *ethpb.BlobsSidecar) (pubsub.ValidationResult, error) {
 	// [IGNORE] the sidecar.beacon_block_slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
 	if err := altair.ValidateSyncMessageTime(b.BeaconBlockSlot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return pubsub.ValidationIgnore, err

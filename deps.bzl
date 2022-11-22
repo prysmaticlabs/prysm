@@ -1460,8 +1460,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_holiman_uint256",
         importpath = "github.com/holiman/uint256",
-        sum = "h1:gpSYcPLWGv4sG43I2mVLiDZCNDh/EpGjSk8tmtxitHM=",
-        version = "v1.2.0",
+        sum = "h1:XRtyuda/zw2l+Bq/38n5XUoEF72aSOu/77Thd9pPp2o=",
+        version = "v1.2.1",
     )
     go_repository(
         name = "com_github_hpcloud_tail",
@@ -2765,8 +2765,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_protolambda_go_kzg",
         importpath = "github.com/protolambda/go-kzg",
-        sum = "h1:oTNfeC6fvE/m3iT62hR+umMXjdjtnhCQ6ez9Kl4Gwu0=",
-        version = "v0.0.0-20221108193918-c6d0faa55038",
+        sum = "h1:yzqsT6UIT17bmesiG9iB6+3cQkmMAtFjUffx5KrXgkk=",
+        version = "v0.0.0-20221121235515-3f3e1ef6beb7",
     )
     go_repository(
         name = "com_github_protolambda_ztyp",

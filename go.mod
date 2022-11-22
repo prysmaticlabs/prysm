@@ -33,7 +33,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/herumi/bls-eth-go-binary v1.28.1
-	github.com/holiman/uint256 v1.2.0
+	github.com/holiman/uint256 v1.2.1
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
@@ -58,7 +58,7 @@ require (
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/prom2json v1.3.0
-	github.com/protolambda/go-kzg v0.0.0-20221108193918-c6d0faa55038
+	github.com/protolambda/go-kzg v0.0.0-20221122014024-bb3fa3695412
 	github.com/protolambda/ztyp v0.2.1
 	github.com/prysmaticlabs/fastssz v0.0.0-20220628121656-93dfe28febab
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7

@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/crypto/kzg"
 	"github.com/pkg/errors"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
@@ -375,7 +375,7 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) erro
 	if err != nil {
 		return errors.Wrap(err, "could not get blob kzg commitments from block")
 	}
-	kzgs := make(kzg.KZGCommitmentSequenceImpl, len(blkKzgs))
+	kzgs := make(eth.KZGCommitmentSequenceImpl, len(blkKzgs))
 	for i := range blkKzgs {
 		kzgs[i] = bytesutil.ToBytes48(blkKzgs[i])
 	}
@@ -383,7 +383,7 @@ func ValidateBlobKzgs(ctx context.Context, body interfaces.BeaconBlockBody) erro
 	if err != nil {
 		return errors.Wrap(err, "could not get transactions from payload")
 	}
-	if err := kzg.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs); err != nil {
+	if err := eth.VerifyKZGCommitmentsAgainstTransactions(txs, kzgs); err != nil {
 		return err
 	}
 	return nil

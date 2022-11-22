@@ -15,8 +15,8 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
-        "@com_github_ethereum_go_ethereum//crypto/kzg:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_protolambda_go_kzg//eth:go_default_library",
         "@com_github_protolambda_ztyp//codec:go_default_library",
     ],
 )

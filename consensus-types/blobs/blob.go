@@ -1,17 +1,17 @@
 package blobs
 
 import (
-	"github.com/ethereum/go-ethereum/crypto/kzg"
+	"github.com/protolambda/go-kzg/eth"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 type commitmentSequenceImpl [][]byte
 
-func (s commitmentSequenceImpl) At(i int) kzg.KZGCommitment {
-	var out kzg.KZGCommitment
+func (s commitmentSequenceImpl) At(i int) eth.KZGCommitment {
+	var out eth.KZGCommitment
 	copy(out[:], s[i])
 	return out
 }
@@ -34,7 +34,7 @@ func (b BlobImpl) Len() int {
 
 type BlobsSequenceImpl []*v1.Blob
 
-func (s BlobsSequenceImpl) At(i int) kzg.Blob {
+func (s BlobsSequenceImpl) At(i int) eth.Blob {
 	return BlobImpl(s[i].Data)
 }
 
@@ -43,12 +43,12 @@ func (s BlobsSequenceImpl) Len() int {
 }
 
 // ValidateBlobsSidecar verifies the integrity of a sidecar, returning nil if the blob is valid.
-func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, sidecar *eth.BlobsSidecar) error {
-	kzgSidecar := kzg.BlobsSidecar{
-		BeaconBlockRoot:    kzg.Root(bytesutil.ToBytes32(sidecar.BeaconBlockRoot)),
-		BeaconBlockSlot:    kzg.Slot(sidecar.BeaconBlockSlot),
+func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, sidecar *ethpb.BlobsSidecar) error {
+	kzgSidecar := eth.BlobsSidecar{
+		BeaconBlockRoot:    eth.Root(bytesutil.ToBytes32(sidecar.BeaconBlockRoot)),
+		BeaconBlockSlot:    eth.Slot(sidecar.BeaconBlockSlot),
 		Blobs:              BlobsSequenceImpl(sidecar.Blobs),
-		KZGAggregatedProof: kzg.KZGProof(bytesutil.ToBytes48(sidecar.AggregatedProof)),
+		KZGAggregatedProof: eth.KZGProof(bytesutil.ToBytes48(sidecar.AggregatedProof)),
 	}
-	return kzg.ValidateBlobsSidecar(kzg.Slot(slot), root, commitmentSequenceImpl(commitments), kzgSidecar)
+	return eth.ValidateBlobsSidecar(eth.Slot(slot), root, commitmentSequenceImpl(commitments), kzgSidecar)
 }
