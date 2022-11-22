@@ -60,7 +60,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-
 	return vs.getBellatrixBeaconBlock(ctx, req)
 }
 
