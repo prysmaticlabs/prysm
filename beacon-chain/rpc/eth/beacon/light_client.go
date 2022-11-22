@@ -143,7 +143,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 		// Get attested state
 		attestedRoot := block.Block().ParentRoot()
 		attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
-		if err != nil {
+		if err != nil || attestedBlock == nil {
 			continue
 		}
 
@@ -358,7 +358,6 @@ func createLightClientUpdate(
 				StateRoot:     make([]byte, 32),
 				BodyRoot:      make([]byte, 32),
 			}
-			``
 		}
 
 		finalityBranch, err = attestedState.FinalizedRootProof(ctx)
