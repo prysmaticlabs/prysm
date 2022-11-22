@@ -42,12 +42,49 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get state by slot: %v", err)
 	}
 
-	// Prepare header
-	signedBeaconHeader, err := blk.Header()
+	bootstrap, err := createLightClientBootstrap(ctx, state)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block header: %v", err)
+		return nil, err
 	}
-	header := migration.V1Alpha1SignedHeaderToV1(signedBeaconHeader).GetMessage()
+
+	result := &ethpbv2.LightClientBootstrapResponse{
+		Version: ethpbv2.Version(blk.Version()),
+		Data:    bootstrap,
+	}
+
+	return result, nil
+}
+
+// In https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
+// def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
+//
+//	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+//	assert state.slot == state.latest_block_header.slot
+//
+//	return LightClientBootstrap(
+//	    header=BeaconBlockHeader(
+//	        slot=state.latest_block_header.slot,
+//	        proposer_index=state.latest_block_header.proposer_index,
+//	        parent_root=state.latest_block_header.parent_root,
+//	        state_root=hash_tree_root(state),
+//	        body_root=state.latest_block_header.body_root,
+//	    ),
+//	    current_sync_committee=state.current_sync_committee,
+//	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
+//	)
+func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*ethpbv2.LightClientBootstrap, error) {
+	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+		return nil, status.Errorf(codes.Internal, "Invalid state slot: %d", state.Slot())
+	}
+
+	// assert state.slot == state.latest_block_header.slot
+	if state.Slot() != state.LatestBlockHeader().Slot {
+		return nil, status.Errorf(codes.Internal, "Invalid state slot: %d", state.Slot())
+	}
+
+	// Prepare data
+	latestBlockHeader := state.LatestBlockHeader()
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
@@ -64,15 +101,22 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get current sync committee proof: %v", err)
 	}
 
-	data := ethpbv2.LightClientBootstrap{
-		Header:                     header,
-		CurrentSyncCommittee:       &committee,
-		CurrentSyncCommitteeBranch: branch,
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 
-	result := &ethpbv2.LightClientBootstrapResponse{
-		Version: ethpbv2.Version(blk.Version()),
-		Data:    &data,
+	// Return result
+	result := &ethpbv2.LightClientBootstrap{
+		Header: &ethpbv1.BeaconBlockHeader{
+			Slot:          latestBlockHeader.Slot,
+			ProposerIndex: latestBlockHeader.ProposerIndex,
+			ParentRoot:    latestBlockHeader.ParentRoot,
+			StateRoot:     stateRoot[:],
+			BodyRoot:      latestBlockHeader.BodyRoot,
+		},
+		CurrentSyncCommittee:       &committee,
+		CurrentSyncCommitteeBranch: branch,
 	}
 
 	return result, nil
