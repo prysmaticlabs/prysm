@@ -253,6 +253,9 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 	timeStamp := hexutil.Uint64(e.Timestamp)
 	recipient := common.BytesToAddress(e.FeeRecipient)
 	logsBloom := hexutil.Bytes(e.LogsBloom)
+	if e.Withdrawals == nil {
+		e.Withdrawals = make([]*Withdrawal, 0)
+	}
 	return json.Marshal(executionPayloadCapellaJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
@@ -415,6 +418,9 @@ func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
 		transactions[i] = tx
 	}
 	e.Transactions = transactions
+	if dec.Withdrawals == nil {
+		dec.Withdrawals = make([]*Withdrawal, 0)
+	}
 	e.Withdrawals = dec.Withdrawals
 	return nil
 }
