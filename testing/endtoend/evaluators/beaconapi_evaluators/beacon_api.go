@@ -363,7 +363,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSO
 		beaconNodeIdx,
 		respJSONPrysm,
 	); err != nil {
-		return errors.Wrap(err, "prysm json error")
+		return errors.Wrap(err, "could not perform GET request for Prysm JSON")
 	}
 
 	if err := doMiddlewareJSONGetRequest(
