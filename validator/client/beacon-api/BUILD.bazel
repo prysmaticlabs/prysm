@@ -1,15 +1,43 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
-# Gazelle will flag this for removal since it's only being used with the use_beacon_api flag, but it should be kept
-# keep
+# gazelle:build_tags use_beacon_api
 go_library(
     name = "go_default_library",
-    srcs = ["beacon_api_validator_client.go"],
+    srcs = [
+        "beacon_api_helpers.go",
+        "beacon_api_validator_client.go",
+        "genesis.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//api/gateway/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//validator/client/iface:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
+    ],
+)
+
+# gazelle:build_tags use_beacon_api
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = [
+        "beacon_api_helpers_test.go",
+        "genesis_test.go",
+        "handlers_test.go",
+        "wait_for_chain_start_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//api/gateway/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
