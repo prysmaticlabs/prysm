@@ -293,7 +293,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	if finalizedEpoch < 8 {
+	if finalizedEpoch < helpers.AltairE2EForkEpoch + 2 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
