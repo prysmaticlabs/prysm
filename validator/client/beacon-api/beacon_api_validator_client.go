@@ -144,8 +144,8 @@ func (*beaconApiValidatorClient) WaitForActivation(_ context.Context, _ *ethpb.V
 }
 
 // Deprecated: Do not use.
-func (*beaconApiValidatorClient) WaitForChainStart(_ context.Context, _ *empty.Empty) (ethpb.BeaconNodeValidator_WaitForChainStartClient, error) {
-	panic("beaconApiValidatorClient.WaitForChainStart is not implemented")
+func (c *beaconApiValidatorClient) WaitForChainStart(_ context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
+	return c.waitForChainStart()
 }
 
 func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {

@@ -22,7 +22,7 @@ var OptimisticSyncEnabled = types.Evaluator{
 	Evaluation: optimisticSyncEnabled,
 }
 
-func optimisticSyncEnabled(conns ...*grpc.ClientConn) error {
+func optimisticSyncEnabled(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for _, conn := range conns {
 		client := service.NewBeaconChainClient(conn)
 		head, err := client.GetBlockV2(context.Background(), &v2.BlockRequestV2{BlockId: []byte("head")})

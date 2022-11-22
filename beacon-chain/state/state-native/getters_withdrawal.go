@@ -56,7 +56,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	for range b.validators {
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
-		if isFullyWithdrawableValidator(val, epoch) && balance > 0 {
+		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				WithdrawalIndex:  withdrawalIndex,
 				ValidatorIndex:   validatorIndex,

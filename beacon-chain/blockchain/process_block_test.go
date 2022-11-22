@@ -446,9 +446,12 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling(t *testing.T) {
 }
 
 // blockTree1 constructs the following tree:
-//    /- B1
+//
+//	/- B1
+//
 // B0           /- B5 - B7
-//    \- B3 - B4 - B6 - B8
+//
+//	\- B3 - B4 - B6 - B8
 func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byte, error) {
 	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
 	b0 := util.NewBeaconBlock()
@@ -2284,6 +2287,21 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	require.Equal(t, 0, service.cfg.AttPool.ForkchoiceAttestationCount())
 	require.NoError(t, service.handleBlockAttestations(ctx, wsb3.Block(), st3)) // fine to use the same committe as st
 	require.Equal(t, 1, len(service.cfg.AttPool.BlockAttestations()))
+}
+
+func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
+	fc := doublylinkedtree.New()
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithForkChoiceStore(fc),
+		WithStateGen(stategen.New(beaconDB, fc)),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	require.NoError(t, service.fillMissingBlockPayloadId(ctx, time.Unix(int64(params.BeaconConfig().SecondsPerSlot/2), 0)))
 }
 
 // Helper function to simulate the block being on time or delayed for proposer

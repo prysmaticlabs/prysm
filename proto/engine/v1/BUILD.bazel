@@ -16,9 +16,7 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 proto_library(
     name = "proto",
     srcs = [
-        #"execution_engine.proto",
         ":ssz_proto_files",
-        #        ":generated_swagger_proto",
     ],
     visibility = ["//visibility:public"],
     deps = [
