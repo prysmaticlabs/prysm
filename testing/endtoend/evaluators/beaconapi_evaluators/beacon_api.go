@@ -301,9 +301,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			return errors.Wrap(err, "failed to unmarshal rysm ssz")
 		}
 		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-				blockP,
-				blockL)
+			return errors.New("prysm signature does not match lighthouse signature")
 		}
 	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockAltair{}
