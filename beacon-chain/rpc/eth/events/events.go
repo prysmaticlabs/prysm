@@ -119,7 +119,7 @@ func handleBlockEvents(
 		if err != nil {
 			return err
 		}
-		item, err := v1Data.HashTreeRoot()
+		item, err := v1Data.Message.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not hash tree root block")
 		}
