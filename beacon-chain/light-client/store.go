@@ -6,7 +6,6 @@ package light_client
 import (
 	"bytes"
 	"errors"
-	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -31,10 +30,6 @@ type Store struct {
 
 func getSubtreeIndex(index uint64) uint64 {
 	return index % uint64(math.Pow(2, float64(floorLog2(index-1))))
-}
-
-func computeSyncCommitteePeriodAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
-	panic("not implemented")
 }
 
 // NewStore implements initialize_light_client_store from the spec.

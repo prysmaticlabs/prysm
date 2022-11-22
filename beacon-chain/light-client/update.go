@@ -2,6 +2,7 @@ package light_client
 
 import (
 	"bytes"
+	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"math/bits"
 )
@@ -27,6 +28,10 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
+func computeSyncCommitteePeriodAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
+	panic("not implemented")
+}
+
 func (u *Update) IsSyncCommiteeUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.NextSyncCommitteeIndex)
 }
@@ -35,12 +40,61 @@ func (u *Update) IsFinalityUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), finalizedRootIndex)
 }
 
+func (u *Update) hasRelevantSyncCommittee() bool {
+	return u.IsSyncCommiteeUpdate() && computeSyncCommitteePeriodAtSlot(u.
+		GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(
+		github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(u.GetSignatureSlot()))
+}
+
+func (u *Update) hasSyncCommitteeFinality() bool {
+	return computeSyncCommitteePeriodAtSlot(u.GetFinalizedHeader().Slot) == computeSyncCommitteePeriodAtSlot(u.
+		GetAttestedHeader().Slot)
+}
+
 func (u *Update) IsBetterUpdate(newUpdate *Update) bool {
 	maxActiveParticipants := uint64(len(newUpdate.GetSyncAggregate().SyncCommitteeBits))
 	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()
 	oldNumActiveParticipants := u.GetSyncAggregate().SyncCommitteeBits.Count()
-	_ = newNumActiveParticipants*3 >= maxActiveParticipants*2
-	_ = oldNumActiveParticipants*3 >= maxActiveParticipants*2
-	// TODO: resume here
-	return false
+	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
+	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
+	if newHasSupermajority != oldHasSupermajority {
+		return newHasSupermajority && !oldHasSupermajority
+	}
+	if !newHasSupermajority && newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Compare presence of relevant sync committee
+	newHasRelevantSyncCommittee := newUpdate.hasRelevantSyncCommittee()
+	oldHasRelevantSyncCommittee := u.hasRelevantSyncCommittee()
+	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
+		return newHasRelevantSyncCommittee
+	}
+
+	// Compare indication of any finality
+	newHasFinality := newUpdate.IsFinalityUpdate()
+	oldHasFinality := u.IsFinalityUpdate()
+	if newHasFinality != oldHasFinality {
+		return newHasFinality
+	}
+
+	// Compare sync committee finality
+	if newHasFinality {
+		newHasSyncCommitteeFinality := newUpdate.hasSyncCommitteeFinality()
+		oldHasSyncCommitteeFinality := u.hasSyncCommitteeFinality()
+		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
+			return newHasSyncCommitteeFinality
+		}
+	}
+
+	// Tiebreaker 1: Sync committee participation beyond supermajority
+	if newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Tiebreaker 2: Prefer older data (fewer changes to best)
+	if newUpdate.GetAttestedHeader().Slot != u.GetAttestedHeader().Slot {
+		return newUpdate.GetAttestedHeader().Slot < u.GetAttestedHeader().Slot
+	}
+	return newUpdate.GetSignatureSlot() < u.GetSignatureSlot()
 }
