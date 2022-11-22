@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	"reflect"
 	"strconv"
 	"strings"
+
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 
@@ -263,6 +265,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			}
 		}
 	}
+	return orderedEvaluationOnResponses(beaconPathsAndObjects, genesisData)
+}
+
+func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisData *v1.GenesisResponse) error {
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
 	prysmForkData, ok := forkPathData.prysmResps["json"].(*apimiddleware.StateForkResponseJson)
 	if !ok {
