@@ -4,7 +4,14 @@ import (
 	"bytes"
 	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"math"
 	"math/bits"
+)
+
+const (
+	// TODO: we should read these from the beacon chain config
+	epochsPerSyncCommitteePeriod = uint64(256)
+	slotsPerEpoch                = uint64(32)
 )
 
 type Update struct {
@@ -28,8 +35,16 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
+func computeEpochAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
+	return uint64(math.Floor(float64(slot) / float64(slotsPerEpoch)))
+}
+
+func computeSyncCommitteePeriod(epoch uint64) uint64 {
+	return uint64(math.Floor(float64(epoch) / float64(epochsPerSyncCommitteePeriod)))
+}
+
 func computeSyncCommitteePeriodAtSlot(slot github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot) uint64 {
-	panic("not implemented")
+	return computeSyncCommitteePeriod(computeEpochAtSlot(slot))
 }
 
 func (u *Update) IsSyncCommiteeUpdate() bool {
