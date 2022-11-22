@@ -5,6 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
@@ -12,9 +16,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/cmd/flags"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"io"
-	"os"
-	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -90,10 +91,10 @@ var (
 				Usage:       "Unix timestamp seconds used as the genesis time in the genesis state. If unset, defaults to now()",
 			},
 			flags.EnumValue{
-				Name:    "fork",
-				Usage:   fmt.Sprintf("Name of the BeaconState schema to use in output encoding. [%s]", strings.Join(versionNames(), ",")),
-				Enum:    versionNames(),
-				Default: versionNames()[0],
+				Name:        "fork",
+				Usage:       fmt.Sprintf("Name of the BeaconState schema to use in output encoding. [%s]", strings.Join(versionNames(), ",")),
+				Enum:        versionNames(),
+				Value:       versionNames()[0],
 				Destination: &generateGenesisStateFlags.ForkName,
 			}.GenericFlag(),
 			outputSSZFlag,
