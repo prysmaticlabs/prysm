@@ -41,6 +41,10 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
+	withdrawalRoot, err := payloadHeader.WithdrawalsRoot()
+	if err != nil {
+		return nil, err
+	}
 
 	s := &ethpb.BeaconStateCapella{
 		GenesisTime:           state.GenesisTime(),
@@ -48,7 +52,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			CurrentVersion:  params.BeaconConfig().EIP4844ForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
@@ -84,9 +88,10 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 			Timestamp:        payloadHeader.Timestamp(),
 			ExtraData:        payloadHeader.ExtraData(),
 			BaseFeePerGas:    payloadHeader.BaseFeePerGas(),
+			ExcessDataGas:    make([]byte, 32),
 			BlockHash:        payloadHeader.BlockHash(),
 			TransactionsRoot: txRoot,
-			WithdrawalsRoot:  make([]byte, 32),
+			WithdrawalsRoot:  withdrawalRoot,
 		},
 		NextWithdrawalIndex:          0,
 		NextWithdrawalValidatorIndex: 0,

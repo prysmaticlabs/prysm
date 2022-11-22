@@ -202,6 +202,7 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, 32),
 			BaseFeePerGas: make([]byte, 32),
+			ExcessDataGas: make([]byte, 32),
 			BlockHash:     make([]byte, 32),
 		},
 	}).HashTreeRoot()
@@ -239,6 +240,7 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),
 		WithdrawalsRoot:  make([]byte, 32),
+		ExcessDataGas:    make([]byte, 32),
 	}
 
 	return state_native.InitializeFromProtoCapella(st)

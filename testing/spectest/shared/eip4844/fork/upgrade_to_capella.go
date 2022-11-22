@@ -23,6 +23,9 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "fork/fork/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			if folder.Name() != "fork_next_epoch_with_block" {
+				t.Skip("Skipping non-upgrade_to_capella test")
+			}
 			helpers.ClearCache()
 			folderPath := path.Join(testsFolderPath, folder.Name())
 
@@ -30,11 +33,11 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 			require.NoError(t, err)
 			preStateSSZ, err := snappy.Decode(nil /* dst */, preStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			preStateBase := &ethpb.BeaconStateBellatrix{}
+			preStateBase := &ethpb.BeaconStateCapella{}
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := state_native.InitializeFromProtoBellatrix(preStateBase)
+			preState, err := state_native.InitializeFromProtoCapella(preStateBase)
 			require.NoError(t, err)
 			postState, err := capella.UpgradeToCapella(preState)
 			require.NoError(t, err)
@@ -51,6 +54,8 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 			}
 
 			if !proto.Equal(postStateFromFile, postStateFromFunction) {
+				t.Log(postStateFromFile.LatestExecutionPayloadHeader)
+				t.Log(postStateFromFunction.LatestExecutionPayloadHeader)
 				t.Fatal("Post state does not match expected")
 			}
 		})

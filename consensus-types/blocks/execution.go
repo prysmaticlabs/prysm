@@ -155,6 +155,11 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// ExcessiveDataGas --
+func (e executionPayload) ExcessiveDataGas() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -293,6 +298,11 @@ func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// ExcessiveDataGas --
+func (e executionPayloadHeader) ExcessiveDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -461,13 +471,17 @@ func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
 }
 
 // ExcessiveBlobs --
-func (e executionPayloadCapella) ExcessiveBlobs() uint64 {
-	return e.p.ExcessBlobs
+func (e executionPayloadCapella) ExcessiveBlobs() []byte {
+	return e.p.ExcessDataGas
 }
 
 // WithdrawalsRoot --
 func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
+}
+
+func (e executionPayloadCapella) ExcessiveDataGas() ([]byte, error) {
+	return e.p.ExcessDataGas, nil
 }
 
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
@@ -607,13 +621,17 @@ func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, er
 }
 
 // ExcessiveBlobs --
-func (e executionPayloadHeaderCapella) ExcessiveBlobs() uint64 {
-	return e.p.ExcessBlobs
+func (e executionPayloadHeaderCapella) ExcessiveBlobs() []byte {
+	return e.p.ExcessDataGas
 }
 
 // WitdrawalsRoot --
 func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
+}
+
+func (e executionPayloadHeaderCapella) ExcessiveDataGas() ([]byte, error) {
+	return e.p.ExcessDataGas, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -634,6 +652,10 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	if err != nil {
 		return nil, err
 	}
+	excessDataGas, err := payload.ExcessiveDataGas()
+	if err != nil {
+		return nil, err
+	}
 
 	return &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
@@ -649,6 +671,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData()),
 		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas()),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
+		ExcessDataGas:    bytesutil.SafeCopyBytes(excessDataGas),
 		TransactionsRoot: txRoot[:],
 		WithdrawalsRoot:  withdrawalsRoot[:],
 	}, nil

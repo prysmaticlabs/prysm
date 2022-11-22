@@ -54,7 +54,7 @@ message ExecutionPayloadCapella {
 	uint64 timestamp            = 10;
 	bytes extra_data            = 11 [(ethereum.eth.ext.ssz_max) = "32"];
 	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 excess_blobs = 13;
+	bytes excess_data_gas  = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash            = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes transactions = 15 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 	// MAX_WITHDRAWALS_PER_PAYLOAD
@@ -91,8 +91,8 @@ message ExecutionPayloadHeaderCapella {
 	uint64 timestamp        = 10;
 	bytes extra_data        = 11 [(ethereum.eth.ext.ssz_max) = "32"];
 	bytes base_fee_per_gas  = 12 [(ethereum.eth.ext.ssz_size) = "32"];
-	bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
-	uint64 excess_blobs = 14;
+	bytes excess_data_gas  = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes block_hash        = 14 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes transactions_root = 15 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes withdrawals_root  = 16 [(ethereum.eth.ext.ssz_size) = "32"]; // New in Capella.
 }

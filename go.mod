@@ -60,7 +60,7 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/protolambda/go-kzg v0.0.0-20221122014024-bb3fa3695412
 	github.com/protolambda/ztyp v0.2.1
-	github.com/prysmaticlabs/fastssz v0.0.0-20220628121656-93dfe28febab
+	github.com/prysmaticlabs/fastssz v0.0.0-20221107182844-78142813af44
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20211014160335-757fae4f38c6

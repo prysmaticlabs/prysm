@@ -93,6 +93,7 @@ type ExecutionData interface {
 	Timestamp() uint64
 	ExtraData() []byte
 	BaseFeePerGas() []byte
+	ExcessiveDataGas() ([]byte, error)
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
 	TransactionsRoot() ([]byte, error)

@@ -948,6 +948,7 @@ func HydrateBeaconBlockBodyCapella(b *ethpb.BeaconBlockBodyCapella) *ethpb.Beaco
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			ExcessDataGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 			ExtraData:     make([]byte, 0),
@@ -1019,6 +1020,7 @@ func HydrateBlindedBeaconBlockBodyCapella(b *ethpb.BlindedBeaconBlockBodyCapella
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			ExtraData:        make([]byte, 0),
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+			ExcessDataGas:    make([]byte, fieldparams.RootLength),
 		}
 	}
 	return b

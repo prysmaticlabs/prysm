@@ -151,6 +151,8 @@ type BeaconChainConfig struct {
 	ShardingForkEpoch    types.Epoch `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	CapellaForkVersion   []byte      `yaml:"CAPELLA_FORK_VERSION" spec:"true"`   // CapellaForkVersion is used to represent the fork version for capella.
 	CapellaForkEpoch     types.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
+	EIP4844ForkVersion   []byte      `yaml:"EIP4844_FORK_VERSION" spec:"true"`   // EIP4844ForkVersion is used to represent the fork version for EIP4844.
+	EIP4844ForkEpoch     types.Epoch `yaml:"EIP4844_FORK_EPOCH" spec:"true"`     // EIP4844ForkEpoch is used to represent the assigned fork epoch for EIP4844.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string      // Human-readable names of fork versions.

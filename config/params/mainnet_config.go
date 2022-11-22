@@ -213,6 +213,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	CapellaForkEpoch:     math.MaxUint64,
 	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
+	EIP4844ForkVersion:   []byte{4, 0, 0, 0},
+	EIP4844ForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
