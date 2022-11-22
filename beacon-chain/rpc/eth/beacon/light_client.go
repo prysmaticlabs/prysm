@@ -180,6 +180,10 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 		}
 	}
 
+	if len(updates) == 0 {
+		return nil, status.Errorf(codes.NotFound, "No updates found")
+	}
+
 	result := ethpbv2.LightClientUpdatesByRangeResponse{
 		Updates: updates,
 	}
