@@ -7,7 +7,6 @@ import "proto/prysm/v1alpha1/node.proto";
 import "proto/prysm/v1alpha1/p2p_messages.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "proto/prysm/v1alpha1/attestation.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";

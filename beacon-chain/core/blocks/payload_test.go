@@ -7,12 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -203,6 +205,13 @@ func Test_IsMergeComplete(t *testing.T) {
 	}
 }
 
+func Test_IsMergeCompleteCapella(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateCapella(t, 1)
+	got, err := blocks.IsMergeTransitionComplete(st)
+	require.NoError(t, err)
+	require.Equal(t, got, true)
+}
+
 func Test_IsExecutionBlock(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -235,6 +244,16 @@ func Test_IsExecutionBlock(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func Test_IsExecutionBlockCapella(t *testing.T) {
+	blk := util.NewBeaconBlockCapella()
+	blk.Block.Body.ExecutionPayload = emptyPayloadCapella()
+	wrappedBlock, err := consensusblocks.NewBeaconBlock(blk.Block)
+	require.NoError(t, err)
+	got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
+	require.NoError(t, err)
+	require.Equal(t, true, got)
 }
 
 func Test_IsExecutionEnabled(t *testing.T) {
@@ -329,6 +348,15 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			}
 		})
 	}
+}
+func Test_IsExecutionEnabledCapella(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateCapella(t, 1)
+	blk := util.NewBeaconBlockCapella()
+	body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
+	require.NoError(t, err)
+	got, err := blocks.IsExecutionEnabled(st, body)
+	require.NoError(t, err)
+	require.Equal(t, true, got)
 }
 
 func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
@@ -583,6 +611,20 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 }
 
+func Test_ProcessPayloadCapella(t *testing.T) {
+	spb := &ethpb.BeaconStateCapella{}
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+	header, err := emptyPayloadHeaderCapella()
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(header))
+	payload := emptyPayloadCapella()
+	wrapped, err := consensusblocks.WrappedExecutionPayloadCapella(payload)
+	require.NoError(t, err)
+	_, err = blocks.ProcessPayload(st, wrapped)
+	require.NoError(t, err)
+}
+
 func Test_ProcessPayloadHeader(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
@@ -828,6 +870,22 @@ func emptyPayloadHeader() (interfaces.ExecutionData, error) {
 	})
 }
 
+func emptyPayloadHeaderCapella() (interfaces.ExecutionData, error) {
+	return consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       make([]byte, fieldparams.RootLength),
+		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:        make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:       make([]byte, fieldparams.RootLength),
+		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+		BlockHash:        make([]byte, fieldparams.RootLength),
+		TransactionsRoot: make([]byte, fieldparams.RootLength),
+		WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+		ExtraData:        make([]byte, 0),
+	})
+}
+
 func emptyPayload() *enginev1.ExecutionPayload {
 	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
@@ -839,6 +897,22 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+	}
+}
+
+func emptyPayloadCapella() *enginev1.ExecutionPayloadCapella {
+	return &enginev1.ExecutionPayloadCapella{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		ExtraData:     make([]byte, 0),
 	}
 }

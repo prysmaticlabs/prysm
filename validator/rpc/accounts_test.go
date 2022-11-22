@@ -187,7 +187,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	mockValidatorClient := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	mockValidatorClient := mock2.NewMockValidatorClient(ctrl)
 	mockNodeClient := mock2.NewMockNodeClient(ctrl)
 
 	mockValidatorClient.EXPECT().

@@ -158,3 +158,17 @@ message ForkChoiceHead {
   uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   bool execution_optimistic = 3;
 }
+
+message RandaoRequest {
+  bytes state_id = 1;
+  optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+}
+
+message RandaoResponse {
+  Randao data = 1;
+  bool execution_optimistic = 2;
+
+  message Randao {
+    bytes randao = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  }
+}

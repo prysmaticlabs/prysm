@@ -128,7 +128,7 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 		}
 	}
 	if outputYaml != "" {
-		if err := writeToOutputFile(outputJson, genesisState, yaml.Marshal); err != nil {
+		if err := writeToOutputFile(outputYaml, genesisState, yaml.Marshal); err != nil {
 			return err
 		}
 	}

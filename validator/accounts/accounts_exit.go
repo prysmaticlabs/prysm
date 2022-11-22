@@ -14,13 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
-	ValidatorClient  ethpb.BeaconNodeValidatorClient
+	ValidatorClient  iface.ValidatorClient
 	NodeClient       ethpb.NodeClient
 	Keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte

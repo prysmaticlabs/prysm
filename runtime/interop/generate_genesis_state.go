@@ -186,8 +186,10 @@ func createDepositData(privKey bls.SecretKey, pubKey bls.PublicKey) (*ethpb.Depo
 // address.
 //
 // The specification is as follows:
-//   withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
-//   withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
+//
+//	withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX_BYTE
+//	withdrawal_credentials[1:] == hash(withdrawal_pubkey)[1:]
+//
 // where withdrawal_credentials is of type bytes32.
 func withdrawalCredentialsHash(pubKey []byte) []byte {
 	h := hash.Hash(pubKey)
