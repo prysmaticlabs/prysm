@@ -285,7 +285,7 @@ message BeaconStateCapella {
 
   // Capella fields [11001-12000]
   uint64 next_withdrawal_index = 11001; // [New in Capella]
-  uint64 last_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
+  uint64 next_withdrawal_validator_index = 11002 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
 }
 
 // PowBlock is a definition from Bellatrix fork choice spec to represent a block with total difficulty in the PoW chain.

@@ -27,11 +27,14 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	bCfg := params.BeaconConfig().Copy()
 	altairForkEpoch := eth2types.Epoch(100)
 	BellatrixForkEpoch := eth2types.Epoch(200)
+	CapellaForkEpoch := eth2types.Epoch(300)
 
 	bCfg.AltairForkEpoch = altairForkEpoch
 	bCfg.BellatrixForkEpoch = BellatrixForkEpoch
+	bCfg.CapellaForkEpoch = CapellaForkEpoch
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = eth2types.Epoch(200)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.CapellaForkVersion)] = eth2types.Epoch(300)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Phase 0
@@ -49,4 +52,8 @@ func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	_, ok = pMessage.(*ethpb.SignedBeaconBlockBellatrix)
 	assert.Equal(t, true, ok)
 
+	// Capella Fork
+	pMessage = GossipTopicMappings(BlockSubnetTopicFormat, CapellaForkEpoch)
+	_, ok = pMessage.(*ethpb.SignedBeaconBlockCapella)
+	assert.Equal(t, true, ok)
 }

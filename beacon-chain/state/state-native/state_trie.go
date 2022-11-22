@@ -81,7 +81,7 @@ var capellaFields = append(
 	altairFields,
 	nativetypes.LatestExecutionPayloadHeaderCapella,
 	nativetypes.NextWithdrawalIndex,
-	nativetypes.LastWithdrawalValidatorIndex,
+	nativetypes.NextWithdrawalValidatorIndex,
 )
 
 const (
@@ -432,7 +432,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		nextSyncCommittee:                   st.NextSyncCommittee,
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		lastWithdrawalValidatorIndex:        st.LastWithdrawalValidatorIndex,
+		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -498,7 +498,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		slot:                         b.slot,
 		eth1DepositIndex:             b.eth1DepositIndex,
 		nextWithdrawalIndex:          b.nextWithdrawalIndex,
-		lastWithdrawalValidatorIndex: b.lastWithdrawalValidatorIndex,
+		nextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
@@ -831,8 +831,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
-	case nativetypes.LastWithdrawalValidatorIndex:
-		return ssz.Uint64Root(uint64(b.lastWithdrawalValidatorIndex)), nil
+	case nativetypes.NextWithdrawalValidatorIndex:
+		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

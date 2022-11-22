@@ -85,6 +85,13 @@ type SyncCommitteesResponseJson struct {
 	ExecutionOptimistic bool                         `json:"execution_optimistic"`
 }
 
+type RandaoResponseJson struct {
+	Data *struct {
+		Randao string `json:"randao" hex:"true"`
+	} `json:"data"`
+	ExecutionOptimistic bool `json:"execution_optimistic"`
+}
+
 type BlockHeadersResponseJson struct {
 	Data                []*BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
