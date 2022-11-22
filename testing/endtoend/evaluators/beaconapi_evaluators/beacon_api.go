@@ -126,26 +126,23 @@ var beaconPathsAndObjects = map[string]metadata{
 			"json": &apimiddleware.ProposerDutiesResponseJson{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedp, ok := prysmResp.(*apimiddleware.ProposerDutiesResponseJson)
-			if !ok {
-				return errors.New("failed to cast type")
-			}
 			castedl, ok := lhouseResp.(*apimiddleware.ProposerDutiesResponseJson)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
 			if castedl.Data[0].Slot == "0" {
-				// remove the first item from lighthouse data as it's from slot 0
+				// remove the first item from lighthouse data since lighthouse is returning a value despite no proposer
+				// there is no proposer on slot 0 so prysm don't return anything for slot 0
 				castedl.Data = castedl.Data[1:]
 			}
-			return compareJSONResponseObjects(castedp, castedl)
+			return compareJSONResponseObjects(prysmResp, castedl)
 		},
 	},
 	"/beacon/headers/{param1}": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, e types.Epoch) []string {
 			slot := uint64(0)
-			if uint64(e) > uint64(0) {
+			if e > 0 {
 				slot = (uint64(e) * uint64(params.BeaconConfig().SlotsPerEpoch)) - 1
 			}
 			return []string{fmt.Sprintf("%v", slot)}
@@ -297,10 +294,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-			return errors.Wrap(err, "lighthouse ssz error")
+			return errors.Wrap(err, "failed to unmarshal lighthouse ssz")
 		}
 		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-			return errors.Wrap(err, "prysm ssz error")
+			return errors.Wrap(err, "failed to unmarshal rysm ssz")
 		}
 		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
 			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
