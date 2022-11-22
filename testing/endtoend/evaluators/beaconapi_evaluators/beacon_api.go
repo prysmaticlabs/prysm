@@ -290,7 +290,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	if finalizedEpoch < 8 {
+	if finalizedEpoch < helpers.AltairE2EForkEpoch + 2 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
@@ -304,7 +304,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockP,
 				blockL)
 		}
-	} else if finalizedEpoch > 8 && finalizedEpoch < 10 {
+	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch + 2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockAltair{}
 		blockL := &ethpb.SignedBeaconBlockAltair{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
@@ -360,7 +360,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSO
 		beaconNodeIdx,
 		respJSONPrysm,
 	); err != nil {
-		return errors.Wrap(err, "prysm json error")
+		return errors.Wrap(err, "could not perform GET request for Prysm JSON")
 	}
 
 	if err := doMiddlewareJSONGetRequest(
