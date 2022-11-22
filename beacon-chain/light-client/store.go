@@ -110,18 +110,27 @@ func (s *Store) processUpdate(update *Update, currentSlot uint64, genesisValidat
 		return err
 	}
 	syncCommiteeBits := update.GetSyncAggregate().SyncCommitteeBits
+
+	// Update the best update in case we have to force-update to it if the timeout elapses
 	if s.bestValidUpdate == nil || update.IsBetterUpdate(s.bestValidUpdate) {
 		s.bestValidUpdate = update
 	}
+
+	// Track the maximum number of active participants in the committee signature
 	s.currentMaxActiveParticipants = uint64(math.Max(float64(s.currentMaxActiveParticipants),
 		float64(syncCommiteeBits.Count())))
+
+	// Update the optimistic header
 	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.optimisticHeader.Slot {
 		s.optimisticHeader = update.GetAttestedHeader()
 	}
+
+	// Update finalized header
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.IsSyncCommiteeUpdate() &&
 		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
 		Slot) == computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 || updateHasFinalizedNextSyncCommittee {
+		// Normal update throught 2/3 threshold
 		if err := s.ApplyUpdate(update); err != nil {
 			return err
 		}
