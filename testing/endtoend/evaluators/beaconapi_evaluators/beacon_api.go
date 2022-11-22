@@ -307,7 +307,7 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 				blockP,
 				blockL)
 		}
-	} else if finalizedEpoch > 8 && finalizedEpoch < 10 {
+	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch + 2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockAltair{}
 		blockL := &ethpb.SignedBeaconBlockAltair{}
 		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
