@@ -11,6 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
@@ -191,7 +196,23 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
 	}
 	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
+
+	st, _, err := interop.GenerateGenesisStateBellatrix(ctx, uint64(time.Now().Unix()), params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		return err
+	}
+	stb, err := st.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	stPath := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis-%d.ssz", node.index))
+
+	if err := file.WriteFile(stPath, stb); err != nil {
+		return err
+	}
+
 	args := []string{
+		fmt.Sprintf("--%s=%s", genesis.StatePath, stPath),
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),

@@ -22,6 +22,7 @@ go_library(
     deps = [
         "//cmd:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//cmd/beacon-chain/sync/genesis:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
