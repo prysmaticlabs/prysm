@@ -312,7 +312,7 @@ type ForkChoiceNodeExtraDataJson struct {
 
 type ForkChoiceResponseJson struct {
 	JustifiedCheckpoint *CheckpointJson                  `json:"justified_checkpoint"`
-	FinalizedEpoch      *CheckpointJson                  `json:"finalized_checkpoint"`
+	FinalizedCheckpoint *CheckpointJson                  `json:"finalized_checkpoint"`
 	ForkChoiceNodes     []*ForkChoiceNodeResponseJson    `json:"fork_choice_nodes"`
 	ExtraData           *ForkChoiceResponseExtraDataJson `json:"extra_data"`
 }
@@ -862,15 +862,15 @@ type ForkChoiceNodeJson struct {
 }
 
 type ForkChoiceDumpJson struct {
-	JustifiedEpoch                string                `json:"justified_epoch"`
-	FinalizedEpoch                string                `json:"finalized_epoch"`
+	JustifiedCheckpoint           *CheckpointJson       `json:"justified_checkpoint"`
+	FinalizedCheckpoint           *CheckpointJson       `json:"finalized_checkpoint"`
 	BestJustifiedCheckpoint       *CheckpointJson       `json:"best_justified_checkpoint"`
 	UnrealizedJustifiedCheckpoint *CheckpointJson       `json:"unrealized_justified_checkpoint"`
 	UnrealizedFinalizedCheckpoint *CheckpointJson       `json:"unrealized_finalized_checkpoint"`
 	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
 	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string                `json:"head_root" hex:"true"`
-	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"forkchoice_nodes"`
+	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"fork_choice_nodes"`
 }
 
 //----------------

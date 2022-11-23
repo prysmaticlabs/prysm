@@ -701,9 +701,9 @@ func prepareForkChoiceResponse(response interface{}) (apimiddleware.RunDefault, 
 		}
 	}
 	forkChoice := &ForkChoiceResponseJson{
-		JustifiedEpoch:  dump.JustifiedEpoch,
-		FinalizedEpoch:  dump.FinalizedEpoch,
-		ForkChoiceNodes: nodes,
+		JustifiedCheckpoint: dump.JustifiedCheckpoint,
+		FinalizedCheckpoint: dump.FinalizedCheckpoint,
+		ForkChoiceNodes:     nodes,
 		ExtraData: &ForkChoiceResponseExtraDataJson{
 			BestJustifiedCheckpoint:       dump.BestJustifiedCheckpoint,
 			UnrealizedJustifiedCheckpoint: dump.UnrealizedJustifiedCheckpoint,
