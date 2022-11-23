@@ -9,9 +9,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/cmd/flags"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -30,6 +37,7 @@ var (
 		OutputSSZ       string
 		OutputJSON      string
 		OutputYaml      string
+		ForkName        string
 	}{}
 	log           = logrus.WithField("prefix", "genesis")
 	outputSSZFlag = &cli.StringFlag{
@@ -82,12 +90,28 @@ var (
 				Destination: &generateGenesisStateFlags.GenesisTime,
 				Usage:       "Unix timestamp seconds used as the genesis time in the genesis state. If unset, defaults to now()",
 			},
+			flags.EnumValue{
+				Name:        "fork",
+				Usage:       fmt.Sprintf("Name of the BeaconState schema to use in output encoding [%s]", strings.Join(versionNames(), ",")),
+				Enum:        versionNames(),
+				Value:       versionNames()[0],
+				Destination: &generateGenesisStateFlags.ForkName,
+			}.GenericFlag(),
 			outputSSZFlag,
 			outputYamlFlag,
 			outputJsonFlag,
 		},
 	}
 )
+
+func versionNames() []string {
+	enum := version.All()
+	names := make([]string, len(enum))
+	for i := range enum {
+		names[i] = version.String(enum[i])
+	}
+	return names
+}
 
 // Represents a json object of hex string and uint64 values for
 // validators on Ethereum. This file can be generated using the official staking-deposit-cli.
@@ -122,30 +146,74 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not generate genesis state: %v", err)
 	}
+	st, err := upgradeStateToForkName(cliCtx.Context, genesisState, generateGenesisStateFlags.ForkName)
+	if err != nil {
+		return err
+	}
+
 	if outputJson != "" {
-		if err := writeToOutputFile(outputJson, genesisState, json.Marshal); err != nil {
+		if err := writeToOutputFile(outputJson, st, json.Marshal); err != nil {
 			return err
 		}
 	}
 	if outputYaml != "" {
-		if err := writeToOutputFile(outputYaml, genesisState, yaml.Marshal); err != nil {
+		if err := writeToOutputFile(outputYaml, st, yaml.Marshal); err != nil {
 			return err
 		}
 	}
 	if outputSSZ != "" {
+		type MinimumSSZMarshal interface {
+			MarshalSSZ() ([]byte, error)
+		}
 		marshalFn := func(o interface{}) ([]byte, error) {
-			marshaler, ok := o.(fastssz.Marshaler)
+			marshaler, ok := o.(MinimumSSZMarshal)
 			if !ok {
 				return nil, errors.New("not a marshaler")
 			}
 			return marshaler.MarshalSSZ()
 		}
-		if err := writeToOutputFile(outputSSZ, genesisState, marshalFn); err != nil {
+		if err := writeToOutputFile(outputSSZ, st, marshalFn); err != nil {
 			return err
 		}
 	}
 	log.Info("Command completed")
 	return nil
+}
+
+func upgradeStateToForkName(ctx context.Context, pbst *ethpb.BeaconState, name string) (state.BeaconState, error) {
+	st, err := state_native.InitializeFromProtoUnsafePhase0(pbst)
+	if err != nil {
+		return nil, err
+	}
+	if name == "" || name == "phase0" {
+		return st, nil
+	}
+
+	st, err = altair.UpgradeToAltair(ctx, st)
+	if err != nil {
+		return nil, err
+	}
+	if name == "altair" {
+		return st, nil
+	}
+
+	st, err = execution.UpgradeToBellatrix(st)
+	if err != nil {
+		return nil, err
+	}
+	if name == "bellatrix" {
+		return st, nil
+	}
+
+	st, err = capella.UpgradeToCapella(st)
+	if err != nil {
+		return nil, err
+	}
+	if name == "capella" {
+		return st, nil
+	}
+
+	return nil, fmt.Errorf("unrecognized fork name '%s'", name)
 }
 
 func setGlobalParams() error {
