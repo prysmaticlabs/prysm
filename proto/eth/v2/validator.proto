@@ -131,3 +131,17 @@ message SignedContributionAndProof {
   // Signature of the aggregator that produced `message`.
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
+
+message GetLivenessRequest {
+  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
+  repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+}
+
+message GetLivenessResponse {
+  repeated Liveness data = 1;
+
+  message Liveness {
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+    bool is_live = 2;
+  }
+}

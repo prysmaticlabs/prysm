@@ -62,7 +62,7 @@ func TestWrapAttestationArray(t *testing.T) {
 func TestWrapValidatorIndicesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &DutiesRequestJson{},
+			PostRequest: &ValidatorIndicesJson{},
 		}
 		unwrappedIndices := []string{"1", "2"}
 		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
@@ -76,7 +76,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 		runDefault, errJson := wrapValidatorIndicesArray(endpoint, nil, request)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedIndices := &DutiesRequestJson{}
+		wrappedIndices := &ValidatorIndicesJson{}
 		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
 		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
 		assert.Equal(t, "1", wrappedIndices.Index[0])
@@ -85,7 +85,7 @@ func TestWrapValidatorIndicesArray(t *testing.T) {
 
 	t.Run("invalid_body", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &DutiesRequestJson{},
+			PostRequest: &ValidatorIndicesJson{},
 		}
 		var body bytes.Buffer
 		_, err := body.Write([]byte("invalid"))
