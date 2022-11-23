@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 )
 
@@ -27,5 +26,4 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	V1Alpha1Server         *v1alpha1validator.Server
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
-	ReplayerBuilder        stategen.ReplayerBuilder
 }

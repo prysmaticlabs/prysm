@@ -37,7 +37,7 @@ import (
 )
 
 var errInvalidValIndex = errors.New("invalid validator index")
-var errParticipation = status.Errorf(codes.Internal, "Could not obtain epoch participation")
+var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
@@ -990,16 +990,19 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	}
 	currEpoch := slots.ToEpoch(headSt.Slot())
 	if req.Epoch > currEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested epoch cannot be in the future")
+		return nil, status.Error(codes.InvalidArgument, "Requested epoch cannot be in the future")
 	}
 
+	var st state.BeaconState
 	if req.Epoch == currEpoch {
-		participation, err = headSt.CurrentEpochParticipation()
+		st = headSt
+		participation, err = st.CurrentEpochParticipation()
 		if err != nil {
 			return nil, errParticipation
 		}
 	} else if req.Epoch == currEpoch-1 {
-		participation, err = headSt.PreviousEpochParticipation()
+		st = headSt
+		participation, err = st.PreviousEpochParticipation()
 		if err != nil {
 			return nil, errParticipation
 		}
@@ -1008,7 +1011,7 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get requested epoch's end slot")
 		}
-		st, err := vs.StateFetcher.StateBySlot(ctx, epochEnd)
+		st, err = vs.StateFetcher.StateBySlot(ctx, epochEnd)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get slot for requested epoch")
 		}
@@ -1022,6 +1025,13 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
 	}
 	for i, vi := range req.Index {
+		_, err = st.ValidatorAtIndex(vi)
+		if err != nil {
+			if _, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
+				return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
+			}
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
 			Index:  vi,
 			IsLive: participation[vi] != 0,

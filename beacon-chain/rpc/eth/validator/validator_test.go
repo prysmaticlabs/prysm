@@ -3876,10 +3876,14 @@ func TestGetLiveness(t *testing.T) {
 	// Epoch 2 - validator with index 0 is live
 	oldSt, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
+	// Add two validators
+	require.NoError(t, oldSt.SetValidators([]*ethpbalpha.Validator{{}, {}}))
 	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
 	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
 	headSt, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
+	// Add two validators
+	require.NoError(t, headSt.SetValidators([]*ethpbalpha.Validator{{}, {}}))
 	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 	require.NoError(t, headSt.AppendPreviousParticipationBits(0))
 	require.NoError(t, headSt.AppendPreviousParticipationBits(1))
@@ -3930,5 +3934,12 @@ func TestGetLiveness(t *testing.T) {
 			Index: []types.ValidatorIndex{0, 1},
 		})
 		require.ErrorContains(t, "Requested epoch cannot be in the future", err)
+	})
+	t.Run("unknown validator index", func(t *testing.T) {
+		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
+			Epoch: 0,
+			Index: []types.ValidatorIndex{0, 1, 2},
+		})
+		require.ErrorContains(t, "Validator index 2 is invalid", err)
 	})
 }
