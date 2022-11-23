@@ -120,7 +120,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
-		ev.ValidatorsHaveExited,
+		ev.DepositedValidatorsAreActive,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,

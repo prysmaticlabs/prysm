@@ -194,6 +194,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		"--enable-private-discovery",
 		"--debug-level=debug",
 		"--merge",
+		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 	if node.config.UseFixedPeerIDs {
 		flagVal := strings.Join(node.config.PeerIDs, ",")
