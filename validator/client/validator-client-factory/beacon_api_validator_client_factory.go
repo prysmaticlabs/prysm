@@ -1,5 +1,4 @@
-//go:build use_beacon_api
-// +build use_beacon_api
+//go:build use_beacon_api && !use_beacon_api_grpc_fallback
 
 package validator_client_factory
 
