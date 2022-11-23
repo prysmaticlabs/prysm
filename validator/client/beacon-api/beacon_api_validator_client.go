@@ -40,7 +40,7 @@ func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.Duti
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetDuties is not implemented")
+	panic("beaconApiValidatorClient.GetDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
@@ -49,7 +49,7 @@ func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *et
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.CheckDoppelGanger is not implemented")
+	panic("beaconApiValidatorClient.CheckDoppelGanger is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
@@ -58,7 +58,7 @@ func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.Dom
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.DomainData is not implemented")
+	panic("beaconApiValidatorClient.DomainData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
@@ -67,7 +67,7 @@ func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *e
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetAttestationData is not implemented")
+	panic("beaconApiValidatorClient.GetAttestationData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -76,7 +76,7 @@ func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetBeaconBlock is not implemented")
+	panic("beaconApiValidatorClient.GetBeaconBlock is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
@@ -85,7 +85,7 @@ func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, 
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetFeeRecipientByPubKey is not implemented")
+	panic("beaconApiValidatorClient.GetFeeRecipientByPubKey is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
@@ -94,7 +94,7 @@ func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Cont
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetSyncCommitteeContribution is not implemented")
+	panic("beaconApiValidatorClient.GetSyncCommitteeContribution is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetSyncMessageBlockRoot(ctx context.Context, in *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
@@ -103,7 +103,7 @@ func (c *beaconApiValidatorClient) GetSyncMessageBlockRoot(ctx context.Context, 
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetSyncMessageBlockRoot is not implemented")
+	panic("beaconApiValidatorClient.GetSyncMessageBlockRoot is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
@@ -112,7 +112,7 @@ func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context,
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetSyncSubcommitteeIndex is not implemented")
+	panic("beaconApiValidatorClient.GetSyncSubcommitteeIndex is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
@@ -121,7 +121,7 @@ func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, 
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.MultipleValidatorStatus is not implemented")
+	panic("beaconApiValidatorClient.MultipleValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
@@ -130,7 +130,7 @@ func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.PrepareBeaconProposer is not implemented")
+	panic("beaconApiValidatorClient.PrepareBeaconProposer is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
@@ -139,7 +139,7 @@ func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *e
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeAttestation is not implemented")
+	panic("beaconApiValidatorClient.ProposeAttestation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
@@ -148,7 +148,7 @@ func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *e
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeBeaconBlock is not implemented")
+	panic("beaconApiValidatorClient.ProposeBeaconBlock is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
@@ -157,7 +157,7 @@ func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.Si
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeExit is not implemented")
+	panic("beaconApiValidatorClient.ProposeExit is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
@@ -166,7 +166,7 @@ func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *e
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.StreamBlocksAltair is not implemented")
+	panic("beaconApiValidatorClient.StreamBlocksAltair is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
@@ -175,7 +175,7 @@ func (c *beaconApiValidatorClient) StreamDuties(ctx context.Context, in *ethpb.D
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.StreamDuties is not implemented")
+	panic("beaconApiValidatorClient.StreamDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
@@ -184,7 +184,7 @@ func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Con
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitAggregateSelectionProof is not implemented")
+	panic("beaconApiValidatorClient.SubmitAggregateSelectionProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
@@ -193,7 +193,7 @@ func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx conte
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitSignedAggregateSelectionProof is not implemented")
+	panic("beaconApiValidatorClient.SubmitSignedAggregateSelectionProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
@@ -202,7 +202,7 @@ func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitSignedContributionAndProof is not implemented")
+	panic("beaconApiValidatorClient.SubmitSignedContributionAndProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
@@ -211,7 +211,7 @@ func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *et
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitSyncMessage is not implemented")
+	panic("beaconApiValidatorClient.SubmitSyncMessage is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
@@ -220,7 +220,7 @@ func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Cont
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitValidatorRegistrations is not implemented")
+	panic("beaconApiValidatorClient.SubmitValidatorRegistrations is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest) (*empty.Empty, error) {
@@ -229,7 +229,7 @@ func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubscribeCommitteeSubnets is not implemented")
+	panic("beaconApiValidatorClient.SubscribeCommitteeSubnets is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
@@ -238,7 +238,7 @@ func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.ValidatorIndex is not implemented")
+	panic("beaconApiValidatorClient.ValidatorIndex is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
@@ -247,7 +247,7 @@ func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethp
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.ValidatorStatus is not implemented")
+	panic("beaconApiValidatorClient.ValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
@@ -256,7 +256,7 @@ func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *et
 	}
 
 	// TODO: Implement me
-	panic("beaconApiValidatorClient.WaitForActivation is not implemented")
+	panic("beaconApiValidatorClient.WaitForActivation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
 // Deprecated: Do not use.

@@ -6,7 +6,6 @@ go_library(
         "flags.go",
         "interop.go",
     ] + select({
-        "//validator/client/validator-client-factory:beacon_api_grpc_fallback_usage": ["beacon_api_flags.go"],
         "//validator/client/validator-client-factory:beacon_api_usage": ["beacon_api_flags.go"],
         "//conditions:default": ["grpc_flags.go"],
     }),

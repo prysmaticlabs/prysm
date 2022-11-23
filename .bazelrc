@@ -234,11 +234,5 @@ build --define gotags=bazel
 # Build the binary with Beacon API calls for the validator
 build --flag_alias=use_beacon_api=//validator/client/validator-client-factory:use_beacon_api
 
-# When use_beacon_api_grpc_fallback is turned on, the beacon API will fallback to gRPC instead of panicking when methods haven't been implemented yet
-build --flag_alias=use_beacon_api_grpc_fallback=//validator/client/validator-client-factory:use_beacon_api_grpc_fallback
-
 build:beacon_api --use_beacon_api
 build:beacon_api --define=gotags=use_beacon_api
-
-build:beacon_api_grpc_fallback --use_beacon_api_grpc_fallback
-build:beacon_api_grpc_fallback --define=gotags=use_beacon_api,use_beacon_api_grpc_fallback

@@ -6,11 +6,6 @@ bool_flag(
     build_setting_default = False,
 )
 
-bool_flag(
-    name = "use_beacon_api_grpc_fallback",
-    build_setting_default = False,
-)
-
 config_setting(
     name = "beacon_api_usage",
     flag_values = {
@@ -18,17 +13,9 @@ config_setting(
     },
 )
 
-config_setting(
-    name = "beacon_api_grpc_fallback_usage",
-    flag_values = {
-        ":use_beacon_api_grpc_fallback": "true",
-    },
-)
-
 go_library(
     name = "go_default_library",
     srcs = select({
-        ":beacon_api_grpc_fallback_usage": ["beacon_api_validator_client_with_fallback_factory.go"],
         ":beacon_api_usage": ["beacon_api_validator_client_factory.go"],
         "//conditions:default": ["grpc_validator_client_factory.go"],
     }),
@@ -38,10 +25,6 @@ go_library(
         "//validator/client/iface:go_default_library",
         "//validator/helpers:go_default_library",
     ] + select({
-        ":beacon_api_grpc_fallback_usage": [
-            "//validator/client/beacon-api:go_default_library",
-            "//validator/client/grpc-api:go_default_library",
-        ],
         ":beacon_api_usage": ["//validator/client/beacon-api:go_default_library"],
         "//conditions:default": ["//validator/client/grpc-api:go_default_library"],
     }),
