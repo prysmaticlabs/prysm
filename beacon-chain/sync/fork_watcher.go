@@ -60,7 +60,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 			}
 			s.registerSubscribers(nextEpoch, digest)
 			s.registerRPCHandlersAltair()
-		case params.BeaconConfig().BellatrixForkEpoch:
+		case params.BeaconConfig().BellatrixForkEpoch, params.BeaconConfig().CapellaForkEpoch:
 			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve fork digest")
