@@ -304,7 +304,7 @@ service BeaconValidator {
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getLiveness
   rpc GetLiveness(v2.GetLivenessRequest) returns (v2.GetLivenessResponse) {
     option (google.api.http) = {
-      post: "/internal/eth/v1/validator/liveness"
+      post: "/internal/eth/v1/validator/liveness/{epoch}"
       body: "*"
     };
   }

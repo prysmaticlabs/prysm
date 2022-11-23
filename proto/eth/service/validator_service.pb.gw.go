@@ -845,6 +845,24 @@ func request_BeaconValidator_GetLiveness_0(ctx context.Context, marshaler runtim
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["epoch"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "epoch")
+	}
+
+	epoch, err := runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
+	}
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
+
 	msg, err := client.GetLiveness(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
@@ -861,6 +879,24 @@ func local_request_BeaconValidator_GetLiveness_0(ctx context.Context, marshaler 
 	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["epoch"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "epoch")
+	}
+
+	epoch, err := runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
+	}
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := server.GetLiveness(ctx, &protoReq)
 	return msg, metadata, err
@@ -1681,7 +1717,7 @@ var (
 
 	pattern_BeaconValidator_SubmitContributionAndProofs_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "contribution_and_proofs"}, ""))
 
-	pattern_BeaconValidator_GetLiveness_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "validator", "liveness"}, ""))
+	pattern_BeaconValidator_GetLiveness_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "validator", "liveness", "epoch"}, ""))
 )
 
 var (

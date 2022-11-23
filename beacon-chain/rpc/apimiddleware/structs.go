@@ -213,7 +213,7 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type DutiesRequestJson struct {
+type ValidatorIndicesJson struct {
 	Index []string `json:"index"`
 }
 
@@ -300,10 +300,6 @@ type ForkchoiceResponse struct {
 	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string                `json:"head_root" hex:"true"`
 	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"forkchoice_nodes"`
-}
-
-type LivenessRequestJson struct {
-	Indices []string `json:"indices"`
 }
 
 type LivenessResponseJson struct {

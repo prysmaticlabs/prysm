@@ -1019,9 +1019,9 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	}
 
 	resp := &ethpbv2.GetLivenessResponse{
-		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Indices)),
+		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
 	}
-	for i, vi := range req.Indices {
+	for i, vi := range req.Index {
 		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
 			Index:  vi,
 			IsLive: participation[vi] != 0,

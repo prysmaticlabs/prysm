@@ -3893,8 +3893,8 @@ func TestGetLiveness(t *testing.T) {
 
 	t.Run("current epoch", func(t *testing.T) {
 		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch:   0,
-			Indices: []types.ValidatorIndex{0, 1},
+			Epoch: 0,
+			Index: []types.ValidatorIndex{0, 1},
 		})
 		require.NoError(t, err)
 		data0 := resp.Data[0]
@@ -3904,8 +3904,8 @@ func TestGetLiveness(t *testing.T) {
 	})
 	t.Run("previous epoch", func(t *testing.T) {
 		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch:   1,
-			Indices: []types.ValidatorIndex{0, 1},
+			Epoch: 1,
+			Index: []types.ValidatorIndex{0, 1},
 		})
 		require.NoError(t, err)
 		data0 := resp.Data[0]
@@ -3915,8 +3915,8 @@ func TestGetLiveness(t *testing.T) {
 	})
 	t.Run("old epoch", func(t *testing.T) {
 		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch:   2,
-			Indices: []types.ValidatorIndex{0, 1},
+			Epoch: 2,
+			Index: []types.ValidatorIndex{0, 1},
 		})
 		require.NoError(t, err)
 		data0 := resp.Data[0]
@@ -3926,8 +3926,8 @@ func TestGetLiveness(t *testing.T) {
 	})
 	t.Run("future epoch", func(t *testing.T) {
 		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch:   3,
-			Indices: []types.ValidatorIndex{0, 1},
+			Epoch: 3,
+			Index: []types.ValidatorIndex{0, 1},
 		})
 		require.ErrorContains(t, "Requested epoch cannot be in the future", err)
 	})
