@@ -3876,14 +3876,10 @@ func TestGetLiveness(t *testing.T) {
 	// Epoch 2 - validator with index 0 is live
 	oldSt, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
-	// Add two validators
-	require.NoError(t, oldSt.SetValidators([]*ethpbalpha.Validator{{}, {}}))
 	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
 	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
 	headSt, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
-	// Add two validators
-	require.NoError(t, headSt.SetValidators([]*ethpbalpha.Validator{{}, {}}))
 	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 	require.NoError(t, headSt.AppendPreviousParticipationBits(0))
 	require.NoError(t, headSt.AppendPreviousParticipationBits(1))

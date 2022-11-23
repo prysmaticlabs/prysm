@@ -1025,12 +1025,8 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
 	}
 	for i, vi := range req.Index {
-		_, err = st.ValidatorAtIndex(vi)
-		if err != nil {
-			if _, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-				return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
-			}
-			return nil, status.Error(codes.Internal, err.Error())
+		if vi >= types.ValidatorIndex(len(participation)) {
+			return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
 		}
 		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
 			Index:  vi,
