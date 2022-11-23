@@ -27,4 +27,5 @@ const (
 	SyncAggregateSyncCommitteeBytesLength = 64            // SyncAggregateSyncCommitteeBytesLength defines the length of sync committee bytes in a sync aggregate.
 	MaxWithdrawalsPerPayload              = 16            // MaxWithdrawalsPerPayloadLength defines the maximum number of withdrawals that can be included in a payload.
 	WithdrawalQueueLimit                  = 1099511627776 // WithdrawalQueueLimit defines the maximum number of withdrawals queued in the state.
+	ExecutionAddressLength                = 20            // ExecutionAddressLength defines the length of an execution layer address.
 )
