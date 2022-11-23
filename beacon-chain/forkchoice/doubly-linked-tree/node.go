@@ -150,6 +150,11 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		ExecutionBlockHash:       n.payloadHash[:],
 		Timestamp:                n.timestamp,
 	}
+	if n.optimistic {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_OPTIMISTIC
+	} else {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_VALID
+	}
 
 	nodes = append(nodes, thisNode)
 	var err error
