@@ -14,5 +14,5 @@ func TestMainnet_Capella_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Capella)
+	forkchoice.Run(t, "mainnet", version.Capella, "capella")
 }

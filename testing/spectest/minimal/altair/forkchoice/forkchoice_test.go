@@ -14,5 +14,5 @@ func TestMinimal_Altair_Forkchoice(t *testing.T) {
 		EnableDefensivePull: false,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.Altair)
+	forkchoice.Run(t, "minimal", version.Altair, "altair")
 }

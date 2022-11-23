@@ -14,5 +14,5 @@ func TestMainnet_EIP4844_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Capella)
+	forkchoice.Run(t, "mainnet", version.Capella, "eip4844")
 }

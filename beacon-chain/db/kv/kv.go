@@ -128,6 +128,8 @@ var Buckets = [][]byte{
 
 	feeRecipientBucket,
 	registrationBucket,
+
+	blobsBucket,
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory

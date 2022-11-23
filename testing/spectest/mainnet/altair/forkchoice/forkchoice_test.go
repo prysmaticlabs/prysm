@@ -14,5 +14,5 @@ func TestMainnet_Altair_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Altair)
+	forkchoice.Run(t, "mainnet", version.Altair, "altair")
 }

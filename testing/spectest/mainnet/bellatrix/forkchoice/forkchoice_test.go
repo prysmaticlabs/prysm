@@ -14,5 +14,5 @@ func TestMainnet_Bellatrix_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Bellatrix)
+	forkchoice.Run(t, "mainnet", version.Bellatrix, "bellatrix")
 }

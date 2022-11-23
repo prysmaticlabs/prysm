@@ -24,21 +24,21 @@ func init() {
 }
 
 // Run executes "forkchoice"  and "sync" test.
-func Run(t *testing.T, config string, fork int) {
-	runTest(t, config, fork, "fork_choice")
-	runTest(t, config, fork, "sync")
+func Run(t *testing.T, config string, fork int, folderName string) {
+	runTest(t, config, fork, "fork_choice", folderName)
+	runTest(t, config, fork, "sync", folderName)
 }
 
-func runTest(t *testing.T, config string, fork int, basePath string) {
+func runTest(t *testing.T, config string, fork int, basePath, folderName string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
+	testFolders, _ := utils.TestFolders(t, config, folderName, basePath)
 	if testFolders == nil {
 		return
 	}
 
 	for _, folder := range testFolders {
 		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
-		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, folderName, folderPath)
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
