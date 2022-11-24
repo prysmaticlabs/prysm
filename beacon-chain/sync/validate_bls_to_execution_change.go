@@ -5,8 +5,11 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -39,8 +42,21 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	if s.cfg.blsToExecPool.ValidatorExists(blsChange.Message.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
 	}
+	st, err := s.cfg.chain.HeadState(ctx)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
 
+	epoch := slots.ToEpoch(st.Slot())
+	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := signing.VerifySigningRoot(blsChange.Message, blsChange.Message.FromBlsPubkey, blsChange.Signature, domain); err != nil {
+		return pubsub.ValidationIgnore, signing.ErrSigFailedToVerify
+	}
 	// TODO(Potuz): BLSChange Validation
+	// TODO(Nishant): Add to batch gossip sig verification
 
 	msg.ValidatorData = blsChange // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil
