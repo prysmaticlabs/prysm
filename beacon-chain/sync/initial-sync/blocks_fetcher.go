@@ -362,6 +362,34 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
+func (f *blocksFetcher) requestBlockAndSidecarByRoot(
+	ctx context.Context,
+	req *p2pTypes.BeaconBlockByRootsReq,
+	pid peer.ID,
+) ([]*p2ppb.SignedBeaconBlockAndBlobsSidecar, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	l := f.peerLock(pid)
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"numRoots": len(*req),
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting blocks (by roots)")
+	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
+		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
+			return nil, err
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(len(*req)))
+	l.Unlock()
+
+	return prysmsync.SendBlocksAndSidecarsByRootRequest(ctx, f.chain, f.p2p, pid, req, nil)
+}
+
 // waitForBandwidth blocks up until peer's bandwidth is restored.
 func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 	log.WithField("peer", pid).Debug("Slowing down for rate limit")

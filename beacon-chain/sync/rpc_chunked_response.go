@@ -100,6 +100,38 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 	return err
 }
 
+func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.SignedBeaconBlockAndBlobsSidecar, error) {
+	var (
+		code   uint8
+		errMsg string
+		err    error
+	)
+	if isFirstChunk {
+		code, errMsg, err = ReadStatusCode(stream, p2p.Encoding())
+	} else {
+		SetStreamReadDeadline(stream, respTimeout)
+		code, errMsg, err = readStatusCodeNoDeadline(stream, p2p.Encoding())
+	}
+	if err != nil {
+		return nil, err
+	}
+	if code != 0 {
+		return nil, errors.New(errMsg)
+	}
+	// No-op for now with the rpc context.
+	rpcCtx, err := readContextFromStream(stream, chain)
+	if err != nil {
+		return nil, err
+	}
+	// blobs sidecars use v1
+	if len(rpcCtx) != 0 {
+		return nil, errors.New("unexpected fork digest in stream")
+	}
+	b := new(ethpb.SignedBeaconBlockAndBlobsSidecar)
+	err = p2p.Encoding().DecodeWithMaxLength(stream, b)
+	return b, err
+}
+
 func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.BlobsSidecar, error) {
 	var (
 		code   uint8

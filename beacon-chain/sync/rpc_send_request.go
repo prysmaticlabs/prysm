@@ -23,6 +23,8 @@ var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
 // blocks even before all blocks are ready.
 type BeaconBlockProcessor func(block interfaces.SignedBeaconBlock) error
 
+type BeaconBlockAndSidecarProcessor func(blockAndSidecar *pb.SignedBeaconBlockAndBlobsSidecar) error
+
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ForkFetcher, p2pProvider p2p.SenderEncoder, pid peer.ID,
@@ -128,4 +130,47 @@ func SendBeaconBlocksByRootRequest(
 		}
 	}
 	return blocks, nil
+}
+
+func SendBlocksAndSidecarsByRootRequest(
+	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	req *p2ptypes.BeaconBlockByRootsReq, processor BeaconBlockAndSidecarProcessor,
+) ([]*pb.SignedBeaconBlockAndBlobsSidecar, error) {
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlockAndBlobsSidecarByRootName, slots.ToEpoch(chain.CurrentSlot()))
+	if err != nil {
+		return nil, err
+	}
+	stream, err := p2pProvider.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeStream(stream, log)
+
+	blkAndSidecars := make([]*pb.SignedBeaconBlockAndBlobsSidecar, 0, len(*req))
+	process := func(b *pb.SignedBeaconBlockAndBlobsSidecar) error {
+		blkAndSidecars = append(blkAndSidecars, b)
+		if processor != nil {
+			return processor(b)
+		}
+		return nil
+	}
+	for i := 0; i < len(*req); i++ {
+		// Exit if peer sends more than max request blocks.
+		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
+			break
+		}
+		isFirstChunk := i == 0
+		blkAndSidecar, err := ReadChunkedBlockAndBlobsSidecar(stream, chain, p2pProvider, isFirstChunk)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if err := process(blkAndSidecar); err != nil {
+			return nil, err
+		}
+	}
+	return blkAndSidecars, nil
 }

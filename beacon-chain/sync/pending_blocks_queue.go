@@ -257,10 +257,18 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
-		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
-			tracing.AnnotateError(span, err)
-			log.WithError(err).Debug("Could not send recent block request")
+		if slots.ToEpoch(s.cfg.chain.CurrentSlot()) >= params.BeaconConfig().CapellaForkEpoch {
+			if err := s.sendBlocksAndSidecarsRequest(ctx, &req, pid); err != nil {
+				tracing.AnnotateError(span, err)
+				log.WithError(err).Debug("Could not send recent block request")
+			}
+		} else {
+			if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
+				tracing.AnnotateError(span, err)
+				log.WithError(err).Debug("Could not send recent block request")
+			}
 		}
+
 		newRoots := make([][32]byte, 0, len(roots))
 		s.pendingQueueLock.RLock()
 		for _, rt := range roots {
