@@ -10,10 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -32,14 +34,13 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			FromBlsPubkey:      pubkey,
 		}
 
-		pubkeyChunks := [][32]byte{bytesutil.ToBytes32(pubkey[:32]), bytesutil.ToBytes32(pubkey[32:])}
-		digest := make([][32]byte, 1)
-		htr.VectorizedSha256(pubkeyChunks, digest)
-		digest[0][0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 		registry := []*ethpb.Validator{
 			{
-				WithdrawalCredentials: digest[0][:],
+				WithdrawalCredentials: digest[:],
 			},
 		}
 		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -80,14 +81,13 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			FromBlsPubkey:      pubkey,
 		}
 
-		pubkeyChunks := [][32]byte{bytesutil.ToBytes32(pubkey[:32]), bytesutil.ToBytes32(pubkey[32:])}
-		digest := make([][32]byte, 1)
-		htr.VectorizedSha256(pubkeyChunks, digest)
-		digest[0][0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 		registry := []*ethpb.Validator{
 			{
-				WithdrawalCredentials: digest[0][:],
+				WithdrawalCredentials: digest[:],
 			},
 		}
 		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -160,15 +160,13 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 			ValidatorIndex:     0,
 			FromBlsPubkey:      pubkey,
 		}
-
-		pubkeyChunks := [][32]byte{bytesutil.ToBytes32(pubkey[:32]), bytesutil.ToBytes32(pubkey[32:])}
-		digest := make([][32]byte, 1)
-		htr.VectorizedSha256(pubkeyChunks, digest)
-		digest[0][0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 		registry := []*ethpb.Validator{
 			{
-				WithdrawalCredentials: digest[0][:],
+				WithdrawalCredentials: digest[:],
 			},
 		}
 		registry[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
@@ -576,5 +574,79 @@ func TestProcessWithdrawals(t *testing.T) {
 				checkPostState(t, test.Control, post)
 			}
 		})
+	}
+}
+
+func TestProcessBLSToExecutionChanges(t *testing.T) {
+	spb := &ethpb.BeaconStateCapella{
+		Fork: &ethpb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpb.Validator, numValidators)
+	blsChanges := make([]*ethpb.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpb.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpb.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     types.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpb.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+
+	body := &ethpb.BeaconBlockBodyCapella{
+		BlsToExecutionChanges: signedChanges,
+	}
+	bpb := &ethpb.BeaconBlockCapella{
+		Body: body,
+	}
+	sbpb := &ethpb.SignedBeaconBlockCapella{
+		Block: bpb,
+	}
+	signed, err := consensusblocks.NewSignedBeaconBlock(sbpb)
+	require.NoError(t, err)
+	st, err = blocks.ProcessBLSToExecutionChanges(st, signed)
+	require.NoError(t, err)
+	vals := st.Validators()
+	for _, val := range vals {
+		require.DeepEqual(t, executionAddress, val.WithdrawalCredentials[12:])
+		require.Equal(t, params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, val.WithdrawalCredentials[0])
 	}
 }

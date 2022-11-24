@@ -47,12 +47,12 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj f
 //	       domain=domain,
 //	   ))
 func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
-	return signingData(object.HashTreeRoot, domain)
+	return SigningData(object.HashTreeRoot, domain)
 }
 
 // Computes the signing data by utilising the provided root function and then
 // returning the signing data of the container object.
-func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
 	if err != nil {
 		return [32]byte{}, err
@@ -107,7 +107,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(blkHdr.HashTreeRoot, domain)
+	root, err := SigningData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -146,7 +146,7 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	// utilize custom block hashing function
-	root, err := signingData(rootFunc, domain)
+	root, err := SigningData(rootFunc, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
