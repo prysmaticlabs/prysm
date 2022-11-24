@@ -11,6 +11,7 @@ go_library(
     visibility = [
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",
+	"//beacon-chain/core/blocks:__subpackages__",
     ],
     deps = ["//config/fieldparams:go_default_library"],
 )
