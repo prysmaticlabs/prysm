@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -30,6 +31,39 @@ func ProcessBLSToExecutionChanges(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
+	// Return early if no changes
+	if len(changes) == 0 {
+		return st, nil
+	}
+	// Verify Signatures before processing them
+	batch := &bls.SignatureBatch{
+		Signatures: make([][]byte, len(changes)),
+		PublicKeys: make([]bls.PublicKey, len(changes)),
+		Messages:   make([][32]byte, len(changes)),
+	}
+	epoch := slots.ToEpoch(st.Slot())
+	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return nil, err
+	}
+	for i, change := range changes {
+		batch.Signatures[i] = change.Signature
+		publicKey, err := bls.PublicKeyFromBytes(change.Message.FromBlsPubkey)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not convert bytes to public key")
+		}
+		batch.PublicKeys[i] = publicKey
+		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
+		}
+		batch.Messages[i] = htr
+	}
+	verify, err := batch.Verify()
+	if err != nil || !verify {
+		return nil, signing.ErrSigFailedToVerify
+	}
+
 	for _, change := range changes {
 		st, err = processBLSToExecutionChange(st, change)
 		if err != nil {
@@ -86,14 +120,6 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 		return nil, errInvalidWithdrawalCredentials
 	}
 
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
-	}
-	if err := signing.VerifySigningRoot(message, fromPubkey, signed.Signature, domain); err != nil {
-		return nil, signing.ErrSigFailedToVerify
-	}
 	newCredentials := make([]byte, executionToBLSPadding)
 	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
