@@ -60,10 +60,12 @@ func ProcessBLSToExecutionChanges(
 		batch.Messages[i] = htr
 	}
 	verify, err := batch.Verify()
-	if err != nil || !verify {
+	if err != nil {
+		return nil, errors.Wrap(err, "could not verify BLSToExecutionChange signatures")
+	}
+	if !verify {
 		return nil, signing.ErrSigFailedToVerify
 	}
-
 	for _, change := range changes {
 		st, err = processBLSToExecutionChange(st, change)
 		if err != nil {
