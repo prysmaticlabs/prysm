@@ -114,7 +114,6 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 			return nil, errInvalidWithdrawalIndex
 		}
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
-			log.Errorf("Expected %v, got %v", expected[i], withdrawal)
 			return nil, errInvalidValidatorIndex
 		}
 		if !bytes.Equal(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) {
