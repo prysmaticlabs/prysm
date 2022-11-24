@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunCapellapella is a helper function that runs capella's fork spec tests.
+// RunUpgradeToCapella is a helper function that runs capella's fork spec tests.
 // It unmarshals a pre- and post-state to check `UpgradeToCapella` comply with spec implementation.
 func RunUpgradeToCapella(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
