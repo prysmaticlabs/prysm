@@ -53,7 +53,7 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationIgnore, err
 	}
 	if err := signing.VerifySigningRoot(blsChange.Message, blsChange.Message.FromBlsPubkey, blsChange.Signature, domain); err != nil {
-		return pubsub.ValidationIgnore, signing.ErrSigFailedToVerify
+		return pubsub.ValidationReject, signing.ErrSigFailedToVerify
 	}
 	// TODO(Potuz): BLSChange Validation
 	// TODO(Nishant): Add to batch gossip sig verification
