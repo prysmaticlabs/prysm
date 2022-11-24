@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -15,6 +16,7 @@ func (b *BeaconState) SetNextWithdrawalIndex(i uint64) error {
 	defer b.lock.Unlock()
 
 	b.nextWithdrawalIndex = i
+	b.markFieldAsDirty(nativetypes.NextWithdrawalIndex)
 	return nil
 }
 
@@ -29,5 +31,6 @@ func (b *BeaconState) SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) er
 	defer b.lock.Unlock()
 
 	b.nextWithdrawalValidatorIndex = i
+	b.markFieldAsDirty(nativetypes.NextWithdrawalValidatorIndex)
 	return nil
 }
