@@ -814,6 +814,38 @@ func TestSerializeBlindedBlock(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
+	t.Run("Capella", func(t *testing.T) {
+		response := &BlindedBlockResponseJson{
+			Version: ethpbv2.Version_CAPELLA.String(),
+			Data: &SignedBlindedBeaconBlockContainerJson{
+				CapellaBlock: &BlindedBeaconBlockCapellaJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &BlindedBeaconBlockBodyCapellaJson{},
+				},
+				Signature: "sig",
+			},
+			ExecutionOptimistic: true,
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &capellaBlindedBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
 		runDefault, j, errJson := serializeBlindedBlock(response)
