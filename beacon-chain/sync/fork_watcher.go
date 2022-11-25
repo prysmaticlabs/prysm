@@ -49,26 +49,16 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 	// will subscribe the new topics in advance.
 	if isNextForkEpoch {
 		nextEpoch := currEpoch + 1
-		switch nextEpoch {
-		case params.BeaconConfig().AltairForkEpoch:
-			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
-			if err != nil {
-				return errors.Wrap(err, "Could not retrieve fork digest")
-			}
-			if s.subHandler.digestExists(digest) {
-				return nil
-			}
-			s.registerSubscribers(nextEpoch, digest)
+		digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve fork digest")
+		}
+		if s.subHandler.digestExists(digest) {
+			return nil
+		}
+		s.registerSubscribers(nextEpoch, digest)
+		if nextEpoch == params.BeaconConfig().AltairForkEpoch {
 			s.registerRPCHandlersAltair()
-		case params.BeaconConfig().BellatrixForkEpoch, params.BeaconConfig().CapellaForkEpoch:
-			digest, err := forks.ForkDigestFromEpoch(nextEpoch, genRoot[:])
-			if err != nil {
-				return errors.Wrap(err, "could not retrieve fork digest")
-			}
-			if s.subHandler.digestExists(digest) {
-				return nil
-			}
-			s.registerSubscribers(nextEpoch, digest)
 		}
 	}
 	return nil
