@@ -648,7 +648,8 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		expectedFinalizedEpoch := tt.expectedFinalizedEpoch
 		headSlot := tt.headSlot
 
-		nState := bState.Copy()
+		nState, err := bState.Copy()
+		require.NoError(t, err)
 		// Set up a head state with data we expect.
 		head := blocksTillHead[len(blocksTillHead)-1]
 		headRoot, err := head.Block().HashTreeRoot()

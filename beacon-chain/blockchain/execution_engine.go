@@ -259,8 +259,11 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 
 	// Get previous randao.
-	st = st.Copy()
-	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
+	st, err := st.Copy()
+	if err != nil {
+		return false, nil, 0, err
+	}
+	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		return false, nil, 0, err
 	}

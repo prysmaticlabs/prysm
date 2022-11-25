@@ -127,10 +127,12 @@ func CalculateStateRoot(
 	}
 
 	// Copy state to avoid mutating the state reference.
-	state = state.Copy()
+	state, err := state.Copy()
+	if err != nil {
+		return [32]byte{}, err
+	}
 
 	// Execute per slots transition.
-	var err error
 	parentRoot := signed.Block().ParentRoot()
 	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, parentRoot[:], signed.Block().Slot())
 	if err != nil {

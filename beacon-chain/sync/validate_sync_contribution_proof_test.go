@@ -1035,7 +1035,8 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	assert.NoError(t, gs.SetCurrentSyncCommittee(sCom))
 	assert.NoError(t, beaconDB.SaveGenesisData(context.Background(), gs))
 
-	testState := gs.Copy()
+	testState, err := gs.Copy()
+	assert.NoError(t, err)
 	hRoot := [32]byte{}
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlockAltair(testState, keys, util.DefaultBlockGenConfig(), i)

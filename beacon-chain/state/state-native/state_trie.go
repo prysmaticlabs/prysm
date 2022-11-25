@@ -491,7 +491,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 }
 
 // Copy returns a deep copy of the beacon state.
-func (b *BeaconState) Copy() state.BeaconState {
+func (b *BeaconState) Copy() (state.BeaconState, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -510,7 +510,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	// TODO: may panic!
 	header, err := b.latestExecutionPayloadHeaderVal()
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to get latest execution payload header")
 	}
 	dst := &BeaconState{
 		version: b.version,
@@ -617,7 +617,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, finalizerCleanup)
-	return dst
+	return dst, nil
 }
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie

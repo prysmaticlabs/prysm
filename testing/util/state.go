@@ -112,7 +112,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy()
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
@@ -167,7 +167,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy()
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
@@ -234,7 +234,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy()
 }
 
 // NewBeaconStateCapella creates a beacon state with minimum marshalable fields.
@@ -302,7 +302,7 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 		return nil, err
 	}
 
-	return st.Copy(), nil
+	return st.Copy()
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

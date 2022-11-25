@@ -20,7 +20,7 @@ type BeaconState interface {
 	ReadOnlyBeaconState
 	ReadOnlyWithdrawals
 	WriteOnlyBeaconState
-	Copy() BeaconState
+	Copy() (BeaconState, error)
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	FutureForkStub
 	StateProver
@@ -50,7 +50,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
-	ToProtoUnsafe() interface{}
+	ToProtoUnsafe() (interface{}, error)
 	ToProto() (interface{}, error)
 	GenesisTime() uint64
 	GenesisValidatorsRoot() []byte

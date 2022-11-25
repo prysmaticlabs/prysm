@@ -42,9 +42,11 @@ func BlockSignature(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var wsb interfaces.SignedBeaconBlock
-	var err error
 	// copy the state since we need to process slots
-	bState = bState.Copy()
+	bState, err := bState.Copy()
+	if err != nil {
+		return nil, err
+	}
 	switch b := block.(type) {
 	case *ethpb.BeaconBlock:
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: b})

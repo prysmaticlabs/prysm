@@ -53,7 +53,11 @@ func GenerateAttestations(
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
-	bState = bState.Copy()
+	var err error
+	bState, err = bState.Copy()
+	if err != nil {
+		return nil, err
+	}
 	if slot > bState.Slot() {
 		// Going back a slot here so there's no inclusion delay issues.
 		slot--
@@ -63,7 +67,6 @@ func GenerateAttestations(
 
 	targetRoot := make([]byte, fieldparams.RootLength)
 	var headRoot []byte
-	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
 		var headState state.BeaconState

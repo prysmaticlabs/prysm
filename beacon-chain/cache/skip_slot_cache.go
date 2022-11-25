@@ -94,7 +94,11 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
 		span.AddAttributes(trace.BoolAttribute("hit", true))
-		return item.(state.BeaconState).Copy(), nil
+		c, err := item.(state.BeaconState).Copy()
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
 	}
 	skipSlotCacheMiss.Inc()
 	span.AddAttributes(trace.BoolAttribute("hit", false))
@@ -132,10 +136,15 @@ func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) {
+func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) error {
 	if c.disabled {
-		return
+		return nil
 	}
 	// Copy state so cached value is not mutated.
-	c.cache.Add(r, state.Copy())
+	cpy, err := state.Copy()
+	if err != nil {
+		return err
+	}
+	c.cache.Add(r, cpy)
+	return nil
 }

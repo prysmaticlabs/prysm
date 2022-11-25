@@ -41,7 +41,7 @@ func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
 	}
 	nextSlotCacheHit.Inc()
 	// Returning copied state.
-	return nsc.state.Copy(), nil
+	return nsc.state.Copy()
 }
 
 // UpdateNextSlotCache updates the `nextSlotCache`. It saves the input state after advancing the state slot by 1
@@ -49,8 +49,12 @@ func NextSlotState(_ context.Context, root []byte) (state.BeaconState, error) {
 // This is useful to call after successfully processing a block.
 func UpdateNextSlotCache(ctx context.Context, root []byte, state state.BeaconState) error {
 	// Advancing one slot by using a copied state.
-	copied := state.Copy()
-	copied, err := ProcessSlots(ctx, copied, copied.Slot()+1)
+	copied, err := state.Copy()
+	if err != nil {
+		return err
+
+	}
+	copied, err = ProcessSlots(ctx, copied, copied.Slot()+1)
 	if err != nil {
 		return err
 	}

@@ -11,9 +11,9 @@ import (
 
 // ToProtoUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) ToProtoUnsafe() interface{} {
+func (b *BeaconState) ToProtoUnsafe() (interface{}, error) {
 	if b == nil {
-		return nil
+		return nil, nil
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
@@ -42,7 +42,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:         b.finalizedCheckpoint,
-		}
+		}, nil
 	case version.Altair:
 		return &ethpb.BeaconStateAltair{
 			GenesisTime:                 b.genesisTime,
@@ -69,12 +69,11 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:            b.inactivityScores,
 			CurrentSyncCommittee:        b.currentSyncCommittee,
 			NextSyncCommittee:           b.nextSyncCommittee,
-		}
+		}, nil
 	case version.Bellatrix:
-		// TODO: may panic!
 		execHeader, ok := b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
 		if !ok {
-			panic("unexpected execution payload")
+			return nil, errors.New("unexpected execution payload")
 		}
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
@@ -102,12 +101,11 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: execHeader,
-		}
+		}, nil
 	case version.Capella:
-		// TODO: may panic!
 		execHeader, ok := b.latestExecutionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
 		if !ok {
-			panic("unexpected execution payload")
+			return nil, errors.New("unexpected execution payload")
 		}
 		return &ethpb.BeaconStateCapella{
 			GenesisTime:                  b.genesisTime,
@@ -137,9 +135,9 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			LatestExecutionPayloadHeader: execHeader,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
-		}
+		}, nil
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
