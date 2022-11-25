@@ -96,6 +96,14 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
+	result, err = bs.getBlindedSSZBlockCapella(ctx, blk)
+	if result != nil {
+		return result, nil
+	}
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
+		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
 
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
@@ -400,4 +408,79 @@ func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interface
 		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 	}
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+}
+
+func (bs *Server) getBlindedSSZBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	capellaBlk, err := blk.PbCapellaBlock()
+	if err != nil {
+		// ErrUnsupportedGetter means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
+				if blindedCapellaBlk == nil {
+					return nil, errNilBlock
+				}
+				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlk.Block)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
+				}
+				root, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get block root")
+				}
+				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
+				}
+				sig := blk.Signature()
+				data := &ethpbv2.SignedBlindedBeaconBlockCapella{
+					Message:   v2Blk,
+					Signature: sig[:],
+				}
+				sszData, err := data.MarshalSSZ()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+				}
+				return &ethpbv2.SSZContainer{
+					Version:             ethpbv2.Version_CAPELLA,
+					ExecutionOptimistic: isOptimistic,
+					Data:                sszData,
+				}, nil
+			}
+			return nil, err
+		}
+	}
+
+	if capellaBlk == nil {
+		return nil, errNilBlock
+	}
+	blindedBlkInterface, err := blk.ToBlinded()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not convert block to blinded block")
+	}
+	blindedCapellaBlock, err := blindedBlkInterface.PbBlindedCapellaBlock()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlock.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
+	}
+	sig := blk.Signature()
+	data := &ethpbv2.SignedBlindedBeaconBlockCapella{
+		Message:   v2Blk,
+		Signature: sig[:],
+	}
+	sszData, err := data.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+	}
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_CAPELLA, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }

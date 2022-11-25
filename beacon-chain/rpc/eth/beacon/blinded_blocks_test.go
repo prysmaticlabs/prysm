@@ -706,4 +706,42 @@ func TestServer_GetBlindedBlockSSZ(t *testing.T) {
 		assert.DeepEqual(t, sszBlock, resp.Data)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocksCapellaBlinded(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+
+		b2 := util.NewBlindedBeaconBlockCapella()
+		b2.Block.Slot = 30
+		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b2)
+
+		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetBlindedCapellaBlock())
+		require.NoError(t, err)
+		bs := &Server{
+			BeaconDB: beaconDB,
+			ChainInfoFetcher: &mock.ChainService{
+				DB:                  beaconDB,
+				Block:               chainBlk,
+				Root:                headBlock.BlockRoot,
+				FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			},
+			OptimisticModeFetcher: &mock.ChainService{},
+		}
+
+		blks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, len(blks) > 0)
+		require.NoError(t, err)
+		sszBlock, err := blks[0].MarshalSSZ()
+		require.NoError(t, err)
+
+		resp, err := bs.GetBlindedBlockSSZ(ctx, &ethpbv1.BlockRequest{BlockId: []byte("30")})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, sszBlock, resp.Data)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+	})
 }
