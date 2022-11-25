@@ -116,6 +116,8 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 		return defaultProposerSlashingTopicParams(), nil
 	case strings.Contains(topic, GossipAttesterSlashingMessage):
 		return defaultAttesterSlashingTopicParams(), nil
+	case strings.Contains(topic, GossipBlsToExecutionChangeMessage):
+		return defaultBlsToExecutionChangeTopicParams(), nil
 	default:
 		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}
@@ -452,6 +454,28 @@ func defaultProposerSlashingTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
+	return &pubsub.TopicScoreParams{
+		TopicWeight:                     voluntaryExitWeight,
+		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
+		TimeInMeshQuantum:               inMeshTime(),
+		TimeInMeshCap:                   inMeshCap(),
+		FirstMessageDeliveriesWeight:    2,
+		FirstMessageDeliveriesDecay:     scoreDecay(oneHundredEpochs),
+		FirstMessageDeliveriesCap:       5,
+		MeshMessageDeliveriesWeight:     0,
+		MeshMessageDeliveriesDecay:      0,
+		MeshMessageDeliveriesCap:        0,
+		MeshMessageDeliveriesThreshold:  0,
+		MeshMessageDeliveriesWindow:     0,
+		MeshMessageDeliveriesActivation: 0,
+		MeshFailurePenaltyWeight:        0,
+		MeshFailurePenaltyDecay:         0,
+		InvalidMessageDeliveriesWeight:  -2000,
+		InvalidMessageDeliveriesDecay:   scoreDecay(invalidDecayPeriod),
+	}
+}
+
+func defaultBlsToExecutionChangeTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
 		TopicWeight:                     voluntaryExitWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
