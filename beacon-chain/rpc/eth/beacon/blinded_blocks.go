@@ -39,7 +39,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockBellatrix(ctx, blk)
 	if result != nil {
@@ -47,7 +47,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	result, err = bs.getBlindedBlockCapella(ctx, blk)
 	if result != nil {
@@ -55,7 +55,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
@@ -113,19 +113,19 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.S
 		if errors.Is(err, blocks.ErrUnsupportedGetter) {
 			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
 				if blindedBellatrixBlk == nil {
-					return nil, status.Error(codes.Internal, "Nil block")
+					return nil, errNilBlock
 				}
 				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlk.Block)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
 				}
 				root, err := blk.Block().HashTreeRoot()
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+					return nil, errors.Wrapf(err, "could not get block root")
 				}
 				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
 				}
 				sig := blk.Signature()
 				return &ethpbv2.BlindedBlockResponse{
@@ -143,27 +143,27 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.S
 	}
 
 	if bellatrixBlk == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+		return nil, errNilBlock
 	}
 	blindedBlkInterface, err := blk.ToBlinded()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to blinded block: %v", err)
+		return nil, errors.Wrapf(err, "could not convert block to blinded block")
 	}
 	blindedBellatrixBlock, err := blindedBlkInterface.PbBlindedBellatrixBlock()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
 	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlock.Block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		return nil, errors.Wrapf(err, "could not get block root")
 	}
 	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
 	}
 	sig := blk.Signature()
 	return &ethpbv2.BlindedBlockResponse{
@@ -183,19 +183,19 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 		if errors.Is(err, blocks.ErrUnsupportedGetter) {
 			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
 				if blindedCapellaBlk == nil {
-					return nil, status.Error(codes.Internal, "Nil block")
+					return nil, errNilBlock
 				}
 				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlk.Block)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+					return nil, errors.Wrapf(err, "Could not get signed beacon block")
 				}
 				root, err := blk.Block().HashTreeRoot()
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+					return nil, errors.Wrapf(err, "could not get block root")
 				}
 				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
 				}
 				sig := blk.Signature()
 				return &ethpbv2.BlindedBlockResponse{
@@ -212,27 +212,27 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 	}
 
 	if capellaBlk == nil {
-		return nil, status.Error(codes.Internal, "Nil block")
+		return nil, errNilBlock
 	}
 	blindedBlkInterface, err := blk.ToBlinded()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to blinded block: %v", err)
+		return nil, errors.Wrapf(err, "could not convert block to blinded block")
 	}
 	blindedCapellaBlock, err := blindedBlkInterface.PbBlindedCapellaBlock()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
 	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlock.Block)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		return nil, errors.Wrapf(err, "could not get block root")
 	}
 	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
 	}
 	sig := blk.Signature()
 	return &ethpbv2.BlindedBlockResponse{
