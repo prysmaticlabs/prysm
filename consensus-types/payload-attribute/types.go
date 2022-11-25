@@ -43,7 +43,7 @@ func initPayloadAttributeFromV1(a *enginev1.PayloadAttributes) (Attributer, erro
 	}
 
 	return &data{
-		version:               version.Capella,
+		version:               version.Bellatrix,
 		prevRandao:            a.PrevRandao,
 		timeStamp:             a.Timestamp,
 		suggestedFeeRecipient: a.SuggestedFeeRecipient,
