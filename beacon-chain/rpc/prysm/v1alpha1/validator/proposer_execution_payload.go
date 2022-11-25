@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -145,10 +146,13 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
 
-	p := &enginev1.PayloadAttributes{
+	p, err := payloadattribute.New(&enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
+	})
+	if err != nil {
+		return nil, err
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
@@ -255,13 +259,16 @@ func (vs *Server) getExecutionPayloadV2(ctx context.Context,
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
 	}
 
-	p := &enginev1.PayloadAttributesV2{
+	p, err := payloadattribute.New(&enginev1.PayloadAttributesV2{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
 		Withdrawals:           withdrawals,
+	})
+	if err != nil {
+		return nil, err
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdatedV2(ctx, f, p)
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
