@@ -100,10 +100,10 @@ func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
 			return errors.Wrap(err, "failed to determine previous epoch fork data")
 		}
 
-		switch prevFork.Epoch {
-		case params.BeaconConfig().GenesisEpoch:
+		if prevFork.Epoch == params.BeaconConfig().GenesisEpoch {
 			s.unregisterPhase0Handlers()
 		}
+
 		// Run through all our current active topics and see
 		// if there are any subscriptions to be removed.
 		for _, t := range s.subHandler.allTopics() {
