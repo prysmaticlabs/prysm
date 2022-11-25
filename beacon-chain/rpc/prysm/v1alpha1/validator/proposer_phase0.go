@@ -204,8 +204,11 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 					return nil, errors.Wrap(err, "could not get execution payload")
 				}
 				blk.ExecutionPayloadV2 = executionPayloadV2
-				// TODO pack BlsToExecutionChanges Here
-				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
+				changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion()
+				if err != nil {
+					return nil, errors.Wrap(err, "could not pack BLSToExecutionChanges")
+				}
+				blk.BlsToExecutionChanges = changes
 			} else {
 				executionPayload, err := vs.getExecutionPayload(
 					ctx,

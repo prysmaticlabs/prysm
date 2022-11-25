@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -24,6 +25,7 @@ type Server struct {
 	StateFetcher           statefetcher.Fetcher
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncCommitteePool      synccommittee.Pool
+	BLSChangesPool         blstoexec.PoolManager
 	V1Alpha1Server         *v1alpha1validator.Server
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 }

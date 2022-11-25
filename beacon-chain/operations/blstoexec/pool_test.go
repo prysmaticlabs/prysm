@@ -38,16 +38,9 @@ func TestPendingBLSToExecChanges(t *testing.T) {
 func TestBLSToExecChangesForInclusion(t *testing.T) {
 	t.Run("empty pool", func(t *testing.T) {
 		pool := NewPool()
-		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges-1; i++ {
-			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
-				Message: &eth.BLSToExecutionChange{
-					ValidatorIndex: types.ValidatorIndex(i),
-				},
-			})
-		}
 		changes, err := pool.BLSToExecChangesForInclusion()
 		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges-1), len(changes))
+		assert.Equal(t, 0, len(changes))
 	})
 	t.Run("MaxBlsToExecutionChanges in pool", func(t *testing.T) {
 		pool := NewPool()
