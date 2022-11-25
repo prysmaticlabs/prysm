@@ -16,7 +16,7 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 proto_library(
     name = "proto",
     srcs = [
-        "execution_engine.proto",
+        ":ssz_proto_files",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -91,6 +91,18 @@ go_library(
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
     ],  # keep
+)
+
+ssz_proto_files(
+    name = "ssz_proto_files",
+    srcs = [
+        "execution_engine.proto",
+    ],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
 )
 
 go_test(
