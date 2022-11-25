@@ -1,6 +1,7 @@
 package blocks_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 
@@ -649,4 +650,64 @@ func TestProcessBLSToExecutionChanges(t *testing.T) {
 		require.DeepEqual(t, executionAddress, val.WithdrawalCredentials[12:])
 		require.Equal(t, params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, val.WithdrawalCredentials[0])
 	}
+}
+
+func TestBLSChangesSignatureBatch(t *testing.T) {
+	spb := &ethpb.BeaconStateCapella{
+		Fork: &ethpb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpb.Validator, numValidators)
+	blsChanges := make([]*ethpb.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpb.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpb.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     types.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpb.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+	batch, err := blocks.BLSChangesSignatureBatch(context.Background(), st, signedChanges)
+	require.NoError(t, err)
+	verify, err := batch.Verify()
+	require.NoError(t, err)
+	require.Equal(t, true, verify)
 }
