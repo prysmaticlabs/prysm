@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -29,6 +31,10 @@ func ProcessBLSToExecutionChanges(
 	changes, err := signed.Block().Body().BLSToExecutionChanges()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	// Return early if no changes
+	if len(changes) == 0 {
+		return st, nil
 	}
 	for _, change := range changes {
 		st, err = processBLSToExecutionChange(st, change)
@@ -86,14 +92,6 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 		return nil, errInvalidWithdrawalCredentials
 	}
 
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
-	}
-	if err := signing.VerifySigningRoot(message, fromPubkey, signed.Signature, domain); err != nil {
-		return nil, signing.ErrSigFailedToVerify
-	}
 	newCredentials := make([]byte, executionToBLSPadding)
 	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
@@ -141,4 +139,42 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		}
 	}
 	return st, nil
+}
+
+func BLSChangesSignatureBatch(
+	ctx context.Context,
+	st state.ReadOnlyBeaconState,
+	changes []*ethpb.SignedBLSToExecutionChange,
+) (*bls.SignatureBatch, error) {
+	// Return early if no changes
+	if len(changes) == 0 {
+		return bls.NewSet(), nil
+	}
+	batch := &bls.SignatureBatch{
+		Signatures: make([][]byte, len(changes)),
+		PublicKeys: make([]bls.PublicKey, len(changes)),
+		Messages:   make([][32]byte, len(changes)),
+	}
+	epoch := slots.ToEpoch(st.Slot())
+	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return nil, err
+	}
+	for i, change := range changes {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		batch.Signatures[i] = change.Signature
+		publicKey, err := bls.PublicKeyFromBytes(change.Message.FromBlsPubkey)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not convert bytes to public key")
+		}
+		batch.PublicKeys[i] = publicKey
+		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
+		}
+		batch.Messages[i] = htr
+	}
+	return batch, nil
 }
