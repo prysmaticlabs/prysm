@@ -67,14 +67,13 @@ func ProcessBLSToExecutionChanges(
 //	    + address_change.to_execution_address
 //	)
 func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
-	message := signed.Message
-
 	// Checks that the message passes the validation conditions.
 	val, err := ValidateBLSToExecutionChange(st, signed)
 	if err != nil {
 		return nil, err
 	}
 
+	message := signed.Message
 	newCredentials := make([]byte, executionToBLSPadding)
 	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
