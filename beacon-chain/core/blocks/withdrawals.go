@@ -17,7 +17,6 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 const executionToBLSPadding = 12
@@ -153,7 +152,9 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 
 func BLSChangesSignatureBatch(
 	ctx context.Context,
-	st state.ReadOnlyBeaconState,
+	epoch types.Epoch,
+	fork *ethpb.Fork,
+	genesisValidatorsRoot []byte,
 	changes []*ethpb.SignedBLSToExecutionChange,
 ) (*bls.SignatureBatch, error) {
 	// Return early if no changes
@@ -165,8 +166,7 @@ func BLSChangesSignatureBatch(
 		PublicKeys: make([]bls.PublicKey, len(changes)),
 		Messages:   make([][32]byte, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

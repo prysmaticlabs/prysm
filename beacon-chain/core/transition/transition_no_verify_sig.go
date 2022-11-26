@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -205,7 +206,7 @@ func ProcessBlockNoVerifyAnySig(
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
 		}
-		cSet, err := b.BLSChangesSignatureBatch(ctx, st, changes)
+		cSet, err := b.BLSChangesSignatureBatch(ctx, time.CurrentEpoch(st), st.Fork(), st.GenesisValidatorsRoot(), changes)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges signatures")
 		}

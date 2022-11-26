@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -51,10 +52,9 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject, err
 	}
 
-	// Nvm, still need state here, lol!
-
 	// Validate the signature of the message using our batch gossip verifier.
-	sigBatch, err := blocks.BLSChangesSignatureBatch(ctx, st, []*ethpb.SignedBLSToExecutionChange{blsChange})
+	gvr := s.cfg.chain.GenesisValidatorsRoot()
+	sigBatch, err := blocks.BLSChangesSignatureBatch(ctx, slots.ToEpoch(s.cfg.chain.HeadSlot()), s.cfg.chain.CurrentFork(), gvr[:], []*ethpb.SignedBLSToExecutionChange{blsChange})
 	if err != nil {
 		return pubsub.ValidationReject, err
 	}
