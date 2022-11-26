@@ -6,6 +6,7 @@ go_library(
         "assignments.go",
         "attestations.go",
         "blocks.go",
+        "blstoexec.go",
         "committees.go",
         "config.go",
         "log.go",
