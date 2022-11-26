@@ -42,7 +42,7 @@ const (
 	// our voluntary exit topic.
 	voluntaryExitWeight = 0.05
 	// blsToExecutionChangeWeight specifies the scoring weight that we apply to
-	// our voluntary exit topic.
+	// our bls to execution topic.
 	blsToExecutionChangeWeight = 0.05
 
 	// maxInMeshScore describes the max score a peer can attain from being in the mesh.
