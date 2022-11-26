@@ -6,7 +6,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"google.golang.org/grpc"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 )
 
 type E2EConfigOpt func(*E2EConfig)
@@ -44,7 +44,7 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
-	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
+	EvalInterceptor         func(uint64, []validatorHelpers.NodeConnection) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
@@ -57,7 +57,7 @@ type Evaluator struct {
 	Name   string
 	Policy func(currentEpoch types.Epoch) bool
 	// Evaluation accepts one or many/all conns, depending on what is needed by the set of evaluators.
-	Evaluation func(ec EvaluationContext, conn ...*grpc.ClientConn) error
+	Evaluation func(ec EvaluationContext, conn ...validatorHelpers.NodeConnection) error
 }
 
 // DepositBatch represents a group of deposits that are sent together during an e2e run.

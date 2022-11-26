@@ -25,6 +25,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -253,23 +254,26 @@ func writeURLRespAtPath(url, fp string) error {
 }
 
 // NewLocalConnection creates and returns GRPC connection on a given localhost port.
-func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error) {
-	endpoint := fmt.Sprintf("127.0.0.1:%d", port)
+func NewLocalConnection(ctx context.Context, grpcPort int, restPort int) (validatorHelpers.NodeConnection, error) {
+	grpcEndpoint := fmt.Sprintf("127.0.0.1:%d", grpcPort)
+	restEndpoint := fmt.Sprintf("http://127.0.0.1:%d", restPort)
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
-	conn, err := grpc.DialContext(ctx, endpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(ctx, grpcEndpoint, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
+
+	conn := validatorHelpers.NewNodeConnection(grpcConn, restEndpoint, time.Second*30)
 	return conn, nil
 }
 
 // NewLocalConnections returns number of GRPC connections, along with function to close all of them.
-func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
-	conns := make([]*grpc.ClientConn, numConns)
+func NewLocalConnections(ctx context.Context, numConns int) ([]validatorHelpers.NodeConnection, func(), error) {
+	conns := make([]validatorHelpers.NodeConnection, numConns)
 	for i := 0; i < len(conns); i++ {
-		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i)
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i, e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+i)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -277,7 +281,7 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 	}
 	return conns, func() {
 		for _, conn := range conns {
-			if err := conn.Close(); err != nil {
+			if err := conn.GetGrpcClientConn().Close(); err != nil {
 				log.Error(err)
 			}
 		}

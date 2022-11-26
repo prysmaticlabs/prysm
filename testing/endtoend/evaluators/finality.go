@@ -9,7 +9,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"google.golang.org/grpc"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -23,9 +23,9 @@ var FinalizationOccurs = func(epoch ethtypes.Epoch) types.Evaluator {
 	}
 }
 
-func finalizationOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func finalizationOccurs(_ types.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
 	conn := conns[0]
-	client := eth.NewBeaconChainClient(conn)
+	client := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
