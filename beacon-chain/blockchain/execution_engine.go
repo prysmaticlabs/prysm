@@ -26,7 +26,6 @@ import (
 )
 
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
-var errNoAttribute = errors.New("could not get payload attributes")
 
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
@@ -72,13 +71,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
 	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	if err != nil {
-		return nil, err
+		log.WithError(err).Error("Could not get head payload attribute")
+		return nil, nil
 	}
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
-		case errNoAttribute:
-			return nil, errNoAttribute
 		case execution.ErrAcceptedSyncingPayloadStatus:
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
@@ -157,12 +155,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
-		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(
-			nextSlot,
-			proposerId,
-			pId,
-			arg.headRoot,
-		)
+		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
