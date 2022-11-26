@@ -41,6 +41,9 @@ const (
 	// voluntaryExitWeight specifies the scoring weight that we apply to
 	// our voluntary exit topic.
 	voluntaryExitWeight = 0.05
+	// blsToExecutionChangeWeight specifies the scoring weight that we apply to
+	// our voluntary exit topic.
+	blsToExecutionChangeWeight = 0.05
 
 	// maxInMeshScore describes the max score a peer can attain from being in the mesh.
 	maxInMeshScore = 10
@@ -477,7 +480,7 @@ func defaultVoluntaryExitTopicParams() *pubsub.TopicScoreParams {
 
 func defaultBlsToExecutionChangeTopicParams() *pubsub.TopicScoreParams {
 	return &pubsub.TopicScoreParams{
-		TopicWeight:                     voluntaryExitWeight,
+		TopicWeight:                     blsToExecutionChangeWeight,
 		TimeInMeshWeight:                maxInMeshScore / inMeshCap(),
 		TimeInMeshQuantum:               inMeshTime(),
 		TimeInMeshCap:                   inMeshCap(),
@@ -555,7 +558,7 @@ func scoreByWeight(weight, threshold float64) float64 {
 func maxScore() float64 {
 	totalWeight := beaconBlockWeight + aggregateWeight + syncContributionWeight +
 		attestationTotalWeight + syncCommitteesTotalWeight + attesterSlashingWeight +
-		proposerSlashingWeight + voluntaryExitWeight
+		proposerSlashingWeight + voluntaryExitWeight + blsToExecutionChangeWeight
 	return (maxInMeshScore + maxFirstDeliveryScore) * totalWeight
 }
 
