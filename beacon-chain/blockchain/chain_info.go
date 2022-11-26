@@ -55,6 +55,7 @@ type HeadFetcher interface {
 	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
+	HeadValidatorIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
@@ -291,6 +292,14 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// HeadValidatorIndex returns the validator in current head state.
+func (s *Service) HeadValidatorIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return s.headValidatorAtIndex(index)
 }
 
 // ForkChoicer returns the forkchoice interface.

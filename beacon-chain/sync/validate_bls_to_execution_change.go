@@ -41,15 +41,18 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	if s.cfg.blsToExecPool.ValidatorExists(blsChange.Message.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
 	}
-	st, err := s.cfg.chain.HeadState(ctx)
+	val, err := s.cfg.chain.HeadValidatorIndex(blsChange.Message.ValidatorIndex)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 	// Validate that the execution change object is valid.
-	_, err = blocks.ValidateBLSToExecutionChange(st, blsChange)
+	err = blocks.ValidateBLSToExecutionChange(val.WithdrawalCredentials(), blsChange)
 	if err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	// Nvm, still need state here, lol!
+
 	// Validate the signature of the message using our batch gossip verifier.
 	sigBatch, err := blocks.BLSChangesSignatureBatch(ctx, st, []*ethpb.SignedBLSToExecutionChange{blsChange})
 	if err != nil {

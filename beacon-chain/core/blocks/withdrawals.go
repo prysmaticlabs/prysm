@@ -68,7 +68,11 @@ func ProcessBLSToExecutionChanges(
 //	)
 func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
 	// Checks that the message passes the validation conditions.
-	val, err := ValidateBLSToExecutionChange(st, signed)
+	val, err := st.ValidatorAtIndex(signed.Message.ValidatorIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get validator")
+	}
+	err = ValidateBLSToExecutionChange(val.WithdrawalCredentials, signed)
 	if err != nil {
 		return nil, err
 	}
@@ -83,22 +87,17 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
-func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
+func ValidateBLSToExecutionChange(cred []byte, signed *ethpb.SignedBLSToExecutionChange) error {
 	if signed == nil {
-		return nil, errNilSignedWithdrawalMessage
+		return errNilSignedWithdrawalMessage
 	}
 	message := signed.Message
 	if message == nil {
-		return nil, errNilWithdrawalMessage
+		return errNilWithdrawalMessage
 	}
 
-	val, err := st.ValidatorAtIndex(message.ValidatorIndex)
-	if err != nil {
-		return nil, err
-	}
-	cred := val.WithdrawalCredentials
 	if cred[0] != params.BeaconConfig().BLSWithdrawalPrefixByte {
-		return nil, errInvalidBLSPrefix
+		return errInvalidBLSPrefix
 	}
 
 	// hash the public key and verify it matches the withdrawal credentials
@@ -106,9 +105,9 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 	hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
 	digest := hashFn.Hash(fromPubkey)
 	if !bytes.Equal(digest[1:], cred[1:]) {
-		return nil, errInvalidWithdrawalCredentials
+		return errInvalidWithdrawalCredentials
 	}
-	return val, nil
+	return nil
 }
 
 func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
