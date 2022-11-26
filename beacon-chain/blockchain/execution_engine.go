@@ -15,9 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -31,58 +33,6 @@ type notifyForkchoiceUpdateArg struct {
 	headState state.BeaconState
 	headRoot  [32]byte
 	headBlock interfaces.BeaconBlock
-}
-
-type callForkchoiceUpdatedReturn struct {
-	hasAttr       bool
-	proposerId    types.ValidatorIndex
-	payloadID     *enginev1.PayloadIDBytes
-	lastValidHash []byte
-	err           error
-}
-
-// callFforkchoiceUpdatedV1 wraps a call to the engine methods `engine_forkchoiceUpdatedV1`
-func (s *Service) callForkchoiceUpdatedV1(
-	ctx context.Context,
-	st state.BeaconState,
-	nextSlot types.Slot,
-	fcs *enginev1.ForkchoiceState) callForkchoiceUpdatedReturn {
-
-	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, st, nextSlot)
-	if err != nil {
-		return callForkchoiceUpdatedReturn{false, 0, nil, nil, errNoAttribute}
-	}
-
-	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
-	return callForkchoiceUpdatedReturn{
-		hasAttr:       hasAttr,
-		proposerId:    proposerId,
-		payloadID:     payloadID,
-		lastValidHash: lastValidHash,
-		err:           err,
-	}
-}
-
-// callFforkchoiceUpdatedV2 wraps a call to the engine methods `engine_forkchoiceUpdatedV2`
-func (s *Service) callForkchoiceUpdatedV2(
-	ctx context.Context,
-	st state.BeaconState,
-	nextSlot types.Slot,
-	fcs *enginev1.ForkchoiceState) callForkchoiceUpdatedReturn {
-
-	hasAttr, attr, proposerId, err := s.getPayloadAttributeV2(ctx, st, nextSlot)
-	if err != nil {
-		return callForkchoiceUpdatedReturn{false, 0, nil, nil, errNoAttribute}
-	}
-
-	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdatedV2(ctx, fcs, attr)
-	return callForkchoiceUpdatedReturn{
-		hasAttr:       hasAttr,
-		proposerId:    proposerId,
-		payloadID:     payloadID,
-		lastValidHash: lastValidHash,
-		err:           err,
-	}
 }
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
@@ -120,14 +70,13 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	var fcuReturn callForkchoiceUpdatedReturn
-	if slots.ToEpoch(nextSlot) >= params.BeaconConfig().CapellaForkEpoch {
-		fcuReturn = s.callForkchoiceUpdatedV2(ctx, arg.headState, nextSlot, fcs)
-	} else {
-		fcuReturn = s.callForkchoiceUpdatedV1(ctx, arg.headState, nextSlot, fcs)
+	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
+	if err != nil {
+		return nil, err
 	}
-	if fcuReturn.err != nil {
-		switch fcuReturn.err {
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	if err != nil {
+		switch err {
 		case errNoAttribute:
 			return nil, errNoAttribute
 		case execution.ErrAcceptedSyncingPayloadStatus:
@@ -137,14 +86,14 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
-			return fcuReturn.payloadID, nil
+			return payloadID, nil
 		case execution.ErrInvalidPayloadStatus:
 			forkchoiceUpdatedInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
-			if len(fcuReturn.lastValidHash) == 0 {
-				fcuReturn.lastValidHash = defaultLatestValidHash
+			if len(lastValidHash) == 0 {
+				lastValidHash = defaultLatestValidHash
 			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(fcuReturn.lastValidHash))
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				log.WithError(err).Error("Could not set head root to invalid")
 				return nil, nil
@@ -205,22 +154,22 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		return nil, nil
 	}
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
-	if fcuReturn.hasAttr && fcuReturn.payloadID != nil {
+	if hasAttr && payloadID != nil {
 		var pId [8]byte
-		copy(pId[:], fcuReturn.payloadID[:])
+		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(
 			nextSlot,
-			fcuReturn.proposerId,
+			proposerId,
 			pId,
 			arg.headRoot,
 		)
-	} else if fcuReturn.hasAttr && fcuReturn.payloadID == nil {
+	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
 			"slot":      headBlk.Slot(),
 		}).Error("Received nil payload ID on VALID engine response")
 	}
-	return fcuReturn.payloadID, nil
+	return payloadID, nil
 }
 
 // getPayloadHash returns the payload hash given the block root.
@@ -311,7 +260,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, *enginev1.PayloadAttributes, types.ValidatorIndex, error) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, payloadattribute.Attributer, types.ValidatorIndex, error) {
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
@@ -354,73 +303,36 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	if err != nil {
 		return false, nil, 0, err
 	}
-	attr := &enginev1.PayloadAttributes{
-		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            prevRando,
-		SuggestedFeeRecipient: feeRecipient.Bytes(),
-	}
-	return true, attr, proposerID, nil
-}
 
-// getPayloadAttributesV2 returns the payload attributes for the given state and slot.
-// The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdatedV2` call.
-func (s *Service) getPayloadAttributeV2(
-	ctx context.Context,
-	st state.BeaconState,
-	slot types.Slot) (bool, *enginev1.PayloadAttributesV2, types.ValidatorIndex, error) {
-	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot.
-	// During insertion at assignment the root was not known.
-	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	if !ok { // There's no need to build attribute if there is no proposer for slot.
-		return false, nil, 0, nil
-	}
-
-	// Get previous randao.
-	st = st.Copy()
-	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
-	if err != nil {
-		return false, nil, 0, err
-	}
-	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	if err != nil {
-		return false, nil, 0, nil
-	}
-
-	// Get fee recipient.
-	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
-	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
-			logrus.WithFields(logrus.Fields{
-				"validatorIndex": proposerID,
-				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
-			}).Warn("Fee recipient is currently using the burn address, " +
-				"you will not be rewarded transaction fees on this setting. " +
-				"Please set a different eth address as the fee recipient. " +
-				"Please refer to our documentation for instructions")
+	var attr payloadattribute.Attributer
+	switch st.Version() {
+	case version.Capella:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return false, nil, 0, errors.Wrap(err, "could not get expected withdrawals")
 		}
-	case err != nil:
-		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            prevRando,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+		})
+		if err != nil {
+			return false, nil, 0, err
+		}
+	case version.Bellatrix:
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            prevRando,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+		})
+		if err != nil {
+			return false, nil, 0, err
+		}
 	default:
-		feeRecipient = recipient
+		return false, nil, 0, errors.New("unknown state version")
 	}
 
-	// Get timestamp.
-	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
-	if err != nil {
-		return false, nil, 0, err
-	}
-	withdrawals, err := st.ExpectedWithdrawals()
-	if err != nil {
-		return false, nil, 0, errors.Wrap(err, "could not get expected withdrawals")
-	}
-	attr := &enginev1.PayloadAttributesV2{
-		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            prevRando,
-		SuggestedFeeRecipient: feeRecipient.Bytes(),
-		Withdrawals:           withdrawals,
-	}
 	return true, attr, proposerID, nil
 }
 
