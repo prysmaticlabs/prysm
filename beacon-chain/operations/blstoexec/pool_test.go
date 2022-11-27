@@ -256,3 +256,76 @@ func TestMarkIncluded(t *testing.T) {
 		assert.NotNil(t, pool.m[1])
 	})
 }
+
+func TestValidatorExists(t *testing.T) {
+	t.Run("no validators in pool", func(t *testing.T) {
+		pool := NewPool()
+		assert.Equal(t, false, pool.ValidatorExists(0))
+	})
+	t.Run("validator added to pool", func(t *testing.T) {
+		pool := NewPool()
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertBLSToExecChange(change)
+		assert.Equal(t, true, pool.ValidatorExists(0))
+	})
+	t.Run("multiple validators added to pool", func(t *testing.T) {
+		pool := NewPool()
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertBLSToExecChange(change)
+		change = &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(10),
+			}}
+		pool.InsertBLSToExecChange(change)
+		change = &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(30),
+			}}
+		pool.InsertBLSToExecChange(change)
+
+		assert.Equal(t, true, pool.ValidatorExists(0))
+		assert.Equal(t, true, pool.ValidatorExists(10))
+		assert.Equal(t, true, pool.ValidatorExists(30))
+	})
+	t.Run("validator added and then removed", func(t *testing.T) {
+		pool := NewPool()
+		change := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertBLSToExecChange(change)
+		require.NoError(t, pool.MarkIncluded(change))
+		assert.Equal(t, false, pool.ValidatorExists(0))
+	})
+	t.Run("multiple validators added to pool and removed", func(t *testing.T) {
+		pool := NewPool()
+		firstChange := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertBLSToExecChange(firstChange)
+		secondChange := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(10),
+			}}
+		pool.InsertBLSToExecChange(secondChange)
+		thirdChange := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(30),
+			}}
+		pool.InsertBLSToExecChange(thirdChange)
+
+		assert.NoError(t, pool.MarkIncluded(firstChange))
+		assert.NoError(t, pool.MarkIncluded(thirdChange))
+
+		assert.Equal(t, false, pool.ValidatorExists(0))
+		assert.Equal(t, true, pool.ValidatorExists(10))
+		assert.Equal(t, false, pool.ValidatorExists(30))
+	})
+}
