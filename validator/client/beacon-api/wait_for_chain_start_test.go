@@ -116,24 +116,13 @@ func TestWaitForChainStart_InternalServerError(t *testing.T) {
 	assert.ErrorContains(t, "500: Internal server error", err)
 }
 
-func TestWaitForChainStart_NotFoundErrorContextCancelled(t *testing.T) {
-	// WaitForChainStart blocks until the error is not 404, but it needs to listen to context cancellations
+func TestWaitForChainStart_NotFoundError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(notFoundErrHandler))
 	defer server.Close()
 
 	validatorClient := NewBeaconApiValidatorClient(server.URL, time.Second*5)
-
-	// Create a context that can be canceled
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Cancel the context after 1 second
-	go func(ctx context.Context) {
-		time.Sleep(time.Second)
-		cancel()
-	}(ctx)
-
-	_, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	assert.ErrorContains(t, "context canceled", err)
+	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
+	assert.ErrorContains(t, "404: Not found", err)
 }
 
 // This test makes sure that we handle even errors not specified in the Beacon API spec
