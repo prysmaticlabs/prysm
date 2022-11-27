@@ -667,6 +667,7 @@ type BeaconStateContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to State:
+	//
 	//	*BeaconStateContainer_Phase0State
 	//	*BeaconStateContainer_AltairState
 	//	*BeaconStateContainer_BellatrixState

@@ -22,6 +22,7 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/validator.proto";
+import "proto/prysm/v1alpha1/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
@@ -258,6 +259,14 @@ service BeaconChain {
             get: "/eth/v1alpha1/beacon/individual_votes"
         };
     }
+
+    // Submit a BLS_TO_EXECUTION_CHANGE object to the beacon node.
+    rpc SubmitBLSToExecutionChange(SignedBLSToExecutionChange) returns (BLSToExecutionChangeResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/beacon/pool/bls_to_execution_changes/submit"
+        };
+    }
+
 }
 
 // SetAction defines the type of action that should be applied to the keys in a validator change set.
@@ -408,6 +417,12 @@ message BeaconBlockContainer {
 
         // Representing a blinded bellatrix block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
+
+        // Representing a Capella block.
+        SignedBeaconBlockCapella capella_block = 7;
+
+        // Representing a blinded Capella block.
+        SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
     }
 }
 
@@ -827,6 +842,10 @@ message SubmitSlashingResponse {
     // proposer/attester slashing object.
     repeated uint64 slashed_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
+
+message BLSToExecutionChangeResponse {
+}
+
 
 message IndividualVotesRequest {
     // Epoch of the request.

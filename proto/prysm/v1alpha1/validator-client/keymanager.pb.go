@@ -138,6 +138,7 @@ type SignRequest struct {
 	SigningRoot     []byte `protobuf:"bytes,2,opt,name=signing_root,json=signingRoot,proto3" json:"signing_root,omitempty"`
 	SignatureDomain []byte `protobuf:"bytes,3,opt,name=signature_domain,json=signatureDomain,proto3" json:"signature_domain,omitempty"`
 	// Types that are assignable to Object:
+	//
 	//	*SignRequest_Block
 	//	*SignRequest_AttestationData
 	//	*SignRequest_AggregateAttestationAndProof

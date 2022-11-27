@@ -27,6 +27,7 @@ type BeaconStateForStorage struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to StorageState:
+	//
 	//	*BeaconStateForStorage_StateV1
 	StorageState isBeaconStateForStorage_StorageState `protobuf_oneof:"storageState"`
 }

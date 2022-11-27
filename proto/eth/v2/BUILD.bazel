@@ -41,6 +41,10 @@ ssz_gen_marshal(
         "SignedBeaconBlockAltair",
         "SignedBeaconBlockBellatrix",
         "SignedBlindedBeaconBlockBellatrix",
+        "SignedBeaconBlockCapella",
+        "SignedBlindedBeaconBlockCapella",
+	"BlsToExecutionChange",
+	"SignedBlsToExecutionChange",
     ],
 )
 
