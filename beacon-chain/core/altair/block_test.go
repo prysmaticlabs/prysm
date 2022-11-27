@@ -168,6 +168,35 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// This is a regression test #11696
+func TestProcessSyncCommittee_DontPrecompute(t *testing.T) {
+	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	require.NoError(t, beaconState.SetSlot(1))
+	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+	require.NoError(t, err)
+	committeeKeys := committee.Pubkeys
+	committeeKeys[1] = committeeKeys[0]
+	require.NoError(t, beaconState.SetCurrentSyncCommittee(committee))
+	idx, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(committeeKeys[0]))
+	require.Equal(t, true, ok)
+
+	syncBits := bitfield.NewBitvector512()
+	for i := range syncBits {
+		syncBits[i] = 0xFF
+	}
+	syncBits.SetBitAt(0, false)
+	syncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits: syncBits,
+	}
+	require.NoError(t, beaconState.UpdateBalancesAtIndex(idx, 0))
+	st, votedKeys, err := altair.ProcessSyncAggregateEported(context.Background(), beaconState, syncAggregate)
+	require.NoError(t, err)
+	require.Equal(t, 511, len(votedKeys))
+	require.DeepEqual(t, committeeKeys[0], votedKeys[0].Marshal())
+	balances := st.Balances()
+	require.Equal(t, uint64(988), balances[idx])
+}
+
 func TestProcessSyncCommittee_processSyncAggregate(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, beaconState.SetSlot(1))
