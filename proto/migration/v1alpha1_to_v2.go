@@ -782,3 +782,14 @@ func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.Signed
 	}
 	return result
 }
+
+func V2SignedBLSToExecutionChangeToV1Alpha1(change *ethpbv2.SignedBLSToExecutionChange) *ethpbalpha.SignedBLSToExecutionChange {
+	return &ethpbalpha.SignedBLSToExecutionChange{
+		Message: &ethpbalpha.BLSToExecutionChange{
+			ValidatorIndex:     change.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(change.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(change.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(change.Signature),
+	}
+}
