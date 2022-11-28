@@ -403,11 +403,17 @@ message BeaconBlockContainer {
         // Representing an altair block.
         SignedBeaconBlockAltair altair_block = 4;
 
-        // Representing an bellatrix block.
+        // Representing a bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 5;
 
         // Representing a blinded bellatrix block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
+
+        // Representing a capella block.
+        SignedBeaconBlockCapella capella_block = 7;
+
+        // Representing a blinded capella block.
+        SignedBlindedBeaconBlockCapella blinded_capella_block = 8;
     }
 }
 
