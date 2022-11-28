@@ -602,7 +602,7 @@ type AttestationDataJson struct {
 type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
-	ToExecutionAddress string `jston:"to_execution_address" hex:"true"`
+	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
 type DepositJson struct {
