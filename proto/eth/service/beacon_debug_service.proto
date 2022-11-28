@@ -75,9 +75,9 @@ service BeaconDebug {
   // GetForkChoice returns a dump fork choice store.
   //
   // This function is not a part of the official Beacon APIs.
-  rpc GetForkChoice(google.protobuf.Empty) returns (v1.ForkChoiceResponse) {
+  rpc GetForkChoice(google.protobuf.Empty) returns (v1.ForkChoiceDump) {
     option (google.api.http) = {
-      get: "/internal/eth/v1/debug/beacon/forkchoice"
+      get: "/internal/eth/v1/debug/forkchoice"
     };
   }
 }
