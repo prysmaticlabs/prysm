@@ -140,13 +140,15 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	assert.Equal(t, version.Altair, newState.Version())
 }
 
-func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
+func TestReplayBlocks_ThroughCapellaForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 1
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	bCfg.BellatrixForkEpoch = 2
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.BellatrixForkVersion)] = 2
+	bCfg.CapellaForkEpoch = 3
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.CapellaForkVersion)] = 3
 	params.OverrideBeaconConfig(bCfg)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
@@ -166,8 +168,15 @@ func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
-	// Verify state is version Altair.
+	// Verify state is version Bellatrix.
 	assert.Equal(t, version.Bellatrix, newState.Version())
+
+	targetSlot = params.BeaconConfig().SlotsPerEpoch * 3
+	newState, err = service.replayBlocks(context.Background(), newState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	require.NoError(t, err)
+
+	// Verify state is version Capella.
+	assert.Equal(t, version.Capella, newState.Version())
 }
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {

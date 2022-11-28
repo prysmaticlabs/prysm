@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -62,6 +63,13 @@ func WithSlashingPool(slashingPool slashings.PoolManager) Option {
 func WithSyncCommsPool(syncCommsPool synccommittee.Pool) Option {
 	return func(s *Service) error {
 		s.cfg.syncCommsPool = syncCommsPool
+		return nil
+	}
+}
+
+func WithBlsToExecPool(blsToExecPool blstoexec.PoolManager) Option {
+	return func(s *Service) error {
+		s.cfg.blsToExecPool = blsToExecPool
 		return nil
 	}
 }

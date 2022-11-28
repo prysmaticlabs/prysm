@@ -200,6 +200,17 @@ func ProcessBlockNoVerifyAnySig(
 	set := bls.NewSet()
 	set.Join(bSet).Join(rSet).Join(aSet)
 
+	if blk.Version() >= version.Capella {
+		changes, err := signed.Block().Body().BLSToExecutionChanges()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
+		}
+		cSet, err := b.BLSChangesSignatureBatch(ctx, st, changes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges signatures")
+		}
+		set.Join(cSet)
+	}
 	return set, st, nil
 }
 
@@ -368,7 +379,11 @@ func altairOperations(
 	if _, err := altair.ProcessDeposits(ctx, st, signedBeaconBlock.Block().Body().Deposits()); err != nil {
 		return nil, errors.Wrap(err, "could not process altair deposit")
 	}
-	return b.ProcessVoluntaryExits(ctx, st, signedBeaconBlock.Block().Body().VoluntaryExits())
+	st, err = b.ProcessVoluntaryExits(ctx, st, signedBeaconBlock.Block().Body().VoluntaryExits())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process voluntary exits")
+	}
+	return b.ProcessBLSToExecutionChanges(st, signedBeaconBlock)
 }
 
 // This calls phase 0 block operations.

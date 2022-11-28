@@ -67,12 +67,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if stateVersion > version.Phase0 {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if stateVersion > version.Phase0 {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"
@@ -92,6 +92,12 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "nextSyncCommittee"
 	case LatestExecutionPayloadHeader:
 		return "latestExecutionPayloadHeader"
+	case LatestExecutionPayloadHeaderCapella:
+		return "latestExecutionPayloadHeaderCapella"
+	case NextWithdrawalIndex:
+		return "nextWithdrawalIndex"
+	case NextWithdrawalValidatorIndex:
+		return "nextWithdrawalValidatorIndex"
 	default:
 		return ""
 	}
@@ -152,6 +158,10 @@ const (
 	NextSyncCommittee
 	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
+	// State fields added in Capella
+	LatestExecutionPayloadHeaderCapella
+	NextWithdrawalIndex
+	NextWithdrawalValidatorIndex
 )
 
 // Altair fields which replaced previous phase 0 fields.
