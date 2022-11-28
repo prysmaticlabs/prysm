@@ -14,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -78,8 +80,7 @@ var altairFields = []nativetypes.FieldIndex{
 var bellatrixFields = append(altairFields, nativetypes.LatestExecutionPayloadHeader)
 
 var capellaFields = append(
-	altairFields,
-	nativetypes.LatestExecutionPayloadHeaderCapella,
+	bellatrixFields,
 	nativetypes.NextWithdrawalIndex,
 	nativetypes.NextWithdrawalValidatorIndex,
 )
@@ -310,6 +311,14 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
+	var initialPayloadHeader interfaces.ExecutionDataHeader
+	if st.LatestExecutionPayloadHeader != nil {
+		var err error
+		initialPayloadHeader, err = blocks.WrappedExecutionPayloadHeader(st.LatestExecutionPayloadHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to wrap latest execution payload header")
+		}
+	}
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
 	b := &BeaconState{
@@ -338,7 +347,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		inactivityScores:             st.InactivityScores,
 		currentSyncCommittee:         st.CurrentSyncCommittee,
 		nextSyncCommittee:            st.NextSyncCommittee,
-		latestExecutionPayloadHeader: st.LatestExecutionPayloadHeader,
+		latestExecutionPayloadHeader: initialPayloadHeader,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -402,37 +411,45 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	for i, m := range st.RandaoMixes {
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
+	var initialPayloadHeader interfaces.ExecutionDataHeader
+	if st.LatestExecutionPayloadHeader != nil {
+		var err error
+		initialPayloadHeader, err = blocks.WrappedExecutionPayloadHeaderCapella(st.LatestExecutionPayloadHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to wrap latest execution payload header")
+		}
+	}
 
 	fieldCount := params.BeaconConfig().BeaconStateCapellaFieldCount
 	b := &BeaconState{
-		version:                             version.Capella,
-		genesisTime:                         st.GenesisTime,
-		genesisValidatorsRoot:               bytesutil.ToBytes32(st.GenesisValidatorsRoot),
-		slot:                                st.Slot,
-		fork:                                st.Fork,
-		latestBlockHeader:                   st.LatestBlockHeader,
-		blockRoots:                          &bRoots,
-		stateRoots:                          &sRoots,
-		historicalRoots:                     hRoots,
-		eth1Data:                            st.Eth1Data,
-		eth1DataVotes:                       st.Eth1DataVotes,
-		eth1DepositIndex:                    st.Eth1DepositIndex,
-		validators:                          st.Validators,
-		balances:                            st.Balances,
-		randaoMixes:                         &mixes,
-		slashings:                           st.Slashings,
-		previousEpochParticipation:          st.PreviousEpochParticipation,
-		currentEpochParticipation:           st.CurrentEpochParticipation,
-		justificationBits:                   st.JustificationBits,
-		previousJustifiedCheckpoint:         st.PreviousJustifiedCheckpoint,
-		currentJustifiedCheckpoint:          st.CurrentJustifiedCheckpoint,
-		finalizedCheckpoint:                 st.FinalizedCheckpoint,
-		inactivityScores:                    st.InactivityScores,
-		currentSyncCommittee:                st.CurrentSyncCommittee,
-		nextSyncCommittee:                   st.NextSyncCommittee,
-		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
-		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
-		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
+		version:                      version.Capella,
+		genesisTime:                  st.GenesisTime,
+		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
+		slot:                         st.Slot,
+		fork:                         st.Fork,
+		latestBlockHeader:            st.LatestBlockHeader,
+		blockRoots:                   &bRoots,
+		stateRoots:                   &sRoots,
+		historicalRoots:              hRoots,
+		eth1Data:                     st.Eth1Data,
+		eth1DataVotes:                st.Eth1DataVotes,
+		eth1DepositIndex:             st.Eth1DepositIndex,
+		validators:                   st.Validators,
+		balances:                     st.Balances,
+		randaoMixes:                  &mixes,
+		slashings:                    st.Slashings,
+		previousEpochParticipation:   st.PreviousEpochParticipation,
+		currentEpochParticipation:    st.CurrentEpochParticipation,
+		justificationBits:            st.JustificationBits,
+		previousJustifiedCheckpoint:  st.PreviousJustifiedCheckpoint,
+		currentJustifiedCheckpoint:   st.CurrentJustifiedCheckpoint,
+		finalizedCheckpoint:          st.FinalizedCheckpoint,
+		inactivityScores:             st.InactivityScores,
+		currentSyncCommittee:         st.CurrentSyncCommittee,
+		nextSyncCommittee:            st.NextSyncCommittee,
+		latestExecutionPayloadHeader: initialPayloadHeader,
+		nextWithdrawalIndex:          st.NextWithdrawalIndex,
+		nextWithdrawalValidatorIndex: st.NextWithdrawalValidatorIndex,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -465,7 +482,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
+	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeader] = stateutil.NewRef(1)
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -490,6 +507,11 @@ func (b *BeaconState) Copy() state.BeaconState {
 		fieldCount = params.BeaconConfig().BeaconStateCapellaFieldCount
 	}
 
+	// TODO: may panic!
+	header, err := b.latestExecutionPayloadHeaderVal()
+	if err != nil {
+		panic(err)
+	}
 	dst := &BeaconState{
 		version: b.version,
 
@@ -518,18 +540,17 @@ func (b *BeaconState) Copy() state.BeaconState {
 		inactivityScores:           b.inactivityScores,
 
 		// Everything else, too small to be concerned about, constant size.
-		genesisValidatorsRoot:               b.genesisValidatorsRoot,
-		justificationBits:                   b.justificationBitsVal(),
-		fork:                                b.forkVal(),
-		latestBlockHeader:                   b.latestBlockHeaderVal(),
-		eth1Data:                            b.eth1DataVal(),
-		previousJustifiedCheckpoint:         b.previousJustifiedCheckpointVal(),
-		currentJustifiedCheckpoint:          b.currentJustifiedCheckpointVal(),
-		finalizedCheckpoint:                 b.finalizedCheckpointVal(),
-		currentSyncCommittee:                b.currentSyncCommitteeVal(),
-		nextSyncCommittee:                   b.nextSyncCommitteeVal(),
-		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
-		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
+		genesisValidatorsRoot:        b.genesisValidatorsRoot,
+		justificationBits:            b.justificationBitsVal(),
+		fork:                         b.forkVal(),
+		latestBlockHeader:            b.latestBlockHeaderVal(),
+		eth1Data:                     b.eth1DataVal(),
+		previousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
+		currentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
+		finalizedCheckpoint:          b.finalizedCheckpointVal(),
+		currentSyncCommittee:         b.currentSyncCommitteeVal(),
+		nextSyncCommittee:            b.nextSyncCommitteeVal(),
+		latestExecutionPayloadHeader: header,
 
 		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -827,8 +848,6 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return stateutil.SyncCommitteeRoot(b.nextSyncCommittee)
 	case nativetypes.LatestExecutionPayloadHeader:
 		return b.latestExecutionPayloadHeader.HashTreeRoot()
-	case nativetypes.LatestExecutionPayloadHeaderCapella:
-		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
 	case nativetypes.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
 	case nativetypes.NextWithdrawalValidatorIndex:

@@ -6,6 +6,8 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -280,4 +282,117 @@ func createWrappedPayloadHeaderCapella(t testing.TB) interfaces.ExecutionData {
 	})
 	require.NoError(t, err)
 	return payload
+}
+
+func TestCopyExecutionDataHeader(t *testing.T) {
+	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
+	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
+	require.NoError(t, err)
+
+	headerCopy, err := blocks.CopyExecutionDataHeader(wsb)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, data, headerCopy.Proto())
+}
+
+func TestCopyExecutionDataHeaderFromFullPayload(t *testing.T) {
+	data := &enginev1.ExecutionPayload{GasUsed: 54}
+	wsb, err := blocks.WrappedExecutionPayload(data)
+	require.NoError(t, err)
+
+	headerCopy, err := blocks.CopyExecutionDataHeader(wsb)
+	require.NoError(t, err)
+
+	txRoot, err := ssz.TransactionsRoot(nil)
+	require.NoError(t, err)
+
+	assert.DeepSSZEqual(t, &enginev1.ExecutionPayloadHeader{GasUsed: 54, TransactionsRoot: txRoot[:]}, headerCopy.Proto().(*enginev1.ExecutionPayloadHeader))
+}
+
+func TestCopyExecutionDataHeaderCapella(t *testing.T) {
+	data := &enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       []byte("parenthash"),
+		FeeRecipient:     []byte("feerecipient"),
+		StateRoot:        []byte("stateroot"),
+		ReceiptsRoot:     []byte("receiptsroot"),
+		LogsBloom:        []byte("logsbloom"),
+		PrevRandao:       []byte("prevrandao"),
+		BlockNumber:      11,
+		GasLimit:         22,
+		GasUsed:          33,
+		Timestamp:        44,
+		ExtraData:        []byte("extradata"),
+		BaseFeePerGas:    []byte("basefeepergas"),
+		BlockHash:        []byte("blockhash"),
+		TransactionsRoot: []byte("transactionsroot"),
+		WithdrawalsRoot:  []byte("withdrawalsroot"),
+	}
+	payload, err := blocks.WrappedExecutionPayloadHeaderCapella(data)
+	require.NoError(t, err)
+
+	headerCopy, err := blocks.CopyExecutionDataHeader(payload)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, data, headerCopy.Proto())
+
+	txRoot, err := headerCopy.TransactionsRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, txRoot, data.TransactionsRoot)
+
+	wrRoot, err := headerCopy.WithdrawalsRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, wrRoot, data.WithdrawalsRoot)
+}
+
+func TestCopyExecutionDataHeaderCapellaFromFullPayload(t *testing.T) {
+	data := &enginev1.ExecutionPayloadCapella{
+		ParentHash:    []byte("parenthash"),
+		FeeRecipient:  []byte("feerecipient"),
+		StateRoot:     []byte("stateroot"),
+		ReceiptsRoot:  []byte("receiptsroot"),
+		LogsBloom:     []byte("logsbloom"),
+		PrevRandao:    []byte("prevrandao"),
+		BlockNumber:   11,
+		GasLimit:      22,
+		GasUsed:       33,
+		Timestamp:     44,
+		ExtraData:     []byte("extradata"),
+		BaseFeePerGas: []byte("basefeepergas"),
+		BlockHash:     []byte("blockhash"),
+		Transactions:  [][]byte{[]byte("transaction")},
+		Withdrawals: []*enginev1.Withdrawal{{
+			WithdrawalIndex:  55,
+			ValidatorIndex:   66,
+			ExecutionAddress: []byte("executionaddress"),
+			Amount:           77,
+		}},
+	}
+	payload, err := blocks.WrappedExecutionPayloadCapella(data)
+	require.NoError(t, err)
+
+	headerCopy, err := blocks.CopyExecutionDataHeader(payload)
+	require.NoError(t, err)
+
+	txRoot, err := ssz.TransactionsRoot(data.Transactions)
+	require.NoError(t, err)
+	wRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), data.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	require.NoError(t, err)
+	dataHeader := &enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       data.ParentHash,
+		FeeRecipient:     data.FeeRecipient,
+		StateRoot:        data.StateRoot,
+		ReceiptsRoot:     data.ReceiptsRoot,
+		LogsBloom:        data.LogsBloom,
+		PrevRandao:       data.PrevRandao,
+		BlockNumber:      data.BlockNumber,
+		GasLimit:         data.GasLimit,
+		GasUsed:          data.GasUsed,
+		Timestamp:        data.Timestamp,
+		ExtraData:        data.ExtraData,
+		BaseFeePerGas:    data.BaseFeePerGas,
+		BlockHash:        data.BlockHash,
+		TransactionsRoot: txRoot[:],
+		WithdrawalsRoot:  wRoot[:],
+	}
+	assert.DeepSSZEqual(t, dataHeader, headerCopy.Proto())
 }

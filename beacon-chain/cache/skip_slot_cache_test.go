@@ -33,5 +33,9 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 
 	res, err := c.Get(ctx, r)
 	require.NoError(t, err)
-	assert.DeepEqual(t, res.ToProto(), s.ToProto(), "Expected equal protos to return from cache")
+	resProto, err := res.ToProto()
+	require.NoError(t, err)
+	sProto, err := s.ToProto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, resProto, sProto, "Expected equal protos to return from cache")
 }

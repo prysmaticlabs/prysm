@@ -51,7 +51,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
 	ToProtoUnsafe() interface{}
-	ToProto() interface{}
+	ToProto() (interface{}, error)
 	GenesisTime() uint64
 	GenesisValidatorsRoot() []byte
 	Slot() types.Slot
@@ -63,7 +63,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
+	LatestExecutionPayloadHeader() (interfaces.ExecutionDataHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -85,7 +85,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
-	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
+	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionDataHeader) error
 	SetNextWithdrawalIndex(i uint64) error
 	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }

@@ -74,6 +74,12 @@ type BeaconBlockBody interface {
 // ExecutionData represents execution layer information that is contained
 // within post-Bellatrix beacon block bodies.
 type ExecutionData interface {
+	ExecutionDataHeader
+	Transactions() ([][]byte, error)
+	Withdrawals() ([]*enginev1.Withdrawal, error)
+}
+
+type ExecutionDataHeader interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
@@ -92,8 +98,6 @@ type ExecutionData interface {
 	ExtraData() []byte
 	BaseFeePerGas() []byte
 	BlockHash() []byte
-	Transactions() ([][]byte, error)
 	TransactionsRoot() ([]byte, error)
-	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
 }
