@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
-func TestBeaconApiHelpers(t *testing.T) {
-	tests := []struct {
+func TestHexValidation32Bytes(t *testing.T) {
+	testCases := []struct {
 		name  string
 		input string
 		valid bool
@@ -21,17 +21,17 @@ func TestBeaconApiHelpers(t *testing.T) {
 			valid: true,
 		},
 		{
-			name:  "root too small",
+			name:  "too small",
 			input: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f",
 			valid: false,
 		},
 		{
-			name:  "root too big",
+			name:  "too big",
 			input: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f22",
 			valid: false,
 		},
 		{
-			name:  "empty root",
+			name:  "empty",
 			input: "",
 			valid: false,
 		},
@@ -47,9 +47,83 @@ func TestBeaconApiHelpers(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.valid, validRoot(tt.input))
-		})
+	testSuites := []struct {
+		name               string
+		validationFunction func(string) bool
+	}{
+		{
+			"validRoot",
+			validRoot,
+		},
+	}
+
+	for _, testSuite := range testSuites {
+		for _, testCase := range testCases {
+			t.Run(testSuite.name+" "+testCase.name, func(t *testing.T) {
+				assert.Equal(t, testCase.valid, testSuite.validationFunction(testCase.input))
+			})
+		}
+	}
+
+}
+
+func TestHexValidation4Bytes(t *testing.T) {
+	testCases := []struct {
+		name  string
+		input string
+		valid bool
+	}{
+		{
+			name:  "correct format",
+			input: "0x01234567",
+			valid: true,
+		},
+		{
+			name:  "too small",
+			input: "0x0123456",
+			valid: false,
+		},
+		{
+			name:  "too big",
+			input: "0x012345678",
+			valid: false,
+		},
+		{
+			name:  "empty",
+			input: "",
+			valid: false,
+		},
+		{
+			name:  "no 0x prefix",
+			input: "01234567",
+			valid: false,
+		},
+		{
+			name:  "invalid characters",
+			input: "0xzzzzzzzz",
+			valid: false,
+		},
+	}
+
+	testSuites := []struct {
+		name               string
+		validationFunction func(string) bool
+	}{
+		{
+			"validForkVersion",
+			validForkVersion,
+		},
+		{
+			"validDomainTypeVersion",
+			validDomainTypeVersion,
+		},
+	}
+
+	for _, testSuite := range testSuites {
+		for _, testCase := range testCases {
+			t.Run(testSuite.name+" "+testCase.name, func(t *testing.T) {
+				assert.Equal(t, testCase.valid, testSuite.validationFunction(testCase.input))
+			})
+		}
 	}
 }

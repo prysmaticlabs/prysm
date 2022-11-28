@@ -14,24 +14,33 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url            string
-	httpClient     http.Client
-	fallbackClient iface.ValidatorClient
+	url                 string
+	httpClient          http.Client
+	fallbackClient      iface.ValidatorClient
+	forkVersionProvider forkVersionProvider
+	genesisProvider     genesisProvider
+	domainDataProvider  domainDataProvider
 }
 
-func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
+func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
+	httpClient := http.Client{Timeout: timeout}
+
+	forkVersionProvider := beaconApiForkVersionProvider{httpClient: httpClient, url: url}
+	genesisProvider := beaconApiGenesisProvider{httpClient: httpClient, url: url}
+
 	return &beaconApiValidatorClient{
-		url:        url,
-		httpClient: http.Client{Timeout: timeout},
+		url:                 url,
+		httpClient:          httpClient,
+		forkVersionProvider: forkVersionProvider,
+		genesisProvider:     genesisProvider,
+		domainDataProvider:  beaconApiDomainDataProvider{forkVersionProvider: forkVersionProvider, genesisProvider: genesisProvider},
 	}
 }
 
-func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
-	return &beaconApiValidatorClient{
-		url:            url,
-		httpClient:     http.Client{Timeout: timeout},
-		fallbackClient: fallbackClient,
-	}
+func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) *beaconApiValidatorClient {
+	beaconApiValidatorClient := NewBeaconApiValidatorClient(url, timeout)
+	beaconApiValidatorClient.fallbackClient = fallbackClient
+	return beaconApiValidatorClient
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -52,13 +61,8 @@ func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *et
 	panic("beaconApiValidatorClient.CheckDoppelGanger is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.DomainData(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.DomainData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) DomainData(_ context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+	return c.domainDataProvider.GetDomainData(in.Epoch, in.Domain)
 }
 
 func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {

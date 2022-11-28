@@ -21,22 +21,21 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	}))
 	defer server.Close()
 
-	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	resp, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	resp, err := genesisProvider.GetGenesis()
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	assert.Equal(t, "1234", resp.Data.GenesisTime)
-	assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", resp.Data.GenesisValidatorsRoot)
+	assert.Equal(t, "1234", resp.GenesisTime)
+	assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", resp.GenesisValidatorsRoot)
 }
 
 func TestGetGenesis_NilData(t *testing.T) {
 	server := httptest.NewServer(createGenesisHandler(nil))
 	defer server.Close()
 
-	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
-	assert.ErrorContains(t, "GenesisResponseJson.Data is nil", err)
+	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	_, err := genesisProvider.GetGenesis()
+	assert.ErrorContains(t, "genesis data is nil", err)
 }
 
 func TestGetGenesis_InvalidJsonGenesis(t *testing.T) {
@@ -46,8 +45,8 @@ func TestGetGenesis_InvalidJsonGenesis(t *testing.T) {
 	}))
 	defer server.Close()
 
-	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	_, err := genesisProvider.GetGenesis()
 	assert.ErrorContains(t, "failed to decode response body genesis json", err)
 }
 
@@ -55,8 +54,8 @@ func TestGetGenesis_InvalidJsonError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(invalidJsonErrHandler))
 	defer server.Close()
 
-	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	_, err := genesisProvider.GetGenesis()
 	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
 }
 
@@ -67,7 +66,7 @@ func TestGetGenesis_Timeout(t *testing.T) {
 	}))
 	defer server.Close()
 
-	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: 1}}
-	_, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: 1}}
+	_, err := genesisProvider.GetGenesis()
 	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
 }

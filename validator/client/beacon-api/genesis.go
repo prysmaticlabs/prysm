@@ -15,26 +15,35 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
+type genesisProvider interface {
+	GetGenesis() (*rpcmiddleware.GenesisResponse_GenesisJson, error)
+}
+
+type beaconApiGenesisProvider struct {
+	httpClient http.Client
+	url        string
+}
+
 func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse, error) {
-	genesis, err := c.getGenesis()
+	genesis, err := c.genesisProvider.GetGenesis()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis data")
 	}
 
-	genesisTime, err := strconv.ParseUint(genesis.Data.GenesisTime, 10, 64)
+	genesisTime, err := strconv.ParseUint(genesis.GenesisTime, 10, 64)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.Data.GenesisTime)
+		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.GenesisTime)
 	}
 
 	chainStartResponse := &ethpb.ChainStartResponse{}
 	chainStartResponse.Started = true
 	chainStartResponse.GenesisTime = genesisTime
 
-	if !validRoot(genesis.Data.GenesisValidatorsRoot) {
-		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.Data.GenesisValidatorsRoot)
+	if !validRoot(genesis.GenesisValidatorsRoot) {
+		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.GenesisValidatorsRoot)
 	}
 
-	genesisValidatorRoot, err := hexutil.Decode(genesis.Data.GenesisValidatorsRoot)
+	genesisValidatorRoot, err := hexutil.Decode(genesis.GenesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
@@ -43,7 +52,7 @@ func (c beaconApiValidatorClient) waitForChainStart() (*ethpb.ChainStartResponse
 	return chainStartResponse, nil
 }
 
-func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, error) {
+func (c beaconApiGenesisProvider) GetGenesis() (*rpcmiddleware.GenesisResponse_GenesisJson, error) {
 	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query REST API genesis endpoint")
@@ -69,8 +78,8 @@ func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJs
 	}
 
 	if genesisJson.Data == nil {
-		return nil, errors.New("GenesisResponseJson.Data is nil")
+		return nil, errors.New("genesis data is nil")
 	}
 
-	return genesisJson, nil
+	return genesisJson.Data, nil
 }
