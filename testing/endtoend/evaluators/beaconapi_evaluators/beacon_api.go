@@ -39,7 +39,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	"/beacon/genesis": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, _ types.Epoch) []string {
-			return []string{"skip"}
+			return []string{}
 		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.GenesisResponseJson{},
@@ -160,7 +160,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	"/node/identity": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, _ types.Epoch) []string {
-			return []string{"skip"}
+			return []string{}
 		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.IdentityResponseJson{},
@@ -189,7 +189,7 @@ var beaconPathsAndObjects = map[string]metadata{
 	"/node/peers": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, _ types.Epoch) []string {
-			return []string{"skip"}
+			return []string{}
 		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.PeersResponseJson{},
@@ -231,9 +231,6 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			switch key {
 			case "json":
 				jsonparams := meta.params("json", currentEpoch)
-				if len(jsonparams) == 0 {
-					continue
-				}
 				apipath := pathFromParams(path, jsonparams)
 				fmt.Printf("executing json api path: %s\n", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx,
