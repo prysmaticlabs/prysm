@@ -35,7 +35,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "616"
+	e2eConfig.TerminalTotalDifficulty = "0"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
@@ -72,7 +72,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "616"
+	e2eConfig.TerminalTotalDifficulty = "0"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName

@@ -11,8 +11,8 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "mergeForkBlock": 308,
-    "terminalTotalDifficulty": 616,
+    "mergeNetsplitBlock": 308,
+    "terminalTotalDifficulty": 0,
     "clique": {
       "period": 2,
       "epoch": 30000

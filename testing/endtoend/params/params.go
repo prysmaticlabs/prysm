@@ -29,6 +29,9 @@ type params struct {
 	ContractAddress           common.Address
 	Ports                     *ports
 	Paths                     *paths
+	StartTime                 time.Time
+	Eth1BlockHash             *common.Hash
+	Eth1GenesisTime           uint64
 }
 
 type ports struct {
@@ -198,12 +201,15 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
+	now := time.Now()
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:         logPath,
 		TestShardIndex:  testShardIndex,
 		BeaconNodeCount: beaconNodeCount,
 		Ports:           testPorts,
+		StartTime:       now,
+		Eth1GenesisTime: uint64(now.Unix()),
 	}
 	return nil
 }
@@ -247,6 +253,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
+	now := time.Now()
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -254,6 +261,8 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		BeaconNodeCount:           beaconNodeCount,
 		LighthouseBeaconNodeCount: lighthouseNodeCount,
 		Ports:                     testPorts,
+		StartTime:                 now,
+		Eth1GenesisTime:           uint64(now.Unix()),
 	}
 	return nil
 }

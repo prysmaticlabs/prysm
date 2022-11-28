@@ -3,6 +3,9 @@ package eth1
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"os"
 	"os/exec"
 	"path"
@@ -53,12 +56,31 @@ func (node *Node) Start(ctx context.Context) error {
 		}
 	}
 
+	if err := file.MkdirAll(eth1Path); err != nil {
+		return err
+	}
+	gethJsonPath := path.Join(eth1Path, "genesis.json")
+
+	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	b, err := testing.TerribleMarshalHack(gen, testing.DefaultContractAddress)
+	if err != nil {
+		return err
+	}
+
+	if err := file.WriteFile(gethJsonPath, b); err != nil {
+		return err
+	}
+	copyPath := path.Join(e2e.TestParams.LogPath, "eth1-genesis.json")
+	if err := file.WriteFile(copyPath, b); err != nil {
+		return err
+	}
+
 	initCmd := exec.CommandContext(
 		ctx,
 		binaryPath,
 		"init",
 		fmt.Sprintf("--datadir=%s", eth1Path),
-		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json") // #nosec G204 -- Safe
+		gethJsonPath)
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
@@ -91,7 +113,8 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
-		"--verbosity=4",
+		"--verbosity=5",
+		"--vmdebug",
 		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}
