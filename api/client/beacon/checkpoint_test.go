@@ -418,6 +418,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	require.NoError(t, err)
 	fork, err := forkForEpoch(cfg, epoch)
 	require.NoError(t, st.SetFork(fork))
+	require.NoError(t, st.SetSlot(slot))
 
 	// set up checkpoint block
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())

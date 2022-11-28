@@ -17,9 +17,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -51,7 +50,7 @@ func clientTimedOutError(err error) bool {
 	return strings.Contains(err.Error(), errTimedOut.Error())
 }
 
-// Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
+// GenesisExecutionChainInfo retrieves the genesis time and execution block number of the beacon chain
 // from the deposit contract.
 func (s *Service) GenesisExecutionChainInfo() (uint64, *big.Int) {
 	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))
@@ -286,7 +285,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		currentBlockNum = deploymentBlock
 	}
 	// To store all blocks.
-	headersMap := make(map[uint64]*gethtypes.Header)
+	headersMap := make(map[uint64]*types.HeaderInfo)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err
@@ -343,7 +342,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint64, latestFollowHeight uint64, batchSize uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*gethtypes.Header) (uint64, uint64, error) {
+func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint64, latestFollowHeight uint64, batchSize uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*types.HeaderInfo) (uint64, uint64, error) {
 	// Batch request the desired headers and store them in a
 	// map for quick access.
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
@@ -501,11 +500,11 @@ func (s *Service) processChainStartFromBlockNum(ctx context.Context, blkNum *big
 	return nil
 }
 
-func (s *Service) processChainStartFromHeader(ctx context.Context, header *gethtypes.Header) {
-	s.processChainStartIfReady(ctx, header.Hash(), header.Number, header.Time)
+func (s *Service) processChainStartFromHeader(ctx context.Context, header *types.HeaderInfo) {
+	s.processChainStartIfReady(ctx, header.Hash, header.Number, header.Time)
 }
 
-func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*gethtypes.Header,
+func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*types.HeaderInfo,
 	requestHeaders func(uint64, uint64) error) error {
 	for i := start; i <= end; i++ {
 		if !s.chainStartData.Chainstarted {
@@ -552,13 +551,7 @@ func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]by
 
 // savePowchainData saves all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	var pbState *ethpb.BeaconState
-	var err error
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-	} else {
-		pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
-	}
+	pbState, err := statenative.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
 	if err != nil {
 		return err
 	}

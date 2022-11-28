@@ -22,20 +22,21 @@ import (
 // Casper FFG slashing conditions if any slashable events occurred.
 //
 // Spec pseudocode definition:
-//   def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSlashing) -> None:
-//    attestation_1 = attester_slashing.attestation_1
-//    attestation_2 = attester_slashing.attestation_2
-//    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
-//    assert is_valid_indexed_attestation(state, attestation_1)
-//    assert is_valid_indexed_attestation(state, attestation_2)
 //
-//    slashed_any = False
-//    indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
-//    for index in sorted(indices):
-//        if is_slashable_validator(state.validators[index], get_current_epoch(state)):
-//            slash_validator(state, index)
-//            slashed_any = True
-//    assert slashed_any
+//	def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSlashing) -> None:
+//	 attestation_1 = attester_slashing.attestation_1
+//	 attestation_2 = attester_slashing.attestation_2
+//	 assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
+//	 assert is_valid_indexed_attestation(state, attestation_1)
+//	 assert is_valid_indexed_attestation(state, attestation_2)
+//
+//	 slashed_any = False
+//	 indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
+//	 for index in sorted(indices):
+//	     if is_slashable_validator(state.validators[index], get_current_epoch(state)):
+//	         slash_validator(state, index)
+//	         slashed_any = True
+//	 assert slashed_any
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -83,7 +84,7 @@ func ProcessAttesterSlashing(
 				slashingQuotient = cfg.MinSlashingPenaltyQuotient
 			case beaconState.Version() == version.Altair:
 				slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-			case beaconState.Version() == version.Bellatrix:
+			case beaconState.Version() == version.Bellatrix, beaconState.Version() == version.Capella:
 				slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
 			default:
 				return nil, errors.New("unknown state version")
@@ -132,16 +133,17 @@ func VerifyAttesterSlashing(ctx context.Context, beaconState state.ReadOnlyBeaco
 // IsSlashableAttestationData verifies a slashing against the Casper Proof of Stake FFG rules.
 //
 // Spec pseudocode definition:
-//   def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
-//    """
-//    Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
-//    """
-//    return (
-//        # Double vote
-//        (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch) or
-//        # Surround vote
-//        (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
-//    )
+//
+//	def is_slashable_attestation_data(data_1: AttestationData, data_2: AttestationData) -> bool:
+//	 """
+//	 Check if ``data_1`` and ``data_2`` are slashable according to Casper FFG rules.
+//	 """
+//	 return (
+//	     # Double vote
+//	     (data_1 != data_2 and data_1.target.epoch == data_2.target.epoch) or
+//	     # Surround vote
+//	     (data_1.source.epoch < data_2.source.epoch and data_2.target.epoch < data_1.target.epoch)
+//	 )
 func IsSlashableAttestationData(data1, data2 *ethpb.AttestationData) bool {
 	if data1 == nil || data2 == nil || data1.Target == nil || data2.Target == nil || data1.Source == nil || data2.Source == nil {
 		return false

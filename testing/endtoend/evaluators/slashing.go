@@ -60,7 +60,7 @@ var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evalua
 
 var slashedIndices []uint64
 
-func validatorsSlashed(conns ...*grpc.ClientConn) error {
+func validatorsSlashed(_ e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
@@ -75,7 +75,7 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
+func validatorsLoseBalance(_ e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
@@ -106,7 +106,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
+func insertDoubleAttestationIntoPool(_ e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
@@ -194,7 +194,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
+func proposeDoubleBlock(_ e2eTypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)

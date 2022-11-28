@@ -44,22 +44,24 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, err
 	}
 
-	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
-	if registered && err == nil {
-		builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
-		if err != nil {
-			// In the event of an error, the node should fall back to default execution engine for building block.
-			log.WithError(err).Error("Failed to build a block from external builder, falling " +
-				"back to local execution client")
-			builderGetPayloadMissCount.Inc()
-		} else if builderReady {
-			return b, nil
+	if !req.SkipMevBoost {
+		registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
+		if registered && err == nil {
+			builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
+			if err != nil {
+				// In the event of an error, the node should fall back to default execution engine for building block.
+				log.WithError(err).Error("Failed to build a block from external builder, falling " +
+					"back to local execution client")
+				builderGetPayloadMissCount.Inc()
+			} else if builderReady {
+				return b, nil
+			}
+		} else if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"slot":           req.Slot,
+				"validatorIndex": altairBlk.ProposerIndex,
+			}).Error("Could not determine validator has registered. Defaulting to local execution client")
 		}
-	} else if err != nil {
-		log.WithFields(logrus.Fields{
-			"slot":           req.Slot,
-			"validatorIndex": altairBlk.ProposerIndex,
-		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
 	if err != nil {
@@ -235,16 +237,21 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !ok {
 		return nil, errors.New("execution data must be execution payload header")
 	}
+	parentRoot := b.Block().ParentRoot()
+	stateRoot := b.Block().StateRoot()
+	randaoReveal := b.Block().Body().RandaoReveal()
+	graffiti := b.Block().Body().Graffiti()
+	sig := b.Signature()
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
 			Slot:          b.Block().Slot(),
 			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    b.Block().ParentRoot(),
-			StateRoot:     b.Block().StateRoot(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
 			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Block().Body().RandaoReveal(),
+				RandaoReveal:           randaoReveal[:],
 				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               b.Block().Body().Graffiti(),
+				Graffiti:               graffiti[:],
 				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
 				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
 				Attestations:           b.Block().Body().Attestations(),
@@ -254,7 +261,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				ExecutionPayloadHeader: header,
 			},
 		},
-		Signature: b.Signature(),
+		Signature: sig[:],
 	}
 
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)

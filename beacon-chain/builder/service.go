@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/network"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -30,15 +30,15 @@ type BlockBuilder interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	builderEndpoint network.Endpoint
-	beaconDB        db.HeadAccessDatabase
-	headFetcher     blockchain.HeadFetcher
+	builderClient builder.BuilderClient
+	beaconDB      db.HeadAccessDatabase
+	headFetcher   blockchain.HeadFetcher
 }
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
 	cfg    *config
-	c      *builder.Client
+	c      builder.BuilderClient
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -56,18 +56,14 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 	}
-	if s.cfg.builderEndpoint.Url != "" {
-		c, err := builder.NewClient(s.cfg.builderEndpoint.Url)
-		if err != nil {
-			return nil, err
-		}
-		s.c = c
+	if s.cfg.builderClient != nil && !reflect.ValueOf(s.cfg.builderClient).IsNil() {
+		s.c = s.cfg.builderClient
 
 		// Is the builder up?
 		if err := s.c.Status(ctx); err != nil {
 			log.WithError(err).Error("Failed to check builder status")
 		} else {
-			log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
+			log.WithField("endpoint", s.c.NodeURL()).Info("Builder has been configured")
 			log.Warn("Outsourcing block construction to external builders adds non-trivial delay to block propagation time.  " +
 				"Builder-constructed blocks or fallback blocks may get orphaned. Use at your own risk!")
 		}
@@ -76,7 +72,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 }
 
 // Start initializes the service.
-func (*Service) Start() {}
+func (s *Service) Start() {
+	go s.pollRelayerStatus(s.ctx)
+}
 
 // Stop halts the service.
 func (*Service) Stop() error {
@@ -109,19 +107,12 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 
 // Status retrieves the status of the builder relay network.
 func (s *Service) Status() error {
-	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
-
 	// Return early if builder isn't initialized in service.
 	if s.c == nil {
 		return nil
 	}
 
-	return s.c.Status(ctx)
+	return nil
 }
 
 // RegisterValidator registers a validator with the builder relay network.
@@ -157,7 +148,24 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
 }
 
-// Configured returns true if the user has input a builder URL.
+// Configured returns true if the user has configured a builder client.
 func (s *Service) Configured() bool {
-	return s.cfg.builderEndpoint.Url != ""
+	return s.c != nil && !reflect.ValueOf(s.c).IsNil()
+}
+
+func (s *Service) pollRelayerStatus(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if s.c != nil {
+				if err := s.c.Status(ctx); err != nil {
+					log.WithError(err).Error("Failed to call relayer status endpoint, perhaps mev-boost or relayers are down")
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

@@ -165,7 +165,7 @@ var (
 	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
-		Value: 10,
+		Value: 2,
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
@@ -191,6 +191,13 @@ var (
 	NetworkID = &cli.Uint64Flag{
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
+	}
+	// EngineEndpointTimeoutSeconds defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+	// If this flag is not used then default will be used as defined here:
+	// https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+	EngineEndpointTimeoutSeconds = &cli.Uint64Flag{
+		Name:  "engine-endpoint-timeout-seconds",
+		Usage: "Sets the execution engine timeout (seconds) for execution payload semantics (forkchoiceUpdated, newPayload)",
 	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{

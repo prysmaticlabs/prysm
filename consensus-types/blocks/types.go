@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	engine "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -15,6 +15,11 @@ var (
 	_ = interfaces.SignedBeaconBlock(&SignedBeaconBlock{})
 	_ = interfaces.BeaconBlock(&BeaconBlock{})
 	_ = interfaces.BeaconBlockBody(&BeaconBlockBody{})
+)
+
+var (
+	errPayloadWrongType       = errors.New("execution payload has wrong type")
+	errPayloadHeaderWrongType = errors.New("execution payload header has wrong type")
 )
 
 const (
@@ -39,17 +44,18 @@ var (
 type BeaconBlockBody struct {
 	version                int
 	isBlinded              bool
-	randaoReveal           []byte
+	randaoReveal           [field_params.BLSSignatureLength]byte
 	eth1Data               *eth.Eth1Data
-	graffiti               []byte
+	graffiti               [field_params.RootLength]byte
 	proposerSlashings      []*eth.ProposerSlashing
 	attesterSlashings      []*eth.AttesterSlashing
 	attestations           []*eth.Attestation
 	deposits               []*eth.Deposit
 	voluntaryExits         []*eth.SignedVoluntaryExit
 	syncAggregate          *eth.SyncAggregate
-	executionPayload       *engine.ExecutionPayload
-	executionPayloadHeader *engine.ExecutionPayloadHeader
+	executionPayload       interfaces.ExecutionData
+	executionPayloadHeader interfaces.ExecutionData
+	blsToExecutionChanges  []*eth.SignedBLSToExecutionChange
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.
@@ -57,8 +63,8 @@ type BeaconBlock struct {
 	version       int
 	slot          types.Slot
 	proposerIndex types.ValidatorIndex
-	parentRoot    []byte
-	stateRoot     []byte
+	parentRoot    [field_params.RootLength]byte
+	stateRoot     [field_params.RootLength]byte
 	body          *BeaconBlockBody
 }
 
@@ -66,7 +72,7 @@ type BeaconBlock struct {
 type SignedBeaconBlock struct {
 	version   int
 	block     *BeaconBlock
-	signature []byte
+	signature [field_params.BLSSignatureLength]byte
 }
 
 func errNotSupported(funcName string, ver int) error {

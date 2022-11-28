@@ -8,13 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
@@ -117,6 +119,16 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 				digest,
 			)
 		}
+	}
+
+	// New Gossip Topic in Capella
+	if epoch >= params.BeaconConfig().CapellaForkEpoch {
+		s.subscribe(
+			p2p.BlsToExecutionChangeSubnetTopicFormat,
+			s.validateBlsToExecutionChange,
+			s.blsToExecutionChangeSubscriber,
+			digest,
+		)
 	}
 }
 
@@ -257,13 +269,17 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 		}
 		b, err := v(ctx, pid, msg)
 		if b == pubsub.ValidationReject {
-			log.WithError(err).WithFields(logrus.Fields{
+			fields := logrus.Fields{
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 				"peer id":      pid.String(),
 				"agent":        agentString(pid, s.cfg.p2p.Host()),
 				"gossip score": s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
-			}).Debugf("Gossip message was rejected")
+			}
+			if features.Get().EnableFullSSZDataLogging {
+				fields["message"] = hexutil.Encode(msg.Data)
+			}
+			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}
 		if b == pubsub.ValidationIgnore {

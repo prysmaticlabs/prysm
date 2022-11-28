@@ -1,11 +1,9 @@
 package components
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"os/exec"
 	"path"
@@ -14,12 +12,8 @@ import (
 	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
@@ -27,18 +21,13 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
-const depositGasLimit = 4000000
 const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
@@ -307,90 +296,6 @@ func (v *ValidatorNode) Resume() error {
 // Stop stops the component and its underlying process.
 func (v *ValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
-}
-
-// SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.
-func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial bool) error {
-	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	web3 := ethclient.NewClient(client)
-
-	keystoreBytes, err := os.ReadFile(keystorePath) // #nosec G304
-	if err != nil {
-		return err
-	}
-	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
-		return err
-	}
-	mineKey, err := keystore.DecryptKey(keystoreBytes, eth1.KeystorePassword)
-	if err != nil {
-		return err
-	}
-	if err = eth1.WaitForBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		return fmt.Errorf("failed to mine blocks %w", err)
-	}
-	return nil
-}
-
-// sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
-func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
-	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), eth1.KeystorePassword, big.NewInt(eth1.NetworkId))
-	if err != nil {
-		return err
-	}
-	txOps.GasLimit = depositGasLimit
-	txOps.Context = context.Background()
-	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
-	if err != nil {
-		return err
-	}
-	txOps.Nonce = big.NewInt(0).SetUint64(nonce)
-
-	contract, err := contracts.NewDepositContract(e2e.TestParams.ContractAddress, web3)
-	if err != nil {
-		return err
-	}
-
-	balances := make([]uint64, num+offset)
-	for i := 0; i < len(balances); i++ {
-		if i < len(balances)/2 && partial {
-			balances[i] = params.BeaconConfig().MaxEffectiveBalance / 2
-		} else {
-			balances[i] = params.BeaconConfig().MaxEffectiveBalance
-		}
-	}
-	deposits, trie, err := util.DepositsWithBalance(balances)
-	if err != nil {
-		return err
-	}
-	allDeposits := deposits
-	allRoots := trie.Items()
-	allBalances := balances
-	if partial {
-		deposits2, trie2, err := util.DepositsWithBalance(balances)
-		if err != nil {
-			return err
-		}
-		allDeposits = append(deposits, deposits2[:len(balances)/2]...)
-		allRoots = append(trie.Items(), trie2.Items()[:len(balances)/2]...)
-		allBalances = append(balances, balances[:len(balances)/2]...)
-	}
-	for index, dd := range allDeposits {
-		if index < offset {
-			continue
-		}
-		depositInGwei := big.NewInt(int64(allBalances[index]))
-		txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
-		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, bytesutil.ToBytes32(allRoots[index]))
-		if err != nil {
-			return errors.Wrap(err, "unable to send transaction to contract")
-		}
-		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
-	}
-	return nil
 }
 
 func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {

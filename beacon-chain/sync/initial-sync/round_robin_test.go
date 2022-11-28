@@ -22,6 +22,11 @@ import (
 )
 
 func TestService_roundRobinSync(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		currentSlot         types.Slot
@@ -488,6 +493,11 @@ func TestService_processBlockBatch(t *testing.T) {
 }
 
 func TestService_blockProviderScoring(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	cache.initializeRootCache(makeSequence(1, 640), t)
 
 	p := p2pt.NewTestP2P(t)

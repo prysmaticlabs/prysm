@@ -247,7 +247,7 @@ func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {
 	}
 }
 
-// DeepEqual reports whether two SSZ-able values x and y are ``deeply equal,'' defined as follows:
+// DeepEqual reports whether two SSZ-able values x and y are “deeply equal,” defined as follows:
 // Two values of identical type are deeply equal if one of the following cases applies:
 //
 // Values of distinct types are never deeply equal.
