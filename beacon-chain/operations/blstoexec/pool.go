@@ -17,6 +17,7 @@ type PoolManager interface {
 	BLSToExecChangesForInclusion() ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
+	ValidatorExists(idx types.ValidatorIndex) bool
 }
 
 // Pool is a concrete implementation of PoolManager.
@@ -106,4 +107,15 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
 	delete(p.m, change.Message.ValidatorIndex)
 	p.pending.Remove(node)
 	return nil
+}
+
+// ValidatorExists checks if the bls to execution change object exists
+// for that particular validator.
+func (p *Pool) ValidatorExists(idx types.ValidatorIndex) bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	node := p.m[idx]
+
+	return node != nil
 }

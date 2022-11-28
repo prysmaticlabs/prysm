@@ -86,19 +86,19 @@ func wrapAttestationsArray(
 	return true, nil
 }
 
-// Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array.
+// Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array of validator indices.
 // We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
 func wrapValidatorIndicesArray(
 	endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*DutiesRequestJson); ok {
+	if _, ok := endpoint.PostRequest.(*ValidatorIndicesJson); ok {
 		indices := make([]string, 0)
 		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
-		j := &DutiesRequestJson{Index: indices}
+		j := &ValidatorIndicesJson{Index: indices}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
@@ -445,6 +445,12 @@ type bellatrixBlindedBlockResponseJson struct {
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
 }
 
+type capellaBlindedBlockResponseJson struct {
+	Version             string                                        `json:"version"`
+	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
+	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
+}
+
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*BlockV2ResponseJson)
 	if !ok {
@@ -522,6 +528,15 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 			Version: respContainer.Version,
 			Data: &SignedBlindedBeaconBlockBellatrixContainerJson{
 				Message:   respContainer.Data.BellatrixBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBlindedBeaconBlockCapellaContainerJson{
+				Message:   respContainer.Data.CapellaBlock,
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,

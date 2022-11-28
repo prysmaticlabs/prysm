@@ -72,6 +72,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/contribution_and_proofs",
 		"/eth/v1/validator/prepare_beacon_proposer",
 		"/eth/v1/validator/register_validator",
+		"/eth/v1/validator/liveness/{epoch}",
 	}
 }
 
@@ -207,7 +208,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
 	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &DutiesRequestJson{}
+		endpoint.PostRequest = &ValidatorIndicesJson{}
 		endpoint.PostResponse = &AttesterDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Err = &NodeSyncDetailsErrorJson{}
@@ -219,7 +220,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Err = &NodeSyncDetailsErrorJson{}
 	case "/eth/v1/validator/duties/sync/{epoch}":
-		endpoint.PostRequest = &DutiesRequestJson{}
+		endpoint.PostRequest = &ValidatorIndicesJson{}
 		endpoint.PostResponse = &SyncCommitteeDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}
 		endpoint.Err = &NodeSyncDetailsErrorJson{}
@@ -286,6 +287,14 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &SignedValidatorRegistrationsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedValidatorRegistrationsArray,
+		}
+	case "/eth/v1/validator/liveness/{epoch}":
+		endpoint.PostRequest = &ValidatorIndicesJson{}
+		endpoint.PostResponse = &LivenessResponseJson{}
+		endpoint.RequestURLLiterals = []string{"epoch"}
+		endpoint.Err = &NodeSyncDetailsErrorJson{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
 		}
 	default:
 		return nil, errors.New("invalid path")
