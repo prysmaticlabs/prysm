@@ -291,8 +291,8 @@ func ConfigureValidator(ctx *cli.Context) error {
 		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
 	}
-	if ctx.Bool(enableBeaconRESTApi.Name) {
-		logEnabled(enableBeaconRESTApi)
+	if ctx.Bool(EnableBeaconRESTApi.Name) {
+		logEnabled(EnableBeaconRESTApi)
 		cfg.EnableBeaconRESTApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)

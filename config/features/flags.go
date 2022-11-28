@@ -128,7 +128,7 @@ var (
 		Name:  "enable-full-ssz-data-logging",
 		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
-	enableBeaconRESTApi = &cli.BoolFlag{
+	EnableBeaconRESTApi = &cli.BoolFlag{
 		Name:  "enable-beacon-rest-api",
 		Usage: "Experimental enable of the beacon REST API when querying a beacon node",
 	}
@@ -149,13 +149,12 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	attestTimely,
 	enableSlashingProtectionPruning,
 	enableDoppelGangerProtection,
-	enableBeaconRESTApi,
+	EnableBeaconRESTApi,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--enable-doppelganger",
-	"--enable-beacon-rest-api",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.

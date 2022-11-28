@@ -4,7 +4,9 @@ package types
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 )
@@ -26,6 +28,12 @@ func WithRemoteSigner() E2EConfigOpt {
 func WithCheckpointSync() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.TestCheckpointSync = true
+	}
+}
+
+func WithValidatorRESTApi() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.ValidatorFlags = append(cfg.ValidatorFlags, fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
 	}
 }
 

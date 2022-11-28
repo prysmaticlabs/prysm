@@ -26,3 +26,24 @@ func TestEndToEnd_ScenarioRun_EEOffline(t *testing.T) {
 	runner.config.EvalInterceptor = runner.eeOffline
 	runner.scenarioRunner()
 }
+
+func TestEndToEnd_MultiScenarioRun_ValidatorRESTApi(t *testing.T) {
+	runner := e2eMinimal(t, types.WithEpochs(22), types.WithValidatorRESTApi())
+
+	runner.config.Evaluators = scenarioEvals()
+	runner.config.EvalInterceptor = runner.multiScenario
+	runner.scenarioRunner()
+}
+
+func TestEndToEnd_MinimalConfig_Web3Signer_ValidatorRESTApi(t *testing.T) {
+	e2eMinimal(t, types.WithRemoteSigner(), types.WithValidatorRESTApi()).run()
+}
+
+func TestEndToEnd_ScenarioRun_EEOffline_ValidatorRESTApi(t *testing.T) {
+	t.Skip("TODO(#10242) Prysm is current unable to handle an offline e2e")
+	runner := e2eMinimal(t, types.WithValidatorRESTApi())
+
+	runner.config.Evaluators = scenarioEvals()
+	runner.config.EvalInterceptor = runner.eeOffline
+	runner.scenarioRunner()
+}

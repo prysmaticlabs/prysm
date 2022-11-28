@@ -9,3 +9,7 @@ import (
 func TestEndToEnd_MinimalConfig(t *testing.T) {
 	e2eMinimal(t, types.WithCheckpointSync()).run()
 }
+
+func TestEndToEnd_MinimalConfig_ValidatorRESTApi(t *testing.T) {
+	e2eMinimal(t, types.WithCheckpointSync(), types.WithValidatorRESTApi()).run()
+}
