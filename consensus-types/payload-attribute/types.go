@@ -37,6 +37,12 @@ func New(i interface{}) (Attributer, error) {
 	}
 }
 
+func EmptyWithVersion(version int) Attributer {
+	return &data{
+		version: version,
+	}
+}
+
 func initPayloadAttributeFromV1(a *enginev1.PayloadAttributes) (Attributer, error) {
 	if a == nil {
 		return nil, errNilPayloadAttribute

@@ -37,6 +37,9 @@ func (a *data) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // PbV1 returns the payload attribute in version 1.
 func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
+	if a == nil {
+		return nil, nil
+	}
 	if a.version != version.Bellatrix {
 		return nil, blocks.ErrNotSupported("PayloadAttributePbV1", a.version)
 	}
@@ -49,6 +52,9 @@ func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
 
 // PbV2 returns the payload attribute in version 2.
 func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
+	if a == nil {
+		return nil, nil
+	}
 	if a.version != version.Capella {
 		return nil, blocks.ErrNotSupported("PayloadAttributePbV2", a.version)
 	}
