@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -22,8 +23,9 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	defer server.Close()
 
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	resp, err := validatorClient.getGenesis()
+	resp, httpError, err := validatorClient.getGenesis()
 	assert.NoError(t, err)
+	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
 	assert.Equal(t, "1234", resp.Data.GenesisTime)
@@ -35,7 +37,8 @@ func TestGetGenesis_NilData(t *testing.T) {
 	defer server.Close()
 
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
+	_, httpError, err := validatorClient.getGenesis()
+	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "GenesisResponseJson.Data is nil", err)
 }
 
@@ -47,7 +50,8 @@ func TestGetGenesis_InvalidJsonGenesis(t *testing.T) {
 	defer server.Close()
 
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
+	_, httpError, err := validatorClient.getGenesis()
+	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "failed to decode response body genesis json", err)
 }
 
@@ -56,8 +60,33 @@ func TestGetGenesis_InvalidJsonError(t *testing.T) {
 	defer server.Close()
 
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, err := validatorClient.getGenesis()
+	_, httpError, err := validatorClient.getGenesis()
+	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
+}
+
+func TestGetGenesis_404Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(notFoundErrHandler))
+	defer server.Close()
+
+	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	_, httpError, err := validatorClient.getGenesis()
+	require.NotNil(t, httpError)
+	assert.Equal(t, http.StatusNotFound, httpError.Code)
+	assert.Equal(t, "Not found", httpError.Message)
+	assert.ErrorContains(t, "error 404: Not found", err)
+}
+
+func TestGetGenesis_500Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(internalServerErrHandler))
+	defer server.Close()
+
+	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	_, httpError, err := validatorClient.getGenesis()
+	require.NotNil(t, httpError)
+	assert.Equal(t, http.StatusInternalServerError, httpError.Code)
+	assert.Equal(t, "Internal server error", httpError.Message)
+	assert.ErrorContains(t, "error 500: Internal server error", err)
 }
 
 func TestGetGenesis_Timeout(t *testing.T) {
@@ -68,6 +97,7 @@ func TestGetGenesis_Timeout(t *testing.T) {
 	defer server.Close()
 
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: 1}}
-	_, err := validatorClient.getGenesis()
+	_, httpError, err := validatorClient.getGenesis()
+	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
 }
