@@ -167,19 +167,6 @@ go_register_toolchains(
 )
 
 http_archive(
-    name = "prysm_testnet_site",
-    build_file_content = """
-proto_library(
-  name = "faucet_proto",
-  srcs = ["src/proto/faucet.proto"],
-  visibility = ["//visibility:public"],
-)""",
-    sha256 = "29742136ff9faf47343073c4569a7cf21b8ed138f726929e09e3c38ab83544f7",
-    strip_prefix = "prysm-testnet-site-5c711600f0a77fc553b18cf37b880eaffef4afdb",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5c711600f0a77fc553b18cf37b880eaffef4afdb.tar.gz",
-)
-
-http_archive(
     name = "io_kubernetes_build",
     sha256 = "b84fbd1173acee9d02a7d3698ad269fdf4f7aa081e9cecd40e012ad0ad8cfa2a",
     strip_prefix = "repo-infra-6537f2101fb432b679f3d103ee729dd8ac5d30a0",
