@@ -12,7 +12,7 @@ go_test(
         "sync_committee_test.go",
         "voluntary_exit_test.go",
     ],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
     shard_count = 4,

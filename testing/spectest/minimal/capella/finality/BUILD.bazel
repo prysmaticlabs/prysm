@@ -4,11 +4,11 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["finality_test.go"],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_minimal//:test_data",
     ],
     eth_network = "minimal",
-    shard_count = 4,
+    shard_count = 1,
     tags = [
         "minimal",
         "spectest",

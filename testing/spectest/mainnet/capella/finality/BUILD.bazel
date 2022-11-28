@@ -5,10 +5,10 @@ go_test(
     size = "medium",
     timeout = "short",
     srcs = ["finality_test.go"],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
-    shard_count = 4,
+    shard_count = 1,
     tags = ["spectest"],
     deps = ["//testing/spectest/shared/capella/finality:go_default_library"],
 )

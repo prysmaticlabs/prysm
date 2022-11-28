@@ -7,7 +7,7 @@ go_test(
         "blocks_test.go",
         "slots_test.go",
     ],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_minimal//:test_data",
     ],
     eth_network = "minimal",

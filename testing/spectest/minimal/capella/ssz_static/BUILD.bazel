@@ -4,7 +4,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = ["ssz_static_test.go"],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_minimal//:test_data",
     ],
     eth_network = "minimal",

@@ -16,7 +16,7 @@ go_test(
         "slashings_reset_test.go",
         "slashings_test.go",
     ],
-    data = glob(["*.yaml"]) + [
+    data =  [
         "@consensus_spec_tests_minimal//:test_data",
     ],
     eth_network = "minimal",
