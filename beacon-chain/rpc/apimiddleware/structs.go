@@ -467,17 +467,17 @@ type BeaconBlockBodyBellatrixJson struct {
 }
 
 type BeaconBlockBodyCapellaJson struct {
-	RandaoReveal          string                       `json:"randao_reveal" hex:"true"`
-	Eth1Data              *Eth1DataJson                `json:"eth1_data"`
-	Graffiti              string                       `json:"graffiti" hex:"true"`
-	ProposerSlashings     []*ProposerSlashingJson      `json:"proposer_slashings"`
-	AttesterSlashings     []*AttesterSlashingJson      `json:"attester_slashings"`
-	Attestations          []*AttestationJson           `json:"attestations"`
-	Deposits              []*DepositJson               `json:"deposits"`
-	VoluntaryExits        []*SignedVoluntaryExitJson   `json:"voluntary_exits"`
-	SyncAggregate         *SyncAggregateJson           `json:"sync_aggregate"`
-	ExecutionPayload      *ExecutionPayloadCapellaJson `json:"execution_payload"`
-	BLSToExecutionChanges []*BLSToExecutionChangeJson  `json:"bls_to_execution_changes"`
+	RandaoReveal          string                            `json:"randao_reveal" hex:"true"`
+	Eth1Data              *Eth1DataJson                     `json:"eth1_data"`
+	Graffiti              string                            `json:"graffiti" hex:"true"`
+	ProposerSlashings     []*ProposerSlashingJson           `json:"proposer_slashings"`
+	AttesterSlashings     []*AttesterSlashingJson           `json:"attester_slashings"`
+	Attestations          []*AttestationJson                `json:"attestations"`
+	Deposits              []*DepositJson                    `json:"deposits"`
+	VoluntaryExits        []*SignedVoluntaryExitJson        `json:"voluntary_exits"`
+	SyncAggregate         *SyncAggregateJson                `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapellaJson      `json:"execution_payload"`
+	BLSToExecutionChanges []*SignedBLSToExecutionChangeJson `json:"bls_to_execution_changes"`
 }
 
 type BlindedBeaconBlockBodyBellatrixJson struct {
@@ -504,7 +504,7 @@ type BlindedBeaconBlockBodyCapellaJson struct {
 	VoluntaryExits         []*SignedVoluntaryExitJson         `json:"voluntary_exits"`
 	SyncAggregate          *SyncAggregateJson                 `json:"sync_aggregate"`
 	ExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"execution_payload_header"`
-	BLSToExecutionChanges  []*BLSToExecutionChangeJson        `json:"bls_to_execution_changes"`
+	BLSToExecutionChanges  []*SignedBLSToExecutionChangeJson  `json:"bls_to_execution_changes"`
 }
 
 type ExecutionPayloadJson struct {
@@ -650,10 +650,10 @@ type AttestationDataJson struct {
 type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
-	ToExecutionAddress string `jston:"to_execution_address" hex:"true"`
+	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
-type SigledBLSToExecutionChangeJson struct {
+type SignedBLSToExecutionChangeJson struct {
 	BLSToExecutionChange *BLSToExecutionChangeJson `json:"message"`
 	Signature            string                    `json:"signature" hex:"true"`
 }

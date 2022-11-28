@@ -384,6 +384,15 @@ service BeaconChain {
     };
   }
 
+  // SubmitSignedBLSToExecutionEngine submits said object to node's pool
+  // and if passes validation node MUST broadcast it to network.
+  rpc SubmitSignedBLSToExecutionChange(v2.SignedBLSToExecutionChange) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
+      body: "*"
+    };
+  }
+
   // Submits sync committee signature objects to the node.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolSyncCommitteeSignatures

@@ -3,9 +3,13 @@
 package interop
 
 import (
+	"bufio"
 	"context"
+	"log"
+	"os"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -36,7 +40,25 @@ func GenerateGenesisState(ctx context.Context, genesisTime, numValidators uint64
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
+	if err := outputPrivateKeys(privKeys); err != nil {
+		return nil, nil, err
+	}
 	return GenerateGenesisStateFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots)
+}
+
+func outputPrivateKeys(keys []bls.SecretKey) error {
+	f, err := os.Create("/tmp/privkeys")
+	if err != nil {
+		return err
+	}
+	w := bufio.NewWriter(f)
+	for _, key := range keys {
+		if _, err := w.WriteString(hexutil.Encode(key.Marshal()) + "\n"); err != nil {
+			return err
+		}
+	}
+	log.Printf("Done writing genesis state to /tmp/privkeys")
+	return w.Flush()
 }
 
 // GenerateGenesisStateFromDepositData creates a genesis state given a list of
