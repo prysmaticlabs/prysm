@@ -260,6 +260,6 @@ func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *et
 }
 
 // Deprecated: Do not use.
-func (c *beaconApiValidatorClient) WaitForChainStart(_ context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
-	return c.waitForChainStart()
+func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
+	return c.waitForChainStart(ctx)
 }
