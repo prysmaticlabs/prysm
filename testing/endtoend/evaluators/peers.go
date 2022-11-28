@@ -19,7 +19,7 @@ var PeersCheck = types.Evaluator{
 	Evaluation: peersTest,
 }
 
-func peersTest(conns ...*grpc.ClientConn) error {
+func peersTest(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	debugClient := eth.NewDebugClient(conns[0])
 
 	peerResponses, err := debugClient.ListPeers(context.Background(), &emptypb.Empty{})

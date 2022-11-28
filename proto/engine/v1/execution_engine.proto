@@ -57,7 +57,7 @@ message ExecutionPayloadCapella {
 	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
 	// MAX_WITHDRAWALS_PER_PAYLOAD
-	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "16"]; // New in Capella.
+	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
 }
 
 message ExecutionPayloadHeader {
@@ -105,6 +105,13 @@ message PayloadAttributes {
 	uint64 timestamp              = 1;
 	bytes prev_randao             = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes suggested_fee_recipient = 3 [(ethereum.eth.ext.ssz_size) = "20"];
+}
+
+message PayloadAttributesV2 {
+	uint64 timestamp              = 1;
+	bytes prev_randao             = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+	bytes suggested_fee_recipient = 3 [(ethereum.eth.ext.ssz_size) = "20"];
+	repeated Withdrawal withdrawals = 4 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
 }
 
 message PayloadStatus {

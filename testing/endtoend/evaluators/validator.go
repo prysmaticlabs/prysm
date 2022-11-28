@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -53,7 +55,7 @@ var ValidatorSyncParticipation = types.Evaluator{
 	Evaluation: validatorsSyncParticipation,
 }
 
-func validatorsAreActive(conns ...*grpc.ClientConn) error {
+func validatorsAreActive(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
@@ -76,7 +78,7 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
-		if valExited && item.Index == exitedIndex {
+		if exitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -106,7 +108,7 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(conns ...*grpc.ClientConn) error {
+func validatorsParticipating(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpbservice.NewBeaconDebugClient(conn)
@@ -167,7 +169,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
 // sync committee assignments.
-func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
+func validatorsSyncParticipation(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewNodeClient(conn)
 	altairClient := ethpb.NewBeaconChainClient(conn)

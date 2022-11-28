@@ -32,9 +32,9 @@ type SlashingReceiver interface {
 
 // ReceiveBlock is a function that defines the operations (minus pubsub)
 // that are performed on a received block. The operations consist of:
-//   1. Validate block, apply state transition and update checkpoints
-//   2. Apply fork choice to the processed block
-//   3. Save latest head info
+//  1. Validate block, apply state transition and update checkpoints
+//  2. Apply fork choice to the processed block
+//  3. Save latest head info
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
