@@ -200,6 +200,17 @@ func ProcessBlockNoVerifyAnySig(
 	set := bls.NewSet()
 	set.Join(bSet).Join(rSet).Join(aSet)
 
+	if blk.Version() >= version.Capella {
+		changes, err := signed.Block().Body().BLSToExecutionChanges()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
+		}
+		cSet, err := b.BLSChangesSignatureBatch(ctx, st, changes)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not get BLSToExecutionChanges signatures")
+		}
+		set.Join(cSet)
+	}
 	return set, st, nil
 }
 

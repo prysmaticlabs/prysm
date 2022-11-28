@@ -32,6 +32,7 @@ go_test(
         "wait_for_chain_start_test.go",
     ],
     embed = [":go_default_library"],
+    gotags = ["use_beacon_api"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
