@@ -263,6 +263,19 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 	return v2Block, nil
 }
 
+// V1Alpha1BeaconBlockBlindedCapellaToV2Blinded converts a v1alpha1 blinded Capella beacon block to a v2 blinded Capella block.
+func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockCapella) (*ethpbv2.BlindedBeaconBlockCapella, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BlindedBeaconBlockCapella{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
 // BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
 func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconState, error) {
 	sourceFork := altairState.Fork()

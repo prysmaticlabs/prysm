@@ -8,7 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	apimiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	apimiddleware "github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	apimiddleware0 "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
 // MockgenesisProvider is a mock of genesisProvider interface.
@@ -35,12 +36,13 @@ func (m *MockgenesisProvider) EXPECT() *MockgenesisProviderMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockgenesisProvider) GetGenesis() (*apimiddleware.GenesisResponse_GenesisJson, error) {
+func (m *MockgenesisProvider) GetGenesis() (*apimiddleware0.GenesisResponse_GenesisJson, *apimiddleware.DefaultErrorJson, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGenesis")
-	ret0, _ := ret[0].(*apimiddleware.GenesisResponse_GenesisJson)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(*apimiddleware0.GenesisResponse_GenesisJson)
+	ret1, _ := ret[1].(*apimiddleware.DefaultErrorJson)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetGenesis indicates an expected call of GetGenesis.

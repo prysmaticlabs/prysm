@@ -31,7 +31,7 @@ func (c beaconApiDomainDataProvider) GetDomainData(epoch types.Epoch, domainType
 	}
 
 	// Get the genesis validator root
-	genesis, err := c.genesisProvider.GetGenesis()
+	genesis, _, err := c.genesisProvider.GetGenesis()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis info")
 	}

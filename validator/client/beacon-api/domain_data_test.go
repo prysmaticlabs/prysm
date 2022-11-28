@@ -41,6 +41,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 	genesisProvider.EXPECT().GetGenesis().Return(
 		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
+		nil,
 	).Times(1)
 
 	// Make sure that GetForkVersion() is called exactly once and with the right arguments
@@ -124,7 +125,7 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(nil, errors.New("")).Times(1)
+	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("")).Times(1)
 
 	domainDataProvider := &beaconApiDomainDataProvider{
 		genesisProvider:     genesisProvider,
@@ -159,6 +160,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis().Return(
 		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: "foo"},
+		nil,
 		nil,
 	).Times(1)
 

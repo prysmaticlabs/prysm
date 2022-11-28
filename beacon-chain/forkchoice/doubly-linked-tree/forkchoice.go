@@ -616,8 +616,8 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	return node.payloadHash
 }
 
-// ForkChoiceDump returns a full dump of forkhoice.
-func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse, error) {
+// ForkChoiceDump returns a full dump of forkchoice.
+func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, error) {
 	jc := &v1.Checkpoint{
 		Epoch: f.store.justifiedCheckpoint.Epoch,
 		Root:  f.store.justifiedCheckpoint.Root[:],
@@ -650,7 +650,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 	if f.store.headNode != nil {
 		headRoot = f.store.headNode.root
 	}
-	resp := &v1.ForkChoiceResponse{
+	resp := &v1.ForkChoiceDump{
 		JustifiedCheckpoint:           jc,
 		BestJustifiedCheckpoint:       bjc,
 		UnrealizedJustifiedCheckpoint: ujc,
@@ -659,7 +659,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceResponse
 		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
 		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
 		HeadRoot:                      headRoot[:],
-		ForkchoiceNodes:               nodes,
+		ForkChoiceNodes:               nodes,
 	}
 	return resp, nil
 
