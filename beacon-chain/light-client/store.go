@@ -4,9 +4,9 @@
 package light_client
 
 import (
-	"bytes"
 	"errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
@@ -15,12 +15,10 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"math"
 )
 
 const (
 	currentSyncCommitteeIndex = uint64(54)
-	altairForkEpoch           = 74240
 	// TODO: read these from the config
 	minSyncCommitteeParticipants = uint64(1)
 	genesisSlot                  = types.Slot(0)
@@ -28,6 +26,7 @@ const (
 )
 
 type Store struct {
+	BeaconChainConfig             *params.BeaconChainConfig  `json:"config,omitempty"`
 	FinalizedHeader               *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	CurrentSyncCommittee          *ethpbv2.SyncCommittee     `json:"current_sync_committeeu,omitempty"`
 	NextSyncCommittee             *ethpbv2.SyncCommittee     `json:"next_sync_committee,omitempty"`
@@ -38,65 +37,74 @@ type Store struct {
 }
 
 func getSubtreeIndex(index uint64) uint64 {
-	return index % uint64(math.Pow(2, float64(ethpbv2.FloorLog2(index-1))))
+	return index % (uint64(1) << ethpbv2.FloorLog2(index-1))
 }
 
 // TODO: this should be in the proto
-func hashTreeRoot(committee *ethpbv2.SyncCommittee) []byte {
+func hashTreeRoot(committee *ethpbv2.SyncCommittee) ([]byte, error) {
 	v1alpha1Committee := ethpb.SyncCommittee{
 		Pubkeys:         committee.GetPubkeys(),
 		AggregatePubkey: committee.GetAggregatePubkey(),
 	}
 	root, err := v1alpha1Committee.HashTreeRoot()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return root[:]
+	return root[:], nil
 }
 
 // NewStore implements initialize_light_client_store from the spec.
-func NewStore(trustedBlockRoot [32]byte,
-	bootstrap ethpbv2.Bootstrap) *Store {
+func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
+	bootstrap ethpbv2.Bootstrap) (*Store, error) {
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
 		panic(err)
 	}
-	if !bytes.Equal(trustedBlockRoot[:], bootstrapRoot[:]) {
+	if trustedBlockRoot == bootstrapRoot {
 		panic("trusted block root does not match bootstrap header")
+	}
+	root, err := hashTreeRoot(bootstrap.CurrentSyncCommittee)
+	if err != nil {
+		return nil, err
 	}
 	if !trie.VerifyMerkleProofWithDepth(
 		bootstrap.Header.StateRoot,
-		hashTreeRoot(bootstrap.CurrentSyncCommittee),
+		root,
 		getSubtreeIndex(currentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch,
 		uint64(ethpbv2.FloorLog2(currentSyncCommitteeIndex))) {
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
+		BeaconChainConfig:    config,
 		FinalizedHeader:      bootstrap.Header,
 		CurrentSyncCommittee: bootstrap.CurrentSyncCommittee,
-		NextSyncCommittee:    &ethpbv2.SyncCommittee{},
+		NextSyncCommittee:    nil,
 		OptimisticHeader:     bootstrap.Header,
-	}
+	}, nil
 }
 
 func (s *Store) isNextSyncCommitteeKnown() bool {
-	return s.NextSyncCommittee != &ethpbv2.SyncCommittee{}
+	return s.NextSyncCommittee != nil
+}
+
+func max(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (s *Store) getSafetyThreshold() uint64 {
-	return uint64(math.Floor(math.Max(float64(s.PreviousMaxActiveParticipants),
-		float64(s.CurrentMaxActiveParticipants)) / 2))
+	halfActiveParticipants := s.CurrentMaxActiveParticipants / 2
+	return max(minSyncCommitteeParticipants, halfActiveParticipants)
 }
 
-func computeForkVersion(epoch uint64) [4]byte {
-	// TODO: export these
-	altairForkVersion := bytesutil.Uint32ToBytes4(0x01000000)
-	genesisForkVersion := bytesutil.Uint32ToBytes4(0x00000000)
-	if epoch >= altairForkEpoch {
-		return altairForkVersion
+func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
+	if epoch >= s.BeaconChainConfig.AltairForkEpoch {
+		return s.BeaconChainConfig.AltairForkVersion
 	}
-	return genesisForkVersion
+	return s.BeaconChainConfig.GenesisForkVersion
 }
 
 func (s *Store) validateUpdate(update *Update,
@@ -137,13 +145,13 @@ func (s *Store) validateUpdate(update *Update,
 	// saved in the state of attested header. Note that the genesis finalized checkpoint root is represented as a zero
 	// hash.
 	if !update.isFinalityUpdate() {
-		if update.GetFinalizedHeader() != &(ethpbv1.BeaconBlockHeader{}) {
+		if update.GetFinalizedHeader() != nil {
 			return errors.New("finality branch is present but update is not finality")
 		}
 	} else {
 		var finalizedRoot [32]byte
 		if update.GetFinalizedHeader().Slot == genesisSlot {
-			if update.GetFinalizedHeader() != &(ethpbv1.BeaconBlockHeader{}) {
+			if update.GetFinalizedHeader() != nil {
 				return errors.New("finality branch is present but update is not finality")
 			}
 			finalizedRoot = [32]byte{}
@@ -166,18 +174,22 @@ func (s *Store) validateUpdate(update *Update,
 	// Verify that the next sync committee, if present, actually is the next sync committee saved in the state of the
 	// attested header
 	if !update.isSyncCommiteeUpdate() {
-		if update.GetNextSyncCommittee() != &(ethpbv2.SyncCommittee{}) {
+		if update.GetNextSyncCommittee() != nil {
 			return errors.New("sync committee branch is present but update is not sync committee")
 		}
 	} else {
 		if updateAttestedPeriod == storePeriod && s.isNextSyncCommitteeKnown() {
-			if update.GetNextSyncCommittee() != s.NextSyncCommittee {
+			if update.GetNextSyncCommittee().Equals(s.NextSyncCommittee) {
 				return errors.New("next sync committee is not known")
 			}
 		}
+		root, err := hashTreeRoot(update.GetNextSyncCommittee())
+		if err != nil {
+			return err
+		}
 		if !trie.VerifyMerkleProofWithDepth(
 			update.GetAttestedHeader().StateRoot,
-			hashTreeRoot(update.GetNextSyncCommittee())[:],
+			root[:],
 			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
 			update.GetNextSyncCommitteeBranch(),
 			uint64(ethpbv2.FloorLog2(ethpbv2.NextSyncCommitteeIndex))) {
@@ -202,10 +214,10 @@ func (s *Store) validateUpdate(update *Update,
 			participantPubkeys = append(participantPubkeys, publicKey)
 		}
 	}
-	forkVersion := computeForkVersion(computeEpochAtSlot(update.GetSignatureSlot()))
+	forkVersion := s.computeForkVersion(computeEpochAtSlot(update.GetSignatureSlot()))
 	// TODO: export this somewhere
 	domainSyncCommittee := bytesutil.Uint32ToBytes4(0x07000000)
-	domain, err := signing.ComputeDomain(domainSyncCommittee, forkVersion[:], genesisValidatorsRoot)
+	domain, err := signing.ComputeDomain(domainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
 	}
@@ -276,8 +288,7 @@ func (s *Store) processUpdate(update *Update,
 	}
 
 	// Track the maximum number of active participants in the committee signature
-	s.CurrentMaxActiveParticipants = uint64(math.Max(float64(s.CurrentMaxActiveParticipants),
-		float64(syncCommiteeBits.Count())))
+	s.CurrentMaxActiveParticipants = max(s.CurrentMaxActiveParticipants, syncCommiteeBits.Count())
 
 	// Update the optimistic header
 	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.OptimisticHeader.Slot {
@@ -288,7 +299,8 @@ func (s *Store) processUpdate(update *Update,
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
 		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
 		Slot) == computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
-	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 || updateHasFinalizedNextSyncCommittee {
+	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
+		(update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
 		if err := s.applyUpdate(update); err != nil {
 			return err
@@ -307,6 +319,5 @@ func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
 func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.OptimisticUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	// TODO: implement
 	return s.processUpdate(&Update{optimisticUpdate}, currentSlot, genesisValidatorsRoot)
 }

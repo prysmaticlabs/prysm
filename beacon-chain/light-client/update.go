@@ -4,13 +4,12 @@ import (
 	"bytes"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"math"
 )
 
 const (
 	// TODO: we should read these from the beacon chain config
 	epochsPerSyncCommitteePeriod = uint64(256)
-	slotsPerEpoch                = uint64(32)
+	slotsPerEpoch                = types.Slot(32)
 )
 
 type Update struct {
@@ -30,12 +29,12 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
-func computeEpochAtSlot(slot types.Slot) uint64 {
-	return uint64(math.Floor(float64(slot) / float64(slotsPerEpoch)))
+func computeEpochAtSlot(slot types.Slot) types.Epoch {
+	return types.Epoch(slot / slotsPerEpoch)
 }
 
-func computeSyncCommitteePeriod(epoch uint64) uint64 {
-	return uint64(math.Floor(float64(epoch) / float64(epochsPerSyncCommitteePeriod)))
+func computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
+	return uint64(epoch) / epochsPerSyncCommitteePeriod
 }
 
 func computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
@@ -61,7 +60,7 @@ func (u *Update) hasSyncCommitteeFinality() bool {
 }
 
 func (u *Update) isBetterUpdate(newUpdate *Update) bool {
-	maxActiveParticipants := uint64(len(newUpdate.GetSyncAggregate().SyncCommitteeBits))
+	maxActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()
 	oldNumActiveParticipants := u.GetSyncAggregate().SyncCommitteeBits.Count()
 	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2

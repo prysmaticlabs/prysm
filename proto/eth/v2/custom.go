@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"bytes"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"math/bits"
@@ -60,3 +61,15 @@ func (x *OptimisticUpdate) GetFinalityBranch() [][]byte {
 }
 
 func (x *OptimisticUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {}
+
+func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
+	if len(x.Pubkeys) != len(other.Pubkeys) {
+		return false
+	}
+	for i := range x.Pubkeys {
+		if !bytes.Equal(x.Pubkeys[i], other.Pubkeys[i]) {
+			return false
+		}
+	}
+	return bytes.Equal(x.AggregatePubkey, other.AggregatePubkey)
+}
