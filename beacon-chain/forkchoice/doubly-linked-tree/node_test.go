@@ -250,7 +250,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 
 	for i, respNode := range respNodes {
 		require.Equal(t, storeNodes[i].slot, respNode.Slot)
-		require.DeepEqual(t, storeNodes[i].root[:], respNode.Root)
+		require.DeepEqual(t, storeNodes[i].root[:], respNode.BlockRoot)
 		require.Equal(t, storeNodes[i].balance, respNode.Balance)
 		require.Equal(t, storeNodes[i].weight, respNode.Weight)
 		require.Equal(t, storeNodes[i].optimistic, respNode.ExecutionOptimistic)
