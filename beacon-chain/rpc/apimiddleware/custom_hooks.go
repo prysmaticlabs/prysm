@@ -445,6 +445,12 @@ type bellatrixBlindedBlockResponseJson struct {
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
 }
 
+type capellaBlindedBlockResponseJson struct {
+	Version             string                                        `json:"version"`
+	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
+	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
+}
+
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*BlockV2ResponseJson)
 	if !ok {
@@ -522,6 +528,15 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 			Version: respContainer.Version,
 			Data: &SignedBlindedBeaconBlockBellatrixContainerJson{
 				Message:   respContainer.Data.BellatrixBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBlindedBeaconBlockCapellaContainerJson{
+				Message:   respContainer.Data.CapellaBlock,
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,

@@ -814,6 +814,74 @@ func TestSerializeBlindedBlock(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
+	t.Run("Capella", func(t *testing.T) {
+		response := &BlindedBlockResponseJson{
+			Version: ethpbv2.Version_CAPELLA.String(),
+			Data: &SignedBlindedBeaconBlockContainerJson{
+				CapellaBlock: &BlindedBeaconBlockCapellaJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body: &BlindedBeaconBlockBodyCapellaJson{
+						ExecutionPayloadHeader: &ExecutionPayloadHeaderCapellaJson{
+							ParentHash:       "parent_hash",
+							FeeRecipient:     "fee_recipient",
+							StateRoot:        "state_root",
+							ReceiptsRoot:     "receipts_root",
+							LogsBloom:        "logs_bloom",
+							PrevRandao:       "prev_randao",
+							BlockNumber:      "block_number",
+							GasLimit:         "gas_limit",
+							GasUsed:          "gas_used",
+							TimeStamp:        "time_stamp",
+							ExtraData:        "extra_data",
+							BaseFeePerGas:    "base_fee_per_gas",
+							BlockHash:        "block_hash",
+							TransactionsRoot: "transactions_root",
+							WithdrawalsRoot:  "withdrawals_root",
+						},
+					},
+				},
+				Signature: "sig",
+			},
+			ExecutionOptimistic: true,
+		}
+		runDefault, j, errJson := serializeBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &capellaBlindedBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		assert.NotNil(t, beaconBlock.Body)
+		payloadHeader := beaconBlock.Body.ExecutionPayloadHeader
+		assert.NotNil(t, payloadHeader)
+		assert.Equal(t, "parent_hash", payloadHeader.ParentHash)
+		assert.Equal(t, "fee_recipient", payloadHeader.FeeRecipient)
+		assert.Equal(t, "state_root", payloadHeader.StateRoot)
+		assert.Equal(t, "receipts_root", payloadHeader.ReceiptsRoot)
+		assert.Equal(t, "logs_bloom", payloadHeader.LogsBloom)
+		assert.Equal(t, "prev_randao", payloadHeader.PrevRandao)
+		assert.Equal(t, "block_number", payloadHeader.BlockNumber)
+		assert.Equal(t, "gas_limit", payloadHeader.GasLimit)
+		assert.Equal(t, "gas_used", payloadHeader.GasUsed)
+		assert.Equal(t, "time_stamp", payloadHeader.TimeStamp)
+		assert.Equal(t, "extra_data", payloadHeader.ExtraData)
+		assert.Equal(t, "base_fee_per_gas", payloadHeader.BaseFeePerGas)
+		assert.Equal(t, "block_hash", payloadHeader.BlockHash)
+		assert.Equal(t, "transactions_root", payloadHeader.TransactionsRoot)
+		assert.Equal(t, "withdrawals_root", payloadHeader.WithdrawalsRoot)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+
+	})
+
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
 		runDefault, j, errJson := serializeBlindedBlock(response)

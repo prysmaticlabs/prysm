@@ -357,6 +357,7 @@ type SignedBlindedBeaconBlockContainerJson struct {
 	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
 	Signature      string                           `json:"signature" hex:"true"`
 }
 
@@ -387,6 +388,11 @@ type SignedBlindedBeaconBlockBellatrixContainerJson struct {
 	Signature string                           `json:"signature" hex:"true"`
 }
 
+type SignedBlindedBeaconBlockCapellaContainerJson struct {
+	Message   *BlindedBeaconBlockCapellaJson `json:"message"`
+	Signature string                         `json:"signature" hex:"true"`
+}
+
 type BeaconBlockAltairJson struct {
 	Slot          string                     `json:"slot"`
 	ProposerIndex string                     `json:"proposer_index"`
@@ -409,6 +415,14 @@ type BlindedBeaconBlockBellatrixJson struct {
 	ParentRoot    string                               `json:"parent_root" hex:"true"`
 	StateRoot     string                               `json:"state_root" hex:"true"`
 	Body          *BlindedBeaconBlockBodyBellatrixJson `json:"body"`
+}
+
+type BlindedBeaconBlockCapellaJson struct {
+	Slot          string                             `json:"slot"`
+	ProposerIndex string                             `json:"proposer_index"`
+	ParentRoot    string                             `json:"parent_root" hex:"true"`
+	StateRoot     string                             `json:"state_root" hex:"true"`
+	Body          *BlindedBeaconBlockBodyCapellaJson `json:"body"`
 }
 
 type BeaconBlockBodyAltairJson struct {
@@ -449,6 +463,20 @@ type BlindedBeaconBlockBodyBellatrixJson struct {
 	ExecutionPayloadHeader *ExecutionPayloadHeaderJson `json:"execution_payload_header"`
 }
 
+type BlindedBeaconBlockBodyCapellaJson struct {
+	RandaoReveal           string                             `json:"randao_reveal" hex:"true"`
+	Eth1Data               *Eth1DataJson                      `json:"eth1_data"`
+	Graffiti               string                             `json:"graffiti" hex:"true"`
+	ProposerSlashings      []*ProposerSlashingJson            `json:"proposer_slashings"`
+	AttesterSlashings      []*AttesterSlashingJson            `json:"attester_slashings"`
+	Attestations           []*AttestationJson                 `json:"attestations"`
+	Deposits               []*DepositJson                     `json:"deposits"`
+	VoluntaryExits         []*SignedVoluntaryExitJson         `json:"voluntary_exits"`
+	SyncAggregate          *SyncAggregateJson                 `json:"sync_aggregate"`
+	ExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"execution_payload_header"`
+	BLSToExecutionChanges  []*BLSToExecutionChangeJson        `json:"bls_to_execution_changes"`
+}
+
 type ExecutionPayloadJson struct {
 	ParentHash    string   `json:"parent_hash" hex:"true"`
 	FeeRecipient  string   `json:"fee_recipient" hex:"true"`
@@ -481,6 +509,24 @@ type ExecutionPayloadHeaderJson struct {
 	BaseFeePerGas    string `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash        string `json:"block_hash" hex:"true"`
 	TransactionsRoot string `json:"transactions_root" hex:"true"`
+}
+
+type ExecutionPayloadHeaderCapellaJson struct {
+	ParentHash       string `json:"parent_hash" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" hex:"true"`
+	StateRoot        string `json:"state_root" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" hex:"true"`
+	LogsBloom        string `json:"logs_bloom" hex:"true"`
+	PrevRandao       string `json:"prev_randao" hex:"true"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	TimeStamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" uint256:"true"`
+	BlockHash        string `json:"block_hash" hex:"true"`
+	TransactionsRoot string `json:"transactions_root" hex:"true"`
+	WithdrawalsRoot  string `json:"withdrawals_root" hex:"true"`
 }
 
 type SyncAggregateJson struct {
@@ -551,6 +597,12 @@ type AttestationDataJson struct {
 	BeaconBlockRoot string          `json:"beacon_block_root" hex:"true"`
 	Source          *CheckpointJson `json:"source"`
 	Target          *CheckpointJson `json:"target"`
+}
+
+type BLSToExecutionChangeJson struct {
+	ValidatorIndex     string `json:"validator_index"`
+	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
+	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
 type DepositJson struct {
