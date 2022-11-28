@@ -15,9 +15,9 @@ proto_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/engine/v1:proto",
         "//proto/eth/ext:proto",
         "//proto/eth/v1:proto",
-        "//proto/engine/v1:proto",
     ],
 )
 
@@ -33,14 +33,16 @@ ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":go_proto",
     includes = [
-        "//proto/eth/v1:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
+        "//proto/eth/v1:go_default_library",
     ],
     objs = [
         "SignedBeaconBlockAltair",
         "SignedBeaconBlockBellatrix",
         "SignedBlindedBeaconBlockBellatrix",
+        "SignedBeaconBlockCapella",
+        "SignedBlindedBeaconBlockCapella",
     ],
 )
 
@@ -53,12 +55,12 @@ go_proto_library(
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
+        "//consensus-types/primitives:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//proto/eth/v1:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "//consensus-types/primitives:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
 
@@ -81,7 +83,7 @@ go_library(
     embed = [":go_grpc_gateway_library"],
     importpath = "github.com/prysmaticlabs/prysm/v3/proto/eth/v2",
     visibility = ["//visibility:public"],
-    deps = SSZ_DEPS
+    deps = SSZ_DEPS,
 )
 
 ssz_proto_files(
@@ -90,6 +92,7 @@ ssz_proto_files(
         "beacon_state.proto",
         "sync_committee.proto",
         "validator.proto",
+        "withdrawals.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
