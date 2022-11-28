@@ -5,17 +5,16 @@ package components
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
-
-	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
@@ -171,6 +170,41 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
+func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
+	genTime := uint64(e2e.TestParams.StartTime.Unix())
+	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, genTime, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		return "", err
+	}
+
+	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
+	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
+	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	if err != nil {
+		return "", err
+	}
+	dr, err := t.HashTreeRoot()
+	if err != nil {
+		return "", err
+	}
+	genesis.Eth1Data.DepositRoot = dr[:]
+	if e2e.TestParams.Eth1BlockHash != nil {
+		genesis.Eth1Data.BlockHash = e2e.TestParams.Eth1BlockHash.Bytes()
+	}
+	log.Infof("genesis eth1 block root=%#x", genesis.Eth1Data.BlockHash)
+
+	genesisBytes, err := genesis.MarshalSSZ()
+	if err != nil {
+		return "", err
+	}
+	genesisDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis/%d", node.index))
+	if err := file.MkdirAll(genesisDir); err != nil {
+		return "", err
+	}
+	genesisPath := path.Join(genesisDir, "genesis.ssz")
+	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
+}
+
 // Start starts a fresh beacon node, connecting to all passed in beacon nodes.
 func (node *BeaconNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
@@ -197,22 +231,12 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	}
 	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
 
-	st, _, err := interop.GenerateGenesisStateBellatrix(ctx, uint64(time.Now().Unix()), params.BeaconConfig().MinGenesisActiveValidatorCount)
+	genesisPath, err := node.saveGenesis(ctx)
 	if err != nil {
 		return err
 	}
-	stb, err := st.MarshalSSZ()
-	if err != nil {
-		return err
-	}
-	stPath := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis-%d.ssz", node.index))
-
-	if err := file.WriteFile(stPath, stb); err != nil {
-		return err
-	}
-
 	args := []string{
-		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, stPath),
+		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
