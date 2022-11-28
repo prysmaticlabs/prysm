@@ -117,7 +117,7 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.S
 				}
 				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlk.Block)
 				if err != nil {
-					return nil, errors.Wrapf(err, "could not get signed beacon block")
+					return nil, errors.Wrapf(err, "could not convert beacon block")
 				}
 				root, err := blk.Block().HashTreeRoot()
 				if err != nil {
@@ -155,7 +155,7 @@ func (bs *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.S
 	}
 	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlock.Block)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get signed beacon block")
+		return nil, errors.Wrapf(err, "could not convert beacon block")
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
@@ -187,7 +187,7 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 				}
 				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlk.Block)
 				if err != nil {
-					return nil, errors.Wrapf(err, "Could not get signed beacon block")
+					return nil, errors.Wrapf(err, "Could not convert beacon block")
 				}
 				root, err := blk.Block().HashTreeRoot()
 				if err != nil {
@@ -224,7 +224,7 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 	}
 	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(blindedCapellaBlock.Block)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get signed beacon block")
+		return nil, errors.Wrapf(err, "could not convert beacon block")
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
