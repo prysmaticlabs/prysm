@@ -9,6 +9,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/common",
     visibility = [
+        "//beacon-chain/core/blocks:__subpackages__",
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",
     ],
