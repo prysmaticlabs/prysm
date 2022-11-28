@@ -8,7 +8,7 @@ go_test(
         "blocks_test.go",
         "slots_test.go",
     ],
-    data =  [
+    data = [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],

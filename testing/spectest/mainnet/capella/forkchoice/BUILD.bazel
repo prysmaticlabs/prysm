@@ -5,7 +5,7 @@ go_test(
     size = "enormous",
     timeout = "short",
     srcs = ["forkchoice_test.go"],
-    data =  [
+    data = [
         "@consensus_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],
