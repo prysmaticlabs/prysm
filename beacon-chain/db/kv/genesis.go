@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -54,11 +54,11 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 
 // LoadGenesis loads a genesis state from a ssz-serialized byte slice, if no genesis exists already.
 func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
-	st := &ethpb.BeaconState{}
-	if err := st.UnmarshalSSZ(sb); err != nil {
+	vu, err := detect.FromState(sb)
+	if err != nil {
 		return err
 	}
-	gs, err := state_native.InitializeFromProtoUnsafePhase0(st)
+	gs, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return err
 	}
