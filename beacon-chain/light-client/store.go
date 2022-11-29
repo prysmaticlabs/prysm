@@ -28,7 +28,7 @@ type Store struct {
 	NextSyncCommittee *ethpbv2.SyncCommittee `json:"next_sync_committee,omitempty"`
 	// BestValidUpdate is the best available header to switch finalized head to if we see nothing else
 	BestValidUpdate *Update `json:"best_valid_update,omitempty"`
-	// OptimisticHeader os the most recent available reasonably-safe header
+	// OptimisticHeader is the most recent available reasonably-safe header
 	OptimisticHeader *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
 	// PreviousMaxActiveParticipants is the previous max number of active participants in a sync committee (used to
 	// calculate safety threshold)
