@@ -18,19 +18,24 @@ import (
 )
 
 type Store struct {
+	// BeaconChainConfig is the config for the beacon chain
 	BeaconChainConfig *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
-	// Header that is finalized
+	// FinalizedHeader is a header that is finalized
 	FinalizedHeader *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
-	// Sync committees corresponding to the finalized header
+	// CurrentSyncCommittee is the sync committees corresponding to the finalized header
 	CurrentSyncCommittee *ethpbv2.SyncCommittee `json:"current_sync_committeeu,omitempty"`
-	NextSyncCommittee    *ethpbv2.SyncCommittee `json:"next_sync_committee,omitempty"`
-	// Best available header to switch finalized head to if we see nothing else
+	// NextSyncCommittee is the next sync committees corresponding to the finalized header
+	NextSyncCommittee *ethpbv2.SyncCommittee `json:"next_sync_committee,omitempty"`
+	// BestValidUpdate is the best available header to switch finalized head to if we see nothing else
 	BestValidUpdate *Update `json:"best_valid_update,omitempty"`
-	// Most recent available reasonably-safe header
+	// OptimisticHeader os the most recent available reasonably-safe header
 	OptimisticHeader *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
-	// Max number of active participants in a sync committee (used to calculate safety threshold)
+	// PreviousMaxActiveParticipants is the previous max number of active participants in a sync committee (used to
+	// calculate safety threshold)
 	PreviousMaxActiveParticipants uint64 `json:"previous_max_active_participants,omitempty"`
-	CurrentMaxActiveParticipants  uint64 `json:"current_max_active_participants,omitempty"`
+	// CurrentMaxActiveParticipants is the max number of active participants in a sync committee (used to calculate
+	// safety threshold)
+	CurrentMaxActiveParticipants uint64 `json:"current_max_active_participants,omitempty"`
 }
 
 func getSubtreeIndex(index uint64) uint64 {
