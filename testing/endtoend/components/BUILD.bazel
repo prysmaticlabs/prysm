@@ -28,6 +28,7 @@ go_library(
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//config/validator/service:go_default_library",
+        "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
         "//io/file:go_default_library",
         "//runtime/interop:go_default_library",

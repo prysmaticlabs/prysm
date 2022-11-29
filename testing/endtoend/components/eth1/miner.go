@@ -3,15 +3,14 @@ package eth1
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"math/big"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 	"syscall"
-	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -91,14 +90,14 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	gethJsonPath := path.Join(path.Dir(binaryPath), "genesis.json")
 	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
 	log.Infof("eth1 miner genesis timestamp=%d", e2e.TestParams.Eth1GenesisTime)
-	b, err := testing.TerribleMarshalHack(gen, testing.DefaultContractAddress)
+	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress)
 	if err != nil {
 		return nil, err
 	}
 	if err := file.WriteFile(gethJsonPath, b); err != nil {
 		return nil, err
 	}
-	initCmd := exec.CommandContext(ctx, binaryPath,"init", fmt.Sprintf("--datadir=%s", m.DataDir()), gethJsonPath)
+	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", m.DataDir()), gethJsonPath)
 
 	// redirect stderr to a log file
 	initFile, err := helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1-init_miner.log"))
@@ -170,15 +169,15 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 		return nil, fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
 	/*
-	// check logs for common issues that prevent the EL miner from starting up.
-	if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
-		kerr := runCmd.Process.Kill()
-		if kerr != nil {
-			log.WithError(kerr).Error("error sending kill to failed miner command process")
+		// check logs for common issues that prevent the EL miner from starting up.
+		if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
+			kerr := runCmd.Process.Kill()
+			if kerr != nil {
+				log.WithError(kerr).Error("error sending kill to failed miner command process")
+			}
+			return nil, fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
 		}
-		return nil, fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
-	}
-	 */
+	*/
 	if err = helpers.WaitForTextInFile(minerLog, "Started P2P networking"); err != nil {
 		kerr := runCmd.Process.Kill()
 		if kerr != nil {
@@ -229,7 +228,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	eth1BlockHash := block.Hash()
 	e2e.TestParams.Eth1BlockHash = &eth1BlockHash
 	log.Infof("miner says genesis block root=%#x", eth1BlockHash)
-	cAddr := common.HexToAddress(testing.DefaultContractAddress)
+	cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
 	code, err := web3.CodeAt(ctx, cAddr, nil)
 	if err != nil {
 		return err

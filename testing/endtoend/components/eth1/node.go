@@ -3,15 +3,16 @@ package eth1
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 
 	log "github.com/sirupsen/logrus"
 
@@ -62,7 +63,7 @@ func (node *Node) Start(ctx context.Context) error {
 	gethJsonPath := path.Join(eth1Path, "genesis.json")
 
 	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
-	b, err := testing.TerribleMarshalHack(gen, testing.DefaultContractAddress)
+	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress)
 	if err != nil {
 		return err
 	}

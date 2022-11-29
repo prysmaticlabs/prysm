@@ -85,7 +85,7 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 			return errors.Wrap(err, "eth1Miner component never started - cannot send deposits")
 		}
 		// refactored send and mine goes here
-		minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+		//minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 		keyPath, err := e2e.TestParams.Paths.MinerKeyPath()
 		if err != nil {
 			return errors.Wrap(err, "error getting miner key file from bazel static files")
@@ -99,9 +99,11 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 			return errors.Wrap(err, "failed to initialize a client to connect to the miner EL node")
 		}
 		r.depositor = &eth1.Depositor{Key: key, Client: client, NetworkId: big.NewInt(eth1.NetworkId)}
+		/*
 		if err := r.depositor.SendAndMine(r.comHandler.ctx, 0, minGenesisActiveCount, e2etypes.GenesisDepositBatch, true); err != nil {
 			return errors.Wrap(err, "failed to send and mine deposits")
 		}
+		 */
 		if err := r.depositor.Start(r.comHandler.ctx); err != nil {
 			return errors.Wrap(err, "depositor.Start failed")
 		}
@@ -471,23 +473,23 @@ func (r *testRunner) defaultEndToEndRun() error {
 		return errors.New("incorrect component type")
 	}
 	/*
-	beaconNodes, ok := r.comHandler.beaconNodes.(*components.BeaconNodeSet)
-	if !ok {
-		return errors.New("incorrect component type")
-	}
-	 */
+		beaconNodes, ok := r.comHandler.beaconNodes.(*components.BeaconNodeSet)
+		if !ok {
+			return errors.New("incorrect component type")
+		}
+	*/
 	bootNode, ok := r.comHandler.bootnode.(*components.BootNode)
 	if !ok {
 		return errors.New("incorrect component type")
 	}
 
 	/*
-	keypath, err := e2e.TestParams.Paths.MinerKeyPath()
-	if err != nil {
-		return errors.Wrap(err, "error getting miner key path from bazel static files in defaultEndToEndRun")
-	}
-	r.testDepositsAndTx(ctx, g, keypath, []e2etypes.ComponentRunner{beaconNodes})
-	 */
+		keypath, err := e2e.TestParams.Paths.MinerKeyPath()
+		if err != nil {
+			return errors.Wrap(err, "error getting miner key path from bazel static files in defaultEndToEndRun")
+		}
+		r.testDepositsAndTx(ctx, g, keypath, []e2etypes.ComponentRunner{beaconNodes})
+	*/
 
 	// Create GRPC connection to beacon nodes.
 	conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)

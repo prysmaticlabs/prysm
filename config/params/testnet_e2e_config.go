@@ -10,6 +10,7 @@ const (
 // WARNING: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
+	e2eConfig.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
@@ -50,6 +51,7 @@ func E2ETestConfig() *BeaconChainConfig {
 
 func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig := MainnetConfig().Copy()
+	e2eConfig.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256

@@ -2,9 +2,10 @@ package eth1
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core/types"

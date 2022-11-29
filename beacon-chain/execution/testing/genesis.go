@@ -2,6 +2,9 @@ package testing
 
 import (
 	"encoding/json"
+	"math"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -9,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
-	"math"
-	"math/big"
 )
 
 const DefaultTestChainId int64 = 31337
@@ -18,8 +19,6 @@ const DefaultCoinbase = "0x0000000000000000000000000000000000000000"
 const DefaultDifficulty = "0x20000"
 const DefaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const DefaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-const DefaultContractAddress = "0x4242424242424242424242424242424242424242"
 
 // DepositContractCode is the compiled deposit contract code, via https://github.com/protolambda/merge-genesis-tools
 // This is embedded into genesis so that we can start the chain at a merge block.
@@ -97,11 +96,11 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		TerminalTotalDifficulty:       bigz,
 		TerminalTotalDifficultyPassed: false,
 	}
-	da := DefaultDepositContractAllocation()
+	da := DefaultDepositContractAllocation(cfg.DepositContractAddress)
 	return &core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
-		Timestamp: genesisTime,
+		Timestamp:  genesisTime,
 		ExtraData:  []byte(DefaultCliqueSigner),
 		GasLimit:   math.MaxUint64 >> 1, // shift 1 back from the max, just in case
 		Difficulty: common.HexToHash(DefaultDifficulty).Big(),
@@ -119,7 +118,7 @@ type DepositAllocation struct {
 	Account core.GenesisAccount
 }
 
-func DefaultDepositContractAllocation() DepositAllocation {
+func DefaultDepositContractAllocation(contractAddress string) DepositAllocation {
 	s := make(map[common.Hash]common.Hash)
 	for k, v := range DefaultDepositContractStorage {
 		s[common.HexToHash(k)] = common.HexToHash(v)
@@ -129,7 +128,7 @@ func DefaultDepositContractAllocation() DepositAllocation {
 		panic(err)
 	}
 	return DepositAllocation{
-		Address: common.HexToAddress(DefaultContractAddress),
+		Address: common.HexToAddress(contractAddress),
 		Account: core.GenesisAccount{
 			Code:    codeBytes,
 			Storage: s,

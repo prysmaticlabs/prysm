@@ -26,7 +26,6 @@ type params struct {
 	TestShardIndex            int
 	BeaconNodeCount           int
 	LighthouseBeaconNodeCount int
-	ContractAddress           common.Address
 	Ports                     *ports
 	Paths                     *paths
 	StartTime                 time.Time

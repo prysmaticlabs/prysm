@@ -3,6 +3,7 @@ package eth1
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
@@ -210,7 +211,8 @@ func (d *Depositor) txops(ctx context.Context) (*bind.TransactOpts, error) {
 // DepositContract is a special-purpose client for calling the deposit contract.
 func (d *Depositor) contractDepositor() (*contracts.DepositContract, error) {
 	if d.cd == nil {
-		contract, err := contracts.NewDepositContract(e2e.TestParams.ContractAddress, d.Client)
+		addr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
+		contract, err := contracts.NewDepositContract(addr, d.Client)
 		if err != nil {
 			return nil, err
 		}
