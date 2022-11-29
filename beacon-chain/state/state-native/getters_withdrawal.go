@@ -57,18 +57,18 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 		balance := b.balances[validatorIndex]
 		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance,
 			})
 			withdrawalIndex++
 		} else if isPartiallyWithdrawableValidator(val, balance) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
 		}
