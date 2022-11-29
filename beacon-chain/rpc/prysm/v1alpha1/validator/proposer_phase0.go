@@ -188,39 +188,30 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	}
 
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		// We request the execution payload only if the validator is not registered
-		// with a relayer
+		// We request the execution payload only if the validator is not registered with a relayer
 		registered, err := vs.validatorRegistered(ctx, idx)
 		if !registered || err != nil {
+			executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload")
+			}
 			if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-				executionPayloadV2, err := vs.getExecutionPayloadV2(
-					ctx,
-					req.Slot,
-					idx,
-					bytesutil.ToBytes32(parentRoot),
-					head,
-				)
+				p, err := executionData.PbV2()
 				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload")
+					return nil, errors.Wrap(err, "could not get execution payload v2")
 				}
-				blk.ExecutionPayloadV2 = executionPayloadV2
+				blk.ExecutionPayloadV2 = p
 				changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion()
 				if err != nil {
 					return nil, errors.Wrap(err, "could not pack BLSToExecutionChanges")
 				}
 				blk.BlsToExecutionChanges = changes
 			} else {
-				executionPayload, err := vs.getExecutionPayload(
-					ctx,
-					req.Slot,
-					idx,
-					bytesutil.ToBytes32(parentRoot),
-					head,
-				)
+				p, err := executionData.PbV1()
 				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload")
+					return nil, errors.Wrap(err, "could not get execution payload v2")
 				}
-				blk.ExecutionPayload = executionPayload
+				blk.ExecutionPayload = p
 			}
 		}
 	}
