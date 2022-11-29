@@ -37,7 +37,7 @@ func (a *data) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // PbV1 returns the payload attribute in version 1.
 func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
-	if a == nil {
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
 	}
 	if a.version != version.Bellatrix {
@@ -52,7 +52,7 @@ func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
 
 // PbV2 returns the payload attribute in version 2.
 func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
-	if a == nil {
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
 		return nil, nil
 	}
 	if a.version != version.Capella {
