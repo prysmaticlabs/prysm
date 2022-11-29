@@ -158,6 +158,48 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	return genBlk, blkContainers
 }
 
+func fillDBTestBlocksCapella(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlockCapella, []*ethpbalpha.BeaconBlockContainer) {
+	parentRoot := [32]byte{1, 2, 3}
+	genBlk := util.NewBeaconBlockCapella()
+	genBlk.Block.ParentRoot = parentRoot[:]
+	root, err := genBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, beaconDB, genBlk)
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
+
+	count := types.Slot(100)
+	blks := make([]interfaces.SignedBeaconBlock, count)
+	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
+	for i := types.Slot(0); i < count; i++ {
+		b := util.NewBeaconBlockCapella()
+		b.Block.Slot = i
+		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
+		att1 := util.NewAttestation()
+		att1.Data.Slot = i
+		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
+		att2 := util.NewAttestation()
+		att2.Data.Slot = i
+		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
+		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		signedB, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		blks[i] = signedB
+		blkContainers[i] = &ethpbalpha.BeaconBlockContainer{
+			Block: &ethpbalpha.BeaconBlockContainer_CapellaBlock{CapellaBlock: b}, BlockRoot: root[:]}
+	}
+	require.NoError(t, beaconDB.SaveBlocks(ctx, blks))
+	headRoot := bytesutil.ToBytes32(blkContainers[len(blks)-1].BlockRoot)
+	summary := &ethpbalpha.StateSummary{
+		Root: headRoot[:],
+		Slot: blkContainers[len(blks)-1].Block.(*ethpbalpha.BeaconBlockContainer_CapellaBlock).CapellaBlock.Block.Slot,
+	}
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, summary))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
+	return genBlk, blkContainers
+}
+
 func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBlindedBeaconBlockBellatrix, []*ethpbalpha.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
 	genBlk := util.NewBlindedBeaconBlockBellatrix()
@@ -1540,6 +1582,140 @@ func TestServer_GetBlockV2(t *testing.T) {
 					t.Error("Expected blocks to equal")
 				}
 				assert.Equal(t, ethpbv2.Version_BELLATRIX, blk.Version)
+			})
+		}
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genBlk, blkContainers := fillDBTestBlocksCapella(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
+		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetCapellaBlock().Block.Slot + 1
+
+		b2 := util.NewBeaconBlockCapella()
+		b2.Block.Slot = 30
+		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b2)
+		b3 := util.NewBeaconBlockCapella()
+		b3.Block.Slot = 30
+		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlockCapella()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
+
+		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetCapellaBlock())
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               chainBlk,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			ExecutionPayloadReconstructor: &executionTest.EngineClient{
+				ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{},
+			},
+		}
+
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    *ethpbalpha.SignedBeaconBlockCapella
+			wantErr bool
+		}{
+			{
+				name:    "slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].GetCapellaBlock(),
+			},
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "canonical",
+				blockID: []byte("30"),
+				want:    blkContainers[30].GetCapellaBlock(),
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.GetCapellaBlock(),
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].GetCapellaBlock(),
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    genBlk,
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    genBlk,
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].GetCapellaBlock(),
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				blk, err := bs.GetBlockV2(ctx, &ethpbv2.BlockRequestV2{
+					BlockId: tt.blockID,
+				})
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+
+				v2Block, err := migration.V1Alpha1BeaconBlockCapellaToV2(tt.want.Block)
+				require.NoError(t, err)
+
+				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
+				require.Equal(t, true, ok)
+				if !reflect.DeepEqual(b.CapellaBlock, v2Block) {
+					t.Error("Expected blocks to equal")
+				}
+				assert.Equal(t, ethpbv2.Version_CAPELLA, blk.Version)
 			})
 		}
 	})
