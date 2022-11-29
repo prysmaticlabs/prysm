@@ -2,18 +2,14 @@ package light_client
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
-const (
-	// TODO: we should read these from the beacon chain config
-	epochsPerSyncCommitteePeriod = uint64(256)
-	slotsPerEpoch                = types.Slot(32)
-)
-
 type Update struct {
-	ethpbv2.Update `json:"update,omitempty"`
+	BeaconChainConfig *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
+	ethpbv2.Update    `json:"update,omitempty"`
 }
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
@@ -29,16 +25,16 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
-func computeEpochAtSlot(slot types.Slot) types.Epoch {
-	return types.Epoch(slot / slotsPerEpoch)
+func (u *Update) computeEpochAtSlot(slot types.Slot) types.Epoch {
+	return types.Epoch(slot / u.BeaconChainConfig.SlotsPerEpoch)
 }
 
-func computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
-	return uint64(epoch) / epochsPerSyncCommitteePeriod
+func (u *Update) computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
+	return uint64(epoch / u.BeaconChainConfig.EpochsPerSyncCommitteePeriod)
 }
 
-func computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
-	return computeSyncCommitteePeriod(computeEpochAtSlot(slot))
+func (u *Update) computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
+	return u.computeSyncCommitteePeriod(u.computeEpochAtSlot(slot))
 }
 
 func (u *Update) isSyncCommiteeUpdate() bool {
@@ -51,11 +47,12 @@ func (u *Update) isFinalityUpdate() bool {
 
 func (u *Update) hasRelevantSyncCommittee() bool {
 	return u.isSyncCommiteeUpdate() &&
-		computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == computeSyncCommitteePeriodAtSlot(u.GetSignatureSlot())
+		u.computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
+			GetSignatureSlot())
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {
-	return computeSyncCommitteePeriodAtSlot(u.GetFinalizedHeader().Slot) == computeSyncCommitteePeriodAtSlot(u.
+	return u.computeSyncCommitteePeriodAtSlot(u.GetFinalizedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
 		GetAttestedHeader().Slot)
 }
 

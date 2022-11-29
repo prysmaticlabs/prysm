@@ -19,14 +19,10 @@ import (
 
 const (
 	currentSyncCommitteeIndex = uint64(54)
-	// TODO: read these from the config
-	minSyncCommitteeParticipants = uint64(1)
-	genesisSlot                  = types.Slot(0)
-	updateTimeout                = slotsPerEpoch + epochsPerSyncCommitteePeriod
 )
 
 type Store struct {
-	BeaconChainConfig             *params.BeaconChainConfig  `json:"config,omitempty"`
+	BeaconChainConfig             *params.BeaconChainConfig  `json:"beacon_chain_config,omitempty"`
 	FinalizedHeader               *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	CurrentSyncCommittee          *ethpbv2.SyncCommittee     `json:"current_sync_committeeu,omitempty"`
 	NextSyncCommittee             *ethpbv2.SyncCommittee     `json:"next_sync_committee,omitempty"`
@@ -97,7 +93,7 @@ func max(a, b uint64) uint64 {
 
 func (s *Store) getSafetyThreshold() uint64 {
 	halfActiveParticipants := s.CurrentMaxActiveParticipants / 2
-	return max(minSyncCommitteeParticipants, halfActiveParticipants)
+	return max(s.BeaconChainConfig.MinSyncCommitteeParticipants, halfActiveParticipants)
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
@@ -112,7 +108,7 @@ func (s *Store) validateUpdate(update *Update,
 	genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.GetSyncAggregate()
-	if syncAggregate.SyncCommitteeBits.Count() < minSyncCommitteeParticipants {
+	if syncAggregate.SyncCommitteeBits.Count() < s.BeaconChainConfig.MinSyncCommitteeParticipants {
 		return errors.New("sync committee does not have sufficient participants")
 	}
 
@@ -122,8 +118,8 @@ func (s *Store) validateUpdate(update *Update,
 		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
 		return errors.New("update skips a sync committee period")
 	}
-	storePeriod := computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(update.GetSignatureSlot())
+	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
+	updateSignaturePeriod := update.computeSyncCommitteePeriodAtSlot(update.GetSignatureSlot())
 	if s.isNextSyncCommitteeKnown() {
 		if !(updateSignaturePeriod == storePeriod || updateSignaturePeriod == storePeriod+1) {
 			return errors.New("update skips a sync committee period")
@@ -135,7 +131,7 @@ func (s *Store) validateUpdate(update *Update,
 	}
 
 	// Verify update is relevant
-	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+	updateAttestedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
 	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.isSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
 	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
@@ -150,7 +146,7 @@ func (s *Store) validateUpdate(update *Update,
 		}
 	} else {
 		var finalizedRoot [32]byte
-		if update.GetFinalizedHeader().Slot == genesisSlot {
+		if update.GetFinalizedHeader().Slot == s.BeaconChainConfig.GenesisSlot {
 			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
 				return errors.New("finality branch is present but update is not finality")
 			}
@@ -204,7 +200,7 @@ func (s *Store) validateUpdate(update *Update,
 	} else {
 		syncCommittee = s.NextSyncCommittee
 	}
-	participantPubkeys := []common.PublicKey{}
+	var participantPubkeys []common.PublicKey
 	for i, bit := range syncAggregate.SyncCommitteeBits {
 		if bit > 0 {
 			publicKey, err := blst.PublicKeyFromBytes(syncCommittee.Pubkeys[i])
@@ -214,7 +210,7 @@ func (s *Store) validateUpdate(update *Update,
 			participantPubkeys = append(participantPubkeys, publicKey)
 		}
 	}
-	forkVersion := s.computeForkVersion(computeEpochAtSlot(update.GetSignatureSlot()))
+	forkVersion := s.computeForkVersion(update.computeEpochAtSlot(update.GetSignatureSlot()))
 	// TODO: export this somewhere
 	domainSyncCommittee := bytesutil.Uint32ToBytes4(0x07000000)
 	domain, err := signing.ComputeDomain(domainSyncCommittee, forkVersion, genesisValidatorsRoot)
@@ -236,8 +232,8 @@ func (s *Store) validateUpdate(update *Update,
 }
 
 func (s *Store) applyUpdate(update *Update) error {
-	storePeriod := computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
+	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
+	updateFinalizedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
@@ -259,7 +255,8 @@ func (s *Store) applyUpdate(update *Update) error {
 }
 
 func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
-	if currentSlot > s.FinalizedHeader.Slot+types.Slot(updateTimeout) && s.BestValidUpdate != nil {
+	if currentSlot > s.FinalizedHeader.Slot+s.BeaconChainConfig.SlotsPerEpoch+types.Slot(s.BeaconChainConfig.
+		EpochsPerSyncCommitteePeriod) && s.BestValidUpdate != nil {
 		// Forced best update when the update timeout has elapsed.
 		// Because the apply logic waits for `finalized_header.slot` to indicate sync committee finality,
 		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
@@ -297,8 +294,8 @@ func (s *Store) processUpdate(update *Update,
 
 	// Update finalized header
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
-		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
-		Slot) == computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+		update.isFinalityUpdate() && update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
+		Slot) == update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
 		(update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
@@ -313,11 +310,11 @@ func (s *Store) processUpdate(update *Update,
 func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.processUpdate(&Update{finalityUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.processUpdate(&Update{s.BeaconChainConfig, finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.OptimisticUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.processUpdate(&Update{optimisticUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.processUpdate(&Update{s.BeaconChainConfig, optimisticUpdate}, currentSlot, genesisValidatorsRoot)
 }
