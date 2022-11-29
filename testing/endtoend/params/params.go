@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
@@ -150,17 +151,29 @@ const (
 	JaegerTracingPort = 9150
 )
 
+func logDir() string {
+	wTime := func(p string) string {
+		return path.Join(p, time.Now().Format("20060102/150405"))
+	}
+	path, ok := os.LookupEnv("E2E_LOG_PATH")
+	if ok {
+		return wTime(path)
+	}
+	path, _ = os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
+	return wTime(path)
+}
+
 // Init initializes the E2E config, properly handling test sharding.
 func Init(t *testing.T, beaconNodeCount int) error {
-	testPath := bazel.TestTmpDir()
-	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
-	if !ok {
-		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	d := logDir()
+	if d == "" {
+		return errors.New("unable to determine log directory, no value for E2E_LOG_PATH or TEST_UNDECLARED_OUTPUTS_DIR")
 	}
-	logPath = path.Join(logPath, t.Name())
+	logPath := path.Join(d, t.Name())
 	if err := file.MkdirAll(logPath); err != nil {
 		return err
 	}
+	testPath := bazel.TestTmpDir()
 	testTotalShardsStr, ok := os.LookupEnv("TEST_TOTAL_SHARDS")
 	if !ok {
 		testTotalShardsStr = "1"

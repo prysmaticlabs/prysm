@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -99,6 +100,7 @@ type Config struct {
 	SlashingsPool                 slashings.PoolManager
 	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
+	BLSChangesPool                blstoexec.PoolManager
 	SyncService                   chainSync.Checker
 	Broadcaster                   p2p.Broadcaster
 	PeersFetcher                  p2p.PeersProvider
@@ -216,6 +218,7 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ReplayerBuilder:        ch,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
@@ -241,6 +244,7 @@ func (s *Service) Start() {
 			ReplayerBuilder:    ch,
 		},
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
+		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 
@@ -293,6 +297,7 @@ func (s *Service) Start() {
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
 		ReplayerBuilder:             ch,
+		BLSChangesPool:              s.cfg.BLSChangesPool,
 	}
 	beaconChainServerV1 := &beacon.Server{
 		CanonicalHistory:   ch,
@@ -319,6 +324,7 @@ func (s *Service) Start() {
 		V1Alpha1ValidatorServer:       validatorServer,
 		SyncChecker:                   s.cfg.SyncService,
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
+		BLSChangesPool:                s.cfg.BLSChangesPool,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)

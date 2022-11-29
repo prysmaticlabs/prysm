@@ -215,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.3.0-alpha.1-hotfix"
+consensus_spec_version = "v1.3.0-alpha.1-hotfix.2"
 
 bls_test_version = "v0.1.1"
 

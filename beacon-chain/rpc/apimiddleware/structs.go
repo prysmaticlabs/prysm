@@ -213,7 +213,7 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type DutiesRequestJson struct {
+type ValidatorIndicesJson struct {
 	Index []string `json:"index"`
 }
 
@@ -290,16 +290,47 @@ type SubmitContributionAndProofsRequestJson struct {
 	Data []*SignedContributionAndProofJson `json:"data"`
 }
 
-type ForkchoiceResponse struct {
-	JustifiedCheckpoint           *CheckpointJson       `json:"justified_checkpoint"`
-	FinalizedCheckpoint           *CheckpointJson       `json:"finalized_checkpoint"`
-	BestJustifiedCheckpoint       *CheckpointJson       `json:"best_justified_checkpoint"`
-	UnrealizedJustifiedCheckpoint *CheckpointJson       `json:"unrealized_justified_checkpoint"`
-	UnrealizedFinalizedCheckpoint *CheckpointJson       `json:"unrealized_finalized_checkpoint"`
-	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
-	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
-	HeadRoot                      string                `json:"head_root" hex:"true"`
-	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"forkchoice_nodes"`
+type ForkChoiceNodeResponseJson struct {
+	Slot               string                       `json:"slot"`
+	BlockRoot          string                       `json:"block_root" hex:"true"`
+	ParentRoot         string                       `json:"parent_root" hex:"true"`
+	JustifiedEpoch     string                       `json:"justified_epoch"`
+	FinalizedEpoch     string                       `json:"finalized_epoch"`
+	Weight             string                       `json:"weight"`
+	Validity           string                       `json:"validity" enum:"true"`
+	ExecutionBlockHash string                       `json:"execution_block_hash" hex:"true"`
+	ExtraData          *ForkChoiceNodeExtraDataJson `json:"extra_data"`
+}
+
+type ForkChoiceNodeExtraDataJson struct {
+	UnrealizedJustifiedEpoch string `json:"unrealized_justified_epoch"`
+	UnrealizedFinalizedEpoch string `json:"unrealized_finalized_epoch"`
+	Balance                  string `json:"balance"`
+	ExecutionOptimistic      bool   `json:"execution_optimistic"`
+	TimeStamp                string `json:"timestamp"`
+}
+
+type ForkChoiceResponseJson struct {
+	JustifiedCheckpoint *CheckpointJson                  `json:"justified_checkpoint"`
+	FinalizedCheckpoint *CheckpointJson                  `json:"finalized_checkpoint"`
+	ForkChoiceNodes     []*ForkChoiceNodeResponseJson    `json:"fork_choice_nodes"`
+	ExtraData           *ForkChoiceResponseExtraDataJson `json:"extra_data"`
+}
+
+type ForkChoiceResponseExtraDataJson struct {
+	BestJustifiedCheckpoint       *CheckpointJson `json:"best_justified_checkpoint"`
+	UnrealizedJustifiedCheckpoint *CheckpointJson `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *CheckpointJson `json:"unrealized_finalized_checkpoint"`
+	ProposerBoostRoot             string          `json:"proposer_boost_root" hex:"true"`
+	PreviousProposerBoostRoot     string          `json:"previous_proposer_boost_root" hex:"true"`
+	HeadRoot                      string          `json:"head_root" hex:"true"`
+}
+
+type LivenessResponseJson struct {
+	Data []*struct {
+		Index  string `json:"index"`
+		IsLive bool   `json:"is_live"`
+	} `json:"data"`
 }
 
 //----------------
@@ -460,17 +491,17 @@ type BeaconBlockBodyBellatrixJson struct {
 }
 
 type BeaconBlockBodyCapellaJson struct {
-	RandaoReveal          string                       `json:"randao_reveal" hex:"true"`
-	Eth1Data              *Eth1DataJson                `json:"eth1_data"`
-	Graffiti              string                       `json:"graffiti" hex:"true"`
-	ProposerSlashings     []*ProposerSlashingJson      `json:"proposer_slashings"`
-	AttesterSlashings     []*AttesterSlashingJson      `json:"attester_slashings"`
-	Attestations          []*AttestationJson           `json:"attestations"`
-	Deposits              []*DepositJson               `json:"deposits"`
-	VoluntaryExits        []*SignedVoluntaryExitJson   `json:"voluntary_exits"`
-	SyncAggregate         *SyncAggregateJson           `json:"sync_aggregate"`
-	ExecutionPayload      *ExecutionPayloadCapellaJson `json:"execution_payload"`
-	BLSToExecutionChanges []*BLSToExecutionChangeJson  `json:"bls_to_execution_changes"`
+	RandaoReveal          string                            `json:"randao_reveal" hex:"true"`
+	Eth1Data              *Eth1DataJson                     `json:"eth1_data"`
+	Graffiti              string                            `json:"graffiti" hex:"true"`
+	ProposerSlashings     []*ProposerSlashingJson           `json:"proposer_slashings"`
+	AttesterSlashings     []*AttesterSlashingJson           `json:"attester_slashings"`
+	Attestations          []*AttestationJson                `json:"attestations"`
+	Deposits              []*DepositJson                    `json:"deposits"`
+	VoluntaryExits        []*SignedVoluntaryExitJson        `json:"voluntary_exits"`
+	SyncAggregate         *SyncAggregateJson                `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapellaJson      `json:"execution_payload"`
+	BLSToExecutionChanges []*SignedBLSToExecutionChangeJson `json:"bls_to_execution_changes"`
 }
 
 type BlindedBeaconBlockBodyBellatrixJson struct {
@@ -497,7 +528,7 @@ type BlindedBeaconBlockBodyCapellaJson struct {
 	VoluntaryExits         []*SignedVoluntaryExitJson         `json:"voluntary_exits"`
 	SyncAggregate          *SyncAggregateJson                 `json:"sync_aggregate"`
 	ExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"execution_payload_header"`
-	BLSToExecutionChanges  []*BLSToExecutionChangeJson        `json:"bls_to_execution_changes"`
+	BLSToExecutionChanges  []*SignedBLSToExecutionChangeJson  `json:"bls_to_execution_changes"`
 }
 
 type ExecutionPayloadJson struct {
@@ -643,10 +674,10 @@ type AttestationDataJson struct {
 type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
-	ToExecutionAddress string `jston:"to_execution_address" hex:"true"`
+	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
-type SigledBLSToExecutionChangeJson struct {
+type SignedBLSToExecutionChangeJson struct {
 	BLSToExecutionChange *BLSToExecutionChangeJson `json:"message"`
 	Signature            string                    `json:"signature" hex:"true"`
 }
@@ -966,7 +997,7 @@ type SignedValidatorRegistrationsRequestJson struct {
 
 type ForkChoiceNodeJson struct {
 	Slot                     string `json:"slot"`
-	Root                     string `json:"root" hex:"true"`
+	BlockRoot                string `json:"block_root" hex:"true"`
 	ParentRoot               string `json:"parent_root" hex:"true"`
 	JustifiedEpoch           string `json:"justified_epoch"`
 	FinalizedEpoch           string `json:"finalized_epoch"`
@@ -975,8 +1006,21 @@ type ForkChoiceNodeJson struct {
 	Balance                  string `json:"balance"`
 	Weight                   string `json:"weight"`
 	ExecutionOptimistic      bool   `json:"execution_optimistic"`
-	ExecutionPayload         string `json:"execution_payload" hex:"true"`
+	ExecutionBlockHash       string `json:"execution_block_hash" hex:"true"`
 	TimeStamp                string `json:"timestamp"`
+	Validity                 string `json:"validity" enum:"true"`
+}
+
+type ForkChoiceDumpJson struct {
+	JustifiedCheckpoint           *CheckpointJson       `json:"justified_checkpoint"`
+	FinalizedCheckpoint           *CheckpointJson       `json:"finalized_checkpoint"`
+	BestJustifiedCheckpoint       *CheckpointJson       `json:"best_justified_checkpoint"`
+	UnrealizedJustifiedCheckpoint *CheckpointJson       `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *CheckpointJson       `json:"unrealized_finalized_checkpoint"`
+	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
+	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
+	HeadRoot                      string                `json:"head_root" hex:"true"`
+	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"fork_choice_nodes"`
 }
 
 //----------------

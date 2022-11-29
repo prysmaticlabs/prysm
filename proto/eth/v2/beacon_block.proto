@@ -15,11 +15,12 @@ syntax = "proto3";
 
 package ethereum.eth.v2;
 
-import "proto/engine/v1/execution_engine.proto";
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v2/version.proto";
+import "proto/eth/v2/withdrawals.proto";
+import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/v2;eth";
@@ -51,7 +52,7 @@ message BeaconBlockContainerV2 {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BeaconBlockBellatrix bellatrix_block = 3;
-    BeaconBlockCapella capella_block = 4;
+    BeaconBlockCapella capella_block = 4; 
   }
 }
 
@@ -72,6 +73,7 @@ message BlindedBeaconBlockContainer {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
+    BlindedBeaconBlockCapella capella_block = 4;
   }
 }
 
@@ -80,10 +82,11 @@ message SignedBlindedBeaconBlockContainer {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
+    BlindedBeaconBlockCapella capella_block = 4;
   }
 
   // 96 byte BLS signature from the validator that produced this block.
-  bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
+  bytes signature = 5 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 message SignedBeaconBlockBellatrix {
@@ -93,8 +96,22 @@ message SignedBeaconBlockBellatrix {
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message SignedBeaconBlockCapella {
+  BeaconBlockCapella message = 1;
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
 message SignedBlindedBeaconBlockBellatrix {
   BlindedBeaconBlockBellatrix message = 1;
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message SignedBlindedBeaconBlockCapella {
+  BlindedBeaconBlockCapella message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -141,6 +158,24 @@ message BlindedBeaconBlockBellatrix {
 
   // The block body itself.
   BlindedBeaconBlockBodyBellatrix body = 5;
+}
+
+// The Ethereum consensus beacon block. The message does not contain a validator signature.
+message BlindedBeaconBlockCapella {
+  // Beacon chain slot that this block represents.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+
+  // Validator index of the validator that proposed the block header.
+  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+
+  // 32 byte root of the parent block.
+  bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // 32 byte root of the resulting state after processing this block.
+  bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // The block body itself.
+  BlindedBeaconBlockBodyCapella body = 5;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
@@ -233,6 +268,45 @@ message BlindedBeaconBlockBodyBellatrix {
   ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
+message BlindedBeaconBlockBodyCapella {
+  // The validators RANDAO reveal 96 byte value.
+  bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+
+  // A reference to the Ethereum 1.x chain.
+  v1.Eth1Data eth1_data = 2;
+
+  // 32 byte field of arbitrary data. This field may contain any data and
+  // is not used for anything other than a fun message.
+  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // Block operations
+  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
+
+  // At most MAX_PROPOSER_SLASHINGS.
+  repeated v1.ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // At most MAX_ATTESTER_SLASHINGS.
+  repeated v1.AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+
+  // At most MAX_ATTESTATIONS.
+  repeated v1.Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+
+  // At most MAX_DEPOSITS.
+  repeated v1.Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // At most MAX_VOLUNTARY_EXITS.
+  repeated v1.SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // Sync aggregate object to track sync committee votes for light client support.
+  v1.SyncAggregate sync_aggregate = 9;
+
+  // Execution payload header: the embedded execution payload of the block [Modified in Capella]
+  ethereum.engine.v1.ExecutionPayloadHeaderCapella execution_payload_header = 10;
+
+  // BLS To Execution Changes: signed messages to change withdrawal credentials [New in Capella]
+  repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+}
+
 message BeaconBlockBodyAltair {
   // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -322,25 +396,4 @@ message BeaconBlockBodyCapella {
   repeated  SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
   repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
-}
-
-// The message requesting a BLS to execution withdrawal credentials change
-message BLSToExecutionChange {
-  // The validator index requesting the change
-  uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
-
-  // The public key of the BLS address requesting the change
-  bytes from_bls_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
-
-  // The new execution address to be the withdrawal credentials
-  bytes to_execution_address = 3 [(ethereum.eth.ext.ssz_size) = "20"];
-}
-
-// The signed version of a BLSToExecutionChange
-message SignedBLSToExecutionChange {
-  // The BLSToExecutionChange message itself
-  BLSToExecutionChange message = 1;
-
-  // The 96 byte BLS signature from the withdrawal address requesting the change
-  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }

@@ -117,7 +117,7 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 // PbPhase0Block returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	if b.version != version.Phase0 {
-		return nil, errNotSupported("PbPhase0Block", b.version)
+		return nil, ErrNotSupported("PbPhase0Block", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -129,7 +129,7 @@ func (b *SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 // PbAltairBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	if b.version != version.Altair {
-		return nil, errNotSupported("PbAltairBlock", b.version)
+		return nil, ErrNotSupported("PbAltairBlock", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -141,7 +141,7 @@ func (b *SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error
 // PbBellatrixBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	if b.version != version.Bellatrix || b.IsBlinded() {
-		return nil, errNotSupported("PbBellatrixBlock", b.version)
+		return nil, ErrNotSupported("PbBellatrixBlock", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -153,7 +153,7 @@ func (b *SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix,
 // PbBlindedBellatrixBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
 	if b.version != version.Bellatrix || !b.IsBlinded() {
-		return nil, errNotSupported("PbBlindedBellatrixBlock", b.version)
+		return nil, ErrNotSupported("PbBlindedBellatrixBlock", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -165,7 +165,7 @@ func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconB
 // PbCapellaBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, error) {
 	if b.version != version.Capella || b.IsBlinded() {
-		return nil, errNotSupported("PbCapellaBlock", b.version)
+		return nil, ErrNotSupported("PbCapellaBlock", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -177,7 +177,7 @@ func (b *SignedBeaconBlock) PbCapellaBlock() (*eth.SignedBeaconBlockCapella, err
 // PbBlindedCapellaBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockCapella, error) {
 	if b.version != version.Capella || !b.IsBlinded() {
-		return nil, errNotSupported("PbBlindedCapellaBlock", b.version)
+		return nil, ErrNotSupported("PbBlindedCapellaBlock", b.version)
 	}
 	pb, err := b.Proto()
 	if err != nil {
@@ -786,7 +786,7 @@ func (b *BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 // SyncAggregate returns the sync aggregate in the block.
 func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	if b.version == version.Phase0 {
-		return nil, errNotSupported("SyncAggregate", b.version)
+		return nil, ErrNotSupported("SyncAggregate", b.version)
 	}
 	return b.syncAggregate, nil
 }
@@ -795,7 +795,7 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
-		return nil, errNotSupported("Execution", b.version)
+		return nil, ErrNotSupported("Execution", b.version)
 	case version.Bellatrix:
 		if b.isBlinded {
 			var ph *enginev1.ExecutionPayloadHeader
@@ -846,7 +846,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 // BLSToExecutionChanges returns the `BLSToExecutionChanges` objects in the block.
 func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
 	if b.version < version.Capella {
-		return nil, errNotSupported("BLSToExecutionChanges", b.version)
+		return nil, ErrNotSupported("BLSToExecutionChanges", b.version)
 	}
 	return b.blsToExecutionChanges, nil
 }
@@ -855,7 +855,7 @@ func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionCh
 func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	switch b.version {
 	case version.Phase0, version.Altair, version.Bellatrix:
-		return nil, errNotSupported("BlobKzgCommitments", b.version)
+		return nil, ErrNotSupported("BlobKzgCommitments", b.version)
 	case version.Capella:
 		return b.blobKzgCommitments, nil
 	default:

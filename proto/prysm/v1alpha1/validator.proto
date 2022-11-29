@@ -350,7 +350,7 @@ message StreamBlocksResponse {
         // Representing a bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 3;
 
-        // Represening a capella block.
+        // Representing a capella block.
         SignedBeaconBlockCapella capella_block = 4;
     }
 }

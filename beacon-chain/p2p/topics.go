@@ -28,6 +28,8 @@ const (
 	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
 	// GossipBlockAndBlobsMessage is the name for the block and blobs sidecar message type. (EIP4844)
 	GossipBlockAndBlobsMessage = "beacon_block_and_blobs_sidecar"
+	// GossipBlsToExecutionChangeMessage is the name for the bls to execution change message type.
+	GossipBlsToExecutionChangeMessage = "bls_to_execution_change"
 
 	// Topic Formats
 	//
@@ -49,4 +51,6 @@ const (
 	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
 	// BlockAndBlobsSubnetTopicFormat is the topic format for the block and blobs.
 	BlockAndBlobsSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockAndBlobsMessage
+	// BlsToExecutionChangeSubnetTopicFormat is the topic format for the bls to execution change subnet.
+	BlsToExecutionChangeSubnetTopicFormat = GossipProtocolAndDigest + GossipBlsToExecutionChangeMessage
 )

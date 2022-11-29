@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -72,7 +73,9 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
+		attr, err := payloadattribute.New(&pb.PayloadAttributes{})
+		require.NoError(t, err)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, attr)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -173,7 +176,9 @@ func TestClient_HTTP(t *testing.T) {
 		srv := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		attr, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, attr)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -194,7 +199,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		attr, err := payloadattribute.New(&payloadAttributes)
+		require.NoError(t, err)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
 		require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
@@ -215,7 +222,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		attr, err := payloadattribute.New(&payloadAttributes)
+		require.NoError(t, err)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
 		require.ErrorIs(t, err, ErrInvalidPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
@@ -236,7 +245,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		attr, err := payloadattribute.New(&payloadAttributes)
+		require.NoError(t, err)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
 		require.ErrorIs(t, err, ErrUnknownPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)

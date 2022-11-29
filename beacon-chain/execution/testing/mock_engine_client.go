@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
@@ -44,7 +45,7 @@ func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData)
 
 // ForkchoiceUpdated --
 func (e *EngineClient) ForkchoiceUpdated(
-	_ context.Context, fcs *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+	_ context.Context, fcs *pb.ForkchoiceState, _ payloadattribute.Attributer,
 ) (*pb.PayloadIDBytes, []byte, error) {
 	if e.OverrideValidHash != [32]byte{} && bytesutil.ToBytes32(fcs.HeadBlockHash) == e.OverrideValidHash {
 		return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
@@ -55,6 +56,10 @@ func (e *EngineClient) ForkchoiceUpdated(
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
 	return e.ExecutionPayload, e.ErrGetPayload
+}
+
+func (e *EngineClient) GetPayloadV2(_ context.Context, _ [8]byte) (*pb.ExecutionPayloadCapella, error) {
+	return nil, nil
 }
 
 // ExchangeTransitionConfiguration --

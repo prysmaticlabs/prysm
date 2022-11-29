@@ -25,6 +25,7 @@ import "proto/eth/v2/beacon_block.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/sync_committee.proto";
+import "proto/eth/v2/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
@@ -380,6 +381,15 @@ service BeaconChain {
   rpc SubmitVoluntaryExit(v1.SignedVoluntaryExit) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/pool/voluntary_exits"
+      body: "*"
+    };
+  }
+
+  // SubmitSignedBLSToExecutionEngine submits said object to node's pool
+  // and if passes validation node MUST broadcast it to network.
+  rpc SubmitSignedBLSToExecutionChange(v2.SignedBLSToExecutionChange) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
       body: "*"
     };
   }

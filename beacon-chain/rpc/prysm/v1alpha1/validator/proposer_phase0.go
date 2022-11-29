@@ -208,8 +208,6 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 				}
 
 				blk.ExecutionPayloadV2 = executionPayloadV2
-				// TODO pack BlsToExecutionChanges Here
-				blk.BlsToExecutionChanges = make([]*ethpb.SignedBLSToExecutionChange, 0)
 
 				blk.BlobsKzg = blobsBundle.KzgCommitments
 				aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(blobsBundle.Blobs))
@@ -222,6 +220,12 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 					Blobs:           blobsBundle.Blobs,
 					AggregatedProof: aggregatedProof[:],
 				})
+
+				changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion()
+				if err != nil {
+					return nil, errors.Wrap(err, "could not pack BLSToExecutionChanges")
+				}
+				blk.BlsToExecutionChanges = changes
 			} else {
 				executionPayload, err := vs.getExecutionPayload(
 					ctx,

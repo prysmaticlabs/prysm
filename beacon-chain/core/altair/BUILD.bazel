@@ -16,6 +16,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd/prysmctl/testnet:__pkg__",
         "//testing/endtoend/evaluators:__subpackages__",
         "//testing/spectest:__subpackages__",
         "//testing/util:__pkg__",
@@ -58,6 +59,7 @@ go_test(
         "deposit_test.go",
         "epoch_precompute_test.go",
         "epoch_spec_test.go",
+        "exports_test.go",
         "reward_test.go",
         "sync_committee_test.go",
         "transition_test.go",

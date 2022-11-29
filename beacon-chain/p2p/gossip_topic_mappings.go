@@ -21,6 +21,7 @@ var gossipTopicMappings = map[string]proto.Message{
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
 	BlockAndBlobsSubnetTopicFormat:            &ethpb.SignedBeaconBlockAndBlobsSidecar{},
+	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
