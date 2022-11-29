@@ -23,7 +23,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -275,112 +274,6 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
 	}
-	root, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
-	}
-	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
-}
-
-// SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-// to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-// successful. The beacon node is expected to integrate the new block into its state, and
-// therefore validate the block internally, however blocks which fail the validation are still
-// broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBlindedBeaconBlockContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
-	defer span.End()
-
-	capellaBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock)
-	if ok {
-		if err := bs.submitBlindedCapellaBlock(ctx, capellaBlkContainer.CapellaBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
-	if ok {
-		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-
-	// At the end we check forks that don't have blinded blocks.
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block)
-	if ok {
-		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock)
-	if ok {
-		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// SubmitBlindedBlockSSZ instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-// to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-// successful. The beacon node is expected to integrate the new block into its state, and
-// therefore validate the block internally, however blocks which fail the validation are still
-// broadcast but a different status code is returned (202).
-//
-// The provided block must be SSZ-serialized.
-func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlockSSZ")
-	defer span.End()
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
-	}
-	ver := md.Get(versionHeader)
-	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
-	}
-	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
-	forkVer, err := schedule.VersionForName(ver[0])
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not determine fork version: %v", err)
-	}
-	unmarshaler, err := detect.FromForkVersion(forkVer)
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
-	}
-	block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
-	}
-
-	if block.IsBlinded() {
-		b, err := block.PbBlindedBellatrixBlock()
-		if err != nil {
-			b, err := block.PbBlindedCapellaBlock()
-			if err != nil {
-				return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
-			}
-			bb, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(b.Block)
-			if err != nil {
-				return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not migrate block: %v", err)
-			}
-			return &emptypb.Empty{}, bs.submitBlindedCapellaBlock(ctx, bb, b.Signature)
-		}
-		bb, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.Block)
-		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not migrate block: %v", err)
-		}
-		return &emptypb.Empty{}, bs.submitBlindedBellatrixBlock(ctx, bb, b.Signature)
-	}
-
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
@@ -1164,44 +1057,6 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	}
 
 	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
-}
-
-func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
-	b, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
-		Message:   blindedBellatrixBlk,
-		Signature: sig,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
-	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
-			BlindedBellatrix: b,
-		},
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
-	}
-	return nil
-}
-
-func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaBlk *ethpbv2.BlindedBeaconBlockCapella, sig []byte) error {
-	b, err := migration.BlindedCapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockCapella{
-		Message:   blindedCapellaBlk,
-		Signature: sig,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
-	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
-			BlindedCapella: b,
-		},
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
-	}
-	return nil
 }
 
 func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {
