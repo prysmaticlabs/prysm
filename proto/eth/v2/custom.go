@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	NextSyncCommitteeIndex = uint64(55)
-	FinalizedRootIndex     = uint64(105)
+	CurrentSyncCommitteeIndex = uint64(54)
+	NextSyncCommitteeIndex    = uint64(55)
+	FinalizedRootIndex        = uint64(105)
 )
 
 type Update interface {

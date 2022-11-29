@@ -17,9 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-const (
-	currentSyncCommitteeIndex = uint64(54)
-)
+const ()
 
 type Store struct {
 	BeaconChainConfig             *params.BeaconChainConfig  `json:"beacon_chain_config,omitempty"`
@@ -66,9 +64,9 @@ func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
 	if !trie.VerifyMerkleProofWithDepth(
 		bootstrap.Header.StateRoot,
 		root,
-		getSubtreeIndex(currentSyncCommitteeIndex),
+		getSubtreeIndex(ethpbv2.CurrentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch,
-		uint64(ethpbv2.FloorLog2(currentSyncCommitteeIndex))) {
+		uint64(ethpbv2.FloorLog2(ethpbv2.CurrentSyncCommitteeIndex))) {
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
