@@ -256,6 +256,7 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 			}
 			return nil, err
 		}
+		return nil, err
 	}
 
 	if capellaBlk == nil {
