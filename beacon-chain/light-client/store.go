@@ -19,14 +19,19 @@ import (
 const ()
 
 type Store struct {
-	BeaconChainConfig             *params.BeaconChainConfig  `json:"beacon_chain_config,omitempty"`
-	FinalizedHeader               *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
-	CurrentSyncCommittee          *ethpbv2.SyncCommittee     `json:"current_sync_committeeu,omitempty"`
-	NextSyncCommittee             *ethpbv2.SyncCommittee     `json:"next_sync_committee,omitempty"`
-	BestValidUpdate               *Update                    `json:"best_valid_update,omitempty"`
-	OptimisticHeader              *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
-	PreviousMaxActiveParticipants uint64                     `json:"previous_max_active_participants,omitempty"`
-	CurrentMaxActiveParticipants  uint64                     `json:"current_max_active_participants,omitempty"`
+	BeaconChainConfig *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
+	// Header that is finalized
+	FinalizedHeader *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
+	// Sync committees corresponding to the finalized header
+	CurrentSyncCommittee *ethpbv2.SyncCommittee `json:"current_sync_committeeu,omitempty"`
+	NextSyncCommittee    *ethpbv2.SyncCommittee `json:"next_sync_committee,omitempty"`
+	// Best available header to switch finalized head to if we see nothing else
+	BestValidUpdate *Update `json:"best_valid_update,omitempty"`
+	// Most recent available reasonably-safe header
+	OptimisticHeader *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
+	// Max number of active participants in a sync committee (used to calculate safety threshold)
+	PreviousMaxActiveParticipants uint64 `json:"previous_max_active_participants,omitempty"`
+	CurrentMaxActiveParticipants  uint64 `json:"current_max_active_participants,omitempty"`
 }
 
 func getSubtreeIndex(index uint64) uint64 {
