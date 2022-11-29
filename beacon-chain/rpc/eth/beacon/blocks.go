@@ -233,6 +233,13 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+	capellaBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
+	if ok {
+		if err := bs.submitCapellaBlock(ctx, capellaBlkContainer.CapellaBlock, req.Signature); err != nil {
+			return nil, err
+		}
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
