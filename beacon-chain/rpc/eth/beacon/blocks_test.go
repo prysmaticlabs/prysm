@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -663,6 +664,44 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockCapella()
+		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
+		}
+		req := util.NewBeaconBlockCapella()
+		req.Block.Slot = 5
+		req.Block.ParentRoot = bsRoot[:]
+		v2Block, err := migration.V1Alpha1BeaconBlockCapellaToV2(req.Block)
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, beaconDB, req)
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: v2Block},
+			Signature: req.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
 }
 
 func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
@@ -747,13 +786,6 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
-		// INFO: This code block can be removed once Bellatrix
-		// fork epoch is set to a value other than math.MaxUint64
-		cfg := params.BeaconConfig()
-		cfg.BellatrixForkEpoch = cfg.AltairForkEpoch + 1000
-		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.BellatrixForkVersion)] = cfg.AltairForkEpoch + 1000
-		params.OverrideBeaconConfig(cfg)
-
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -788,6 +820,55 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		}
 		md := metadata.MD{}
 		md.Set(versionHeader, "bellatrix")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		t.Skip("This test needs Capella fork version configured properly")
+
+		// INFO: This code block can be removed once Capella
+		// fork epoch is set to a value other than math.MaxUint64
+		cfg := params.BeaconConfig()
+		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 1000
+		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.CapellaForkVersion)] = cfg.BellatrixForkEpoch + 1000
+		params.OverrideBeaconConfig(cfg)
+
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockCapella()
+		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		beaconChainServer := &Server{
+			BeaconDB:         beaconDB,
+			BlockReceiver:    c,
+			ChainInfoFetcher: c,
+			BlockNotifier:    c.BlockNotifier(),
+			Broadcaster:      mockp2p.NewTestP2P(t),
+			HeadFetcher:      c,
+		}
+		req := util.NewBeaconBlockCapella()
+		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		req.Block.ParentRoot = bsRoot[:]
+		util.SaveBlock(t, ctx, beaconDB, req)
+		blockSsz, err := req.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: blockSsz,
+		}
+		md := metadata.MD{}
+		md.Set(versionHeader, "capella")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -930,6 +1011,64 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		t.Skip("This test needs Capella fork version configured properly")
+
+		// INFO: This code block can be removed once Capella
+		// fork epoch is set to a value other than math.MaxUint64
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig()
+		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 1000
+		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.CapellaForkVersion)] = cfg.BellatrixForkEpoch + 1000
+		params.OverrideBeaconConfig(cfg)
+
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockCapella()
+		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockReceiver:     c,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
+		beaconChainServer := &Server{
+			BeaconDB:                beaconDB,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			HeadFetcher:             c,
+			V1Alpha1ValidatorServer: alphaServer,
+		}
+		req := util.NewBlindedBeaconBlockCapella()
+		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		req.Block.ParentRoot = bsRoot[:]
+		util.SaveBlock(t, ctx, beaconDB, req)
+		blockSsz, err := req.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: blockSsz,
+		}
+		md := metadata.MD{}
+		md.Set(versionHeader, "capella")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err, "Could not propose block correctly")
+	})
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -1007,7 +1146,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err, "Could not propose block correctly")
 	})
 
-	t.Run("Bellatrix - OK", func(t *testing.T) {
+	t.Run("Bellatrix", func(t *testing.T) {
 		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
 		transactionsRoot, err := ssz.TransactionsRoot(transactions)
 		require.NoError(t, err)
@@ -1055,6 +1194,79 @@ func TestSubmitBlindedBlock(t *testing.T) {
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
 			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
+			Signature: blindedBlk.Signature,
+		}
+		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		transactions := [][]byte{[]byte("transaction1"), []byte("transaction2")}
+		transactionsRoot, err := ssz.TransactionsRoot(transactions)
+		require.NoError(t, err)
+
+		withdrawals := []*enginev1.Withdrawal{
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        bytesutil.PadTo([]byte("address1"), 20),
+				Amount:         1,
+			},
+			{
+				Index:          2,
+				ValidatorIndex: 2,
+				Address:        bytesutil.PadTo([]byte("address2"), 20),
+				Amount:         2,
+			},
+		}
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 16)
+		require.NoError(t, err)
+
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		genesis := util.NewBeaconBlockCapella()
+		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+
+		numDeposits := uint64(64)
+		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
+		bsRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		genesisRoot, err := genesis.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
+
+		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+		alphaServer := &validator.Server{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			BlockBuilder:      &builderTest.MockBuilderService{},
+			BlockReceiver:     c,
+			BlockNotifier:     &mock.MockBlockNotifier{},
+		}
+		beaconChainServer := &Server{
+			BeaconDB:                beaconDB,
+			BlockReceiver:           c,
+			ChainInfoFetcher:        c,
+			BlockNotifier:           c.BlockNotifier(),
+			Broadcaster:             mockp2p.NewTestP2P(t),
+			V1Alpha1ValidatorServer: alphaServer,
+		}
+
+		blk := util.NewBeaconBlockCapella()
+		blk.Block.Slot = 5
+		blk.Block.ParentRoot = bsRoot[:]
+		blk.Block.Body.ExecutionPayload.Transactions = transactions
+		blk.Block.Body.ExecutionPayload.Withdrawals = withdrawals
+		blindedBlk := util.NewBlindedBeaconBlockCapellaV2()
+		blindedBlk.Message.Slot = 5
+		blindedBlk.Message.ParentRoot = bsRoot[:]
+		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
+		blindedBlk.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+		util.SaveBlock(t, ctx, beaconDB, blk)
+
+		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock{CapellaBlock: blindedBlk.Message},
 			Signature: blindedBlk.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
