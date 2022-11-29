@@ -291,7 +291,7 @@ message WeakSubjectivityData {
     bytes state_root = 2;
 }
 
-message ForkChoiceResponse {
+message ForkChoiceDump {
     // Latest justified checkpoint in forkchoice store.
     Checkpoint justified_checkpoint = 1;
     // Latest finalized checkpoint in forkchoice store.
@@ -310,14 +310,14 @@ message ForkChoiceResponse {
     bytes head_root = 8 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // The list of the forkchoice nodes in store.
-    repeated ForkChoiceNode forkchoice_nodes = 9;
+    repeated ForkChoiceNode fork_choice_nodes = 9;
 }
 
 message ForkChoiceNode {
     // Slot of the forkchoice node.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
     // Root of the forkchoice node.
-    bytes root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes block_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
     // Parent root of the forkchoice node.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
     // Justified epoch of the current forkchoice node.
@@ -335,7 +335,15 @@ message ForkChoiceNode {
     // Optimistic status of the current forkchoice node.
     bool execution_optimistic = 10;
     // Execution payload block hash of the current forkchoice node.
-    bytes execution_payload = 11 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes execution_block_hash = 11 [(ethereum.eth.ext.ssz_size) = "32"];
     // Timestamp when the node was inserted
     uint64 timestamp = 12;
+    // Validity status of the node.
+    ForkChoiceNodeValidity validity = 13;
+}
+
+enum ForkChoiceNodeValidity {
+    VALID = 0;
+    INVALID = 1;
+    OPTIMISTIC = 2;
 }

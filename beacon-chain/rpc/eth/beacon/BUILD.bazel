@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "blinded_blocks.go",
         "blocks.go",
         "config.go",
         "log.go",
@@ -69,6 +70,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "blinded_blocks_test.go",
         "blocks_test.go",
         "config_test.go",
         "init_test.go",

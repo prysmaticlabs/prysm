@@ -70,7 +70,6 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	if err != nil {
 		log.WithError(err).Error("Could not get head payload attribute")
-		return nil, nil
 	}
 
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
