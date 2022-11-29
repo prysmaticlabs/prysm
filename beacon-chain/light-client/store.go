@@ -199,8 +199,9 @@ func (s *Store) validateUpdate(update *Update,
 		syncCommittee = s.NextSyncCommittee
 	}
 	var participantPubkeys []common.PublicKey
-	for i, bit := range syncAggregate.SyncCommitteeBits {
-		if bit > 0 {
+	for i := uint64(0); i < syncAggregate.SyncCommitteeBits.Len(); i++ {
+		bit := syncAggregate.SyncCommitteeBits.BitAt(i)
+		if bit {
 			publicKey, err := blst.PublicKeyFromBytes(syncCommittee.Pubkeys[i])
 			if err != nil {
 				return err
