@@ -16,8 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-const ()
-
 type Store struct {
 	BeaconChainConfig *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
 	// Header that is finalized
@@ -94,8 +92,7 @@ func max(a, b uint64) uint64 {
 }
 
 func (s *Store) getSafetyThreshold() uint64 {
-	halfActiveParticipants := s.CurrentMaxActiveParticipants / 2
-	return max(s.BeaconChainConfig.MinSyncCommitteeParticipants, halfActiveParticipants)
+	return max(s.PreviousMaxActiveParticipants, s.CurrentMaxActiveParticipants) / 2
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {

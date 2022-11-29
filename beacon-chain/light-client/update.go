@@ -57,6 +57,7 @@ func (u *Update) hasSyncCommitteeFinality() bool {
 }
 
 func (u *Update) isBetterUpdate(newUpdate *Update) bool {
+	// Compare supermajority (> 2/3) sync committee participation
 	maxActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()
 	oldNumActiveParticipants := u.GetSyncAggregate().SyncCommitteeBits.Count()
