@@ -40,6 +40,7 @@ func TestPeer_AtMaxLimit(t *testing.T) {
 	s.cfg = &Config{MaxPeers: 0}
 	s.addrFilter, err = configureFilter(&Config{})
 	require.NoError(t, err)
+	s.started = true
 	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
@@ -83,6 +84,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
+	s.started = true
 
 	for i := 0; i < ipBurst; i++ {
 		valid := s.validateDial(multiAddress)
@@ -96,7 +98,7 @@ func TestService_InterceptBannedIP(t *testing.T) {
 	}
 }
 
-func TestService_RejectInboundConnectionBeforedStarted(t *testing.T) {
+func TestService_RejectInboundConnectionBeforeStarted(t *testing.T) {
 	s := &Service{
 		host: mockp2p.NewTestP2P(t).BHost,
 	}
@@ -127,6 +129,7 @@ func TestService_RejectInboundPeersBeyondLimit(t *testing.T) {
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
+	s.started = true
 
 	valid := s.InterceptAccept(&maEndpoints{raddr: multiAddress})
 	if !valid {
@@ -171,6 +174,7 @@ func TestPeer_BelowMaxLimit(t *testing.T) {
 	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
+	s.started = true
 	defer func() {
 		err := h1.Close()
 		require.NoError(t, err)
@@ -216,6 +220,7 @@ func TestPeerAllowList(t *testing.T) {
 	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
+	s.started = true
 	defer func() {
 		err := h1.Close()
 		require.NoError(t, err)
@@ -262,6 +267,7 @@ func TestPeerDenyList(t *testing.T) {
 	h1, err := libp2p.New([]libp2p.Option{privKeyOption(pkey), libp2p.ListenAddrs(listen), libp2p.ConnectionGater(s)}...)
 	require.NoError(t, err)
 	s.host = h1
+	s.started = true
 	defer func() {
 		err := h1.Close()
 		require.NoError(t, err)
