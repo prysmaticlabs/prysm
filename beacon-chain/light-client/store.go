@@ -276,7 +276,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
-func (s *Store) processUpdate(update *Update,
+func (s *Store) ProcessUpdate(update *Update,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 		return err
@@ -314,11 +314,11 @@ func (s *Store) processUpdate(update *Update,
 func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.processUpdate(&Update{s.BeaconChainConfig, finalityUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(&Update{s.BeaconChainConfig, finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.OptimisticUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.processUpdate(&Update{s.BeaconChainConfig, optimisticUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(&Update{s.BeaconChainConfig, optimisticUpdate}, currentSlot, genesisValidatorsRoot)
 }
