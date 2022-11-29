@@ -144,6 +144,10 @@ func (s *Service) ForkchoiceUpdated(
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &ForkchoiceUpdatedResponse{}
+
+	if attrs == nil {
+		return nil, nil, errors.New("nil payload attribute")
+	}
 	switch attrs.Version() {
 	case version.Bellatrix:
 		a, err := attrs.PbV1()

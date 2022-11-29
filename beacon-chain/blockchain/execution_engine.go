@@ -254,21 +254,22 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
 func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot types.Slot) (bool, payloadattribute.Attributer, types.ValidatorIndex, error) {
+	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
 	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
-		return false, nil, 0, nil
+		return false, emptyAttri, 0, nil
 	}
 
 	// Get previous randao.
 	st = st.Copy()
 	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
-		return false, nil, 0, err
+		return false, emptyAttri, 0, err
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
-		return false, nil, 0, nil
+		return false, emptyAttri, 0, err
 	}
 
 	// Get fee recipient.
@@ -286,7 +287,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 				"Please refer to our documentation for instructions")
 		}
 	case err != nil:
-		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
+		return false, emptyAttri, 0, errors.Wrap(err, "could not get fee recipient in db")
 	default:
 		feeRecipient = recipient
 	}
@@ -294,7 +295,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	// Get timestamp.
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
-		return false, nil, 0, err
+		return false, emptyAttri, 0, err
 	}
 
 	var attr payloadattribute.Attributer
@@ -302,7 +303,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
-			return false, nil, 0, errors.Wrap(err, "could not get expected withdrawals")
+			return false, emptyAttri, 0, errors.Wrap(err, "could not get expected withdrawals")
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
@@ -311,7 +312,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			Withdrawals:           withdrawals,
 		})
 		if err != nil {
-			return false, nil, 0, err
+			return false, emptyAttri, 0, err
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
@@ -320,10 +321,10 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			SuggestedFeeRecipient: feeRecipient.Bytes(),
 		})
 		if err != nil {
-			return false, nil, 0, err
+			return false, emptyAttri, 0, err
 		}
 	default:
-		return false, nil, 0, errors.New("unknown state version")
+		return false, emptyAttri, 0, errors.New("unknown state version")
 	}
 
 	return true, attr, proposerID, nil
