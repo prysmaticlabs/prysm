@@ -72,7 +72,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 		return nil, err
 	}
 
-	result, err := getBlindedSSZBlockPhase0(blk)
+	result, err := getSSZBlockPhase0(blk)
 	if result != nil {
 		return result, nil
 	}
@@ -80,7 +80,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	result, err = getBlindedSSZBlockAltair(blk)
+	result, err = getSSZBlockAltair(blk)
 	if result != nil {
 		return result, nil
 	}
@@ -291,49 +291,6 @@ func (bs *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Sig
 		},
 		ExecutionOptimistic: isOptimistic,
 	}, nil
-}
-
-func getBlindedSSZBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
-	phase0Blk, err := blk.PbPhase0Block()
-	if err != nil {
-		return nil, err
-	}
-	if phase0Blk == nil {
-		return nil, errNilBlock
-	}
-	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get signed beacon block")
-	}
-	sszBlock, err := signedBeaconBlock.MarshalSSZ()
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
-	}
-	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, ExecutionOptimistic: false, Data: sszBlock}, nil
-}
-
-func getBlindedSSZBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
-	altairBlk, err := blk.PbAltairBlock()
-	if err != nil {
-		return nil, err
-	}
-	if altairBlk == nil {
-		return nil, errNilBlock
-	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get signed beacon block")
-	}
-	sig := blk.Signature()
-	data := &ethpbv2.SignedBeaconBlockAltair{
-		Message:   v2Blk,
-		Signature: sig[:],
-	}
-	sszData, err := data.MarshalSSZ()
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
-	}
-	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, ExecutionOptimistic: false, Data: sszData}, nil
 }
 
 func (bs *Server) getBlindedSSZBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
