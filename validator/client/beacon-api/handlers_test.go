@@ -8,7 +8,7 @@ import (
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
-func internalServerErrHandler(w http.ResponseWriter, r *http.Request) {
+func internalServerErrHandler(w http.ResponseWriter, _ *http.Request) {
 	internalErrorJson := &apimiddleware.DefaultErrorJson{
 		Code:    http.StatusInternalServerError,
 		Message: "Internal server error",
@@ -26,7 +26,7 @@ func internalServerErrHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func notFoundErrHandler(w http.ResponseWriter, r *http.Request) {
+func notFoundErrHandler(w http.ResponseWriter, _ *http.Request) {
 	internalErrorJson := &apimiddleware.DefaultErrorJson{
 		Code:    http.StatusNotFound,
 		Message: "Not found",
@@ -44,7 +44,7 @@ func notFoundErrHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func invalidErr999Handler(w http.ResponseWriter, r *http.Request) {
+func invalidErr999Handler(w http.ResponseWriter, _ *http.Request) {
 	internalErrorJson := &apimiddleware.DefaultErrorJson{
 		Code:    999,
 		Message: "Invalid error",
@@ -62,7 +62,7 @@ func invalidErr999Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
+func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
