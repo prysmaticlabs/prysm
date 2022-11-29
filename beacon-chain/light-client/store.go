@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -210,9 +209,7 @@ func (s *Store) validateUpdate(update *Update,
 		}
 	}
 	forkVersion := s.computeForkVersion(update.computeEpochAtSlot(update.GetSignatureSlot()))
-	// TODO: export this somewhere
-	domainSyncCommittee := bytesutil.Uint32ToBytes4(0x07000000)
-	domain, err := signing.ComputeDomain(domainSyncCommittee, forkVersion, genesisValidatorsRoot)
+	domain, err := signing.ComputeDomain(s.BeaconChainConfig.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
 	}
