@@ -151,7 +151,7 @@ func (s *Store) validateUpdate(update *Update,
 	} else {
 		var finalizedRoot [32]byte
 		if update.GetFinalizedHeader().Slot == genesisSlot {
-			if update.GetFinalizedHeader() != nil {
+			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
 				return errors.New("finality branch is present but update is not finality")
 			}
 			finalizedRoot = [32]byte{}
@@ -179,7 +179,7 @@ func (s *Store) validateUpdate(update *Update,
 		}
 	} else {
 		if updateAttestedPeriod == storePeriod && s.isNextSyncCommitteeKnown() {
-			if update.GetNextSyncCommittee().Equals(s.NextSyncCommittee) {
+			if !update.GetNextSyncCommittee().Equals(s.NextSyncCommittee) {
 				return errors.New("next sync committee is not known")
 			}
 		}
