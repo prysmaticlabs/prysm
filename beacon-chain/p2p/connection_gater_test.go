@@ -99,9 +99,20 @@ func TestService_InterceptBannedIP(t *testing.T) {
 }
 
 func TestService_RejectInboundConnectionBeforeStarted(t *testing.T) {
+	limit := 1
 	s := &Service{
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, 1*time.Second, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    limit,
+			ScorerParams: &scorers.Config{},
+		}),
 		host: mockp2p.NewTestP2P(t).BHost,
+		cfg:  &Config{MaxPeers: uint(limit)},
 	}
+	var err error
+	s.addrFilter, err = configureFilter(&Config{})
+	require.NoError(t, err)
+
 	ip := "212.67.10.122"
 	multiAddress, err := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ip, 3000))
 	require.NoError(t, err)
@@ -109,6 +120,12 @@ func TestService_RejectInboundConnectionBeforeStarted(t *testing.T) {
 	valid := s.InterceptAccept(&maEndpoints{raddr: multiAddress})
 	if valid {
 		t.Errorf("Expected multiaddress with ip %s to be rejected as p2p service is not ready", ip)
+	}
+
+	s.started = true
+	valid = s.InterceptAccept(&maEndpoints{raddr: multiAddress})
+	if !valid {
+		t.Errorf("Expected multiaddress with ip %s to be accepted after service is started", ip)
 	}
 }
 
