@@ -87,6 +87,9 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
 func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
+	if st.Version() < version.Capella {
+		return nil, ErrInvalidBLSChangeBeforeCapella
+	}
 	if signed == nil {
 		return nil, errNilSignedWithdrawalMessage
 	}
@@ -165,11 +168,6 @@ func BLSChangesSignatureBatch(
 	if len(changes) == 0 {
 		return bls.NewSet(), nil
 	}
-
-	if st.Version() < version.Capella {
-		return nil, ErrInvalidBLSChangeBeforeCapella
-	}
-
 	batch := &bls.SignatureBatch{
 		Signatures: make([][]byte, len(changes)),
 		PublicKeys: make([]bls.PublicKey, len(changes)),
@@ -204,9 +202,6 @@ func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
-	if st.Version() < version.Capella {
-		return ErrInvalidBLSChangeBeforeCapella
-	}
 	epoch := slots.ToEpoch(st.Slot())
 	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 	if err != nil {
