@@ -1,8 +1,6 @@
 package apimiddleware
 
 import (
-	"encoding/json"
-
 	"github.com/pkg/errors"
 
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
@@ -179,23 +177,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/light_client/updates":
 		endpoint.GetResponse = &[]*LightClientUpdateJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeGrpcResponseBodyIntoContainer: func(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-				var grpcResponse LightClientUpdatesByRangeResponseJson
-				if err := json.Unmarshal(body, &grpcResponse); err != nil {
-					return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
-				}
-
-				container, ok := responseContainer.(*[]*LightClientUpdateJson)
-				if !ok {
-					return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
-				}
-
-				for _, update := range grpcResponse.Update {
-					*container = append(*container, update)
-				}
-
-				return false, nil
-			},
+			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareLightClientUpdates,
 		}
 	case "/eth/v1/beacon/light_client/finality_update":
 		endpoint.GetResponse = &LightClientFinalityUpdateResponseJson{}

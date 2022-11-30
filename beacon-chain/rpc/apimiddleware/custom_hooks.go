@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -395,6 +396,30 @@ type tempSyncCommitteeValidatorsJson struct {
 
 type tempSyncSubcommitteeValidatorsJson struct {
 	Validators []string `json:"validators"`
+}
+
+type tempLightClientUpdatesByRangeJson struct {
+	Updates []*LightClientUpdateJson `json:"updates"`
+}
+
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientUpdatesByRange
+// grpc-gateway returns a struct with slice embedded, but spec says it should be a list directly instead of a struct.
+func prepareLightClientUpdates(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	var grpcResponse tempLightClientUpdatesByRangeJson
+	if err := json.Unmarshal(body, &grpcResponse); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
+	}
+
+	container, ok := responseContainer.(*[]*LightClientUpdateJson)
+	if !ok {
+		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	for _, update := range grpcResponse.Updates {
+		*container = append(*container, update)
+	}
+
+	return false, nil
 }
 
 // https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.0.0#/Beacon/getEpochSyncCommittees returns validator_aggregates as a nested array.

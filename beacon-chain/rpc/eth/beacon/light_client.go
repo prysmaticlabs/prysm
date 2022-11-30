@@ -107,7 +107,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 	updates = append(updates, &update2)
 
 	result := ethpbv2.LightClientUpdatesByRangeResponse{
-		Update: updates,
+		Updates: updates,
 	}
 
 	return &result, nil

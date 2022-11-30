@@ -249,7 +249,7 @@ type LightClientUpdatesByRangeResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Update []*Update `protobuf:"bytes,1,rep,name=update,proto3" json:"update,omitempty"`
+	Updates []*Update `protobuf:"bytes,1,rep,name=updates,proto3" json:"updates,omitempty"`
 }
 
 func (x *LightClientUpdatesByRangeResponse) Reset() {
@@ -284,9 +284,9 @@ func (*LightClientUpdatesByRangeResponse) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *LightClientUpdatesByRangeResponse) GetUpdate() []*Update {
+func (x *LightClientUpdatesByRangeResponse) GetUpdates() []*Update {
 	if x != nil {
-		return x.Update
+		return x.Updates
 	}
 	return nil
 }
@@ -847,7 +847,7 @@ var file_proto_eth_v2_beacon_lightclient_proto_depIdxs = []int32{
 	2,  // 1: ethereum.eth.v2.LightClientBootstrapResponse.data:type_name -> ethereum.eth.v2.Bootstrap
 	12, // 2: ethereum.eth.v2.Bootstrap.header:type_name -> ethereum.eth.v1.BeaconBlockHeader
 	13, // 3: ethereum.eth.v2.Bootstrap.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	5,  // 4: ethereum.eth.v2.LightClientUpdatesByRangeResponse.update:type_name -> ethereum.eth.v2.Update
+	5,  // 4: ethereum.eth.v2.LightClientUpdatesByRangeResponse.updates:type_name -> ethereum.eth.v2.Update
 	11, // 5: ethereum.eth.v2.Update.version:type_name -> ethereum.eth.v2.Version
 	6,  // 6: ethereum.eth.v2.Update.data:type_name -> ethereum.eth.v2.UpdateData
 	12, // 7: ethereum.eth.v2.UpdateData.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader

@@ -53,7 +53,7 @@ message LightClientUpdatesByRangeRequest {
 }
 
 message LightClientUpdatesByRangeResponse {
-    repeated Update update = 1;
+    repeated Update updates = 1;
 }
 
 message Update {

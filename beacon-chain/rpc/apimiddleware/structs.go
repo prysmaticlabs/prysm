@@ -103,10 +103,6 @@ type LightClientBootstrapJson struct {
 	CurrentSyncCommitteeBranch []string               `json:"current_sync_committee_branch" hex:"true"`
 }
 
-type LightClientUpdatesByRangeResponseJson struct {
-	Update []*LightClientUpdateJson `json:"update"` // TODO: This isn't the way spec describe, it describes as a JSON array directly, not a good idea
-}
-
 type LightClientUpdateJson struct {
 	Version string                     `json:"version" enum:"true"`
 	Data    *LightClientUpdateDataJson `json:"data"`
