@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
-	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 
@@ -120,9 +119,9 @@ func validatorsParticipating(_ types.EvaluationContext, conns ...*grpc.ClientCon
 
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
-	if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
-		expected = float32(expectedMulticlientParticipation)
-	}
+	//if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
+	//	expected = float32(expectedMulticlientParticipation)
+	//}
 	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
 		// Reduce Participation requirement to 95% to account for longer EE calls for
 		// the merge block. Target and head will likely be missed for a few validators at

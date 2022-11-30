@@ -116,7 +116,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
-		//ev.ValidatorsParticipatingAtEpoch(2),
+		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
