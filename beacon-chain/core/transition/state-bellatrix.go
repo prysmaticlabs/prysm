@@ -117,6 +117,16 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
 
+	scores, err := preState.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
+	scoresMissing := len(preState.Validators()) - len(scores)
+	if scoresMissing > 0 {
+		for i := 0; i < scoresMissing; i++ {
+			scores = append(scores, 0)
+		}
+	}
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot:                  0,
@@ -124,8 +134,8 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
 
 		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().AltairForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
 			Epoch:           0,
 		},
 
@@ -161,24 +171,25 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
 		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys: committeeKeys(),
+			Pubkeys:         committeeKeys(),
 			AggregatePubkey: make([]byte, 48),
 		},
 		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys: committeeKeys(),
+			Pubkeys:         committeeKeys(),
 			AggregatePubkey: make([]byte, 48),
 		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			ParentHash:    make([]byte, 32),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, 32),
-			ReceiptsRoot:  make([]byte, 32),
-			LogsBloom:     make([]byte, 256),
-			PrevRandao:    make([]byte, 32),
-			BaseFeePerGas: make([]byte, 32),
-			BlockHash:     make([]byte, 32),
+			ParentHash:       make([]byte, 32),
+			FeeRecipient:     make([]byte, 20),
+			StateRoot:        make([]byte, 32),
+			ReceiptsRoot:     make([]byte, 32),
+			LogsBloom:        make([]byte, 256),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, 32),
 		},
+		InactivityScores: scores,
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
@@ -238,22 +249,22 @@ func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys: committeeKeys(),
+			Pubkeys:         committeeKeys(),
 			AggregatePubkey: make([]byte, 48),
 		},
 		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys: committeeKeys(),
+			Pubkeys:         committeeKeys(),
 			AggregatePubkey: make([]byte, 48),
 		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			ParentHash:    make([]byte, 32),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, 32),
-			ReceiptsRoot:  make([]byte, 32),
-			LogsBloom:     make([]byte, 256),
-			PrevRandao:    make([]byte, 32),
-			BaseFeePerGas: make([]byte, 32),
-			BlockHash:     make([]byte, 32),
+			ParentHash:       make([]byte, 32),
+			FeeRecipient:     make([]byte, 20),
+			StateRoot:        make([]byte, 32),
+			ReceiptsRoot:     make([]byte, 32),
+			LogsBloom:        make([]byte, 256),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, 32),
 		},
 	}

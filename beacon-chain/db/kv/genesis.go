@@ -1,9 +1,7 @@
 package kv
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 
@@ -11,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -84,10 +81,6 @@ func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 		return dbIface.ErrExistingGenesisState
 	}
 
-	if !bytes.Equal(gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion) {
-		return fmt.Errorf("loaded genesis fork version (%#x) does not match config genesis "+
-			"fork version (%#x)", gs.Fork().CurrentVersion, params.BeaconConfig().GenesisForkVersion)
-	}
 	return s.SaveGenesisData(ctx, gs)
 }
 

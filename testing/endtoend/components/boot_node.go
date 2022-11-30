@@ -9,6 +9,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
@@ -54,6 +56,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		fmt.Sprintf("--discv5-port=%d", e2e.TestParams.Ports.BootNodePort),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.BootNodeMetricsPort),
+		fmt.Sprintf("--fork-version=%#x", params.BeaconConfig().BellatrixForkVersion),
 		"--debug",
 	}
 
