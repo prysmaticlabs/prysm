@@ -415,9 +415,7 @@ func prepareLightClientUpdates(body []byte, responseContainer interface{}) (apim
 		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
 
-	for _, update := range grpcResponse.Updates {
-		*container = append(*container, update)
-	}
+	*container = append(*container, grpcResponse.Updates...)
 
 	return false, nil
 }
