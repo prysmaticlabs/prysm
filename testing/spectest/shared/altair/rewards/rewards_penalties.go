@@ -45,6 +45,10 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	testTypes, err := util.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
 
+	if len(testTypes) == 0 {
+		t.Fatalf("No test types found for %s", testsFolderPath)
+	}
+
 	for _, testType := range testTypes {
 		testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {
