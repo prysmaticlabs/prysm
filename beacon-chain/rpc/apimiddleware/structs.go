@@ -796,6 +796,7 @@ type BeaconStateContainerV2Json struct {
 	Phase0State    *BeaconStateJson          `json:"phase0_state"`
 	AltairState    *BeaconStateAltairJson    `json:"altair_state"`
 	BellatrixState *BeaconStateBellatrixJson `json:"bellatrix_state"`
+	CapellaState   *BeaconStateCapellaJson   `json:"capella_state"`
 }
 
 type ForkJson struct {
