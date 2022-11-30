@@ -45,7 +45,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() >= version.Bellatrix {
 		p, err := b.Body().Execution()
 		if err != nil {
 			return err
@@ -60,7 +60,13 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			log = log.WithField("txCount", len(txs))
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
-
+		if b.Version() == version.EIP4844 {
+			k, err := b.Body().BlobKzgs()
+			if err != nil {
+				return err
+			}
+			log = log.WithField("blobKzgCount", len(k))
+		}
 	}
 	log.Info("Finished applying state transition")
 	return nil

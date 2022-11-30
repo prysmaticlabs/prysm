@@ -5,9 +5,30 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
+
+// UpgradeToEip4844 updates inputs a generic state to return the version Eip4844 state.
+func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
+	if err := state.SetFork(&ethpb.Fork{
+		PreviousVersion: state.Fork().CurrentVersion,
+		CurrentVersion:  params.BeaconConfig().Eip4844ForkVersion,
+		Epoch:           time.CurrentEpoch(state),
+	}); err != nil {
+		return nil, err
+	}
+
+	header, err := state.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	blocks.WrappedExecutionPayloadCapella()
+	state.SetLatestExecutionPayloadHeader()
+
+	return state, nil
+}
 
 // UpgradeToCapella updates a generic state to return the version Capella state.
 func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {

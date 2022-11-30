@@ -81,6 +81,15 @@ func CanUpgradeToCapella(slot types.Slot) bool {
 	return epochStart && capellaEpoch
 }
 
+// CanUpgradeToEIP4844 returns true if the input `slot` can upgrade to EIP4844.
+// Spec code:
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == EIP4844_FORK_EPOCH
+func CanUpgradeToEIP4844(slot types.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	EIP4844Epoch := slots.ToEpoch(slot) == params.BeaconConfig().EIP4844ForkEpoch
+	return epochStart && EIP4844Epoch
+}
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch.
 //
