@@ -12,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
@@ -171,36 +174,43 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
-func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
-	genTime := uint64(e2e.TestParams.StartTime.Unix())
-	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, genTime, params.BeaconConfig().MinGenesisActiveValidatorCount)
+func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
+	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
-		return "", err
+		return nil, errors.Wrap(err, "1")
 	}
 
-	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
 	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
 	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
-		return "", err
+		return nil, errors.Wrap(err, "2")
 	}
 	dr, err := t.HashTreeRoot()
 	if err != nil {
-		return "", err
+		return nil, errors.Wrap(err, "3")
 	}
 	genesis.Eth1Data.DepositRoot = dr[:]
 	if e2e.TestParams.Eth1BlockHash != nil {
 		genesis.Eth1Data.BlockHash = e2e.TestParams.Eth1BlockHash.Bytes()
 	}
 	log.Infof("genesis eth1 block root=%#x", genesis.Eth1Data.BlockHash)
+	return state_native.InitializeFromProtoUnsafeBellatrix(genesis)
+}
 
-	genesisBytes, err := genesis.MarshalSSZ()
+func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
+	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
+	g, err := node.generateGenesis(ctx)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "4")
+	}
+
+	genesisBytes, err := g.MarshalSSZ()
+	if err != nil {
+		return "", errors.Wrap(err, "5")
 	}
 	genesisDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis/%d", node.index))
 	if err := file.MkdirAll(genesisDir); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "6")
 	}
 	genesisPath := path.Join(genesisDir, "genesis.ssz")
 	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
@@ -234,7 +244,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 
 	genesisPath, err := node.saveGenesis(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "derp")
 	}
 	args := []string{
 		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),

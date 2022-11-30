@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 )
 
-const DefaultTestChainId int64 = 31337
+const DefaultTestChainId int64 = 1337
 const DefaultCoinbase = "0x0000000000000000000000000000000000000000"
 const DefaultDifficulty = "0x20000"
 const DefaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"

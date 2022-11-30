@@ -100,10 +100,10 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 		}
 		r.depositor = &eth1.Depositor{Key: key, Client: client, NetworkId: big.NewInt(eth1.NetworkId)}
 		/*
-		if err := r.depositor.SendAndMine(r.comHandler.ctx, 0, minGenesisActiveCount, e2etypes.GenesisDepositBatch, true); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		 */
+			if err := r.depositor.SendAndMine(r.comHandler.ctx, 0, minGenesisActiveCount, e2etypes.GenesisDepositBatch, true); err != nil {
+				return errors.Wrap(err, "failed to send and mine deposits")
+			}
+		*/
 		if err := r.depositor.Start(r.comHandler.ctx); err != nil {
 			return errors.Wrap(err, "depositor.Start failed")
 		}

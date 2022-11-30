@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 
 	"github.com/pkg/errors"

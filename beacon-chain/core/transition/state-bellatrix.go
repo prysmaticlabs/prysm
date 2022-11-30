@@ -3,6 +3,10 @@ package transition
 import (
 	"context"
 
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -156,6 +160,25 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		Eth1Data:         eth1Data,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
+		CurrentSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys: committeeKeys(),
+			AggregatePubkey: make([]byte, 48),
+		},
+		NextSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys: committeeKeys(),
+			AggregatePubkey: make([]byte, 48),
+		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
+			TransactionsRoot: make([]byte, 32),
+		},
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
@@ -165,6 +188,20 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 			BlockHash:   make([]byte, 32),
 		},
 		Graffiti: make([]byte, 32),
+		SyncAggregate: &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
+		},
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
@@ -200,6 +237,33 @@ func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 		Eth1Data:         &ethpb.Eth1Data{},
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
+		CurrentSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys: committeeKeys(),
+			AggregatePubkey: make([]byte, 48),
+		},
+		NextSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys: committeeKeys(),
+			AggregatePubkey: make([]byte, 48),
+		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
+			TransactionsRoot: make([]byte, 32),
+		},
 	}
 	return state_native.InitializeFromProtoBellatrix(st)
+}
+
+func committeeKeys() [][]byte {
+	k := make([][]byte, fieldparams.SyncCommitteeLength)
+	for i := 0; i < fieldparams.SyncCommitteeLength; i++ {
+		k[i] = make([]byte, fieldparams.BLSPubkeyLength)
+	}
+	return k
 }

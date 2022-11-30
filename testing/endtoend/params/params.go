@@ -16,6 +16,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
+	cfgparams "github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
@@ -28,8 +29,9 @@ type params struct {
 	LighthouseBeaconNodeCount int
 	Ports                     *ports
 	Paths                     *paths
-	StartTime                 time.Time
 	Eth1BlockHash             *common.Hash
+	StartTime                 time.Time
+	CLGenesisTime             uint64
 	Eth1GenesisTime           uint64
 }
 
@@ -151,6 +153,8 @@ const (
 	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
 
 	JaegerTracingPort = 9150
+
+	StartupBufferSecs = 5
 )
 
 func logDir() string {
@@ -200,7 +204,13 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
+	cfg := cfgparams.BeaconConfig()
 	now := time.Now()
+	clGenTime := uint64(now.Unix()) + StartupBufferSecs
+	epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
+	// TODO: support starting from any fork, make the genesis offset variable
+	forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
+
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:         logPath,
@@ -208,7 +218,8 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		BeaconNodeCount: beaconNodeCount,
 		Ports:           testPorts,
 		StartTime:       now,
-		Eth1GenesisTime: uint64(now.Unix()),
+		CLGenesisTime:   clGenTime,
+		Eth1GenesisTime: clGenTime + forkOffset,
 	}
 	return nil
 }
@@ -252,7 +263,12 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
+	cfg := cfgparams.BeaconConfig()
 	now := time.Now()
+	clGenTime := uint64(now.Unix()) + StartupBufferSecs
+	epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
+	// TODO: support starting from any fork, make the genesis offset variable
+	forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -261,7 +277,8 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		LighthouseBeaconNodeCount: lighthouseNodeCount,
 		Ports:                     testPorts,
 		StartTime:                 now,
-		Eth1GenesisTime:           uint64(now.Unix()),
+		CLGenesisTime:             clGenTime,
+		Eth1GenesisTime:           clGenTime + forkOffset,
 	}
 	return nil
 }
