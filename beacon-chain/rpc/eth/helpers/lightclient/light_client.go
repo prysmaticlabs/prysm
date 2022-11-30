@@ -328,7 +328,7 @@ func CreateLightClientUpdate(
 		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          finalityBranch,
 		SyncAggregate:           syncAggregateResult,
-		SignatureSlot:           uint64(block.Block().Slot()),
+		SignatureSlot:           block.Block().Slot(),
 	}
 
 	return result, nil

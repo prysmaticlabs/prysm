@@ -68,7 +68,7 @@ message LightClientUpdate {
     v1.BeaconBlockHeader finalized_header = 4;
     repeated bytes finality_branch = 5 [(ethereum.eth.ext.ssz_size) = "finality_branch.depth,32"];
     v1.SyncAggregate sync_aggregate = 6;
-    uint64 signature_slot = 7;
+    uint64 signature_slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 }
 
 message LightClientFinalityUpdateResponse {
