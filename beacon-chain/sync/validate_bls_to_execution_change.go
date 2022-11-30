@@ -5,11 +5,9 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -39,6 +37,7 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject, errWrongMessage
 	}
 
+	// Check that the validator hasn't submitted a previous execution change.
 	if s.cfg.blsToExecPool.ValidatorExists(blsChange.Message.ValidatorIndex) {
 		return pubsub.ValidationIgnore, nil
 	}
@@ -46,18 +45,20 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	// Validate that the execution change object is valid.
+	_, err = blocks.ValidateBLSToExecutionChange(st, blsChange)
 	if err != nil {
-		return pubsub.ValidationIgnore, err
+		return pubsub.ValidationReject, err
 	}
-	if err := signing.VerifySigningRoot(blsChange.Message, blsChange.Message.FromBlsPubkey, blsChange.Signature, domain); err != nil {
-		return pubsub.ValidationReject, signing.ErrSigFailedToVerify
+	// Validate the signature of the message using our batch gossip verifier.
+	sigBatch, err := blocks.BLSChangesSignatureBatch(ctx, st, []*ethpb.SignedBLSToExecutionChange{blsChange})
+	if err != nil {
+		return pubsub.ValidationReject, err
 	}
-	// TODO(Potuz): BLSChange Validation
-	// TODO(Nishant): Add to batch gossip sig verification
-
+	res, err := s.validateWithBatchVerifier(ctx, "bls to execution change", sigBatch)
+	if res != pubsub.ValidationAccept {
+		return res, err
+	}
 	msg.ValidatorData = blsChange // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil
 }

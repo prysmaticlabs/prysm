@@ -59,6 +59,7 @@ go_test(
         "deposit_test.go",
         "epoch_precompute_test.go",
         "epoch_spec_test.go",
+        "exports_test.go",
         "reward_test.go",
         "sync_committee_test.go",
         "transition_test.go",
