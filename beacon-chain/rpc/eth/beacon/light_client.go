@@ -74,6 +74,12 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 	return result, nil
 }
 
+// GetLightClientUpdatesByRange -
+func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2.LightClientUpdatesByRangeRequest) (*ethpbv2.LightClientUpdatesByRangeResponse, error) {
+	// TODO:
+	return nil, nil
+}
+
 // GetLightClientFinalityUpdate - implements https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientFinalityUpdate
 func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientFinalityUpdateResponse, error) {
 	// Prepare
