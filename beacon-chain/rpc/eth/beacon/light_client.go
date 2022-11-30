@@ -60,7 +60,7 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get current sync committee proof: %v", err)
 	}
 
-	data := ethpbv2.Bootstrap{
+	data := ethpbv2.LightClientBootstrap{
 		Header:                     header,
 		CurrentSyncCommittee:       &committee,
 		CurrentSyncCommitteeBranch: branch,
@@ -76,9 +76,9 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 
 // GetLightClientUpdatesByRange -
 func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2.LightClientUpdatesByRangeRequest) (*ethpbv2.LightClientUpdatesByRangeResponse, error) {
-	update1 := ethpbv2.Update{
+	update1 := ethpbv2.LightClientUpdateWithVersion{
 		Version: 1,
-		Data: &ethpbv2.UpdateData{
+		Data: &ethpbv2.LightClientUpdate{
 			AttestedHeader:          &ethpbv1.BeaconBlockHeader{},
 			NextSyncCommittee:       &ethpbv2.SyncCommittee{},
 			NextSyncCommitteeBranch: [][]byte{},
@@ -89,9 +89,9 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 		},
 	}
 
-	update2 := ethpbv2.Update{
+	update2 := ethpbv2.LightClientUpdateWithVersion{
 		Version: 1,
-		Data: &ethpbv2.UpdateData{
+		Data: &ethpbv2.LightClientUpdate{
 			AttestedHeader:          &ethpbv1.BeaconBlockHeader{},
 			NextSyncCommittee:       &ethpbv2.SyncCommittee{},
 			NextSyncCommitteeBranch: [][]byte{},
@@ -102,7 +102,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 		},
 	}
 
-	var updates []*ethpbv2.Update
+	var updates []*ethpbv2.LightClientUpdateWithVersion
 	updates = append(updates, &update1)
 	updates = append(updates, &update2)
 
@@ -182,7 +182,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
 	}
 
-	data := ethpbv2.FinalityUpdate{
+	data := ethpbv2.LightClientFinalityUpdate{
 		AttestedHeader:  attestedHeader,
 		FinalizedHeader: finalizedHeader,
 		FinalityBranch:  finalityBranch,
@@ -242,7 +242,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
 	}
 
-	data := ethpbv2.OptimisticUpdate{
+	data := ethpbv2.LightClientOptimisticUpdate{
 		AttestedHeader: attestedHeader,
 		SyncAggregate:  &syncAggregateV1,
 		SignatureSlot:  prevSlot,

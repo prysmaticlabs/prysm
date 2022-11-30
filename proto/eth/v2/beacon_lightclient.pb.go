@@ -76,8 +76,8 @@ type LightClientBootstrapResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version Version    `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    *Bootstrap `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Version Version               `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
+	Data    *LightClientBootstrap `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *LightClientBootstrapResponse) Reset() {
@@ -119,14 +119,14 @@ func (x *LightClientBootstrapResponse) GetVersion() Version {
 	return Version_PHASE0
 }
 
-func (x *LightClientBootstrapResponse) GetData() *Bootstrap {
+func (x *LightClientBootstrapResponse) GetData() *LightClientBootstrap {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type Bootstrap struct {
+type LightClientBootstrap struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -136,8 +136,8 @@ type Bootstrap struct {
 	CurrentSyncCommitteeBranch [][]byte              `protobuf:"bytes,3,rep,name=current_sync_committee_branch,json=currentSyncCommitteeBranch,proto3" json:"current_sync_committee_branch,omitempty" ssz-size:"5,32"`
 }
 
-func (x *Bootstrap) Reset() {
-	*x = Bootstrap{}
+func (x *LightClientBootstrap) Reset() {
+	*x = LightClientBootstrap{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -145,13 +145,13 @@ func (x *Bootstrap) Reset() {
 	}
 }
 
-func (x *Bootstrap) String() string {
+func (x *LightClientBootstrap) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Bootstrap) ProtoMessage() {}
+func (*LightClientBootstrap) ProtoMessage() {}
 
-func (x *Bootstrap) ProtoReflect() protoreflect.Message {
+func (x *LightClientBootstrap) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -163,26 +163,26 @@ func (x *Bootstrap) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Bootstrap.ProtoReflect.Descriptor instead.
-func (*Bootstrap) Descriptor() ([]byte, []int) {
+// Deprecated: Use LightClientBootstrap.ProtoReflect.Descriptor instead.
+func (*LightClientBootstrap) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Bootstrap) GetHeader() *v1.BeaconBlockHeader {
+func (x *LightClientBootstrap) GetHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.Header
 	}
 	return nil
 }
 
-func (x *Bootstrap) GetCurrentSyncCommittee() *SyncCommittee {
+func (x *LightClientBootstrap) GetCurrentSyncCommittee() *SyncCommittee {
 	if x != nil {
 		return x.CurrentSyncCommittee
 	}
 	return nil
 }
 
-func (x *Bootstrap) GetCurrentSyncCommitteeBranch() [][]byte {
+func (x *LightClientBootstrap) GetCurrentSyncCommitteeBranch() [][]byte {
 	if x != nil {
 		return x.CurrentSyncCommitteeBranch
 	}
@@ -249,7 +249,7 @@ type LightClientUpdatesByRangeResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Updates []*Update `protobuf:"bytes,1,rep,name=updates,proto3" json:"updates,omitempty"`
+	Updates []*LightClientUpdateWithVersion `protobuf:"bytes,1,rep,name=updates,proto3" json:"updates,omitempty"`
 }
 
 func (x *LightClientUpdatesByRangeResponse) Reset() {
@@ -284,24 +284,24 @@ func (*LightClientUpdatesByRangeResponse) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *LightClientUpdatesByRangeResponse) GetUpdates() []*Update {
+func (x *LightClientUpdatesByRangeResponse) GetUpdates() []*LightClientUpdateWithVersion {
 	if x != nil {
 		return x.Updates
 	}
 	return nil
 }
 
-type Update struct {
+type LightClientUpdateWithVersion struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version Version     `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    *UpdateData `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Version Version            `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
+	Data    *LightClientUpdate `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
-func (x *Update) Reset() {
-	*x = Update{}
+func (x *LightClientUpdateWithVersion) Reset() {
+	*x = LightClientUpdateWithVersion{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -309,13 +309,13 @@ func (x *Update) Reset() {
 	}
 }
 
-func (x *Update) String() string {
+func (x *LightClientUpdateWithVersion) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Update) ProtoMessage() {}
+func (*LightClientUpdateWithVersion) ProtoMessage() {}
 
-func (x *Update) ProtoReflect() protoreflect.Message {
+func (x *LightClientUpdateWithVersion) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -327,26 +327,26 @@ func (x *Update) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Update.ProtoReflect.Descriptor instead.
-func (*Update) Descriptor() ([]byte, []int) {
+// Deprecated: Use LightClientUpdateWithVersion.ProtoReflect.Descriptor instead.
+func (*LightClientUpdateWithVersion) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *Update) GetVersion() Version {
+func (x *LightClientUpdateWithVersion) GetVersion() Version {
 	if x != nil {
 		return x.Version
 	}
 	return Version_PHASE0
 }
 
-func (x *Update) GetData() *UpdateData {
+func (x *LightClientUpdateWithVersion) GetData() *LightClientUpdate {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type UpdateData struct {
+type LightClientUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -360,8 +360,8 @@ type UpdateData struct {
 	SignatureSlot           uint64                `protobuf:"varint,7,opt,name=signature_slot,json=signatureSlot,proto3" json:"signature_slot,omitempty"`
 }
 
-func (x *UpdateData) Reset() {
-	*x = UpdateData{}
+func (x *LightClientUpdate) Reset() {
+	*x = LightClientUpdate{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -369,13 +369,13 @@ func (x *UpdateData) Reset() {
 	}
 }
 
-func (x *UpdateData) String() string {
+func (x *LightClientUpdate) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateData) ProtoMessage() {}
+func (*LightClientUpdate) ProtoMessage() {}
 
-func (x *UpdateData) ProtoReflect() protoreflect.Message {
+func (x *LightClientUpdate) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -387,54 +387,54 @@ func (x *UpdateData) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateData.ProtoReflect.Descriptor instead.
-func (*UpdateData) Descriptor() ([]byte, []int) {
+// Deprecated: Use LightClientUpdate.ProtoReflect.Descriptor instead.
+func (*LightClientUpdate) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *UpdateData) GetAttestedHeader() *v1.BeaconBlockHeader {
+func (x *LightClientUpdate) GetAttestedHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.AttestedHeader
 	}
 	return nil
 }
 
-func (x *UpdateData) GetNextSyncCommittee() *SyncCommittee {
+func (x *LightClientUpdate) GetNextSyncCommittee() *SyncCommittee {
 	if x != nil {
 		return x.NextSyncCommittee
 	}
 	return nil
 }
 
-func (x *UpdateData) GetNextSyncCommitteeBranch() [][]byte {
+func (x *LightClientUpdate) GetNextSyncCommitteeBranch() [][]byte {
 	if x != nil {
 		return x.NextSyncCommitteeBranch
 	}
 	return nil
 }
 
-func (x *UpdateData) GetFinalizedHeader() *v1.BeaconBlockHeader {
+func (x *LightClientUpdate) GetFinalizedHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.FinalizedHeader
 	}
 	return nil
 }
 
-func (x *UpdateData) GetFinalityBranch() [][]byte {
+func (x *LightClientUpdate) GetFinalityBranch() [][]byte {
 	if x != nil {
 		return x.FinalityBranch
 	}
 	return nil
 }
 
-func (x *UpdateData) GetSyncAggregate() *v1.SyncAggregate {
+func (x *LightClientUpdate) GetSyncAggregate() *v1.SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
 	return nil
 }
 
-func (x *UpdateData) GetSignatureSlot() uint64 {
+func (x *LightClientUpdate) GetSignatureSlot() uint64 {
 	if x != nil {
 		return x.SignatureSlot
 	}
@@ -446,8 +446,8 @@ type LightClientFinalityUpdateResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version Version         `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    *FinalityUpdate `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Version Version                    `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
+	Data    *LightClientFinalityUpdate `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *LightClientFinalityUpdateResponse) Reset() {
@@ -489,14 +489,14 @@ func (x *LightClientFinalityUpdateResponse) GetVersion() Version {
 	return Version_PHASE0
 }
 
-func (x *LightClientFinalityUpdateResponse) GetData() *FinalityUpdate {
+func (x *LightClientFinalityUpdateResponse) GetData() *LightClientFinalityUpdate {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type FinalityUpdate struct {
+type LightClientFinalityUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -508,8 +508,8 @@ type FinalityUpdate struct {
 	SignatureSlot   github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot `protobuf:"varint,5,opt,name=signature_slot,json=signatureSlot,proto3" json:"signature_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
-func (x *FinalityUpdate) Reset() {
-	*x = FinalityUpdate{}
+func (x *LightClientFinalityUpdate) Reset() {
+	*x = LightClientFinalityUpdate{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -517,13 +517,13 @@ func (x *FinalityUpdate) Reset() {
 	}
 }
 
-func (x *FinalityUpdate) String() string {
+func (x *LightClientFinalityUpdate) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FinalityUpdate) ProtoMessage() {}
+func (*LightClientFinalityUpdate) ProtoMessage() {}
 
-func (x *FinalityUpdate) ProtoReflect() protoreflect.Message {
+func (x *LightClientFinalityUpdate) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -535,33 +535,33 @@ func (x *FinalityUpdate) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FinalityUpdate.ProtoReflect.Descriptor instead.
-func (*FinalityUpdate) Descriptor() ([]byte, []int) {
+// Deprecated: Use LightClientFinalityUpdate.ProtoReflect.Descriptor instead.
+func (*LightClientFinalityUpdate) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *FinalityUpdate) GetAttestedHeader() *v1.BeaconBlockHeader {
+func (x *LightClientFinalityUpdate) GetAttestedHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.AttestedHeader
 	}
 	return nil
 }
 
-func (x *FinalityUpdate) GetFinalizedHeader() *v1.BeaconBlockHeader {
+func (x *LightClientFinalityUpdate) GetFinalizedHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.FinalizedHeader
 	}
 	return nil
 }
 
-func (x *FinalityUpdate) GetFinalityBranch() [][]byte {
+func (x *LightClientFinalityUpdate) GetFinalityBranch() [][]byte {
 	if x != nil {
 		return x.FinalityBranch
 	}
 	return nil
 }
 
-func (x *FinalityUpdate) GetSyncAggregate() *v1.SyncAggregate {
+func (x *LightClientFinalityUpdate) GetSyncAggregate() *v1.SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
@@ -580,8 +580,8 @@ type LightClientOptimisticUpdateResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version Version           `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
-	Data    *OptimisticUpdate `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Version Version                      `protobuf:"varint,1,opt,name=version,proto3,enum=ethereum.eth.v2.Version" json:"version,omitempty"`
+	Data    *LightClientOptimisticUpdate `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *LightClientOptimisticUpdateResponse) Reset() {
@@ -623,14 +623,14 @@ func (x *LightClientOptimisticUpdateResponse) GetVersion() Version {
 	return Version_PHASE0
 }
 
-func (x *LightClientOptimisticUpdateResponse) GetData() *OptimisticUpdate {
+func (x *LightClientOptimisticUpdateResponse) GetData() *LightClientOptimisticUpdate {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-type OptimisticUpdate struct {
+type LightClientOptimisticUpdate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -640,8 +640,8 @@ type OptimisticUpdate struct {
 	SignatureSlot  github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot `protobuf:"varint,3,opt,name=signature_slot,json=signatureSlot,proto3" json:"signature_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
-func (x *OptimisticUpdate) Reset() {
-	*x = OptimisticUpdate{}
+func (x *LightClientOptimisticUpdate) Reset() {
+	*x = LightClientOptimisticUpdate{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -649,13 +649,13 @@ func (x *OptimisticUpdate) Reset() {
 	}
 }
 
-func (x *OptimisticUpdate) String() string {
+func (x *LightClientOptimisticUpdate) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*OptimisticUpdate) ProtoMessage() {}
+func (*LightClientOptimisticUpdate) ProtoMessage() {}
 
-func (x *OptimisticUpdate) ProtoReflect() protoreflect.Message {
+func (x *LightClientOptimisticUpdate) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_lightclient_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -667,19 +667,19 @@ func (x *OptimisticUpdate) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use OptimisticUpdate.ProtoReflect.Descriptor instead.
-func (*OptimisticUpdate) Descriptor() ([]byte, []int) {
+// Deprecated: Use LightClientOptimisticUpdate.ProtoReflect.Descriptor instead.
+func (*LightClientOptimisticUpdate) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_lightclient_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *OptimisticUpdate) GetAttestedHeader() *v1.BeaconBlockHeader {
+func (x *LightClientOptimisticUpdate) GetAttestedHeader() *v1.BeaconBlockHeader {
 	if x != nil {
 		return x.AttestedHeader
 	}
 	return nil
 }
 
-func (x *OptimisticUpdate) GetSyncAggregate() *v1.SyncAggregate {
+func (x *LightClientOptimisticUpdate) GetSyncAggregate() *v1.SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
@@ -716,7 +716,7 @@ var file_proto_eth_v2_beacon_lightclient_proto_rawDesc = []byte{
 	0x73, 0x74, 0x72, 0x61, 0x70, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x25, 0x0a, 0x0a,
 	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x72, 0x6f, 0x6f, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c,
 	0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x09, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x52,
-	0x6f, 0x6f, 0x74, 0x22, 0x82, 0x01, 0x0a, 0x1c, 0x4c, 0x69, 0x67, 0x68, 0x74, 0x43, 0x6c, 0x69,
+	0x6f, 0x6f, 0x74, 0x22, 0x8d, 0x01, 0x0a, 0x1c, 0x4c, 0x69, 0x67, 0x68, 0x74, 0x43, 0x6c, 0x69,
 	0x65, 0x6e, 0x74, 0x42, 0x6f, 0x6f, 0x74, 0x73, 0x74, 0x72, 0x61, 0x70, 0x52, 0x65, 0x73, 0x70,
 	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x32, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x18, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
@@ -828,15 +828,15 @@ var file_proto_eth_v2_beacon_lightclient_proto_msgTypes = make([]protoimpl.Messa
 var file_proto_eth_v2_beacon_lightclient_proto_goTypes = []interface{}{
 	(*LightClientBootstrapRequest)(nil),         // 0: ethereum.eth.v2.LightClientBootstrapRequest
 	(*LightClientBootstrapResponse)(nil),        // 1: ethereum.eth.v2.LightClientBootstrapResponse
-	(*Bootstrap)(nil),                           // 2: ethereum.eth.v2.Bootstrap
+	(*LightClientBootstrap)(nil),                // 2: ethereum.eth.v2.LightClientBootstrap
 	(*LightClientUpdatesByRangeRequest)(nil),    // 3: ethereum.eth.v2.LightClientUpdatesByRangeRequest
 	(*LightClientUpdatesByRangeResponse)(nil),   // 4: ethereum.eth.v2.LightClientUpdatesByRangeResponse
-	(*Update)(nil),                              // 5: ethereum.eth.v2.Update
-	(*UpdateData)(nil),                          // 6: ethereum.eth.v2.UpdateData
+	(*LightClientUpdateWithVersion)(nil),        // 5: ethereum.eth.v2.LightClientUpdateWithVersion
+	(*LightClientUpdate)(nil),                   // 6: ethereum.eth.v2.LightClientUpdate
 	(*LightClientFinalityUpdateResponse)(nil),   // 7: ethereum.eth.v2.LightClientFinalityUpdateResponse
-	(*FinalityUpdate)(nil),                      // 8: ethereum.eth.v2.FinalityUpdate
+	(*LightClientFinalityUpdate)(nil),           // 8: ethereum.eth.v2.LightClientFinalityUpdate
 	(*LightClientOptimisticUpdateResponse)(nil), // 9: ethereum.eth.v2.LightClientOptimisticUpdateResponse
-	(*OptimisticUpdate)(nil),                    // 10: ethereum.eth.v2.OptimisticUpdate
+	(*LightClientOptimisticUpdate)(nil),         // 10: ethereum.eth.v2.LightClientOptimisticUpdate
 	(Version)(0),                                // 11: ethereum.eth.v2.Version
 	(*v1.BeaconBlockHeader)(nil),                // 12: ethereum.eth.v1.BeaconBlockHeader
 	(*SyncCommittee)(nil),                       // 13: ethereum.eth.v2.SyncCommittee
@@ -844,25 +844,25 @@ var file_proto_eth_v2_beacon_lightclient_proto_goTypes = []interface{}{
 }
 var file_proto_eth_v2_beacon_lightclient_proto_depIdxs = []int32{
 	11, // 0: ethereum.eth.v2.LightClientBootstrapResponse.version:type_name -> ethereum.eth.v2.Version
-	2,  // 1: ethereum.eth.v2.LightClientBootstrapResponse.data:type_name -> ethereum.eth.v2.Bootstrap
-	12, // 2: ethereum.eth.v2.Bootstrap.header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	13, // 3: ethereum.eth.v2.Bootstrap.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	5,  // 4: ethereum.eth.v2.LightClientUpdatesByRangeResponse.updates:type_name -> ethereum.eth.v2.Update
-	11, // 5: ethereum.eth.v2.Update.version:type_name -> ethereum.eth.v2.Version
-	6,  // 6: ethereum.eth.v2.Update.data:type_name -> ethereum.eth.v2.UpdateData
-	12, // 7: ethereum.eth.v2.UpdateData.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	13, // 8: ethereum.eth.v2.UpdateData.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
-	12, // 9: ethereum.eth.v2.UpdateData.finalized_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	14, // 10: ethereum.eth.v2.UpdateData.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	2,  // 1: ethereum.eth.v2.LightClientBootstrapResponse.data:type_name -> ethereum.eth.v2.LightClientBootstrap
+	12, // 2: ethereum.eth.v2.LightClientBootstrap.header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	13, // 3: ethereum.eth.v2.LightClientBootstrap.current_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	5,  // 4: ethereum.eth.v2.LightClientUpdatesByRangeResponse.updates:type_name -> ethereum.eth.v2.LightClientUpdateWithVersion
+	11, // 5: ethereum.eth.v2.LightClientUpdateWithVersion.version:type_name -> ethereum.eth.v2.Version
+	6,  // 6: ethereum.eth.v2.LightClientUpdateWithVersion.data:type_name -> ethereum.eth.v2.LightClientUpdate
+	12, // 7: ethereum.eth.v2.LightClientUpdate.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	13, // 8: ethereum.eth.v2.LightClientUpdate.next_sync_committee:type_name -> ethereum.eth.v2.SyncCommittee
+	12, // 9: ethereum.eth.v2.LightClientUpdate.finalized_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	14, // 10: ethereum.eth.v2.LightClientUpdate.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
 	11, // 11: ethereum.eth.v2.LightClientFinalityUpdateResponse.version:type_name -> ethereum.eth.v2.Version
-	8,  // 12: ethereum.eth.v2.LightClientFinalityUpdateResponse.data:type_name -> ethereum.eth.v2.FinalityUpdate
-	12, // 13: ethereum.eth.v2.FinalityUpdate.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	12, // 14: ethereum.eth.v2.FinalityUpdate.finalized_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	14, // 15: ethereum.eth.v2.FinalityUpdate.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	8,  // 12: ethereum.eth.v2.LightClientFinalityUpdateResponse.data:type_name -> ethereum.eth.v2.LightClientFinalityUpdate
+	12, // 13: ethereum.eth.v2.LightClientFinalityUpdate.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	12, // 14: ethereum.eth.v2.LightClientFinalityUpdate.finalized_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	14, // 15: ethereum.eth.v2.LightClientFinalityUpdate.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
 	11, // 16: ethereum.eth.v2.LightClientOptimisticUpdateResponse.version:type_name -> ethereum.eth.v2.Version
-	10, // 17: ethereum.eth.v2.LightClientOptimisticUpdateResponse.data:type_name -> ethereum.eth.v2.OptimisticUpdate
-	12, // 18: ethereum.eth.v2.OptimisticUpdate.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	14, // 19: ethereum.eth.v2.OptimisticUpdate.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	10, // 17: ethereum.eth.v2.LightClientOptimisticUpdateResponse.data:type_name -> ethereum.eth.v2.LightClientOptimisticUpdate
+	12, // 18: ethereum.eth.v2.LightClientOptimisticUpdate.attested_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	14, // 19: ethereum.eth.v2.LightClientOptimisticUpdate.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
 	20, // [20:20] is the sub-list for method output_type
 	20, // [20:20] is the sub-list for method input_type
 	20, // [20:20] is the sub-list for extension type_name
@@ -903,7 +903,7 @@ func file_proto_eth_v2_beacon_lightclient_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_lightclient_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Bootstrap); i {
+			switch v := v.(*LightClientBootstrap); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -939,7 +939,7 @@ func file_proto_eth_v2_beacon_lightclient_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_lightclient_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Update); i {
+			switch v := v.(*LightClientUpdateWithVersion); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -951,7 +951,7 @@ func file_proto_eth_v2_beacon_lightclient_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_lightclient_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateData); i {
+			switch v := v.(*LightClientUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -975,7 +975,7 @@ func file_proto_eth_v2_beacon_lightclient_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_lightclient_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FinalityUpdate); i {
+			switch v := v.(*LightClientFinalityUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -999,7 +999,7 @@ func file_proto_eth_v2_beacon_lightclient_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_lightclient_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OptimisticUpdate); i {
+			switch v := v.(*LightClientOptimisticUpdate); i {
 			case 0:
 				return &v.state
 			case 1:

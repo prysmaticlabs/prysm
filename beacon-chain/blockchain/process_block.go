@@ -247,7 +247,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
 		}
 
-		data := ethpbv2.OptimisticUpdate{
+		data := ethpbv2.LightClientOptimisticUpdate{
 			AttestedHeader: attestedHeader,
 			SyncAggregate:  &syncAggregateV1,
 			SignatureSlot:  prevSlot,
@@ -367,7 +367,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
 				}
 
-				data := ethpbv2.FinalityUpdate{
+				data := ethpbv2.LightClientFinalityUpdate{
 					AttestedHeader:  attestedHeader,
 					FinalizedHeader: finalizedHeader,
 					FinalityBranch:  finalityBranch,
