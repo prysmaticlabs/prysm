@@ -177,17 +177,17 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
 	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
-		return nil, errors.Wrap(err, "1")
+		return nil, err
 	}
 
 	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
 	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
-		return nil, errors.Wrap(err, "2")
+		return nil, err
 	}
 	dr, err := t.HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "3")
+		return nil, err
 	}
 	genesis.Eth1Data.DepositRoot = dr[:]
 	if e2e.TestParams.Eth1BlockHash != nil {
@@ -201,16 +201,16 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
 	g, err := node.generateGenesis(ctx)
 	if err != nil {
-		return "", errors.Wrap(err, "4")
+		return "", err
 	}
 
 	genesisBytes, err := g.MarshalSSZ()
 	if err != nil {
-		return "", errors.Wrap(err, "5")
+		return "", err
 	}
 	genesisDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis/%d", node.index))
 	if err := file.MkdirAll(genesisDir); err != nil {
-		return "", errors.Wrap(err, "6")
+		return "", err
 	}
 	genesisPath := path.Join(genesisDir, "genesis.ssz")
 	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
@@ -244,7 +244,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 
 	genesisPath, err := node.saveGenesis(ctx)
 	if err != nil {
-		return errors.Wrap(err, "derp")
+		return err
 	}
 	args := []string{
 		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),
