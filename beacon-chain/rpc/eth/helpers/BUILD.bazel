@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "error_handling.go",
-        "light_client.go",
         "sync.go",
         "validator_status.go",
     ],

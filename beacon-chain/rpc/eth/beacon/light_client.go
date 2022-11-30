@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	lightclienthelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers/lightclient"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -39,7 +39,7 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get state by slot: %v", err)
 	}
 
-	bootstrap, err := helpers.CreateLightClientBootstrap(ctx, state)
+	bootstrap, err := lightclienthelpers.CreateLightClientBootstrap(ctx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 			}
 		}
 
-		update, err := helpers.CreateLightClientUpdate(
+		update, err := lightclienthelpers.CreateLightClientUpdate(
 			ctx,
 			config,
 			slotsPerPeriod,
@@ -221,7 +221,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		}
 	}
 
-	update, err := helpers.CreateLightClientUpdate(
+	update, err := lightclienthelpers.CreateLightClientUpdate(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -235,7 +235,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		return nil, err
 	}
 
-	finalityUpdate := helpers.CreateLightClientFinalityUpdate(update)
+	finalityUpdate := lightclienthelpers.CreateLightClientFinalityUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateResponse{
@@ -298,7 +298,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		}
 	}
 
-	update, err := helpers.CreateLightClientUpdate(
+	update, err := lightclienthelpers.CreateLightClientUpdate(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -312,7 +312,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		return nil, err
 	}
 
-	optimisticUpdate := helpers.CreateLightClientOptimisticUpdate(update)
+	optimisticUpdate := lightclienthelpers.CreateLightClientOptimisticUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateResponse{
