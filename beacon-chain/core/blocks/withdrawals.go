@@ -15,12 +15,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 const executionToBLSPadding = 12
+
+var ErrInvalidBLSChangeBeforeCapella = errors.New("cannot process BLSToExecutionChange before Capella fork")
 
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
@@ -162,6 +165,11 @@ func BLSChangesSignatureBatch(
 	if len(changes) == 0 {
 		return bls.NewSet(), nil
 	}
+
+	if st.Version() < version.Capella {
+		return nil, ErrInvalidBLSChangeBeforeCapella
+	}
+
 	batch := &bls.SignatureBatch{
 		Signatures: make([][]byte, len(changes)),
 		PublicKeys: make([]bls.PublicKey, len(changes)),
@@ -189,4 +197,21 @@ func BLSChangesSignatureBatch(
 		batch.Messages[i] = htr
 	}
 	return batch, nil
+}
+
+// VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+func VerifyBLSChangeSignature(
+	st state.BeaconState,
+	change *ethpbv2.SignedBLSToExecutionChange,
+) error {
+	if st.Version() < version.Capella {
+		return ErrInvalidBLSChangeBeforeCapella
+	}
+	epoch := slots.ToEpoch(st.Slot())
+	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing domain")
+	}
+	publicKey := change.Message.FromBlsPubkey
+	return signing.VerifySigningRoot(change.Message, publicKey, change.Signature, domain)
 }

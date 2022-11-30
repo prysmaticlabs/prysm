@@ -320,6 +320,10 @@ func (bs *Server) SubmitSignedBLSToExecutionChange(ctx context.Context, req *eth
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not validate SignedBLSToExecutionChange: %v", err)
 	}
+	if err := blocks.VerifyBLSChangeSignature(st, req); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
+	}
+
 	bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
 	return &emptypb.Empty{}, nil
 }
