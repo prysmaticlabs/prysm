@@ -32,13 +32,16 @@ func Run(t *testing.T, config string, fork int) {
 func runTest(t *testing.T, config string, fork int, basePath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
-	if testFolders == nil {
-		return
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), basePath)
 	}
 
 	for _, folder := range testFolders {
 		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
 		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
+		if len(testFolders) == 0 {
+			t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), folderPath)
+		}
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {

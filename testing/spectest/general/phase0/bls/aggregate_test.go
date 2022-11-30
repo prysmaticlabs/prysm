@@ -20,7 +20,9 @@ func TestAggregate(t *testing.T) {
 
 func testAggregate(t *testing.T) {
 	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/aggregate/small")
-
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/aggregate/small")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := util.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
