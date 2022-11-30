@@ -57,7 +57,7 @@ func hashTreeRoot(committee *ethpbv2.SyncCommittee) ([]byte, error) {
 
 // NewStore implements initialize_light_client_store from the spec.
 func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
-	bootstrap ethpbv2.Bootstrap) (*Store, error) {
+	bootstrap *ethpbv2.Bootstrap) (*Store, error) {
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
 		panic(err)
