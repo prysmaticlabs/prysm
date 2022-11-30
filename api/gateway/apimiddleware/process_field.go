@@ -27,10 +27,8 @@ func processField(s interface{}, processors []fieldProcessor) error {
 	v := reflect.Indirect(reflect.ValueOf(s))
 
 	if t.Kind() == reflect.Struct {
-		err, done := processStructField(t, v, processors)
-		if done {
-			return err
-		}
+		err := processStructField(t, v, processors)
+		return err
 	} else if t.Kind() == reflect.Slice {
 		for i := 0; i < v.Len(); i++ {
 			if err := processField(v.Index(i).Interface(), processors); err != nil {
@@ -44,7 +42,7 @@ func processField(s interface{}, processors []fieldProcessor) error {
 	return nil
 }
 
-func processStructField(t reflect.Type, v reflect.Value, processors []fieldProcessor) (error, bool) {
+func processStructField(t reflect.Type, v reflect.Value, processors []fieldProcessor) error {
 	for i := 0; i < t.NumField(); i++ {
 		switch v.Field(i).Kind() {
 		case reflect.Slice:
@@ -55,7 +53,7 @@ func processStructField(t reflect.Type, v reflect.Value, processors []fieldProce
 			case kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct:
 				for j := 0; j < v.Field(i).Len(); j++ {
 					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
-						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name), true
+						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
 			// Process each string in string slices.
@@ -67,7 +65,7 @@ func processStructField(t reflect.Type, v reflect.Value, processors []fieldProce
 					}
 					for j := 0; j < v.Field(i).Len(); j++ {
 						if err := proc.f(v.Field(i).Index(j)); err != nil {
-							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name), true
+							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 						}
 					}
 				}
@@ -76,7 +74,7 @@ func processStructField(t reflect.Type, v reflect.Value, processors []fieldProce
 		case reflect.Ptr:
 			if v.Field(i).Elem().Kind() == reflect.Struct {
 				if err := processField(v.Field(i).Interface(), processors); err != nil {
-					return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name), true
+					return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 				}
 			}
 		default:
@@ -84,13 +82,13 @@ func processStructField(t reflect.Type, v reflect.Value, processors []fieldProce
 			for _, proc := range processors {
 				if _, hasTag := field.Tag.Lookup(proc.tag); hasTag {
 					if err := proc.f(v.Field(i)); err != nil {
-						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name), true
+						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
 			}
 		}
 	}
-	return nil, false
+	return nil
 }
 
 func hexToBase64Processor(v reflect.Value) error {
