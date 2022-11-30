@@ -13,6 +13,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -24,16 +25,85 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Bytes(b[:]))
 }
 
-// ExecutionBlock is the response kind received by the eth_getBlockByHash and
+type ExecutionBlock interface {
+	Version() int
+	GetHeader() gethtypes.Header
+	GetHash() common.Hash
+	GetTransactions() []*gethtypes.Transaction
+	GetTotalDifficulty() string
+	GetWithdrawals() ([]*Withdrawal, error)
+	MarshalJSON() ([]byte, error)
+	UnmarshalJSON(enc []byte) error
+}
+
+// ExecutionBlockBellatrix is the response kind received by the eth_getBlockByHash and
 // eth_getBlockByNumber endpoints via JSON-RPC.
-type ExecutionBlock struct {
+type ExecutionBlockBellatrix struct {
 	gethtypes.Header
 	Hash            common.Hash              `json:"hash"`
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 }
 
-func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
+// ExecutionBlockCapella is the response kind received by the eth_getBlockByHash and
+// eth_getBlockByNumber endpoints via JSON-RPC.
+type ExecutionBlockCapella struct {
+	gethtypes.Header
+	Hash            common.Hash              `json:"hash"`
+	Transactions    []*gethtypes.Transaction `json:"transactions"`
+	TotalDifficulty string                   `json:"totalDifficulty"`
+	Withdrawals     []*Withdrawal            `json:"withdrawals"`
+}
+
+func (e *ExecutionBlockBellatrix) Version() int {
+	return version.Bellatrix
+}
+
+func (e *ExecutionBlockBellatrix) GetHeader() gethtypes.Header {
+	return e.Header
+}
+
+func (e *ExecutionBlockBellatrix) GetHash() common.Hash {
+	return e.Hash
+}
+
+func (e *ExecutionBlockBellatrix) GetTransactions() []*gethtypes.Transaction {
+	return e.Transactions
+}
+
+func (e *ExecutionBlockBellatrix) GetTotalDifficulty() string {
+	return e.TotalDifficulty
+}
+
+func (e *ExecutionBlockBellatrix) GetWithdrawals() ([]*Withdrawal, error) {
+	return nil, errors.New("unsupported getter")
+}
+
+func (e *ExecutionBlockCapella) Version() int {
+	return version.Capella
+}
+
+func (e *ExecutionBlockCapella) GetHeader() gethtypes.Header {
+	return e.Header
+}
+
+func (e *ExecutionBlockCapella) GetHash() common.Hash {
+	return e.Hash
+}
+
+func (e *ExecutionBlockCapella) GetTransactions() []*gethtypes.Transaction {
+	return e.Transactions
+}
+
+func (e *ExecutionBlockCapella) GetTotalDifficulty() string {
+	return e.TotalDifficulty
+}
+
+func (e *ExecutionBlockCapella) GetWithdrawals() ([]*Withdrawal, error) {
+	return e.Withdrawals, nil
+}
+
+func (e *ExecutionBlockBellatrix) MarshalJSON() ([]byte, error) {
 	decoded := make(map[string]interface{})
 	encodedHeader, err := e.Header.MarshalJSON()
 	if err != nil {
@@ -48,7 +118,35 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	return json.Marshal(decoded)
 }
 
-func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+func (e *ExecutionBlockCapella) MarshalJSON() ([]byte, error) {
+	decoded := make(map[string]interface{})
+	encodedHeader, err := e.Header.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(encodedHeader, &decoded); err != nil {
+		return nil, err
+	}
+	decoded["hash"] = e.Hash.String()
+	decoded["transactions"] = e.Transactions
+	decoded["totalDifficulty"] = e.TotalDifficulty
+	ws := make([]*withdrawalJSON, len(e.Withdrawals))
+	for i, w := range e.Withdrawals {
+		b, err := w.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		j := &withdrawalJSON{}
+		if err = json.Unmarshal(b, j); err != nil {
+			return nil, err
+		}
+		ws[i] = j
+	}
+	decoded["withdrawals"] = ws
+	return json.Marshal(decoded)
+}
+
+func (e *ExecutionBlockBellatrix) UnmarshalJSON(enc []byte) error {
 	type transactionJson struct {
 		Transactions []*gethtypes.Transaction `json:"transactions"`
 	}
@@ -93,6 +191,84 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	// If the block contains a list of transactions, we JSON unmarshal
 	// them into a list of geth transaction objects.
 	txJson := &transactionJson{}
+	if err := json.Unmarshal(enc, txJson); err != nil {
+		return err
+	}
+	e.Transactions = txJson.Transactions
+	return nil
+}
+
+func (e *ExecutionBlockCapella) UnmarshalJSON(enc []byte) error {
+	type transactionsJson struct {
+		Transactions []*gethtypes.Transaction `json:"transactions"`
+	}
+	type withdrawalsJson struct {
+		Withdrawals []*withdrawalJSON `json:"withdrawals"`
+	}
+
+	if err := e.Header.UnmarshalJSON(enc); err != nil {
+		return err
+	}
+	decoded := make(map[string]interface{})
+	if err := json.Unmarshal(enc, &decoded); err != nil {
+		return err
+	}
+	blockHashStr, ok := decoded["hash"].(string)
+	if !ok {
+		return errors.New("expected `hash` field in JSON response")
+	}
+	decodedHash, err := hexutil.Decode(blockHashStr)
+	if err != nil {
+		return err
+	}
+	e.Hash = common.BytesToHash(decodedHash)
+	e.TotalDifficulty, ok = decoded["totalDifficulty"].(string)
+	if !ok {
+		return errors.New("expected `totalDifficulty` field in JSON response")
+	}
+
+	rawWithdrawals, ok := decoded["withdrawals"]
+	if !ok || rawWithdrawals == nil {
+		e.Withdrawals = []*Withdrawal{}
+	} else {
+		j := &withdrawalsJson{}
+		if err := json.Unmarshal(enc, j); err != nil {
+			return err
+		}
+		ws := make([]*Withdrawal, len(j.Withdrawals))
+		for i, wj := range j.Withdrawals {
+			mwj, err := json.Marshal(wj)
+			if err != nil {
+				return err
+			}
+			w := &Withdrawal{}
+			if err = w.UnmarshalJSON(mwj); err != nil {
+				return err
+			}
+			ws[i] = w
+		}
+		e.Withdrawals = []*Withdrawal{}
+	}
+
+	rawTxList, ok := decoded["transactions"]
+	if !ok || rawTxList == nil {
+		// Exit early if there are no transactions stored in the json payload.
+		return nil
+	}
+	txsList, ok := rawTxList.([]interface{})
+	if !ok {
+		return errors.Errorf("expected transaction list to be of a slice interface type.")
+	}
+	for _, tx := range txsList {
+		// If the transaction is just a hex string, do not attempt to
+		// unmarshal into a full transaction object.
+		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
+			return nil
+		}
+	}
+	// If the block contains a list of transactions, we JSON unmarshal
+	// them into a list of geth transaction objects.
+	txJson := &transactionsJson{}
 	if err := json.Unmarshal(enc, txJson); err != nil {
 		return err
 	}

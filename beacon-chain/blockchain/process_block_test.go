@@ -1284,14 +1284,14 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
-			e.BlockByHashMap[aHash] = &enginev1.ExecutionBlock{
+			e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlockBellatrix{}}
+			e.BlockByHashMap[aHash] = &enginev1.ExecutionBlockBellatrix{
 				Header: gethtypes.Header{
 					ParentHash: bHash,
 				},
 				TotalDifficulty: "0x2",
 			}
-			e.BlockByHashMap[bHash] = &enginev1.ExecutionBlock{
+			e.BlockByHashMap[bHash] = &enginev1.ExecutionBlockBellatrix{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("3")),
 				},

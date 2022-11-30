@@ -662,7 +662,7 @@ func (bs *Server) getBlockBellatrix(ctx context.Context, blk interfaces.SignedBe
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
 				}
-				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}
@@ -732,7 +732,7 @@ func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.SignedBeac
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock
 				}
-				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}
@@ -845,7 +845,7 @@ func (bs *Server) getSSZBlockBellatrix(ctx context.Context, blk interfaces.Signe
 				if blindedBellatrixBlk == nil {
 					return nil, errNilBlock
 				}
-				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}
@@ -921,7 +921,7 @@ func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.SignedB
 				if blindedCapellaBlk == nil {
 					return nil, errNilBlock
 				}
-				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}

@@ -163,7 +163,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		encodedPayloadItems, err := json.Marshal(payloadItems)
 		require.NoError(t, err)
 
-		payloadPb := &enginev1.ExecutionBlock{}
+		payloadPb := &enginev1.ExecutionBlockBellatrix{}
 		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
 
 		require.DeepEqual(t, blockHash, payloadPb.Hash)
@@ -219,7 +219,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		encodedPayloadItems, err := json.Marshal(payloadItems)
 		require.NoError(t, err)
 
-		payloadPb := &enginev1.ExecutionBlock{}
+		payloadPb := &enginev1.ExecutionBlockBellatrix{}
 		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
 
 		require.DeepEqual(t, blockHash, payloadPb.Hash)
@@ -288,7 +288,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		encodedPayloadItems, err := json.Marshal(payloadItems)
 		require.NoError(t, err)
 
-		payloadPb := &enginev1.ExecutionBlock{}
+		payloadPb := &enginev1.ExecutionBlockBellatrix{}
 		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
 
 		require.DeepEqual(t, blockHash, payloadPb.Hash)
@@ -326,12 +326,12 @@ func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
 }
 
 func TestExecutionBlock_MarshalUnmarshalJSON_MainnetBlock(t *testing.T) {
-	newBlock := &enginev1.ExecutionBlock{}
+	newBlock := &enginev1.ExecutionBlockBellatrix{}
 	require.NoError(t, newBlock.UnmarshalJSON([]byte(blockJson)))
 	_, err := newBlock.MarshalJSON()
 	require.NoError(t, err)
 
-	newBlock = &enginev1.ExecutionBlock{}
+	newBlock = &enginev1.ExecutionBlockBellatrix{}
 	require.NoError(t, newBlock.UnmarshalJSON([]byte(blockNoTxJson)))
 	_, err = newBlock.MarshalJSON()
 	require.NoError(t, err)
