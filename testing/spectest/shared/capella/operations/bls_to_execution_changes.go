@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -31,8 +32,27 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 			body := &ethpb.BeaconBlockBodyCapella{
 				BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{change},
 			}
-			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
-				return blocks.ProcessBLSToExecutionChanges(s, b)
+			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+				st, err := blocks.ProcessBLSToExecutionChanges(s, b)
+				if err != nil {
+					return nil, err
+				}
+				changes, err := b.Block().Body().BLSToExecutionChanges()
+				if err != nil {
+					return nil, err
+				}
+				cSet, err := blocks.BLSChangesSignatureBatch(ctx, st, changes)
+				if err != nil {
+					return nil, err
+				}
+				ok, err := cSet.Verify()
+				if err != nil {
+					return nil, err
+				}
+				if !ok {
+					return nil, errors.New("signature did not verify")
+				}
+				return st, nil
 			})
 		})
 	}

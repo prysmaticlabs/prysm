@@ -25,6 +25,8 @@ const executionToBLSPadding = 12
 
 var ErrInvalidBLSChangeBeforeCapella = errors.New("cannot process BLSToExecutionChange before Capella fork")
 
+// ProcessBLSToExecutionChanges process all signed BLS_TO_EXECUTION_MESSAGE found in the block.
+// It does not verify their signature.
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
 	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
