@@ -125,6 +125,8 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 // GetLightClientUpdatesByRange - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/updates.yaml
 func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2.LightClientUpdatesByRangeRequest) (*ethpbv2.LightClientUpdatesByRangeResponse, error) {
 	// Prepare
+	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientUpdatesByRange")
+	defer span.End()
 
 	// Determine slots per period
 	config := params.BeaconConfig()
@@ -205,7 +207,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 			finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		}
 
-		update := createLightClientUpdate(
+		update, err := createLightClientUpdate(
 			ctx,
 			config,
 			slotsPerPeriod,
@@ -215,7 +217,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 			finalizedBlock,
 		)
 
-		if update != nil {
+		if err == nil {
 			updates = append(updates, &ethpbv2.LightClientUpdateWithVersion{
 				Version: ethpbv2.Version(attestedState.Version()),
 				Data:    update,
@@ -298,49 +300,49 @@ func createLightClientUpdate(
 	state state.BeaconState,
 	block interfaces.SignedBeaconBlock,
 	attestedState state.BeaconState,
-	finalizedBlock interfaces.SignedBeaconBlock) *ethpbv2.LightClientUpdate {
+	finalizedBlock interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := types.Epoch(uint64(attestedState.Slot()) / uint64(config.SlotsPerEpoch))
 	if attestedEpoch < types.Epoch(config.AltairForkEpoch) {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested epoch: %d", attestedEpoch)
 	}
 
 	// assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 	syncAggregate, err := block.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil
+		return nil, status.Errorf(codes.Internal, "Could not get sync aggregate: %v", err)
 	}
 
 	if syncAggregate.SyncCommitteeBits.Count() < config.MinSyncCommitteeParticipants {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid sync committee bits count: %d", syncAggregate.SyncCommitteeBits.Count())
 	}
 
 	// assert state.slot == state.latest_block_header.slot
 	if state.Slot() != state.LatestBlockHeader().Slot {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid state slot: %d", state.Slot())
 	}
 
 	// assert hash_tree_root(header) == hash_tree_root(block.message)
 	header := *state.LatestBlockHeader()
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
 	header.StateRoot = stateRoot[:]
 
 	headerRoot, err := header.HashTreeRoot()
 	if err != nil {
-		return nil
+		return nil, status.Errorf(codes.Internal, "Could not get header root: %v", err)
 	}
 
 	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil
+		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 	}
 
 	if headerRoot != blockRoot {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid header root: %v", headerRoot)
 	}
 
 	// update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
@@ -348,7 +350,7 @@ func createLightClientUpdate(
 
 	// assert attested_state.slot == attested_state.latest_block_header.slot
 	if attestedState.Slot() != attestedState.LatestBlockHeader().Slot {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested state slot: %d", attestedState.Slot())
 	}
 
 	// attested_header = attested_state.latest_block_header.copy()
@@ -357,14 +359,14 @@ func createLightClientUpdate(
 	// attested_header.state_root = hash_tree_root(attested_state)
 	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil
+		return nil, status.Errorf(codes.Internal, "Could not get attested state root: %v", err)
 	}
 	attestedHeader.StateRoot = attestedStateRoot[:]
 
 	// assert hash_tree_root(attested_header) == block.message.parent_root
 	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
 	if attestedHeaderRoot != block.Block().ParentRoot() {
-		return nil
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested header root: %v", attestedHeaderRoot)
 	}
 
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
@@ -376,7 +378,7 @@ func createLightClientUpdate(
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
 		if err != nil {
-			return nil
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee: %v", err)
 		}
 
 		nextSyncCommittee = &ethpbv2.SyncCommittee{
@@ -386,7 +388,7 @@ func createLightClientUpdate(
 
 		nextSyncCommitteeBranch, err = attestedState.NextSyncCommitteeProof(ctx)
 		if err != nil {
-			return nil
+			return nil, status.Errorf(codes.Internal, "Could not get next sync committee proof: %v", err)
 		}
 	} else {
 		pubKeys := make([][]byte, config.SyncCommitteeSize)
@@ -411,21 +413,21 @@ func createLightClientUpdate(
 		if finalizedBlock.Block().Slot() != 0 {
 			tempFinalizedHeader, err := finalizedBlock.Header()
 			if err != nil {
-				return nil
+				return nil, status.Errorf(codes.Internal, "Could not get finalized header: %v", err)
 			}
 			finalizedHeader = migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
 
 			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
 			if err != nil {
-				return nil
+				return nil, status.Errorf(codes.Internal, "Could not get finalized header root: %v", err)
 			}
 
 			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
-				return nil
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", finalizedHeaderRoot)
 			}
 		} else {
 			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
-				return nil
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", attestedState.FinalizedCheckpoint().Root)
 			}
 
 			finalizedHeader = &ethpbv1.BeaconBlockHeader{
@@ -439,7 +441,7 @@ func createLightClientUpdate(
 
 		finalityBranch, err = attestedState.FinalizedRootProof(ctx)
 		if err != nil {
-			return nil
+			return nil, status.Errorf(codes.Internal, "Could not get finalized root proof: %v", err)
 		}
 	} else {
 		finalizedHeader = &ethpbv1.BeaconBlockHeader{
@@ -480,7 +482,7 @@ func createLightClientUpdate(
 		SignatureSlot:           uint64(block.Block().Slot()),
 	}
 
-	return result
+	return result, nil
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
@@ -489,84 +491,89 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientFinalityUpdate")
 	defer span.End()
 
-	// Get head state
-	headState, err := bs.HeadFetcher.HeadState(ctx)
+	// Determine slots per period
+	config := params.BeaconConfig()
+	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
+
+	// Get the current state
+	state, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Get the attestedHeader
-	prevSlot := slots.PrevSlot(headState.Slot())
-	prevBlockRoot := bytesutil.ToBytes32(headState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
-	prevBlock, err := bs.BeaconDB.Block(ctx, prevBlockRoot)
+	// Get the block
+	latestBlockHeader := state.LatestBlockHeader()
+	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
-	}
-	prevBlockSignedHeader, err := prevBlock.Header()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block header: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get latest block header root: %v", err)
 	}
 
-	attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
+	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
 
-	// Get head block
-	headBlk, err := bs.HeadFetcher.HeadBlock(ctx)
+	// Get attested state
+	attestedRoot := block.Block().ParentRoot()
+	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get attested block: %v", err)
+	}
+
+	attestedSlot := attestedBlock.Block().Slot()
+	attestedState, err := bs.StateFetcher.StateBySlot(ctx, attestedSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get attested state: %v", err)
 	}
 
 	// Get finalized block
-	var finalizedRoot [32]byte
-	copy(finalizedRoot[:], headState.FinalizedCheckpoint().GetRoot())
+	var finalizedBlock interfaces.SignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+	}
 
-	finalizedBlock, err := bs.BeaconDB.Block(ctx, finalizedRoot)
+	update, err := createLightClientUpdate(
+		ctx,
+		config,
+		slotsPerPeriod,
+		state,
+		block,
+		attestedState,
+		finalizedBlock,
+	)
+
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
-	}
-	if finalizedBlock == nil || finalizedBlock.IsNil() {
-		return nil, status.Errorf(codes.Internal, "No finalized block yet")
+		return nil, err
 	}
 
-	// Get finalized header
-	signedFinalizedHeader, err := finalizedBlock.Header()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized block header: %v", err)
-	}
-
-	finalizedHeader := migration.V1Alpha1SignedHeaderToV1(signedFinalizedHeader).GetMessage()
-
-	// Get finalityBranch
-	finalityBranch, err := headState.FinalizedRootProof(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized root proof: %v", err)
-	}
-
-	// Get SyncAggregate
-	syncAggregate, err := headBlk.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync aggregate: %v", err)
-	}
-
-	syncAggregateV1 := ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
-		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-	}
-
-	data := ethpbv2.LightClientFinalityUpdate{
-		AttestedHeader:  attestedHeader,
-		FinalizedHeader: finalizedHeader,
-		FinalityBranch:  finalityBranch,
-		SyncAggregate:   &syncAggregateV1,
-		SignatureSlot:   prevSlot,
-	}
+	finalityUpdate := createLightClientFinalityUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateResponse{
-		Version: ethpbv2.Version(headBlk.Version()),
-		Data:    &data,
+		Version: ethpbv2.Version(attestedState.Version()),
+		Data:    finalityUpdate,
 	}
 
 	return result, nil
+}
+
+// In https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
+// def create_light_client_finality_update(update: LightClientUpdate) -> LightClientFinalityUpdate:
+//
+//	return LightClientFinalityUpdate(
+//	    attested_header=update.attested_header,
+//	    finalized_header=update.finalized_header,
+//	    finality_branch=update.finality_branch,
+//	    sync_aggregate=update.sync_aggregate,
+//	    signature_slot=update.signature_slot,
+//	)
+func createLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
+	return &ethpbv2.LightClientFinalityUpdate{
+		AttestedHeader:  update.AttestedHeader,
+		FinalizedHeader: update.FinalizedHeader,
+		FinalityBranch:  update.FinalityBranch,
+		SyncAggregate:   update.SyncAggregate,
+		SignatureSlot:   update.SignatureSlot,
+	}
 }
 
 // GetLightClientOptimisticUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/optimistic_update.yaml
