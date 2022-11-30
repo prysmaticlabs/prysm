@@ -582,54 +582,83 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientOptimisticUpdate")
 	defer span.End()
 
-	// Get head state
-	headState, err := bs.HeadFetcher.HeadState(ctx)
+	// Determine slots per period
+	config := params.BeaconConfig()
+	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
+
+	// Get the current state
+	state, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Get the attestedHeader
-	prevSlot := slots.PrevSlot(headState.Slot())
-	prevBlockRoot := bytesutil.ToBytes32(headState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
-	prevBlock, err := bs.BeaconDB.Block(ctx, prevBlockRoot)
+	// Get the block
+	latestBlockHeader := state.LatestBlockHeader()
+	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get latest block header root: %v", err)
 	}
-	prevBlockSignedHeader, err := prevBlock.Header()
+
+	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
+
+	// Get attested state
+	attestedRoot := block.Block().ParentRoot()
+	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block header: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get attested block: %v", err)
 	}
 
-	attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
-
-	// Get head block
-	headBlk, err := bs.HeadFetcher.HeadBlock(ctx)
+	attestedSlot := attestedBlock.Block().Slot()
+	attestedState, err := bs.StateFetcher.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get attested state: %v", err)
 	}
 
-	// Get SyncAggregate
-	syncAggregate, err := headBlk.Block().Body().SyncAggregate()
+	// Get finalized block
+	var finalizedBlock interfaces.SignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+	}
+
+	update, err := createLightClientUpdate(
+		ctx,
+		config,
+		slotsPerPeriod,
+		state,
+		block,
+		attestedState,
+		finalizedBlock,
+	)
+
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync aggregate: %v", err)
+		return nil, err
 	}
 
-	syncAggregateV1 := ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
-		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-	}
-
-	data := ethpbv2.LightClientOptimisticUpdate{
-		AttestedHeader: attestedHeader,
-		SyncAggregate:  &syncAggregateV1,
-		SignatureSlot:  prevSlot,
-	}
+	optimisticUpdate := createLightClientOptimisticUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateResponse{
-		Version: ethpbv2.Version(headBlk.Version()),
-		Data:    &data,
+		Version: ethpbv2.Version(attestedState.Version()),
+		Data:    optimisticUpdate,
 	}
 
 	return result, nil
+}
+
+// In https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_optimistic_update
+// def create_light_client_optimistic_update(update: LightClientUpdate) -> LightClientOptimisticUpdate:
+//
+//	return LightClientOptimisticUpdate(
+//	    attested_header=update.attested_header,
+//	    sync_aggregate=update.sync_aggregate,
+//	    signature_slot=update.signature_slot,
+//	)
+func createLightClientOptimisticUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
+	return &ethpbv2.LightClientOptimisticUpdate{
+		AttestedHeader: update.AttestedHeader,
+		SyncAggregate:  update.SyncAggregate,
+		SignatureSlot:  update.SignatureSlot,
+	}
 }
