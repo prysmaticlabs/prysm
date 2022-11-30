@@ -85,6 +85,10 @@ message SignRequest {
         // Capella objects.
         ethereum.eth.v1alpha1.BeaconBlockCapella block_capella = 114;
         ethereum.eth.v1alpha1.BlindedBeaconBlockCapella blinded_block_capella = 115;
+
+        ethereum.eth.v1alpha1.BeaconBlock4844 block_eip4844 = 116;
+        ethereum.eth.v1alpha1.BlindedBeaconBlock4844 blinded_block_eip4844 = 117;
+
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];

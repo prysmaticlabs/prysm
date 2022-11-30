@@ -259,7 +259,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Capella:
+	case version.Altair, version.Bellatrix, version.Capella, version.EIP4844:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err

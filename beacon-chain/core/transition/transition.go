@@ -258,7 +258,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Capella:
+			case version.Altair, version.Bellatrix, version.Capella, version.EIP4844:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -291,6 +291,14 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 
 		if time.CanUpgradeToCapella(state.Slot()) {
 			state, err = capella.UpgradeToCapella(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if time.CanUpgradeToEIP4844(state.Slot()) {
+			state, err = capella.UpgradeToEip4844(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

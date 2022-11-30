@@ -127,6 +127,36 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 		}
+	case version.EIP4844:
+		return &ethpb.BeaconState4844{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.fork,
+			LatestBlockHeader:            b.latestBlockHeader,
+			BlockRoots:                   b.blockRoots.Slice(),
+			StateRoots:                   b.stateRoots.Slice(),
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1Data,
+			Eth1DataVotes:                b.eth1DataVotes,
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   b.validators,
+			Balances:                     b.balances,
+			RandaoMixes:                  b.randaoMixes.Slice(),
+			Slashings:                    b.slashings,
+			PreviousEpochParticipation:   b.previousEpochParticipation,
+			CurrentEpochParticipation:    b.currentEpochParticipation,
+			JustificationBits:            b.justificationBits,
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
+			FinalizedCheckpoint:          b.finalizedCheckpoint,
+			InactivityScores:             b.inactivityScores,
+			CurrentSyncCommittee:         b.currentSyncCommittee,
+			NextSyncCommittee:            b.nextSyncCommittee,
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader4844,
+			NextWithdrawalIndex:          b.nextWithdrawalIndex,
+			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
+		}
 	default:
 		return nil
 	}
@@ -253,6 +283,36 @@ func (b *BeaconState) ToProto() interface{} {
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 		}
+	case version.EIP4844:
+		return &ethpb.BeaconState4844{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.forkVal(),
+			LatestBlockHeader:            b.latestBlockHeaderVal(),
+			BlockRoots:                   b.blockRoots.Slice(),
+			StateRoots:                   b.stateRoots.Slice(),
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1DataVal(),
+			Eth1DataVotes:                b.eth1DataVotesVal(),
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   b.validatorsVal(),
+			Balances:                     b.balancesVal(),
+			RandaoMixes:                  b.randaoMixes.Slice(),
+			Slashings:                    b.slashingsVal(),
+			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
+			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
+			JustificationBits:            b.justificationBitsVal(),
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
+			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
+			InactivityScores:             b.inactivityScoresVal(),
+			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
+			NextSyncCommittee:            b.nextSyncCommitteeVal(),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader4844Val(),
+			NextWithdrawalIndex:          b.nextWithdrawalIndex,
+			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
+		}
 	default:
 		return nil
 	}
@@ -331,6 +391,14 @@ func ProtobufBeaconStateBellatrix(s interface{}) (*ethpb.BeaconStateBellatrix, e
 // Error is returned if the input is not type protobuf beacon state.
 func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error) {
 	pbState, ok := s.(*ethpb.BeaconStateCapella)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconStateCapella")
+	}
+	return pbState, nil
+}
+
+func ProtobufBeaconState4844(s interface{}) (*ethpb.BeaconState4844, error) {
+	pbState, ok := s.(*ethpb.BeaconState4844)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateCapella")
 	}

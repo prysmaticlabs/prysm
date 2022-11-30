@@ -94,6 +94,8 @@ func (f FieldIndex) String(stateVersion int) string {
 		return "latestExecutionPayloadHeader"
 	case LatestExecutionPayloadHeaderCapella:
 		return "latestExecutionPayloadHeaderCapella"
+	case LatestExecutionPayloadHeader4844:
+		return "latestExecutionPayloadHeader4844"
 	case NextWithdrawalIndex:
 		return "nextWithdrawalIndex"
 	case NextWithdrawalValidatorIndex:
@@ -160,6 +162,7 @@ const (
 	LatestExecutionPayloadHeader
 	// State fields added in Capella
 	LatestExecutionPayloadHeaderCapella
+	LatestExecutionPayloadHeader4844
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 )

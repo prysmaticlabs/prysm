@@ -24,6 +24,7 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Bellatrix Fork Epoch for mainnet config.
 	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
+	mainnetEip4844ForkEpoch   = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -212,7 +213,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
 	CapellaForkEpoch:     math.MaxUint64,
-	ShardingForkVersion:  []byte{4, 0, 0, 0},
+	ShardingForkVersion:  []byte{8, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 	EIP4844ForkVersion:   []byte{4, 0, 0, 0},
 	EIP4844ForkEpoch:     math.MaxUint64,
@@ -288,10 +289,12 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
 	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
+	c.EIP4844ForkVersion[fieldparams.VersionLength-1] = b
 	c.ShardingForkVersion[fieldparams.VersionLength-1] = b
 
 	c.GenesisForkVersion[0] = 0
 	c.AltairForkVersion[0] = 1
 	c.BellatrixForkVersion[0] = 2
-	c.ShardingForkVersion[0] = 3
+	c.EIP4844ForkVersion[0] = 3
+	c.ShardingForkVersion[0] = 4
 }

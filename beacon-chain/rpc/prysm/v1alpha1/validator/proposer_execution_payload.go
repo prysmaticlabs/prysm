@@ -270,7 +270,7 @@ func (vs *Server) getExecutionPayloadV2AndBlobsBundleV1(ctx context.Context,
 		Withdrawals:           withdrawals,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {

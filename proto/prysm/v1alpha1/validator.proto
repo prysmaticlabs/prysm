@@ -352,6 +352,8 @@ message StreamBlocksResponse {
 
         // Representing a capella block.
         SignedBeaconBlockCapella capella_block = 4;
+
+        SignedBeaconBlock4844 eip4844_block = 5;
     }
 }
 

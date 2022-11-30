@@ -39,6 +39,8 @@ ssz_gen_marshal(
         "ExecutionPayloadCapella",
         "ExecutionPayloadHeader",
         "ExecutionPayloadHeaderCapella",
+        "ExecutionPayloadHeader4844",
+        "ExecutionPayload4844",
         "Withdrawal",
         "Blob",
     ],

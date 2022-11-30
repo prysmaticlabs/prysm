@@ -20,7 +20,12 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 	if b.version == version.Bellatrix {
 		return blocks.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeaderVal())
 	}
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
+
+	if b.version == version.Capella {
+		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
+	}
+
+	return blocks.WrappedExecutionPayloadHeaderEIP4844(b.latestExecutionPayloadHeader4844Val())
 }
 
 // latestExecutionPayloadHeaderVal of the beacon state.
@@ -33,4 +38,8 @@ func (b *BeaconState) latestExecutionPayloadHeaderVal() *enginev1.ExecutionPaylo
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) latestExecutionPayloadHeaderCapellaVal() *enginev1.ExecutionPayloadHeaderCapella {
 	return ethpb.CopyExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapella)
+}
+
+func (b *BeaconState) latestExecutionPayloadHeader4844Val() *enginev1.ExecutionPayloadHeader4844 {
+	return ethpb.CopyExecutionPayloadHeader4844(b.latestExecutionPayloadHeader4844)
 }

@@ -189,6 +189,7 @@ const (
 	NextSyncCommittee
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
+	LatestExecutionPayloadHeader4844
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 )

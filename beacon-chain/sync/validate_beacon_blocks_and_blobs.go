@@ -74,7 +74,7 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBeaconBlockKzgs(blk *ethpb.BeaconBlockCapella) error {
+func (s *Service) validateBeaconBlockKzgs(blk *ethpb.BeaconBlock4844) error {
 	body := blk.Body
 	payload := body.ExecutionPayload
 	if payload == nil {

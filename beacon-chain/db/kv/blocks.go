@@ -803,6 +803,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(capellaBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Capella block")
 		}
+	case hasEip4844Key(enc):
+		rawBlock = &ethpb.SignedBeaconBlock4844{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(eip4844Key):]); err != nil {
+			return nil, err
+		}
+	case hasEip4844BlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlock4844{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(eip4844BlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded 4844 block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -842,6 +852,8 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		}
 	}
 	switch blockToSave.Version() {
+	case version.EIP4844:
+		return snappy.Encode(nil, append(eip4844Key, encodedBlock...)), nil
 	case version.Capella:
 		if blockToSave.IsBlinded() {
 			return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil

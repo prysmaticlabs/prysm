@@ -55,6 +55,14 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoCapella(b.BlindedCapella)
 	case *eth.SignedBlindedBeaconBlockCapella:
 		return initBlindedSignedBlockFromProtoCapella(b)
+	case *eth.GenericSignedBeaconBlock_EIP4844:
+		return initSignedBlockFromProto4844(b.EIP4844)
+	case *eth.SignedBeaconBlock4844:
+		return initSignedBlockFromProto4844(b)
+	case *eth.GenericSignedBeaconBlock_Blinded_EIP4844:
+		return initBlindedSignedBlockFromProto4844(b.Blinded_EIP4844)
+	case *eth.SignedBlindedBeaconBlock4844:
+		return initBlindedSignedBlockFromProto4844(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -89,6 +97,14 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return initBlindedBlockFromProtoCapella(b.BlindedCapella)
 	case *eth.BlindedBeaconBlockCapella:
 		return initBlindedBlockFromProtoCapella(b)
+	case *eth.GenericBeaconBlock_EIP4844:
+		return initBlockFromProto4844(b.EIP4844)
+	case *eth.BeaconBlock4844:
+		return initBlockFromProto4844(b)
+	case *eth.GenericBeaconBlock_Blinded_EIP4844:
+		return initBlindedBlockFromProto4844(b.Blinded_EIP4844)
+	case *eth.BlindedBeaconBlock4844:
+		return initBlindedBlockFromProto4844(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -111,6 +127,10 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return initBlockBodyFromProtoCapella(b)
 	case *eth.BlindedBeaconBlockBodyCapella:
 		return initBlindedBlockBodyFromProtoCapella(b)
+	case *eth.BeaconBlockBody4844:
+		return initBlockBodyFromProto4844(b)
+	case *eth.BlindedBeaconBlockBody4844:
+		return initBlindedBlockBodyFromProto4844(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -164,6 +184,19 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockCapella{Block: pb, Signature: signature})
+	case version.EIP4844:
+		if blk.IsBlinded() {
+			pb, ok := pb.(*eth.BlindedBeaconBlock4844)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+			return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlock4844{Block: pb, Signature: signature})
+		}
+		pb, ok := pb.(*eth.BeaconBlock4844)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlock4844{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}

@@ -61,7 +61,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
 		if b.Version() == version.EIP4844 {
-			k, err := b.Body().BlobKzgs()
+			k, err := b.Body().BlobKzgCommitments()
 			if err != nil {
 				return err
 			}

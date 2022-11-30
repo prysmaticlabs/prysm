@@ -35,6 +35,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	case version.Capella:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
+	case version.EIP4844:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	}
 
 	// Genesis time root.
@@ -245,6 +247,25 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, err
 		}
 		fieldRoots[nativetypes.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
+
+		// Next withdrawal index root.
+		nextWithdrawalIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)
+		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
+
+		// Next partial withdrawal validator index root.
+		nextWithdrawalValidatorIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
+		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
+	}
+
+	if state.version == version.EIP4844 {
+		// Execution payload root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeader4844.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[nativetypes.LatestExecutionPayloadHeader4844.RealPosition()] = executionPayloadRoot[:]
 
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)

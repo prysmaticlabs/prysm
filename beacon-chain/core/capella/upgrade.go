@@ -14,7 +14,7 @@ import (
 func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 	if err := state.SetFork(&ethpb.Fork{
 		PreviousVersion: state.Fork().CurrentVersion,
-		CurrentVersion:  params.BeaconConfig().Eip4844ForkVersion,
+		CurrentVersion:  params.BeaconConfig().EIP4844ForkVersion,
 		Epoch:           time.CurrentEpoch(state),
 	}); err != nil {
 		return nil, err
@@ -24,8 +24,39 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	blocks.WrappedExecutionPayloadCapella()
-	state.SetLatestExecutionPayloadHeader()
+	txRoot, err := header.TransactionsRoot()
+	if err != nil {
+		return nil, err
+	}
+	withdrawalRoot, err := header.WithdrawalsRoot()
+	if err != nil {
+		return nil, err
+	}
+	h, err := blocks.WrappedExecutionPayloadHeaderEIP4844(&enginev1.ExecutionPayloadHeader4844{
+		ParentHash:       header.ParentHash(),
+		FeeRecipient:     header.FeeRecipient(),
+		StateRoot:        header.StateRoot(),
+		ReceiptsRoot:     header.ReceiptsRoot(),
+		LogsBloom:        header.LogsBloom(),
+		PrevRandao:       header.PrevRandao(),
+		BlockNumber:      header.BlockNumber(),
+		GasLimit:         header.GasLimit(),
+		GasUsed:          header.GasUsed(),
+		Timestamp:        header.Timestamp(),
+		ExtraData:        header.ExtraData(),
+		BaseFeePerGas:    header.BaseFeePerGas(),
+		BlockHash:        header.BlockHash(),
+		TransactionsRoot: txRoot,
+		WithdrawalsRoot:  withdrawalRoot,
+		ExcessDataGas:    make([]byte, 32),
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = state.SetLatestExecutionPayloadHeader(h)
+	if err != nil {
+		return nil, err
+	}
 
 	return state, nil
 }
@@ -62,10 +93,6 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	withdrawalRoot, err := payloadHeader.WithdrawalsRoot()
-	if err != nil {
-		return nil, err
-	}
 
 	s := &ethpb.BeaconStateCapella{
 		GenesisTime:           state.GenesisTime(),
@@ -73,7 +100,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().EIP4844ForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
@@ -109,10 +136,9 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 			Timestamp:        payloadHeader.Timestamp(),
 			ExtraData:        payloadHeader.ExtraData(),
 			BaseFeePerGas:    payloadHeader.BaseFeePerGas(),
-			ExcessDataGas:    make([]byte, 32),
 			BlockHash:        payloadHeader.BlockHash(),
 			TransactionsRoot: txRoot,
-			WithdrawalsRoot:  withdrawalRoot,
+			WithdrawalsRoot:  make([]byte, 32),
 		},
 		NextWithdrawalIndex:          0,
 		NextWithdrawalValidatorIndex: 0,

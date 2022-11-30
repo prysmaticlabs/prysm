@@ -207,7 +207,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 }
 
 func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.SignedBeaconBlock) error {
-	blkPb, err := blk.PbCapellaBlock()
+	blkPb, err := blk.Pb4844Block()
 	if err != nil {
 		return errors.Wrap(err, "could not get protobuf block")
 	}
