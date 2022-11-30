@@ -114,8 +114,8 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
-		"--verbosity=5",
-		"--vmdebug",
+		"--verbosity=4",
+		//"--vmdebug",
 		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}

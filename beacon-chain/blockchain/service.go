@@ -309,7 +309,10 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
-
+	_, err = s.notifyForkchoiceUpdate(s.ctx, &notifyForkchoiceUpdateArg{headState: finalizedState, headRoot: finalizedRoot, headBlock: finalizedBlock.Block()})
+	if err != nil {
+		return errors.Wrap(err, "error calling FCU with finalized state at startup")
+	}
 	return nil
 }
 
@@ -443,6 +446,10 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 
 	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
 		log.WithError(err).Fatal("Could not set head")
+	}
+	_, err = s.notifyForkchoiceUpdate(s.ctx, &notifyForkchoiceUpdateArg{headState: genesisState, headRoot: genesisBlkRoot, headBlock: genesisBlk.Block()})
+	if err != nil {
+		log.WithError(err).Fatal("Could not call FCU with genesis")
 	}
 	return nil
 }
