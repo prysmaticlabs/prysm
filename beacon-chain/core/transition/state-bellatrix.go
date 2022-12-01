@@ -2,6 +2,7 @@ package transition
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 
@@ -170,14 +171,6 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		Eth1Data:         eth1Data,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: preState.Eth1DepositIndex(),
-		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         committeeKeys(),
-			AggregatePubkey: make([]byte, 48),
-		},
-		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         committeeKeys(),
-			AggregatePubkey: make([]byte, 48),
-		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
@@ -224,7 +217,21 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return state_native.InitializeFromProtoBellatrix(st)
+	ist, err := state_native.InitializeFromProtoBellatrix(st)
+	if err != nil {
+		return nil, err
+	}
+	sc, err := altair.NextSyncCommittee(context.Background(), ist)
+	if err != nil {
+		return nil, err
+	}
+	if err := ist.SetNextSyncCommittee(sc); err != nil {
+		return nil, err
+	}
+	if err := ist.SetCurrentSyncCommittee(sc); err != nil {
+		return nil, err
+	}
+	return ist, nil
 }
 
 // EmptyGenesisState returns an empty beacon state object.
@@ -248,14 +255,6 @@ func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 		Eth1Data:         &ethpb.Eth1Data{},
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
-		CurrentSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         committeeKeys(),
-			AggregatePubkey: make([]byte, 48),
-		},
-		NextSyncCommittee: &ethpb.SyncCommittee{
-			Pubkeys:         committeeKeys(),
-			AggregatePubkey: make([]byte, 48),
-		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
@@ -268,13 +267,6 @@ func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 			TransactionsRoot: make([]byte, 32),
 		},
 	}
-	return state_native.InitializeFromProtoBellatrix(st)
-}
 
-func committeeKeys() [][]byte {
-	k := make([][]byte, fieldparams.SyncCommitteeLength)
-	for i := 0; i < fieldparams.SyncCommitteeLength; i++ {
-		k[i] = make([]byte, fieldparams.BLSPubkeyLength)
-	}
-	return k
+	return state_native.InitializeFromProtoBellatrix(st)
 }

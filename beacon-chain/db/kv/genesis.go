@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -17,16 +16,15 @@ import (
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "HashTreeRoot")
 	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	wsb, err := blocks.NewGenesisBlockForState(stateRoot, genesisState)
+	if err != nil {
+		return errors.Wrap(err, "NewGenesisBlockForState")
+	}
+	genesisBlkRoot, err := wsb.Block().HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
-	}
-	wsb, err := consensusblocks.NewSignedBeaconBlock(genesisBlk)
-	if err != nil {
-		return errors.Wrap(err, "could not wrap genesis block")
 	}
 	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")

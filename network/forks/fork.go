@@ -2,6 +2,7 @@
 package forks
 
 import (
+	"bytes"
 	"math"
 	"sort"
 	"time"
