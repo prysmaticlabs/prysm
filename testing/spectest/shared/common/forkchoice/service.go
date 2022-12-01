@@ -80,7 +80,13 @@ type engineMock struct {
 func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {
 	return nil, nil
 }
+func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
+	return nil, nil
+}
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, m.latestValidHash, m.payloadStatus
+}
+func (m *engineMock) ForkchoiceUpdatedV2(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributesV2) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
 func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
