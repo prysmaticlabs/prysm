@@ -14,5 +14,5 @@ func TestMinimal_Capella_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.Capella, "capella")
+	forkchoice.Run(t, "minimal", version.Capella)
 }

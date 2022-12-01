@@ -15,12 +15,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunCapellapella is a helper function that runs capella's fork spec tests.
+// RunUpgradeToCapella is a helper function that runs capella's fork spec tests.
 // It unmarshals a pre- and post-state to check `UpgradeToCapella` comply with spec implementation.
 func RunUpgradeToCapella(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "capella", "fork/fork/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "capella", "fork/fork/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()

@@ -24,21 +24,26 @@ func init() {
 }
 
 // Run executes "forkchoice"  and "sync" test.
-func Run(t *testing.T, config string, fork int, folderName string) {
-	runTest(t, config, fork, "fork_choice", folderName)
-	runTest(t, config, fork, "sync", folderName)
+func Run(t *testing.T, config string, fork int) {
+	runTest(t, config, fork, "fork_choice")
+	if fork >= version.Bellatrix {
+		runTest(t, config, fork, "sync")
+	}
 }
 
-func runTest(t *testing.T, config string, fork int, basePath, folderName string) {
+func runTest(t *testing.T, config string, fork int, basePath string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, _ := utils.TestFolders(t, config, folderName, basePath)
-	if testFolders == nil {
-		return
+	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), basePath)
 	}
 
 	for _, folder := range testFolders {
 		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
-		testFolders, testsFolderPath := utils.TestFolders(t, config, folderName, folderPath)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
+		if len(testFolders) == 0 {
+			t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), folderPath)
+		}
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
@@ -72,9 +77,6 @@ func runTest(t *testing.T, config string, fork int, basePath, folderName string)
 				case version.Capella:
 					beaconState = unmarshalCapellaState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalCapellaBlock(t, blockSSZ)
-				case version.EIP4844:
-					beaconState = unmarshal4844State(t, preBeaconStateSSZ)
-					beaconBlock = unmarshal4844Block(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -100,8 +102,6 @@ func runTest(t *testing.T, config string, fork int, basePath, folderName string)
 							beaconBlock = unmarshalSignedBellatrixBlock(t, blockSSZ)
 						case version.Capella:
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
-						case version.EIP4844:
-							beaconBlock = unmarshalSigned4844Block(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
@@ -239,30 +239,6 @@ func unmarshalCapellaBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBloc
 
 func unmarshalSignedCapellaBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockCapella{}
-	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := blocks.NewSignedBeaconBlock(base)
-	require.NoError(t, err)
-	return blk
-}
-
-func unmarshal4844State(t *testing.T, raw []byte) state.BeaconState {
-	base := &ethpb.BeaconState4844{}
-	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProto4844(base)
-	require.NoError(t, err)
-	return st
-}
-
-func unmarshal4844Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
-	base := &ethpb.BeaconBlock4844{}
-	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock4844{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
-	require.NoError(t, err)
-	return blk
-}
-
-func unmarshalSigned4844Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
-	base := &ethpb.SignedBeaconBlock4844{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)

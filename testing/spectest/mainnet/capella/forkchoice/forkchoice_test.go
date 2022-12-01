@@ -10,9 +10,10 @@ import (
 
 func TestMainnet_Capella_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
+		// Experimental features are disabled by default for spec tests.
 		EnableDefensivePull: false,
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Capella, "capella")
+	forkchoice.Run(t, "mainnet", version.Capella)
 }
