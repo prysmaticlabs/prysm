@@ -30,6 +30,9 @@ var ErrInvalidBLSChangeBeforeCapella = errors.New("cannot process BLSToExecution
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
 	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	if signed.Version() == version.EIP4844 {
+		return st, nil
+	}
 	if signed.Version() < version.Capella {
 		return st, nil
 	}
@@ -120,6 +123,9 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 }
 
 func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
+	if st.Version() == version.EIP4844 {
+		return st, nil
+	}
 	expected, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")

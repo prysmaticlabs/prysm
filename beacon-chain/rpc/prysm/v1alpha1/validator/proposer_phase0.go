@@ -206,6 +206,9 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 					bytesutil.ToBytes32(parentRoot),
 					head,
 				)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
 				p, err := executionData.PbV2()
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get execution payload v2")

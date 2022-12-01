@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 type blockOperation func(context.Context, state.BeaconState, interfaces.SignedBeaconBlock) (state.BeaconState, error)
@@ -72,9 +71,7 @@ func RunBlockOperationTest(
 		pbState, err := state_native.ProtobufBeaconState4844(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)
-			t.Log(diff)
-			t.Fatal("Post state does not match expected")
+			t.Error("Post state does not match expected")
 		}
 	} else {
 		// Note: This doesn't test anything worthwhile. It essentially tests

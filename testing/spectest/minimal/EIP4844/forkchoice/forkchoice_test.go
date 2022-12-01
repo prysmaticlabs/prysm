@@ -14,5 +14,5 @@ func TestMinimal_EIP4844_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.EIP4844, "eip4844")
+	forkchoice.Run(t, "minimal", version.EIP4844)
 }
