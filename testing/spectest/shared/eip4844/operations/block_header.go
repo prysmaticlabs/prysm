@@ -28,16 +28,16 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 			require.NoError(t, err, "Failed to decompress")
-			block := &ethpb.BeaconBlockCapella{}
+			block := &ethpb.BeaconBlock4844{}
 			require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 
 			preBeaconStateFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			preBeaconStateBase := &ethpb.BeaconStateCapella{}
+			preBeaconStateBase := &ethpb.BeaconState4844{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			preBeaconState, err := state_native.InitializeFromProtoCapella(preBeaconStateBase)
+			preBeaconState, err := state_native.InitializeFromProto4844(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -61,9 +61,9 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")
 
-				postBeaconState := &ethpb.BeaconStateCapella{}
+				postBeaconState := &ethpb.BeaconState4844{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := state_native.ProtobufBeaconStateCapella(beaconState.ToProto())
+				pbState, err := state_native.ProtobufBeaconState4844(beaconState.ToProto())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.ToProto(), postBeaconState)

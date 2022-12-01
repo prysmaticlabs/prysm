@@ -20,9 +20,9 @@ func RunSSZStaticTests(t *testing.T, config string) {
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
 	switch object.(type) {
-	case *ethpb.BeaconStateCapella:
+	case *ethpb.BeaconState4844:
 		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProtoCapella(s.(*ethpb.BeaconStateCapella))
+			beaconState, err := state_native.InitializeFromProto4844(s.(*ethpb.BeaconState4844))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})
@@ -35,9 +35,9 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		obj = &enginev1.ExecutionPayloadCapella{}
+		obj = &enginev1.ExecutionPayload4844{}
 	case "ExecutionPayloadHeader":
-		obj = &enginev1.ExecutionPayloadHeaderCapella{}
+		obj = &enginev1.ExecutionPayloadHeader4844{}
 	case "Attestation":
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
@@ -48,14 +48,14 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
 		t.Skip("Skipping BeaconBlock test")
-		obj = &ethpb.BeaconBlockCapella{}
+		obj = &ethpb.BeaconBlock4844{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBodyCapella{}
+		obj = &ethpb.BeaconBlockBody4844{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
 		t.Skip("Skipping BeaconState test")
-		obj = &ethpb.BeaconStateCapella{}
+		obj = &ethpb.BeaconState4844{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
@@ -85,7 +85,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
 		t.Skip("Skipping SignedBeaconBlock test")
-		obj = &ethpb.SignedBeaconBlockCapella{}
+		obj = &ethpb.SignedBeaconBlock4844{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":

@@ -161,7 +161,7 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Capella:
+	case version.Capella, version.EIP4844:
 		a, err := attrs.PbV2()
 		if err != nil {
 			return nil, nil, err

@@ -28,18 +28,18 @@ type blockOperation func(context.Context, state.BeaconState, interfaces.SignedBe
 func RunBlockOperationTest(
 	t *testing.T,
 	folderPath string,
-	body *ethpb.BeaconBlockBodyCapella,
+	body *ethpb.BeaconBlockBody4844,
 	operationFn blockOperation,
 ) {
 	preBeaconStateFile, err := util.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
-	preStateBase := &ethpb.BeaconStateCapella{}
+	preStateBase := &ethpb.BeaconState4844{}
 	if err := preStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preState, err := state_native.InitializeFromProtoCapella(preStateBase)
+	preState, err := state_native.InitializeFromProto4844(preStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -52,7 +52,7 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	b := util.NewBeaconBlockCapella()
+	b := util.NewBeaconBlock4844()
 	b.Block.Body = body
 	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -65,11 +65,11 @@ func RunBlockOperationTest(
 		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 		require.NoError(t, err, "Failed to decompress")
 
-		postBeaconState := &ethpb.BeaconStateCapella{}
+		postBeaconState := &ethpb.BeaconState4844{}
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := state_native.ProtobufBeaconStateCapella(beaconState.ToProtoUnsafe())
+		pbState, err := state_native.ProtobufBeaconState4844(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)

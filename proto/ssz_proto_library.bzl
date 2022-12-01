@@ -21,6 +21,7 @@ mainnet = {
     "sync_committee_aggregate_bytes.size": "16",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
     "withdrawal.size": "16",
+    "blob.size": "131072",
 }
 
 minimal = {
@@ -37,6 +38,7 @@ minimal = {
     "sync_committee_aggregate_bytes.size": "1",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector8",
     "withdrawal.size": "4",
+    "blob.size": "128",
 }
 
 ###### Rules definitions #######

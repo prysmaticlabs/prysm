@@ -853,6 +853,9 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	}
 	switch blockToSave.Version() {
 	case version.EIP4844:
+		if blockToSave.IsBlinded() {
+			return snappy.Encode(nil, append(eip4844BlindKey, encodedBlock...)), nil
+		}
 		return snappy.Encode(nil, append(eip4844Key, encodedBlock...)), nil
 	case version.Capella:
 		if blockToSave.IsBlinded() {

@@ -34,3 +34,13 @@ func NewBlindedBeaconBlockCapella() *ethpb.SignedBlindedBeaconBlockCapella {
 func NewBlindedBeaconBlockCapellaV2() *v2.SignedBlindedBeaconBlockCapella {
 	return HydrateV2SignedBlindedBeaconBlockCapella(&v2.SignedBlindedBeaconBlockCapella{})
 }
+
+// NewBeaconBlock4844 creates a beacon block with minimum marshalable fields.
+func NewBeaconBlock4844() *ethpb.SignedBeaconBlock4844 {
+	return HydrateSignedBeaconBlock4844(&ethpb.SignedBeaconBlock4844{})
+}
+
+// NewBlindedBeaconBlock4844 creates a blinded beacon block with minimum marshalable fields.
+func NewBlindedBeaconBlock4844() *ethpb.SignedBlindedBeaconBlock4844 {
+	return HydrateSignedBlindedBeaconBlock4844(&ethpb.SignedBlindedBeaconBlock4844{})
+}

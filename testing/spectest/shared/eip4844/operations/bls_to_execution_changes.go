@@ -28,7 +28,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 			change := &ethpb.SignedBLSToExecutionChange{}
 			require.NoError(t, change.UnmarshalSSZ(changeSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyCapella{
+			body := &ethpb.BeaconBlockBody4844{
 				BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{change},
 			}
 			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {

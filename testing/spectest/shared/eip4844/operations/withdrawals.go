@@ -26,10 +26,10 @@ func RunWithdrawalsTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			payloadSSZ, err := snappy.Decode(nil /* dst */, payloadFile)
 			require.NoError(t, err, "Failed to decompress")
-			payload := &enginev1.ExecutionPayloadCapella{}
+			payload := &enginev1.ExecutionPayload4844{}
 			require.NoError(t, payload.UnmarshalSSZ(payloadSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBodyCapella{ExecutionPayload: payload}
+			body := &ethpb.BeaconBlockBody4844{ExecutionPayload: payload}
 			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				payload, err := b.Block().Body().Execution()
 				if err != nil {

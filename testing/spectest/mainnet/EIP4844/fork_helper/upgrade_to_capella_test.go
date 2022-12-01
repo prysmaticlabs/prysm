@@ -7,5 +7,5 @@ import (
 )
 
 func TestMainnet_EIP4844_UpgradeToCapella(t *testing.T) {
-	fork.RunUpgradeToCapella(t, "mainnet")
+	fork.RunUpgradeTo48444(t, "mainnet")
 }

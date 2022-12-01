@@ -15,16 +15,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RunCapellapella is a helper function that runs capella's fork spec tests.
-// It unmarshals a pre- and post-state to check `UpgradeToCapella` comply with spec implementation.
-func RunUpgradeToCapella(t *testing.T, config string) {
+// RunUpgradeTo48444 is a helper function that runs 48444's fork spec tests.
+// It unmarshals a pre- and post-state to check `UpgradeTo48444` comply with spec implementation.
+func RunUpgradeTo48444(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "fork/fork/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			if folder.Name() != "fork_next_epoch_with_block" {
-				t.Skip("Skipping non-upgrade_to_capella test")
+				t.Skip("Skipping non-upgrade_to_48444 test")
 			}
 			helpers.ClearCache()
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -39,16 +39,16 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 			}
 			preState, err := state_native.InitializeFromProtoCapella(preStateBase)
 			require.NoError(t, err)
-			postState, err := capella.UpgradeToCapella(preState)
+			postState, err := capella.UpgradeToEip4844(preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := state_native.ProtobufBeaconStateCapella(postState.ToProtoUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconState4844(postState.ToProtoUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
 			require.NoError(t, err)
 			postStateSSZ, err := snappy.Decode(nil /* dst */, postStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postStateFromFile := &ethpb.BeaconStateCapella{}
+			postStateFromFile := &ethpb.BeaconState4844{}
 			if err := postStateFromFile.UnmarshalSSZ(postStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}

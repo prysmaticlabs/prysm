@@ -300,7 +300,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Capella:
+	case version.Capella, version.EIP4844:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return false, emptyAttri, 0, errors.Wrap(err, "could not get expected withdrawals")

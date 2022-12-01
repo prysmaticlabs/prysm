@@ -178,7 +178,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		})
 	}()
 
-	if blk.Version() == version.Capella {
+	if blk.Version() == version.EIP4844 {
 		if err := vs.proposeBlockAndBlobs(ctx, root, blk); err != nil {
 			return nil, errors.Wrap(err, "could not propose block and blob")
 		}

@@ -38,7 +38,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair || b.Version() == version.Bellatrix || b.Version() == version.Capella {
+	if b.Version() >= version.Altair {
 		agg, err := b.Body().SyncAggregate()
 		if err != nil {
 			return err
@@ -68,7 +68,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			log = log.WithField("blobKzgCount", len(k))
 		}
 	}
-	if b.Version() == version.Capella {
+	if b.Version() == version.EIP4844 {
 		k, err := b.Body().BlobKzgCommitments()
 		if err != nil {
 			return err

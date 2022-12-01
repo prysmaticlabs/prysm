@@ -922,6 +922,7 @@ func initBlockBodyFromProto4844(pb *eth.BeaconBlockBody4844) (*BeaconBlockBody, 
 		syncAggregate:         pb.SyncAggregate,
 		executionPayload:      p,
 		blsToExecutionChanges: pb.BlsToExecutionChanges,
+		blobKzgCommitments:    pb.BlobKzgCommitments,
 	}
 	return b, nil
 }
@@ -950,6 +951,7 @@ func initBlindedBlockBodyFromProto4844(pb *eth.BlindedBeaconBlockBody4844) (*Bea
 		syncAggregate:          pb.SyncAggregate,
 		executionPayloadHeader: ph,
 		blsToExecutionChanges:  pb.BlsToExecutionChanges,
+		blobKzgCommitments:     pb.BlobKzgCommitments,
 	}
 	return b, nil
 }

@@ -213,8 +213,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
 	CapellaForkEpoch:     math.MaxUint64,
-	ShardingForkVersion:  []byte{8, 0, 0, 0},
-	ShardingForkEpoch:    math.MaxUint64,
 	EIP4844ForkVersion:   []byte{4, 0, 0, 0},
 	EIP4844ForkEpoch:     math.MaxUint64,
 
@@ -284,6 +282,7 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
 	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)
 	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
+	c.EIP4844ForkVersion = make([]byte, fieldparams.VersionLength)
 	c.ShardingForkVersion = make([]byte, fieldparams.VersionLength)
 
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
