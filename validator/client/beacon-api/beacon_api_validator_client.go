@@ -61,13 +61,8 @@ func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.Dom
 	panic("beaconApiValidatorClient.DomainData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetAttestationData(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetAttestationData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
+	return c.getAttestationData(in)
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {

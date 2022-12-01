@@ -4,6 +4,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attestation_data.go",
         "beacon_api_helpers.go",
         "beacon_api_validator_client.go",
         "genesis.go",
@@ -13,6 +14,7 @@ go_library(
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//validator/client/iface:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
