@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -22,6 +23,10 @@ import (
 
 const executionToBLSPadding = 12
 
+var ErrInvalidBLSChangeBeforeCapella = errors.New("cannot process BLSToExecutionChange before Capella fork")
+
+// ProcessBLSToExecutionChanges process all signed BLS_TO_EXECUTION_MESSAGE found in the block.
+// It does not verify their signature.
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
 	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
@@ -84,6 +89,9 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
 func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
+	if st.Version() < version.Capella {
+		return nil, ErrInvalidBLSChangeBeforeCapella
+	}
 	if signed == nil {
 		return nil, errNilSignedWithdrawalMessage
 	}
@@ -189,4 +197,18 @@ func BLSChangesSignatureBatch(
 		batch.Messages[i] = htr
 	}
 	return batch, nil
+}
+
+// VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+func VerifyBLSChangeSignature(
+	st state.BeaconState,
+	change *ethpbv2.SignedBLSToExecutionChange,
+) error {
+	epoch := slots.ToEpoch(st.Slot())
+	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing domain")
+	}
+	publicKey := change.Message.FromBlsPubkey
+	return signing.VerifySigningRoot(change.Message, publicKey, change.Signature, domain)
 }

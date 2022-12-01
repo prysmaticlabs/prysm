@@ -160,6 +160,16 @@ func (e executionPayload) ExcessiveDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbV1 --
+func (e executionPayload) PbV1() (*enginev1.ExecutionPayload, error) {
+	return e.p, nil
+}
+
+// PbV2 --
+func (e executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -303,6 +313,16 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 
 // ExcessiveDataGas --
 func (e executionPayloadHeader) ExcessiveDataGas() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV2 --
+func (e executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV1 --
+func (e executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -479,6 +499,16 @@ func (e executionPayloadCapella) ExcessiveDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbV2 --
+func (e executionPayloadCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return e.p, nil
+}
+
+// PbV1 --
+func (e executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -621,6 +651,16 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 func (e executionPayloadHeaderCapella) ExcessiveDataGas() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV2 --
+func (e executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV1 --
+func (e executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -907,6 +947,16 @@ func (e executionPayloadHeaderEIP4844) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
+// PbV1 --
+func (e executionPayloadHeaderEIP4844) PbV1() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV2 --
+func (e executionPayloadHeaderEIP4844) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadEIP4844 is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -1050,4 +1100,14 @@ func (e executionPayloadEIP4844) WithdrawalsRoot() ([]byte, error) {
 
 func (e executionPayloadEIP4844) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
+}
+
+// PbV1 --
+func (e executionPayloadEIP4844) PbV1() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV2 --
+func (e executionPayloadEIP4844) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
 }

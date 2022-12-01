@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -46,7 +47,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 	slot types.Slot,
 	vIdx types.ValidatorIndex,
 	headRoot [32]byte,
-	st state.BeaconState) (*enginev1.ExecutionPayload, error) {
+	st state.BeaconState) (interfaces.ExecutionData, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -73,10 +74,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload.FeeRecipient, feeRecipient)
+			warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
 			return payload, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
@@ -103,14 +104,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return emptyPayload(), nil
+			return emptyPayload()
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
 		if !hasTerminalBlock {
-			return emptyPayload(), nil
+			return emptyPayload()
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -161,11 +162,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, err
 	}
-	warnIfFeeRecipientDiffers(payload.FeeRecipient, feeRecipient)
+	warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
 	return payload, nil
 }
 
@@ -174,7 +175,7 @@ func (vs *Server) getExecutionPayloadV2AndBlobsBundleV1(ctx context.Context,
 	slot types.Slot,
 	vIdx types.ValidatorIndex,
 	headRoot [32]byte,
-	st state.BeaconState) (*enginev1.ExecutionPayloadCapella, *enginev1.BlobsBundle, error) {
+	st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -201,10 +202,10 @@ func (vs *Server) getExecutionPayloadV2AndBlobsBundleV1(ctx context.Context,
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayloadV2(ctx, pid)
+		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload.FeeRecipient, feeRecipient)
+			warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
 			sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, pid)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get blobs bundle from execution client")
@@ -279,11 +280,11 @@ func (vs *Server) getExecutionPayloadV2AndBlobsBundleV1(ctx context.Context,
 	if payloadID == nil {
 		return nil, nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayloadV2(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, nil, err
 	}
-	warnIfFeeRecipientDiffers(payload.FeeRecipient, feeRecipient)
+	warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
 
 	sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, *payloadID)
 	if err != nil {
@@ -351,8 +352,8 @@ func activationEpochNotReached(slot types.Slot) bool {
 	return false
 }
 
-func emptyPayload() *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
+func emptyPayload() (interfaces.ExecutionData, error) {
+	return consensusblocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -361,5 +362,5 @@ func emptyPayload() *enginev1.ExecutionPayload {
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
-	}
+	})
 }

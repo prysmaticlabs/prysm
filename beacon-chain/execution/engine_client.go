@@ -20,9 +20,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	types2 "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -78,8 +80,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
-	GetPayloadV2(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayloadCapella, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot types2.Slot) (interfaces.ExecutionData, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -189,7 +190,7 @@ func (s *Service) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot types2.Slot) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -200,26 +201,22 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 	d := time.Now().Add(defaultEngineTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
+
+	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
+		result := &pb.ExecutionPayloadCapella{}
+		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+		return blocks.WrappedExecutionPayloadCapella(result)
+	}
+
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
-	return result, handleRPCError(err)
-}
-
-// GetPayloadV2 calls the engine_getPayloadV2 method via JSON-RPC.
-func (s *Service) GetPayloadV2(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayloadCapella, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadV2")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
-
-	d := time.Now().Add(defaultEngineTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
-	defer cancel()
-	result := &pb.ExecutionPayloadCapella{}
-	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
-	return result, handleRPCError(err)
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
+	return blocks.WrappedExecutionPayload(result)
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
