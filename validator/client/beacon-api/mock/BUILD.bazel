@@ -5,7 +5,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "domain_data_mock.go",
-        "fork_version_mock.go",
         "genesis_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock",

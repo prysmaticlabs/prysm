@@ -14,26 +14,23 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url                 string
-	httpClient          http.Client
-	fallbackClient      iface.ValidatorClient
-	forkVersionProvider forkVersionProvider
-	genesisProvider     genesisProvider
-	domainDataProvider  domainDataProvider
+	url                string
+	httpClient         http.Client
+	fallbackClient     iface.ValidatorClient
+	genesisProvider    genesisProvider
+	domainDataProvider domainDataProvider
 }
 
 func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
 	httpClient := http.Client{Timeout: timeout}
 
-	forkVersionProvider := beaconApiForkVersionProvider{httpClient: httpClient, url: url}
 	genesisProvider := beaconApiGenesisProvider{httpClient: httpClient, url: url}
 
 	return &beaconApiValidatorClient{
-		url:                 url,
-		httpClient:          httpClient,
-		forkVersionProvider: forkVersionProvider,
-		genesisProvider:     genesisProvider,
-		domainDataProvider:  beaconApiDomainDataProvider{forkVersionProvider: forkVersionProvider, genesisProvider: genesisProvider},
+		url:                url,
+		httpClient:         httpClient,
+		genesisProvider:    genesisProvider,
+		domainDataProvider: beaconApiDomainDataProvider{genesisProvider: genesisProvider},
 	}
 }
 

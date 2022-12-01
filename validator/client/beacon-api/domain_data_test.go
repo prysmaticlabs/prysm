@@ -44,22 +44,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 		nil,
 	).Times(1)
 
-	// Make sure that GetForkVersion() is called exactly once and with the right arguments
-	forkVersionProvider := mock.NewMockforkVersionProvider(ctrl)
-	var forkVersionArray [4]byte
-	copy(forkVersionArray[:], forkVersion)
-	forkVersionProvider.EXPECT().GetForkVersion(
-		epoch,
-	).Return(
-		forkVersionArray,
-		nil,
-	).Times(1)
-
-	domainDataProvider := &beaconApiDomainDataProvider{
-		genesisProvider:     genesisProvider,
-		forkVersionProvider: forkVersionProvider,
-	}
-
+	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
 	resp, err := domainDataProvider.GetDomainData(epoch, domainType[:])
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
@@ -80,81 +65,41 @@ func TestGetDomainData_InvalidDomainType(t *testing.T) {
 }
 
 func TestGetDomainData_ForkVersionError(t *testing.T) {
-	// Mock the GetForkVersion() call
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	forkVersionProvider := mock.NewMockforkVersionProvider(ctrl)
+	// Revert the beacon config to its previous state when we're done with the test case
+	prevBeaconConfig := params.BeaconConfig().Copy()
+	defer params.OverrideBeaconConfig(prevBeaconConfig)
+	params.BeaconConfig().AltairForkVersion = []byte{}
 
 	epoch := params.BeaconConfig().AltairForkEpoch
-
-	// Make sure that GetForkVersion() is called exactly once and with the right arguments
-	forkVersionProvider.EXPECT().GetForkVersion(
-		epoch,
-	).Return(
-		[4]byte{},
-		errors.New(""),
-	).Times(1)
-
-	domainDataProvider := &beaconApiDomainDataProvider{
-		forkVersionProvider: forkVersionProvider,
-	}
-
+	domainDataProvider := &beaconApiDomainDataProvider{}
 	_, err := domainDataProvider.GetDomainData(epoch, make([]byte, 4))
 	assert.ErrorContains(t, fmt.Sprintf("failed to get fork version for epoch %d", epoch), err)
 }
 
 func TestGetDomainData_GenesisError(t *testing.T) {
 	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-	forkVersion := params.BeaconConfig().AltairForkVersion
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	// Make sure that GetForkVersion() is called exactly once and with the right arguments
-	forkVersionProvider := mock.NewMockforkVersionProvider(ctrl)
-	var forkVersionArray [4]byte
-	copy(forkVersionArray[:], forkVersion)
-	forkVersionProvider.EXPECT().GetForkVersion(
-		epoch,
-	).Return(
-		forkVersionArray,
-		nil,
-	).Times(1)
-
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("")).Times(1)
 
-	domainDataProvider := &beaconApiDomainDataProvider{
-		genesisProvider:     genesisProvider,
-		forkVersionProvider: forkVersionProvider,
-	}
-
+	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
 	_, err := domainDataProvider.GetDomainData(epoch, domainType[:])
 	assert.ErrorContains(t, "failed to get genesis info", err)
 }
 
 func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-	forkVersion := params.BeaconConfig().AltairForkVersion
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	// Make sure that GetForkVersion() is called exactly once and with the right arguments
-	forkVersionProvider := mock.NewMockforkVersionProvider(ctrl)
-	var forkVersionArray [4]byte
-	copy(forkVersionArray[:], forkVersion)
-	forkVersionProvider.EXPECT().GetForkVersion(
-		epoch,
-	).Return(
-		forkVersionArray,
-		nil,
-	).Times(1)
 
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
@@ -164,10 +109,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 		nil,
 	).Times(1)
 
-	domainDataProvider := &beaconApiDomainDataProvider{
-		genesisProvider:     genesisProvider,
-		forkVersionProvider: forkVersionProvider,
-	}
+	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
 
 	_, err := domainDataProvider.GetDomainData(epoch, domainType[:])
 	assert.ErrorContains(t, "invalid genesis validators root: foo", err)

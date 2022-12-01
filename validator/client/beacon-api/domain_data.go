@@ -15,8 +15,7 @@ type domainDataProvider interface {
 }
 
 type beaconApiDomainDataProvider struct {
-	forkVersionProvider forkVersionProvider
-	genesisProvider     genesisProvider
+	genesisProvider genesisProvider
 }
 
 func (c beaconApiDomainDataProvider) GetDomainData(epoch types.Epoch, domainType []byte) (*ethpb.DomainResponse, error) {
@@ -25,7 +24,7 @@ func (c beaconApiDomainDataProvider) GetDomainData(epoch types.Epoch, domainType
 	}
 
 	// Get the fork version from the given epoch
-	forkVersion, err := c.forkVersionProvider.GetForkVersion(epoch)
+	forkVersion, err := getForkVersion(epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get fork version for epoch %d", epoch)
 	}

@@ -73,7 +73,6 @@ gofmt -s -w "$mock_path/."
 beacon_api_mock_path="validator/client/beacon-api/mock"
 beacon_api_mocks=(
       "$beacon_api_mock_path/genesis_mock.go genesis.go"
-      "$beacon_api_mock_path/fork_version_mock.go fork_version.go"
       "$beacon_api_mock_path/domain_data_mock.go domain_data.go"
 )
 
