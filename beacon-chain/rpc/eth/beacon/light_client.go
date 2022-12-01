@@ -186,21 +186,26 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 	}
 
 	// Get the block
-	latestBlockHeader := state.LatestBlockHeader()
+	latestBlockHeader := *state.LatestBlockHeader()
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
+	}
+	latestBlockHeader.StateRoot = stateRoot[:]
 	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get latest block header root: %v", err)
 	}
 
 	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
-	if err != nil {
+	if err != nil || block == nil {
 		return nil, status.Errorf(codes.Internal, "Could not get latest block: %v", err)
 	}
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
-	if err != nil {
+	if err != nil || attestedBlock == nil {
 		return nil, status.Errorf(codes.Internal, "Could not get attested block: %v", err)
 	}
 
@@ -263,21 +268,26 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 	}
 
 	// Get the block
-	latestBlockHeader := state.LatestBlockHeader()
+	latestBlockHeader := *state.LatestBlockHeader()
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
+	}
+	latestBlockHeader.StateRoot = stateRoot[:]
 	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get latest block header root: %v", err)
 	}
 
 	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
-	if err != nil {
+	if err != nil || block == nil {
 		return nil, status.Errorf(codes.Internal, "Could not get latest block: %v", err)
 	}
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
-	if err != nil {
+	if err != nil || attestedBlock == nil {
 		return nil, status.Errorf(codes.Internal, "Could not get attested block: %v", err)
 	}
 
