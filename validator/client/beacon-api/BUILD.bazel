@@ -28,6 +28,7 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
+        "attestation_data_test.go",
         "beacon_api_helpers_test.go",
         "genesis_test.go",
         "handlers_test.go",

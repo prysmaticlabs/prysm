@@ -68,6 +68,10 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 			continue
 		}
 
+		if !validRoot(attestationData.BeaconBlockRoot) {
+			return nil, errors.Errorf("invalid beacon block root: %s", attestationData.BeaconBlockRoot)
+		}
+
 		beaconBlockRoot, err := hexutil.Decode(attestationData.BeaconBlockRoot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to decode beacon block root: %s", attestationData.BeaconBlockRoot)
@@ -87,6 +91,10 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 			return nil, errors.Wrapf(err, "failed to parse attestation source epoch: %s", attestationData.Source.Epoch)
 		}
 
+		if !validRoot(attestationData.Source.Root) {
+			return nil, errors.Errorf("invalid attestation source root: %s", attestationData.Source.Root)
+		}
+
 		sourceRoot, err := hexutil.Decode(attestationData.Source.Root)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to decode attestation source root: %s", attestationData.Source.Root)
@@ -99,6 +107,10 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 		targetEpoch, err := strconv.ParseUint(attestationData.Target.Epoch, 10, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse attestation target epoch: %s", attestationData.Target.Epoch)
+		}
+
+		if !validRoot(attestationData.Target.Root) {
+			return nil, errors.Errorf("invalid attestation target root: %s", attestationData.Target.Root)
 		}
 
 		targetRoot, err := hexutil.Decode(attestationData.Target.Root)
