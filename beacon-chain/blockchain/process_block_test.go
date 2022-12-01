@@ -2327,7 +2327,7 @@ func TestHandleBBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := consensusblocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(ctx, blk))
+		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella no changes", func(t *testing.T) {
@@ -2337,7 +2337,7 @@ func TestHandleBBlockBLSToExecutionChanges(t *testing.T) {
 		}
 		blk, err := consensusblocks.NewBeaconBlock(pbb)
 		require.NoError(t, err)
-		require.NoError(t, service.handleBlockBLSToExecChanges(ctx, blk))
+		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
 	})
 
 	t.Run("Post Capella some changes", func(t *testing.T) {
@@ -2359,7 +2359,7 @@ func TestHandleBBlockBLSToExecutionChanges(t *testing.T) {
 
 		pool.InsertBLSToExecChange(signedChange)
 		require.Equal(t, true, pool.ValidatorExists(idx))
-		require.NoError(t, service.handleBlockBLSToExecChanges(ctx, blk))
+		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
 	})
 }
