@@ -364,6 +364,13 @@ func Uint64ToBytesLittleEndian(i uint64) []byte {
 	return buf
 }
 
+// Uint64ToBytesLittleEndian conversion.
+func Uint64ToBytesLittleEndian32(i uint64) []byte {
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, i)
+	return buf
+}
+
 // Uint64ToBytesBigEndian conversion.
 func Uint64ToBytesBigEndian(i uint64) []byte {
 	buf := make([]byte, 8)
