@@ -11,17 +11,26 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if in == nil {
-		return nil, errors.New("`in *ethpb.AttestationDataRequest` is nil")
-	}
+type attestationDataProvider interface {
+	GetAttestationData(slot types.Slot, committeeIndex types.CommitteeIndex) (*ethpb.AttestationData, error)
+}
 
-	resp, err := c.httpClient.Get(c.url + fmt.Sprintf("/eth/v1/beacon/blocks/%d/attestations", in.Slot))
+type beaconApiAttestationDataProvider struct {
+	httpClient http.Client
+	url        string
+}
+
+func (c beaconApiAttestationDataProvider) GetAttestationData(
+	reqSlot types.Slot,
+	reqCommitteeIndex types.CommitteeIndex,
+) (*ethpb.AttestationData, error) {
+	resp, err := c.httpClient.Get(c.url + fmt.Sprintf("/eth/v1/beacon/blocks/%d/attestations", reqSlot))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query REST API attestations endpoint")
 	}
@@ -32,16 +41,16 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		errorJson := apimiddleware.EventErrorJson{}
+		errorJson := apimiddleware.DefaultErrorJson{}
 		err = json.NewDecoder(resp.Body).Decode(&errorJson)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to decode response body attestations error json")
 		}
 
-		return nil, errors.Errorf("error %d: %s", errorJson.StatusCode, errorJson.Message)
+		return nil, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
 	}
 
-	blockAttestationsResponseJson := apimiddleware.BlockAttestationsResponseJson{}
+	blockAttestationsResponseJson := rpcmiddleware.BlockAttestationsResponseJson{}
 	err = json.NewDecoder(resp.Body).Decode(&blockAttestationsResponseJson)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode response body attestations json")
@@ -49,22 +58,21 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 
 	for _, attestationJson := range blockAttestationsResponseJson.Data {
 		if attestationJson == nil {
-			return nil, errors.New("attestationJson is nil")
+			return nil, errors.New("attestation is nil")
 		}
 
 		if attestationJson.Data == nil {
-			return nil, errors.New("attestationJson data is nil")
+			return nil, errors.New("attestation data is nil")
 		}
 
 		attestationData := attestationJson.Data
-
 		committeeIndex, err := strconv.ParseUint(attestationData.CommitteeIndex, 10, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse attestation committee index: %s", attestationData.CommitteeIndex)
 		}
 
 		// Skip all attestation data that don't have our committee index
-		if committeeIndex != uint64(in.CommitteeIndex) {
+		if committeeIndex != uint64(reqCommitteeIndex) {
 			continue
 		}
 
@@ -83,7 +91,7 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 		}
 
 		if attestationData.Source == nil {
-			return nil, errors.Wrap(err, "attestation source is nil")
+			return nil, errors.New("attestation source is nil")
 		}
 
 		sourceEpoch, err := strconv.ParseUint(attestationData.Source.Epoch, 10, 64)
@@ -101,7 +109,7 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 		}
 
 		if attestationData.Target == nil {
-			return nil, errors.Wrap(err, "attestation target is nil")
+			return nil, errors.New("attestation target is nil")
 		}
 
 		targetEpoch, err := strconv.ParseUint(attestationData.Target.Epoch, 10, 64)
@@ -135,5 +143,5 @@ func (c *beaconApiValidatorClient) getAttestationData(in *ethpb.AttestationDataR
 		return response, nil
 	}
 
-	return nil, errors.Errorf("attestation data not found for slot `%d` and committee index `%d`", in.Slot, in.CommitteeIndex)
+	return nil, errors.Errorf("attestation data not found for slot `%d` and committee index `%d`", reqSlot, reqCommitteeIndex)
 }

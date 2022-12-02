@@ -5,6 +5,7 @@ package beacon_api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -14,24 +15,26 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url            string
-	httpClient     http.Client
-	fallbackClient iface.ValidatorClient
+	url                     string
+	httpClient              http.Client
+	fallbackClient          iface.ValidatorClient
+	attestationDataProvider attestationDataProvider
 }
 
-func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
+func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
+	httpClient := http.Client{Timeout: timeout}
+
 	return &beaconApiValidatorClient{
-		url:        url,
-		httpClient: http.Client{Timeout: timeout},
+		url:                     url,
+		httpClient:              http.Client{Timeout: timeout},
+		attestationDataProvider: beaconApiAttestationDataProvider{httpClient: httpClient, url: url},
 	}
 }
 
 func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
-	return &beaconApiValidatorClient{
-		url:            url,
-		httpClient:     http.Client{Timeout: timeout},
-		fallbackClient: fallbackClient,
-	}
+	beaconApiValidatorClient := NewBeaconApiValidatorClient(url, timeout)
+	beaconApiValidatorClient.fallbackClient = fallbackClient
+	return beaconApiValidatorClient
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -62,7 +65,11 @@ func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.Dom
 }
 
 func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	return c.getAttestationData(in)
+	if in == nil {
+		return nil, errors.New("GetAttestationData received nil argument `in`")
+	}
+
+	return c.attestationDataProvider.GetAttestationData(in.Slot, in.CommitteeIndex)
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
