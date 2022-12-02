@@ -35,31 +35,6 @@ type Update struct {
 	ethpbv2.LightClientGenericUpdate `json:"update,omitempty"`
 }
 
-type errUnknownUpdateType struct{}
-
-func (e errUnknownUpdateType) Error() string {
-	return "unknown update type"
-}
-
-func (u *Update) MarshalJSON() ([]byte, error) {
-	var typeName string
-	switch (u.LightClientGenericUpdate).(type) {
-	case *ethpbv2.LightClientFinalityUpdate:
-		typeName = "light_client_finality_update"
-	case *ethpbv2.LightClientOptimisticUpdate:
-		typeName = "light_client_optimistic_update"
-	case *ethpbv2.LightClientUpdate:
-		typeName = "light_client_update"
-	default:
-		return nil, errUnknownUpdateType{}
-	}
-	m := map[string]interface{}{
-		"type":   typeName,
-		"update": u,
-	}
-	return json.Marshal(m)
-}
-
 func (u *Update) UnmarshalJSON(data []byte) error {
 	value, err := UnmarshalCustomValue(data, "type", "update", map[string]reflect.Type{
 		"light_client_finality_update":   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
