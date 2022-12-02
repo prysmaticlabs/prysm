@@ -17,16 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-type attestationDataProvider interface {
-	GetAttestationData(slot types.Slot, committeeIndex types.CommitteeIndex) (*ethpb.AttestationData, error)
-}
-
-type beaconApiAttestationDataProvider struct {
-	httpClient http.Client
-	url        string
-}
-
-func (c beaconApiAttestationDataProvider) GetAttestationData(
+func (c beaconApiValidatorClient) getAttestationData(
 	reqSlot types.Slot,
 	reqCommitteeIndex types.CommitteeIndex,
 ) (*ethpb.AttestationData, error) {

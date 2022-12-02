@@ -49,12 +49,12 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: time.Second * 5},
 	}
 
-	resp, err := attestationDataProvider.GetAttestationData(types.Slot(expectedSlot), types.CommitteeIndex(expectedCommitteeIndex))
+	resp, err := validatorClient.getAttestationData(types.Slot(expectedSlot), types.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
 	require.NotNil(t, resp)
@@ -177,12 +177,12 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
-			attestationDataProvider := &beaconApiAttestationDataProvider{
+			validatorClient := &beaconApiValidatorClient{
 				url:        server.URL,
 				httpClient: http.Client{Timeout: time.Second * 5},
 			}
 
-			_, err := attestationDataProvider.GetAttestationData(1, 2)
+			_, err := validatorClient.getAttestationData(1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
@@ -198,12 +198,12 @@ func TestGetAttestationData_InvalidAttestationJson(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: time.Second * 5},
 	}
 
-	_, err := attestationDataProvider.GetAttestationData(1, 2)
+	_, err := validatorClient.getAttestationData(1, 2)
 	assert.ErrorContains(t, "failed to decode response body attestation_data json", err)
 }
 
@@ -214,12 +214,12 @@ func TestGetAttestationData_InvalidErrorJson(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: time.Second * 5},
 	}
 
-	_, err := attestationDataProvider.GetAttestationData(1, 2)
+	_, err := validatorClient.getAttestationData(1, 2)
 	assert.ErrorContains(t, "failed to decode response body attestation_data error json", err)
 }
 
@@ -230,12 +230,12 @@ func TestGetAttestationData_404Error(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: time.Second * 5},
 	}
 
-	_, err := attestationDataProvider.GetAttestationData(1, 2)
+	_, err := validatorClient.getAttestationData(1, 2)
 	assert.ErrorContains(t, "error 404: Not found", err)
 }
 
@@ -246,12 +246,12 @@ func TestGetAttestationData_500Error(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: time.Second * 5},
 	}
 
-	_, err := attestationDataProvider.GetAttestationData(1, 2)
+	_, err := validatorClient.getAttestationData(1, 2)
 	assert.ErrorContains(t, "error 500: Internal server error", err)
 }
 
@@ -262,12 +262,12 @@ func TestGetAttestationData_Timeout(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	attestationDataProvider := &beaconApiAttestationDataProvider{
+	validatorClient := &beaconApiValidatorClient{
 		url:        server.URL,
 		httpClient: http.Client{Timeout: 1},
 	}
 
-	_, err := attestationDataProvider.GetAttestationData(1, 2)
+	_, err := validatorClient.getAttestationData(1, 2)
 	assert.ErrorContains(t, "failed to query REST API /eth/v1/validator/attestation_data endpoint", err)
 	assert.ErrorContains(t, "context deadline exceeded", err)
 }

@@ -15,26 +15,24 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url                     string
-	httpClient              http.Client
-	fallbackClient          iface.ValidatorClient
-	attestationDataProvider attestationDataProvider
+	url            string
+	httpClient     http.Client
+	fallbackClient iface.ValidatorClient
 }
 
-func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
-	httpClient := http.Client{Timeout: timeout}
-
+func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
 	return &beaconApiValidatorClient{
-		url:                     url,
-		httpClient:              http.Client{Timeout: timeout},
-		attestationDataProvider: beaconApiAttestationDataProvider{httpClient: httpClient, url: url},
+		url:        url,
+		httpClient: http.Client{Timeout: timeout},
 	}
 }
 
 func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
-	beaconApiValidatorClient := NewBeaconApiValidatorClient(url, timeout)
-	beaconApiValidatorClient.fallbackClient = fallbackClient
-	return beaconApiValidatorClient
+	return &beaconApiValidatorClient{
+		url:            url,
+		httpClient:     http.Client{Timeout: timeout},
+		fallbackClient: fallbackClient,
+	}
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -69,7 +67,7 @@ func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *eth
 		return nil, errors.New("GetAttestationData received nil argument `in`")
 	}
 
-	return c.attestationDataProvider.GetAttestationData(in.Slot, in.CommitteeIndex)
+	return c.getAttestationData(in.Slot, in.CommitteeIndex)
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
