@@ -1,6 +1,7 @@
 package depositsnapshot
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/math"
 )
 
@@ -8,6 +9,7 @@ const (
 	DepositContractDepth = 32 // Maximum tree depth as defined by EIP-4881
 )
 
+var ErrInvalidFinalizedHeight = errors.New("invalid finalized tree height")
 var zeroHash = [32]byte{}
 
 // MerkleTreeNode is the interface for a Merkle tree.
@@ -56,14 +58,14 @@ func fromSnapshotParts(finalized [][32]byte, deposits uint64, depth uint64) Merk
 
 // fromSnapshotPartsIter creates a new Merkle tree from a list of finalized leaves, number of deposits and specified depth.
 // The tree creation is done iteratively and not recursively.
-func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) MerkleTreeNode {
+func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error) {
 	switch {
 	case deposits == 0, len(finalized) == 0:
-		return &ZeroNode{depth: depth}
+		return &ZeroNode{depth: depth}, nil
 	case depth == 0:
 		return &LeafNode{
 			hash: finalized[0],
-		}
+		}, nil
 	default:
 		node := &InnerNode{
 			left:  nil,
@@ -79,6 +81,9 @@ func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) 
 				node = next // = node.left
 				depth -= 1
 			} else if deposits > split {
+				if len(finalized) < 2 {
+					return nil, ErrInvalidFinalizedHeight
+				}
 				node.left = &FinalizedNode{
 					deposits: deposits,
 					hash:     finalized[0],
@@ -90,12 +95,15 @@ func fromSnapshotPartsIter(finalized [][32]byte, deposits uint64, depth uint64) 
 				node = next // = node.right
 				depth -= 1
 			} else {
+				if len(finalized) < 2 {
+					return nil, ErrInvalidFinalizedHeight
+				}
 				node.left = &FinalizedNode{split, finalized[0]}
 				node.right = &ZeroNode{depth: depth - 1}
 				finalized = finalized[1:]
 				break
 			}
 		}
-		return node
+		return node, nil
 	}
 }

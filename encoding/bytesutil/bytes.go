@@ -364,7 +364,7 @@ func Uint64ToBytesLittleEndian(i uint64) []byte {
 	return buf
 }
 
-// Uint64ToBytesLittleEndian conversion.
+// Uint64ToBytesLittleEndian32 conversion.
 func Uint64ToBytesLittleEndian32(i uint64) []byte {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, i)

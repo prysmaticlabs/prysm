@@ -42,5 +42,5 @@ func (z *ZeroNode) GetFinalized(result [][32]byte) ([][32]byte, uint64) {
 
 // PushLeaf adds a new leaf node at the next available zero node.
 func (z *ZeroNode) PushLeaf(leaf [32]byte, deposits uint64, depth uint64) (MerkleTreeNode, error) {
-	return fromSnapshotPartsIter([][32]byte{leaf}, deposits, depth), nil
+	return fromSnapshotPartsIter([][32]byte{leaf}, deposits, depth)
 }

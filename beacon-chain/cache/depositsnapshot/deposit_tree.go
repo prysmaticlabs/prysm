@@ -32,12 +32,16 @@ func NewDepositTreeFromSnapshot(finalized [][32]byte, deposits uint64, finalized
 }
 
 // NewDepositTreeFromSnapshotIter creates a deposit tree from an existing deposit tree snapshot iteratively.
-func NewDepositTreeFromSnapshotIter(finalized [][32]byte, deposits uint64, finalizedExecutionblock [32]byte) *DepositTree {
+func NewDepositTreeFromSnapshotIter(finalized [][32]byte, deposits uint64, finalizedExecutionblock [32]byte) (*DepositTree, error) {
+	tree, err := fromSnapshotPartsIter(finalized, deposits, DepositContractDepth)
+	if err != nil {
+		return nil, err
+	}
 	return &DepositTree{
-		tree:                    fromSnapshotPartsIter(finalized, deposits, DepositContractDepth),
+		tree:                    tree,
 		depositCount:            deposits,
 		finalizedExecutionblock: finalizedExecutionblock,
-	}
+	}, nil
 }
 
 // AddDeposit adds a new deposit to the tree.
@@ -45,10 +49,11 @@ func NewDepositTreeFromSnapshotIter(finalized [][32]byte, deposits uint64, final
 func (d *DepositTree) AddDeposit(leaf [32]byte, deposits uint64) error {
 	var err error
 	d.depositCount += 1
-	d.tree, err = d.tree.PushLeaf(leaf, deposits, DepositContractDepth)
+	tree, err := d.tree.PushLeaf(leaf, deposits, DepositContractDepth)
 	if err != nil {
 		return err
 	}
+	d.tree = tree
 	return nil
 }
 
