@@ -5,6 +5,7 @@ package beacon_api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -204,7 +205,7 @@ func TestGetAttestationData_InvalidAttestationJson(t *testing.T) {
 	}
 
 	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, "failed to decode response body attestation_data json", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to decode response json for %s", server.URL), err)
 }
 
 func TestGetAttestationData_InvalidErrorJson(t *testing.T) {
@@ -220,7 +221,7 @@ func TestGetAttestationData_InvalidErrorJson(t *testing.T) {
 	}
 
 	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, "failed to decode response body attestation_data error json", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to decode error json for %s", server.URL), err)
 }
 
 func TestGetAttestationData_404Error(t *testing.T) {
@@ -268,7 +269,7 @@ func TestGetAttestationData_Timeout(t *testing.T) {
 	}
 
 	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, "failed to query REST API /eth/v1/validator/attestation_data endpoint", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to query REST API %s/eth/v1/validator/attestation_data", server.URL), err)
 	assert.ErrorContains(t, "context deadline exceeded", err)
 }
 

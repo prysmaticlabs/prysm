@@ -5,7 +5,6 @@ package beacon_api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -57,28 +56,10 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, *apimiddleware.DefaultErrorJson, error) {
-	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to query REST API genesis endpoint")
-	}
-	defer func() {
-		if err = resp.Body.Close(); err != nil {
-			return
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		errorJson := &apimiddleware.DefaultErrorJson{}
-		if err := json.NewDecoder(resp.Body).Decode(&errorJson); err != nil {
-			return nil, nil, errors.Wrap(err, "failed to decode response body genesis error json")
-		}
-
-		return nil, errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
-	}
-
 	genesisJson := &rpcmiddleware.GenesisResponseJson{}
-	if err := json.NewDecoder(resp.Body).Decode(&genesisJson); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to decode response body genesis json")
+	errorJson, err := getRestJsonResponse(c.httpClient, c.url+"/eth/v1/beacon/genesis", genesisJson)
+	if err != nil {
+		return nil, errorJson, errors.Wrap(err, "failed to get json response")
 	}
 
 	if genesisJson.Data == nil {

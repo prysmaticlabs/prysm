@@ -4,6 +4,7 @@
 package beacon_api
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,7 +53,7 @@ func TestGetGenesis_InvalidJsonGenesis(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
 	_, httpError, err := validatorClient.getGenesis()
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to decode response body genesis json", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to decode response json for %s", server.URL), err)
 }
 
 func TestGetGenesis_InvalidJsonError(t *testing.T) {
@@ -62,7 +63,7 @@ func TestGetGenesis_InvalidJsonError(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
 	_, httpError, err := validatorClient.getGenesis()
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to decode error json for %s", server.URL), err)
 }
 
 func TestGetGenesis_404Error(t *testing.T) {
@@ -99,5 +100,6 @@ func TestGetGenesis_Timeout(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{url: server.URL, httpClient: http.Client{Timeout: 1}}
 	_, httpError, err := validatorClient.getGenesis()
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
+	assert.ErrorContains(t, fmt.Sprintf("failed to query REST API %s/eth/v1/beacon/genesis", server.URL), err)
+	assert.ErrorContains(t, "context deadline exceeded", err)
 }

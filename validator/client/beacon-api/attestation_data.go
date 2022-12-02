@@ -4,14 +4,11 @@
 package beacon_api
 
 import (
-	"encoding/json"
-	"net/http"
 	"net/url"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -26,30 +23,10 @@ func (c beaconApiValidatorClient) getAttestationData(
 	params.Add("committee_index", strconv.FormatUint(uint64(reqCommitteeIndex), 10))
 
 	query := buildURL(c.url, "eth/v1/validator/attestation_data", params)
-	resp, err := c.httpClient.Get(query)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query REST API /eth/v1/validator/attestation_data endpoint")
-	}
-	defer func() {
-		if err = resp.Body.Close(); err != nil {
-			return
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		errorJson := apimiddleware.DefaultErrorJson{}
-		err = json.NewDecoder(resp.Body).Decode(&errorJson)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode response body attestation_data error json")
-		}
-
-		return nil, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
-	}
-
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
-	err = json.NewDecoder(resp.Body).Decode(&produceAttestationDataResponseJson)
+	_, err := getRestJsonResponse(c.httpClient, query, &produceAttestationDataResponseJson)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode response body attestation_data json")
+		return nil, errors.Wrap(err, "failed to get json response")
 	}
 
 	if produceAttestationDataResponseJson.Data == nil {
