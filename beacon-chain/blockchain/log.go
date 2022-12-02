@@ -117,12 +117,24 @@ func logPayload(block interfaces.BeaconBlock) error {
 		return errors.New("gas limit should not be 0")
 	}
 	gasUtilized := float64(payload.GasUsed()) / float64(payload.GasLimit())
-
-	log.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash())),
 		"blockNumber": payload.BlockNumber,
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
-	}).Debug("Synced new payload")
+	}
+	if block.Version() >= version.Capella {
+		withdrawals, err := payload.Withdrawals()
+		if err != nil {
+			return errors.Wrap(err, "could not get withdrawals")
+		}
+		fields["withdrawals"] = len(withdrawals)
+		changes, err := block.Body().BLSToExecutionChanges()
+		if err != nil {
+			return errors.Wrap(err, "could not get BLSToExecutionChanges")
+		}
+		fields["blsToExecutionChanges"] = len(changes)
+	}
+	log.WithFields(fields).Debug("Synced new payload")
 	return nil
 }
