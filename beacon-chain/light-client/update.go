@@ -36,7 +36,7 @@ type Update struct {
 }
 
 func (u *Update) UnmarshalJSON(data []byte) error {
-	value, err := UnmarshalCustomValue(data, "type", "update", map[string]reflect.Type{
+	value, err := unmarshalGenericUpdate(data, "type", "update", map[string]reflect.Type{
 		"light_client_finality_update":   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
 		"light_client_optimistic_update": reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
 		"light_client_update":            reflect.TypeOf(ethpbv2.LightClientUpdate{}),
@@ -48,7 +48,7 @@ func (u *Update) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func UnmarshalCustomValue(data []byte, typeJsonField, valueJsonField string,
+func unmarshalGenericUpdate(data []byte, typeJsonField, valueJsonField string,
 	customTypes map[string]reflect.Type) (ethpbv2.LightClientGenericUpdate, error) {
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
