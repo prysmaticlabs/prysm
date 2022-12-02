@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"context"
 	"math/rand"
 	"testing"
 
@@ -746,7 +745,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 		}
 		signedChanges[i] = signed
 	}
-	batch, err := blocks.BLSChangesSignatureBatch(context.Background(), st, signedChanges)
+	batch, err := blocks.BLSChangesSignatureBatch(st, signedChanges)
 	require.NoError(t, err)
 	verify, err := batch.Verify()
 	require.NoError(t, err)
