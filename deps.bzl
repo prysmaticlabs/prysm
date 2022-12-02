@@ -2161,6 +2161,7 @@ def prysm_deps():
         importpath = "github.com/lucas-clemente/quic-go",
         build_directives = [
             "gazelle:exclude mockgen.go",
+            "gazelle:exclude tools.go",
         ],
         sum = "h1:MfNp3fk0wjWRajw6quMFA3ap1AVtlU+2mtwmbVogB2M=",
         version = "v0.31.0",
