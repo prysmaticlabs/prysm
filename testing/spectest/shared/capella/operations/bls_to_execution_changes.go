@@ -44,7 +44,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 				if err != nil {
 					return nil, err
 				}
-				cSet, err := blocks.BLSChangesSignatureBatch(ctx, st, changes)
+				cSet, err := blocks.BLSChangesSignatureBatch(st, changes)
 				if err != nil {
 					return nil, err
 				}
