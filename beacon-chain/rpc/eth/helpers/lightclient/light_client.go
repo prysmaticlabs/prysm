@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-// NewLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
+// NewLightClientBootstrapFromBeaconState - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
 //
 //	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
@@ -35,7 +35,7 @@ import (
 //	    current_sync_committee=state.current_sync_committee,
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
-func NewLightClientBootstrap(ctx context.Context, state state.BeaconState) (*ethpbv2.LightClientBootstrap, error) {
+func NewLightClientBootstrapFromBeaconState(ctx context.Context, state state.BeaconState) (*ethpbv2.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, status.Errorf(codes.Internal, "Invalid state slot: %d", state.Slot())
@@ -85,7 +85,7 @@ func NewLightClientBootstrap(ctx context.Context, state state.BeaconState) (*eth
 	return result, nil
 }
 
-// NewLightClientUpdate - implements https://github.com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
+// NewLightClientUpdateFromBeaconState - implements https://github.com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
 // def create_light_client_update(state: BeaconState,
 //
 //	                           block: SignedBeaconBlock,
@@ -142,7 +142,7 @@ func NewLightClientBootstrap(ctx context.Context, state state.BeaconState) (*eth
 //	    sync_aggregate=block.message.body.sync_aggregate,
 //	    signature_slot=block.message.slot,
 //	)
-func NewLightClientUpdate(
+func NewLightClientUpdateFromBeaconState(
 	ctx context.Context,
 	config *params.BeaconChainConfig,
 	slotsPerPeriod uint64,
@@ -334,7 +334,7 @@ func NewLightClientUpdate(
 	return result, nil
 }
 
-// NewLightClientFinalityUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
+// NewLightClientFinalityUpdateFromUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
 // def create_light_client_finality_update(update: LightClientUpdate) -> LightClientFinalityUpdate:
 //
 //	return LightClientFinalityUpdate(
@@ -344,7 +344,7 @@ func NewLightClientUpdate(
 //	    sync_aggregate=update.sync_aggregate,
 //	    signature_slot=update.signature_slot,
 //	)
-func NewLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
+func NewLightClientFinalityUpdateFromUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
 	return &ethpbv2.LightClientFinalityUpdate{
 		AttestedHeader:  update.AttestedHeader,
 		FinalizedHeader: update.FinalizedHeader,
@@ -354,7 +354,7 @@ func NewLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.Li
 	}
 }
 
-// NewLightClientOptimisticUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_optimistic_update
+// NewLightClientOptimisticUpdateFromUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_optimistic_update
 // def create_light_client_optimistic_update(update: LightClientUpdate) -> LightClientOptimisticUpdate:
 //
 //	return LightClientOptimisticUpdate(
@@ -362,7 +362,7 @@ func NewLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.Li
 //	    sync_aggregate=update.sync_aggregate,
 //	    signature_slot=update.signature_slot,
 //	)
-func NewLightClientOptimisticUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
+func NewLightClientOptimisticUpdateFromUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
 	return &ethpbv2.LightClientOptimisticUpdate{
 		AttestedHeader: update.AttestedHeader,
 		SyncAggregate:  update.SyncAggregate,

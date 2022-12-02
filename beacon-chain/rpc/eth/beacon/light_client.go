@@ -39,7 +39,7 @@ func (bs *Server) GetLightClientBootstrap(ctx context.Context, req *ethpbv2.Ligh
 		return nil, status.Errorf(codes.Internal, "Could not get state by slot: %v", err)
 	}
 
-	bootstrap, err := lightclienthelpers.NewLightClientBootstrap(ctx, state)
+	bootstrap, err := lightclienthelpers.NewLightClientBootstrapFromBeaconState(ctx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 			}
 		}
 
-		update, err := lightclienthelpers.NewLightClientUpdate(
+		update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
 			ctx,
 			config,
 			slotsPerPeriod,
@@ -226,7 +226,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdate(
+	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -240,7 +240,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		return nil, err
 	}
 
-	finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdate(update)
+	finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateResponse{
@@ -308,7 +308,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdate(
+	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -322,7 +322,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		return nil, err
 	}
 
-	optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdate(update)
+	optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
 
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateResponse{
