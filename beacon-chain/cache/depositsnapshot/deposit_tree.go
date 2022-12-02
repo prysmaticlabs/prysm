@@ -1,5 +1,11 @@
 package depositsnapshot
 
+import (
+	"crypto/sha256"
+
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+)
+
 // DepositTree is the Merkle tree representation of deposits.
 type DepositTree struct {
 	tree                    MerkleTreeNode
@@ -44,4 +50,47 @@ func (d *DepositTree) AddDeposit(leaf [32]byte, deposits uint64) error {
 		return err
 	}
 	return nil
+}
+
+func (d *DepositTree) GetRoot() [32]byte {
+	root := d.tree.GetRoot()
+	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.depositCount)...))
+}
+
+type DepositTreeSnapshot struct {
+	finalized            [][32]byte
+	depositRoot          [32]byte
+	depositCount         uint64
+	executionBlockHash   [32]byte
+	executionBlockHeight uint64
+}
+
+func (ds *DepositTreeSnapshot) CalculateRoot() [32]byte {
+	size := ds.depositCount
+	index := len(ds.finalized)
+	root := zeroHash
+	for i := 0; i <= DepositContractDepth; i++ {
+		if size == 1 {
+			index -= 1
+			root = sha256.Sum256(append(ds.finalized[index][:], root[:]...))
+		} else {
+			root = sha256.Sum256(append(root[:], zeroHash[:]...))
+		}
+	}
+	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...))
+}
+
+type ExecutionBlock struct {
+	Hash  [32]byte
+	Depth uint64
+}
+
+func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlockHash [32]byte, executionBlockDepth uint64) DepositTreeSnapshot {
+	return DepositTreeSnapshot{
+		finalized:            finalised,
+		depositRoot:          zeroHash,
+		depositCount:         depositCount,
+		executionBlockHash:   executionBlockHash,
+		executionBlockHeight: executionBlockDepth,
+	}
 }
