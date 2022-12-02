@@ -8,29 +8,28 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 )
 
 type beaconApiValidatorClient struct {
-	url                string
-	httpClient         http.Client
-	fallbackClient     iface.ValidatorClient
-	genesisProvider    genesisProvider
-	domainDataProvider domainDataProvider
+	url             string
+	httpClient      http.Client
+	fallbackClient  iface.ValidatorClient
+	genesisProvider genesisProvider
 }
 
 func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
 	httpClient := http.Client{Timeout: timeout}
 
-	genesisProvider := beaconApiGenesisProvider{httpClient: httpClient, url: url}
-
 	return &beaconApiValidatorClient{
-		url:                url,
-		httpClient:         httpClient,
-		genesisProvider:    genesisProvider,
-		domainDataProvider: beaconApiDomainDataProvider{genesisProvider: genesisProvider},
+		url:             url,
+		httpClient:      httpClient,
+		genesisProvider: beaconApiGenesisProvider{httpClient: httpClient, url: url},
 	}
 }
 
@@ -59,7 +58,12 @@ func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *et
 }
 
 func (c *beaconApiValidatorClient) DomainData(_ context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	return c.domainDataProvider.GetDomainData(in.Epoch, in.Domain)
+	if len(in.Domain) != 4 {
+		return nil, errors.Errorf("invalid domain type: %s", hexutil.Encode(in.Domain))
+	}
+
+	domainType := bytesutil.ToBytes4(in.Domain)
+	return c.getDomainData(in.Epoch, domainType)
 }
 
 func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {

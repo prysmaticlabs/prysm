@@ -5,7 +5,6 @@ package beacon_api
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -44,8 +43,8 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 		nil,
 	).Times(1)
 
-	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
-	resp, err := domainDataProvider.GetDomainData(epoch, domainType[:])
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
+	resp, err := validatorClient.getDomainData(epoch, domainType)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -55,25 +54,6 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 
 	assert.Equal(t, len(expectedSignatureDomain), len(resp.SignatureDomain))
 	assert.DeepEqual(t, expectedSignatureDomain, resp.SignatureDomain)
-}
-
-func TestGetDomainData_InvalidDomainType(t *testing.T) {
-	domainType := make([]byte, 3)
-	domainDataProvider := &beaconApiDomainDataProvider{}
-	_, err := domainDataProvider.GetDomainData(1, domainType)
-	assert.ErrorContains(t, fmt.Sprintf("invalid domain type: %s", hexutil.Encode(domainType)), err)
-}
-
-func TestGetDomainData_ForkVersionError(t *testing.T) {
-	// Revert the beacon config to its previous state when we're done with the test case
-	prevBeaconConfig := params.BeaconConfig().Copy()
-	defer params.OverrideBeaconConfig(prevBeaconConfig)
-	params.BeaconConfig().AltairForkVersion = []byte{}
-
-	epoch := params.BeaconConfig().AltairForkEpoch
-	domainDataProvider := &beaconApiDomainDataProvider{}
-	_, err := domainDataProvider.GetDomainData(epoch, make([]byte, 4))
-	assert.ErrorContains(t, fmt.Sprintf("failed to get fork version for epoch %d", epoch), err)
 }
 
 func TestGetDomainData_GenesisError(t *testing.T) {
@@ -88,8 +68,8 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("")).Times(1)
 
-	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
-	_, err := domainDataProvider.GetDomainData(epoch, domainType[:])
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
+	_, err := validatorClient.getDomainData(epoch, domainType)
 	assert.ErrorContains(t, "failed to get genesis info", err)
 }
 
@@ -109,8 +89,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 		nil,
 	).Times(1)
 
-	domainDataProvider := &beaconApiDomainDataProvider{genesisProvider: genesisProvider}
-
-	_, err := domainDataProvider.GetDomainData(epoch, domainType[:])
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
+	_, err := validatorClient.getDomainData(epoch, domainType)
 	assert.ErrorContains(t, "invalid genesis validators root: foo", err)
 }

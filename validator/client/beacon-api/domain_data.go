@@ -6,25 +6,15 @@ package beacon_api
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-type domainDataProvider interface {
-	GetDomainData(epoch types.Epoch, domainType []byte) (*ethpb.DomainResponse, error)
-}
-
-type beaconApiDomainDataProvider struct {
-	genesisProvider genesisProvider
-}
-
-func (c beaconApiDomainDataProvider) GetDomainData(epoch types.Epoch, domainType []byte) (*ethpb.DomainResponse, error) {
-	if len(domainType) != 4 {
-		return nil, errors.Errorf("invalid domain type: %s", hexutil.Encode(domainType))
-	}
-
+func (c beaconApiValidatorClient) getDomainData(epoch types.Epoch, domainType [4]byte) (*ethpb.DomainResponse, error) {
 	// Get the fork version from the given epoch
-	forkVersion, err := getForkVersion(epoch)
+	fork, err := forks.Fork(epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get fork version for epoch %d", epoch)
 	}
@@ -44,19 +34,10 @@ func (c beaconApiDomainDataProvider) GetDomainData(epoch types.Epoch, domainType
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
 
-	// Compute the hash tree root of the fork version and the genesis validator root
-	forkDataRoot, err := (&ethpb.ForkData{
-		CurrentVersion:        forkVersion[:],
-		GenesisValidatorsRoot: genesisValidatorRoot,
-	}).HashTreeRoot()
+	signatureDomain, err := signing.Domain(fork, epoch, domainType, genesisValidatorRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to hash the fork data")
+		return nil, errors.Wrap(err, "failed to compute signature domain")
 	}
-
-	// Append the last 28 bytes of the fork data root to the domain type
-	signatureDomain := make([]byte, 0, 32)
-	signatureDomain = append(signatureDomain, domainType...)
-	signatureDomain = append(signatureDomain, forkDataRoot[:28]...)
 
 	return &ethpb.DomainResponse{SignatureDomain: signatureDomain}, nil
 }

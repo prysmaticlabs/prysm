@@ -5,65 +5,49 @@ package beacon_api
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
-	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
-// Check that the DomainData() returns whatever GetDomainData() returns
+// Check that the DomainData() returns whatever the internal getDomainData() returns
 func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
+	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainSyncCommittee[:]
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	expectedSignatureDomain := []byte{1, 2, 3, 4, 5}
-
-	// Make sure that GetDomainData() is called exactly once and with the right arguments
-	domainDataProvider := mock.NewMockdomainDataProvider(ctrl)
-	domainDataProvider.EXPECT().GetDomainData(
-		epoch,
-		domainType,
-	).Return(
-		&ethpb.DomainResponse{SignatureDomain: expectedSignatureDomain},
+	genesisProvider := mock.NewMockgenesisProvider(ctrl)
+	genesisProvider.EXPECT().GetGenesis().Return(
+		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
-	).Times(1)
+		nil,
+	).Times(2)
 
-	validatorClient := beaconApiValidatorClient{domainDataProvider: domainDataProvider}
+	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
 	resp, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
-	assert.NoError(t, err)
-	require.NotNil(t, resp)
-	assert.DeepEqual(t, expectedSignatureDomain, resp.SignatureDomain)
+
+	domainTypeArray := bytesutil.ToBytes4(domainType)
+	expectedResp, expectedErr := validatorClient.getDomainData(epoch, domainTypeArray)
+	assert.DeepEqual(t, expectedErr, err)
+	assert.DeepEqual(t, expectedResp, resp)
 }
 
-// Check that the error that DomainData() returns contains the error returned by GetDomainData()
+// Check that the error that DomainData() returns contains the error returned by the internal getDomainData()
 func TestBeaconApiValidatorClient_DomainDataError(t *testing.T) {
 	epoch := params.BeaconConfig().AltairForkEpoch
-	domainType := params.BeaconConfig().DomainSyncCommittee[:]
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	expectedError := errors.New("foo error")
-
-	// Make sure that GetDomainData() is called exactly once and with the right arguments
-	domainDataProvider := mock.NewMockdomainDataProvider(ctrl)
-	domainDataProvider.EXPECT().GetDomainData(
-		epoch,
-		domainType,
-	).Return(
-		nil,
-		expectedError,
-	).Times(1)
-
-	validatorClient := beaconApiValidatorClient{domainDataProvider: domainDataProvider}
+	domainType := make([]byte, 3)
+	validatorClient := beaconApiValidatorClient{}
 	_, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
-	require.ErrorIs(t, err, expectedError)
+	assert.ErrorContains(t, fmt.Sprintf("invalid domain type: %s", hexutil.Encode(domainType)), err)
 }
