@@ -792,7 +792,8 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, nil, 0)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, st, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, types.ValidatorIndex(0), vId)
@@ -801,7 +802,6 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	suggestedVid := types.ValidatorIndex(1)
 	slot := types.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	st, _ := util.DeterministicGenesisState(t, 1)
 	hook := logTest.NewGlobal()
 	hasPayload, attr, vId, err := service.getPayloadAttribute(ctx, st, slot)
 	require.NoError(t, err)
