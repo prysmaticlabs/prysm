@@ -75,6 +75,6 @@ type SignedBeaconBlock struct {
 	signature [field_params.BLSSignatureLength]byte
 }
 
-func errNotSupported(funcName string, ver int) error {
+func ErrNotSupported(funcName string, ver int) error {
 	return errors.Wrap(ErrUnsupportedGetter, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }
