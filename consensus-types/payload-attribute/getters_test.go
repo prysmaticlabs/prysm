@@ -35,7 +35,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				r := []byte{4, 5, 6}
 				a, err := New(&enginev1.PayloadAttributes{SuggestedFeeRecipient: r})
 				require.NoError(t, err)
-				require.DeepEqual(t, r, a.PrevRandao())
+				require.DeepEqual(t, r, a.SuggestedFeeRecipient())
 			},
 		},
 		{
