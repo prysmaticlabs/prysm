@@ -146,6 +146,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
+	if err := s.handleBlockBLSToExecChanges(signed.Block()); err != nil {
+		return errors.Wrap(err, "could not handle block's BLSToExecutionChanges")
+	}
+
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -555,6 +559,22 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Be
 	return nil
 }
 
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
+	if blk.Version() < version.Capella {
+		return nil
+	}
+	changes, err := blk.Body().BLSToExecutionChanges()
+	if err != nil {
+		return errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
+			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
+		}
+	}
+	return nil
+}
+
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
@@ -665,26 +685,8 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 		for {
 			select {
 			case ti := <-ticker.C:
-				if !atHalfSlot(ti) {
-					continue
-				}
-				// Head root should be empty when retrieving proposer index for the next slot.
-				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
-				// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-				if has && id == [8]byte{} {
-					headBlock, err := s.headBlock()
-					if err != nil {
-						log.WithError(err).Error("Could not get head block")
-					} else {
-						if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-							headState: s.headState(ctx),
-							headRoot:  s.headRoot(),
-							headBlock: headBlock.Block(),
-						}); err != nil {
-							log.WithError(err).Error("Could not prepare payload on empty ID")
-						}
-					}
-					missedPayloadIDFilledCount.Inc()
+				if err := s.fillMissingBlockPayloadId(ctx, ti); err != nil {
+					log.WithError(err).Error("Could not fill missing payload ID")
 				}
 			case <-s.ctx.Done():
 				log.Debug("Context closed, exiting routine")
@@ -698,4 +700,32 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 func atHalfSlot(t time.Time) bool {
 	s := params.BeaconConfig().SecondsPerSlot
 	return uint64(t.Second())%s == s/2
+}
+
+func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) error {
+	if !atHalfSlot(ti) {
+		return nil
+	}
+	if s.CurrentSlot() == s.cfg.ForkChoiceStore.HighestReceivedBlockSlot() {
+		return nil
+	}
+	// Head root should be empty when retrieving proposer index for the next slot.
+	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
+	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
+	if has && id == [8]byte{} {
+		missedPayloadIDFilledCount.Inc()
+		headBlock, err := s.headBlock()
+		if err != nil {
+			return err
+		} else {
+			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+				headState: s.headState(ctx),
+				headRoot:  s.headRoot(),
+				headBlock: headBlock.Block(),
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -104,6 +104,7 @@ func TestGetSpec(t *testing.T) {
 	config.TerminalTotalDifficulty = "73"
 	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
 	config.MaxWithdrawalsPerPayload = 74
+	config.MaxBlsToExecutionChanges = 75
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -136,7 +137,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 103, len(resp.Data))
+	assert.Equal(t, 104, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -355,9 +356,11 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "40", v)
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
-		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+		case "MAX_BLS_TO_EXECUTION_CHANGES":
+			assert.Equal(t, "75", v)
 		case "MAX_WITHDRAWALS_PER_PAYLOAD":
 			assert.Equal(t, "74", v)
+		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

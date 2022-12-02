@@ -87,9 +87,6 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 	if IsPreBellatrixVersion(st.Version()) {
 		return false, nil
 	}
-	if st.Version() > version.Bellatrix {
-		return true, nil
-	}
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return false, err
