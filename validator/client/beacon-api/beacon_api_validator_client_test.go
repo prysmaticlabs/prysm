@@ -43,7 +43,6 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	assert.DeepEqual(t, expectedResp, resp)
 }
 
-// Check that the error that DomainData() returns contains the error returned by the internal getDomainData()
 func TestBeaconApiValidatorClient_DomainDataError(t *testing.T) {
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := make([]byte, 3)
