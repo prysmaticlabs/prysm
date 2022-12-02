@@ -472,24 +472,20 @@ func (r *testRunner) defaultEndToEndRun() error {
 	if !ok {
 		return errors.New("incorrect component type")
 	}
-	/*
 		beaconNodes, ok := r.comHandler.beaconNodes.(*components.BeaconNodeSet)
 		if !ok {
 			return errors.New("incorrect component type")
 		}
-	*/
 	bootNode, ok := r.comHandler.bootnode.(*components.BootNode)
 	if !ok {
 		return errors.New("incorrect component type")
 	}
 
-	/*
 		keypath, err := e2e.TestParams.Paths.MinerKeyPath()
 		if err != nil {
 			return errors.Wrap(err, "error getting miner key path from bazel static files in defaultEndToEndRun")
 		}
 		r.testDepositsAndTx(ctx, g, keypath, []e2etypes.ComponentRunner{beaconNodes})
-	*/
 
 	// Create GRPC connection to beacon nodes.
 	conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)

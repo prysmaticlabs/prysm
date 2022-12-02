@@ -63,7 +63,7 @@ func (node *Node) Start(ctx context.Context) error {
 	gethJsonPath := path.Join(eth1Path, "genesis.json")
 
 	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
-	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress)
+	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress, testing.DefaultMinerAddress)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		//"--vmdebug",
+		"--vmdebug",
 		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}

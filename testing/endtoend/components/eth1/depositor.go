@@ -3,6 +3,7 @@ package eth1
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 	"sync"
 	"time"
@@ -144,6 +145,11 @@ type SentDeposit struct {
 // (using 2 transactions for partial deposits) and then uses WaitForBlocks (which spams the miner node with transactions
 // to and from its own address) to advance the chain until it has moved forward ETH1_FOLLOW_DISTANCE blocks.
 func (d *Depositor) SendAndMine(ctx context.Context, offset, nvals int, batch types.DepositBatch, partial bool) error {
+	balance, err := d.Client.BalanceAt(ctx, d.Key.Address, nil)
+	if err != nil {
+		return err
+	}
+	log.WithField("balance", balance.String()).WithField("account", d.Key.Address.Hex()).Info("SendAndMine balance check")
 	// This is the "Send" part of the function. Compute deposits for `nvals` validators,
 	// with half of those deposits being split over 2 transactions if the `partial` flag is true,
 	// and throwing away any validators before `offset`.

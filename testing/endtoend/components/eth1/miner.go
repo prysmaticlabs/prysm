@@ -90,13 +90,20 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	gethJsonPath := path.Join(path.Dir(binaryPath), "genesis.json")
 	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
 	log.Infof("eth1 miner genesis timestamp=%d", e2e.TestParams.Eth1GenesisTime)
-	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress)
+	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress, testing.DefaultMinerAddress)
 	if err != nil {
 		return nil, err
 	}
 	if err := file.WriteFile(gethJsonPath, b); err != nil {
 		return nil, err
 	}
+
+	// write the same thing to the logs dir for inspection
+	gethJsonLogPath := e2e.TestParams.Logfile("genesis.json")
+	if err := file.WriteFile(gethJsonLogPath, b); err != nil {
+		return nil, err
+	}
+
 	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", m.DataDir()), gethJsonPath)
 
 	// redirect stderr to a log file
@@ -136,7 +143,7 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		//"--vmdebug",
+		"--vmdebug",
 		"--mine",
 		fmt.Sprintf("--unlock=%s", EthAddress),
 		"--allow-insecure-unlock",

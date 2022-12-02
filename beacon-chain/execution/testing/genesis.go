@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 )
 
 const DefaultTestChainId int64 = 1337
@@ -19,6 +18,8 @@ const DefaultCoinbase = "0x0000000000000000000000000000000000000000"
 const DefaultDifficulty = "0x20000"
 const DefaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const DefaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const DefaultMinerAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
+const DefaultMinerBalance = "100000000000000000000000000000"
 
 // DepositContractCode is the compiled deposit contract code, via https://github.com/protolambda/merge-genesis-tools
 // This is embedded into genesis so that we can start the chain at a merge block.
@@ -62,6 +63,7 @@ var DefaultDepositContractStorage = map[string]string{
 }
 
 var bigz = big.NewInt(0)
+var minerBalance = big.NewInt(0)
 
 // EIP-225 assigns a special meaning to the `extra-data` field in the block header for clique chains.
 // In a clique chain, this field contains one secp256k1 "miner" signature. This allows other nodes to
@@ -97,6 +99,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		TerminalTotalDifficultyPassed: false,
 	}
 	da := DefaultDepositContractAllocation(cfg.DepositContractAddress)
+	ma := MinerAllocation()
 	return &core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
@@ -108,6 +111,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		Coinbase:   common.HexToAddress(DefaultCoinbase),
 		Alloc: core.GenesisAlloc{
 			da.Address: da.Account,
+			ma.Address: ma.Account,
 		},
 		ParentHash: common.HexToHash(DefaultParenthash),
 	}
@@ -116,6 +120,15 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 type DepositAllocation struct {
 	Address common.Address
 	Account core.GenesisAccount
+}
+
+func MinerAllocation() DepositAllocation {
+	return DepositAllocation{
+		Address: common.HexToAddress(DefaultMinerAddress),
+		Account: core.GenesisAccount{
+			Balance: minerBalance,
+		},
+	}
 }
 
 func DefaultDepositContractAllocation(contractAddress string) DepositAllocation {
@@ -142,16 +155,11 @@ func deterministicNonce(i uint64) uint64 {
 	return math.MaxUint64/2 + i
 }
 
-func randNonce() uint64 {
-	randGen := rand.NewDeterministicGenerator()
-	return randGen.Uint64()
-}
-
 var ErrMalformedGenesisJson = errors.New("encoded genesis.json doesn't have expected layout")
 
 // TerribleMarshalHack calls json.Marshal and also replaces the contract address string with a '0x' prefixed version,
 // because for some reason geth broke their json marshaling.
-func TerribleMarshalHack(g *core.Genesis, contractAddr string) ([]byte, error) {
+func TerribleMarshalHack(g *core.Genesis, addresses ...string) ([]byte, error) {
 	b, err := json.Marshal(g)
 	if err != nil {
 		return nil, err
@@ -170,16 +178,25 @@ func TerribleMarshalHack(g *core.Genesis, contractAddr string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	contract, ok := ir[contractAddr[2:]]
-	if !ok {
-		return nil, errors.Wrapf(ErrMalformedGenesisJson, "no address matching %s", contractAddr)
+	for _, addr := range addresses {
+		contract, ok := ir[addr[2:]]
+		if !ok {
+			return nil, errors.Wrapf(ErrMalformedGenesisJson, "no address matching %s", addr)
+		}
+		delete(ir, addr[2:])
+		ir[addr] = contract
 	}
-	delete(ir, contractAddr[2:])
-	ir[contractAddr] = contract
 	irb, err := json.Marshal(ir)
 	if err != nil {
 		return nil, err
 	}
 	or["alloc"] = irb
 	return json.Marshal(or)
+}
+
+func init() {
+	err := minerBalance.UnmarshalText([]byte(DefaultMinerBalance))
+	if err != nil {
+		panic(err)
+	}
 }
