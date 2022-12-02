@@ -376,10 +376,10 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 
 // ExecutionBlockCapellaByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockCapellaByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error) {
+func (s *Service) ExecutionBlockCapellaByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockCapella, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockCapellaByHash")
 	defer span.End()
-	result := &pb.ExecutionBlockBellatrix{}
+	result := &pb.ExecutionBlockCapella{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }

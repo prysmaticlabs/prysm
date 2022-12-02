@@ -132,15 +132,10 @@ func (e *ExecutionBlockCapella) MarshalJSON() ([]byte, error) {
 	decoded["totalDifficulty"] = e.TotalDifficulty
 	ws := make([]*withdrawalJSON, len(e.Withdrawals))
 	for i, w := range e.Withdrawals {
-		b, err := w.MarshalJSON()
+		ws[i], err = w.toWithdrawalJSON()
 		if err != nil {
 			return nil, err
 		}
-		j := &withdrawalJSON{}
-		if err = json.Unmarshal(b, j); err != nil {
-			return nil, err
-		}
-		ws[i] = j
 	}
 	decoded["withdrawals"] = ws
 	return json.Marshal(decoded)
@@ -237,17 +232,12 @@ func (e *ExecutionBlockCapella) UnmarshalJSON(enc []byte) error {
 		}
 		ws := make([]*Withdrawal, len(j.Withdrawals))
 		for i, wj := range j.Withdrawals {
-			mwj, err := json.Marshal(wj)
+			ws[i], err = wj.ToWithdrawal()
 			if err != nil {
 				return err
 			}
-			w := &Withdrawal{}
-			if err = w.UnmarshalJSON(mwj); err != nil {
-				return err
-			}
-			ws[i] = w
 		}
-		e.Withdrawals = []*Withdrawal{}
+		e.Withdrawals = ws
 	}
 
 	rawTxList, ok := decoded["transactions"]
@@ -291,6 +281,30 @@ type withdrawalJSON struct {
 	Validator *hexutil.Uint64 `json:"validatorIndex"`
 	Address   *common.Address `json:"address"`
 	Amount    string          `json:"amount"`
+}
+
+func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
+	w := &Withdrawal{}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+	if err := w.UnmarshalJSON(b); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
+func (w *Withdrawal) toWithdrawalJSON() (*withdrawalJSON, error) {
+	b, err := w.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	j := &withdrawalJSON{}
+	if err = json.Unmarshal(b, j); err != nil {
+		return nil, err
+	}
+	return j, nil
 }
 
 func (w *Withdrawal) MarshalJSON() ([]byte, error) {
