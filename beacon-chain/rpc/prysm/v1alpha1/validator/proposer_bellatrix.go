@@ -82,10 +82,15 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 		}
 
-		blkData.ExecutionPayload, err = vs.getExecutionPayload(ctx, req.Slot, blkData.ProposerIdx, bytesutil.ToBytes32(blkData.ParentRoot), head)
+		e, err := vs.getExecutionPayload(ctx, req.Slot, blkData.ProposerIdx, bytesutil.ToBytes32(blkData.ParentRoot), head)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get execution payload")
 		}
+		p, err := e.PbV1()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload")
+		}
+		blkData.ExecutionPayload = p
 	}
 
 	var wsb interfaces.SignedBeaconBlock

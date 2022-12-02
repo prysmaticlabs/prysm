@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/forkchoice"
 )
 
-func TestMinimal_Altair_Forkchoice(t *testing.T) {
+func TestMinimal_Phase0_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnableDefensivePull: false,
 		DisablePullTips:     true,

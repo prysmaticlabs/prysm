@@ -32,6 +32,9 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", folderPath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", folderPath)
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()

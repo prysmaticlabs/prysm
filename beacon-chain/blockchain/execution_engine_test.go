@@ -15,6 +15,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	bstate "github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -29,6 +30,69 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
+	altairBlkRoot, err := altairBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
+	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	fcs := doublylinkedtree.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, fcs)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisState(t, 10)
+	service.head = &head{
+		state: st,
+	}
+
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, altairBlkRoot, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, bellatrixBlkRoot, altairBlkRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+
+	b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+		Body: &ethpb.BeaconBlockBodyBellatrix{
+			ExecutionPayload: &v1.ExecutionPayload{},
+		},
+	})
+	require.NoError(t, err)
+
+	pid := &v1.PayloadIDBytes{1}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{PayloadIDBytes: pid}
+	st, _ = util.DeterministicGenesisState(t, 1)
+	require.NoError(t, beaconDB.SaveState(ctx, st, bellatrixBlkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
+
+	// Intentionally generate a bad state such that `hash_tree_root` fails during `process_slot`
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	require.NoError(t, err)
+	arg := &notifyForkchoiceUpdateArg{
+		headState: s,
+		headRoot:  [32]byte{},
+		headBlock: b,
+	}
+
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 0, [8]byte{}, [32]byte{})
+	got, err := service.notifyForkchoiceUpdate(ctx, arg)
+	require.NoError(t, err)
+	require.DeepEqual(t, got, pid) // We still get a payload ID even though the state is bad. This means it returns until the end.
+}
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	ctx := context.Background()
@@ -47,11 +111,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 10)
 	service.head = &head{
 		state: st,
 	}
-	require.NoError(t, err)
+
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
