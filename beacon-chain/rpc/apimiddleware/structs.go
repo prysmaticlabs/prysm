@@ -103,6 +103,21 @@ type LightClientBootstrapJson struct {
 	CurrentSyncCommitteeBranch []string               `json:"current_sync_committee_branch" hex:"true"`
 }
 
+type LightClientUpdateJson struct {
+	Version string                     `json:"version" enum:"true"`
+	Data    *LightClientUpdateDataJson `json:"data"`
+}
+
+type LightClientUpdateDataJson struct {
+	AttestedHeader          *BeaconBlockHeaderJson `json:"attested_header"`
+	NextSyncCommittee       *SyncCommitteeJson     `json:"next_sync_committee"`
+	NextSyncCommitteeBranch []string               `json:"next_sync_committee_branch" hex:"true"`
+	FinalizedHeader         *BeaconBlockHeaderJson `json:"finalized_header"`
+	FinalityBranch          []string               `json:"finality_branch" hex:"true"`
+	SyncAggregate           *SyncAggregateJson     `json:"sync_aggregate"`
+	SignatureSlot           string                 `json:"signature_slot"`
+}
+
 type LightClientFinalityUpdateResponseJson struct {
 	Version string                         `json:"version" enum:"true"`
 	Data    *LightClientFinalityUpdateJson `json:"data"`

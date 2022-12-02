@@ -2,9 +2,10 @@ package eth
 
 import (
 	"bytes"
+	"math/bits"
+
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"math/bits"
 )
 
 const (
@@ -29,39 +30,39 @@ func FloorLog2(x uint64) int {
 	return bits.Len64(uint64(x - 1))
 }
 
-var _ Update = (*FinalityUpdate)(nil)
+var _ Update = (*LightClientFinalityUpdate)(nil)
 
-func (x *FinalityUpdate) GetNextSyncCommittee() *SyncCommittee {
+func (x *LightClientFinalityUpdate) GetNextSyncCommittee() *SyncCommittee {
 	return &SyncCommittee{}
 }
 
-func (x *FinalityUpdate) GetNextSyncCommitteeBranch() [][]byte {
+func (x *LightClientFinalityUpdate) GetNextSyncCommitteeBranch() [][]byte {
 	return make([][]byte, FloorLog2(NextSyncCommitteeIndex))
 }
 
-func (x *FinalityUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
+func (x *LightClientFinalityUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
 	x.FinalizedHeader = header
 }
 
-var _ Update = (*OptimisticUpdate)(nil)
+var _ Update = (*LightClientOptimisticUpdate)(nil)
 
-func (x *OptimisticUpdate) GetNextSyncCommittee() *SyncCommittee {
+func (x *LightClientOptimisticUpdate) GetNextSyncCommittee() *SyncCommittee {
 	return &SyncCommittee{}
 }
 
-func (x *OptimisticUpdate) GetNextSyncCommitteeBranch() [][]byte {
+func (x *LightClientOptimisticUpdate) GetNextSyncCommitteeBranch() [][]byte {
 	return make([][]byte, FloorLog2(NextSyncCommitteeIndex))
 }
 
-func (x *OptimisticUpdate) GetFinalizedHeader() *ethpbv1.BeaconBlockHeader {
+func (x *LightClientOptimisticUpdate) GetFinalizedHeader() *ethpbv1.BeaconBlockHeader {
 	return &ethpbv1.BeaconBlockHeader{}
 }
 
-func (x *OptimisticUpdate) GetFinalityBranch() [][]byte {
+func (x *LightClientOptimisticUpdate) GetFinalityBranch() [][]byte {
 	return make([][]byte, FloorLog2(FinalizedRootIndex))
 }
 
-func (x *OptimisticUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {}
+func (x *LightClientOptimisticUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {}
 
 func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 	if len(x.Pubkeys) != len(other.Pubkeys) {

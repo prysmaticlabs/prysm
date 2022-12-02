@@ -11,12 +11,24 @@ import (
 )
 
 const (
-	finalizedRootIndex = uint64(105) // Precomputed value.
+	finalizedRootIndex        = uint64(105) // Precomputed value.
+	currentSyncCommitteeIndex = uint64(54)  // Precomputed value.
+	nextSyncCommitteeIndex    = uint64(55)  // Precomputed value.
 )
 
 // FinalizedRootGeneralizedIndex for the beacon state.
 func FinalizedRootGeneralizedIndex() uint64 {
 	return finalizedRootIndex
+}
+
+// CurrentSyncCommitteeRootGeneralizedIndex for the beacon state.
+func CurrentSyncCommitteeRootGeneralizedIndex() uint64 {
+	return currentSyncCommitteeIndex
+}
+
+// NextSyncCommitteeRootGeneralizedIndex for the beacon state.
+func NextSyncCommitteeRootGeneralizedIndex() uint64 {
+	return nextSyncCommitteeIndex
 }
 
 // CurrentSyncCommitteeGeneralizedIndex for the beacon state.

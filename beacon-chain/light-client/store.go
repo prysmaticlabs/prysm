@@ -57,7 +57,7 @@ func hashTreeRoot(committee *ethpbv2.SyncCommittee) ([]byte, error) {
 
 // NewStore implements initialize_light_client_store from the spec.
 func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
-	bootstrap *ethpbv2.Bootstrap) (*Store, error) {
+	bootstrap *ethpbv2.LightClientBootstrap) (*Store, error) {
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
 		panic(err)
@@ -311,13 +311,13 @@ func (s *Store) ProcessUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.FinalityUpdate,
+func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientFinalityUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{s.BeaconChainConfig, finalityUpdate}, currentSlot, genesisValidatorsRoot)
 }
 
-func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.OptimisticUpdate,
+func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientOptimisticUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{s.BeaconChainConfig, optimisticUpdate}, currentSlot, genesisValidatorsRoot)

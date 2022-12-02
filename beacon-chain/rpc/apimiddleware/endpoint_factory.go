@@ -43,6 +43,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/beacon/light_client/bootstrap/{block_root}",
+		"/eth/v1/beacon/light_client/updates",
 		"/eth/v1/beacon/light_client/finality_update",
 		"/eth/v1/beacon/light_client/optimistic_update",
 		"/eth/v1/node/identity",
@@ -173,6 +174,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/beacon/light_client/bootstrap/{block_root}":
 		endpoint.GetResponse = &LightClientBootstrapResponseJson{}
+	case "/eth/v1/beacon/light_client/updates":
+		endpoint.GetResponse = &[]*LightClientUpdateJson{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareLightClientUpdates,
+		}
 	case "/eth/v1/beacon/light_client/finality_update":
 		endpoint.GetResponse = &LightClientFinalityUpdateResponseJson{}
 	case "/eth/v1/beacon/light_client/optimistic_update":

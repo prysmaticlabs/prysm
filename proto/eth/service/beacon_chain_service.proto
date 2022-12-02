@@ -430,6 +430,15 @@ service BeaconChain {
     };
   }
 
+  // GetLightClientUpdatesByRange retrieves light client updates based the period range asked.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientUpdatesByRange
+  rpc GetLightClientUpdatesByRange(v2.LightClientUpdatesByRangeRequest) returns (v2.LightClientUpdatesByRangeResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/beacon/light_client/updates"
+    };
+  }
+
   // GetLightClientFinalityUpdate retrieves the latest finality update for light client
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientFinalityUpdate

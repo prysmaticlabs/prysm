@@ -16,6 +16,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	lightclienthelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers/lightclient"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -27,7 +28,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -218,45 +218,50 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	func() {
 		// Send notification of light client optimistic update to the state feed.
-		// Get the attestedHeader
-		prevSlot := slots.PrevSlot(postState.Slot())
-		prevBlockRoot := bytesutil.ToBytes32(postState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
-		prevBlock, err := s.cfg.BeaconDB.Block(ctx, prevBlockRoot)
+		// Determine slots per period
+		config := params.BeaconConfig()
+		slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
+
+		// Get attested state
+		attestedRoot := signed.Block().ParentRoot()
+		attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
 		if err != nil {
-			log.WithError(err).Error("Could not get previous block")
+			log.WithError(err).Error("Could not get attested state")
 			return
 		}
 
-		prevBlockSignedHeader, err := prevBlock.Header()
+		// Get finalized block
+		var finalizedBlock interfaces.SignedBeaconBlock
+		finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+		if finalizedCheckPoint != nil {
+			finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+			finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+			if err != nil {
+				finalizedBlock = nil
+			}
+		}
+
+		update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+			ctx,
+			config,
+			slotsPerPeriod,
+			postState,
+			signed,
+			attestedState,
+			finalizedBlock,
+		)
+
 		if err != nil {
-			log.WithError(err).Error("Could not get previous block header")
+			log.WithError(err).Error("Could not create light client update")
 			return
 		}
 
-		attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
-
-		// Get SyncAggregate
-		syncAggregate, err := signed.Block().Body().SyncAggregate()
-		if err != nil {
-			log.WithError(err).Error("Could not get sync aggregate")
-			return
-		}
-
-		syncAggregateV1 := ethpbv1.SyncAggregate{
-			SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
-			SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-		}
-
-		data := ethpbv2.OptimisticUpdate{
-			AttestedHeader: attestedHeader,
-			SyncAggregate:  &syncAggregateV1,
-			SignatureSlot:  prevSlot,
-		}
+		optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
 
 		// Return the result
 		result := &ethpbv2.LightClientOptimisticUpdateResponse{
 			Version: ethpbv2.Version(signed.Version()),
-			Data:    &data,
+			Data:    optimisticUpdate,
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -316,69 +321,50 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 			func() {
 				// Send an event regarding the new light client finality update over a common event feed.
-				// Get the attestedHeader
-				prevSlot := slots.PrevSlot(postState.Slot())
-				prevBlockRoot := bytesutil.ToBytes32(postState.BlockRoots()[prevSlot%params.BeaconConfig().SlotsPerHistoricalRoot])
-				prevBlock, err := s.cfg.BeaconDB.Block(ctx, prevBlockRoot)
-				if err != nil {
-					log.WithError(err).Error("Could not get previous block")
-					return
-				}
-				prevBlockSignedHeader, err := prevBlock.Header()
-				if err != nil {
-					log.WithError(err).Error("Could not get previous block header")
-					return
-				}
+				// Determine slots per period
+				config := params.BeaconConfig()
+				slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
 
-				attestedHeader := migration.V1Alpha1SignedHeaderToV1(prevBlockSignedHeader).GetMessage()
-
-				// Get finalized header
-				finalizedRoot := postState.FinalizedCheckpoint().GetRoot()
-				finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedRoot))
+				// Get attested state
+				attestedRoot := signed.Block().ParentRoot()
+				attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
 				if err != nil {
-					log.WithError(err).Error("Could not get finalized block")
+					log.WithError(err).Error("Could not get attested state")
 					return
 				}
 
-				signedFinalizedHeader, err := finalizedBlock.Header()
+				// Get finalized block
+				var finalizedBlock interfaces.SignedBeaconBlock
+				finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+				if finalizedCheckPoint != nil {
+					finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+					finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+					if err != nil {
+						finalizedBlock = nil
+					}
+				}
+
+				update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+					ctx,
+					config,
+					slotsPerPeriod,
+					postState,
+					signed,
+					attestedState,
+					finalizedBlock,
+				)
+
 				if err != nil {
-					log.WithError(err).Error("Could not get finalized header")
+					log.WithError(err).Error("Could not create light client update")
 					return
 				}
 
-				finalizedHeader := migration.V1Alpha1SignedHeaderToV1(signedFinalizedHeader).GetMessage()
-
-				// Get finalityBranch
-				finalityBranch, err := postState.FinalizedRootProof(ctx)
-				if err != nil {
-					log.WithError(err).Error("Could not get finality branch")
-					return
-				}
-
-				// Get SyncAggregate
-				syncAggregate, err := signed.Block().Body().SyncAggregate()
-				if err != nil {
-					log.WithError(err).Error("Could not get sync aggregate")
-					return
-				}
-
-				syncAggregateV1 := ethpbv1.SyncAggregate{
-					SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
-					SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-				}
-
-				data := ethpbv2.FinalityUpdate{
-					AttestedHeader:  attestedHeader,
-					FinalizedHeader: finalizedHeader,
-					FinalityBranch:  finalityBranch,
-					SyncAggregate:   &syncAggregateV1,
-					SignatureSlot:   signed.Block().Slot(),
-				}
+				finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
 
 				// Return the result
 				result := &ethpbv2.LightClientFinalityUpdateResponse{
 					Version: ethpbv2.Version(signed.Version()),
-					Data:    &data,
+					Data:    finalityUpdate,
 				}
 
 				// Send event

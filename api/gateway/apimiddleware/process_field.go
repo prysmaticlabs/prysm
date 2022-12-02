@@ -26,6 +26,23 @@ func processField(s interface{}, processors []fieldProcessor) error {
 	t := reflect.TypeOf(s).Elem()
 	v := reflect.Indirect(reflect.ValueOf(s))
 
+	if t.Kind() == reflect.Struct {
+		err := processStructField(t, v, processors)
+		return err
+	} else if t.Kind() == reflect.Slice {
+		for i := 0; i < v.Len(); i++ {
+			if err := processField(v.Index(i).Interface(), processors); err != nil {
+				return errors.Wrapf(err, "could not process field '%s'", t.Name())
+			}
+		}
+	} else {
+		return fmt.Errorf("processing fields of kind '%v' is unsupported", t.Kind())
+	}
+
+	return nil
+}
+
+func processStructField(t reflect.Type, v reflect.Value, processors []fieldProcessor) error {
 	for i := 0; i < t.NumField(); i++ {
 		switch v.Field(i).Kind() {
 		case reflect.Slice:
