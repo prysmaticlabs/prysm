@@ -314,11 +314,19 @@ func (s *Store) ProcessUpdate(update *Update,
 func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientFinalityUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.ProcessUpdate(&Update{s.BeaconChainConfig, finalityUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(&Update{
+		BeaconChainConfig:        s.BeaconChainConfig,
+		Type:                     finalityUpdateTypeName,
+		LightClientGenericUpdate: finalityUpdate,
+	}, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientOptimisticUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	return s.ProcessUpdate(&Update{s.BeaconChainConfig, optimisticUpdate}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(&Update{
+		BeaconChainConfig:        s.BeaconChainConfig,
+		Type:                     optimisticUpdateTypeName,
+		LightClientGenericUpdate: optimisticUpdate,
+	}, currentSlot, genesisValidatorsRoot)
 }
