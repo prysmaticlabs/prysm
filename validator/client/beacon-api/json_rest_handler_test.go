@@ -4,12 +4,14 @@
 package beacon_api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
@@ -78,4 +80,51 @@ func TestGetRestJsonResponse_Timeout(t *testing.T) {
 	)
 
 	assert.ErrorContains(t, "context deadline exceeded", err)
+}
+
+func TestGetRestJsonResponse_BadJsonFormatting(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/example/rest/api/endpoint", invalidJsonErrHandler)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	jsonRestHandler := beaconApiJsonRestHandler{
+		httpClient: http.Client{Timeout: time.Second * 5},
+		host:       server.URL,
+	}
+	responseJson := rpcmiddleware.GenesisResponseJson{}
+	_, err := jsonRestHandler.GetRestJsonResponse(
+		"/example/rest/api/endpoint",
+		&responseJson,
+	)
+
+	assert.ErrorContains(t, "failed to decode error json", err)
+}
+
+func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		errorJson := &apimiddleware.DefaultErrorJson{
+			Code:    statusCode,
+			Message: errorMessage,
+		}
+
+		marshalledError, err := json.Marshal(errorJson)
+		if err != nil {
+			panic(err)
+		}
+
+		w.WriteHeader(statusCode)
+		_, err = w.Write(marshalledError)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	_, err := w.Write([]byte("foo"))
+	if err != nil {
+		panic(err)
+	}
 }
