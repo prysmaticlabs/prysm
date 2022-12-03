@@ -12,8 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -55,113 +53,6 @@ func (vs *Server) getBlockFromBuilder(ctx context.Context, altairBlk *ethpb.Beac
 		return nil, err
 	}
 	return nil, errors.New("validator is not registered")
-}
-
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	blkData, err := vs.buildPhase0BlockData(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the validator was not registered then we computed already an execution payload
-	if !req.SkipMevBoost && blkData.ExecutionPayload == nil && blkData.ExecutionPayloadV2 == nil {
-		altairBlk := buildAltairBeaconBlockFromBlockData(blkData)
-		b, err := vs.getBlockFromBuilder(ctx, altairBlk)
-		if err == nil {
-			return b, nil
-		}
-		log.WithError(err).Error("falling back to local execution")
-
-		head, err := vs.HeadFetcher.HeadState(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("could not get head state %v", err)
-		}
-
-		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, blkData.ParentRoot, req.Slot)
-		if err != nil {
-			return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
-		}
-
-		e, err := vs.getExecutionPayload(ctx, req.Slot, blkData.ProposerIdx, bytesutil.ToBytes32(blkData.ParentRoot), head)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload")
-		}
-		p, err := e.PbV1()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload")
-		}
-		blkData.ExecutionPayload = p
-	}
-
-	var wsb interfaces.SignedBeaconBlock
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().CapellaForkEpoch {
-		blk := &ethpb.BeaconBlockBellatrix{
-			Slot:          blkData.Slot,
-			ProposerIndex: blkData.ProposerIdx,
-			ParentRoot:    blkData.ParentRoot,
-			StateRoot:     params.BeaconConfig().ZeroHash[:],
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      blkData.RandaoReveal,
-				Eth1Data:          blkData.Eth1Data,
-				Graffiti:          blkData.Graffiti[:],
-				ProposerSlashings: blkData.ProposerSlashings,
-				AttesterSlashings: blkData.AttesterSlashings,
-				Attestations:      blkData.Attestations,
-				Deposits:          blkData.Deposits,
-				VoluntaryExits:    blkData.VoluntaryExits,
-				SyncAggregate:     blkData.SyncAggregate,
-				ExecutionPayload:  blkData.ExecutionPayload,
-			},
-		}
-		// Compute state root with the newly constructed block.
-		wsb, err = consensusblocks.NewSignedBeaconBlock(
-			&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-		)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		blk := &ethpb.BeaconBlockCapella{
-			Slot:          blkData.Slot,
-			ProposerIndex: blkData.ProposerIdx,
-			ParentRoot:    blkData.ParentRoot,
-			StateRoot:     params.BeaconConfig().ZeroHash[:],
-			Body: &ethpb.BeaconBlockBodyCapella{
-				RandaoReveal:          blkData.RandaoReveal,
-				Eth1Data:              blkData.Eth1Data,
-				Graffiti:              blkData.Graffiti[:],
-				ProposerSlashings:     blkData.ProposerSlashings,
-				AttesterSlashings:     blkData.AttesterSlashings,
-				Attestations:          blkData.Attestations,
-				Deposits:              blkData.Deposits,
-				VoluntaryExits:        blkData.VoluntaryExits,
-				SyncAggregate:         blkData.SyncAggregate,
-				ExecutionPayload:      blkData.ExecutionPayloadV2,
-				BlsToExecutionChanges: blkData.BlsToExecutionChanges,
-			},
-		}
-		// Compute state root with the newly constructed block.
-		wsb, err = consensusblocks.NewSignedBeaconBlock(
-			&ethpb.SignedBeaconBlockCapella{Block: blk, Signature: make([]byte, 96)},
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	wsb.Block().SetStateRoot(stateRoot)
-	pb, err := wsb.Block().Proto()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().CapellaForkEpoch {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
-	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
 }
 
 // This function retrieves the payload header given the slot number and the validator index.

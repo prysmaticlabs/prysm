@@ -12,9 +12,12 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	blocks2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -41,25 +44,180 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch {
-		blk, err := vs.getPhase0BeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch phase0 beacon block: %v", err)
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: blk}}, nil
-	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch {
-		blk, err := vs.getAltairBeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
+
+	// A syncing validator should not produce a block.
+	if vs.SyncChecker.Syncing() {
+		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
 	}
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-	return vs.getBellatrixBeaconBlock(ctx, req)
+
+	var blk interfaces.BeaconBlock
+	var signedblk interfaces.SignedBeaconBlock
+	var err error
+	switch {
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch:
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock{})
+		signedblk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch:
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{})
+		signedblk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{})
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().CapellaForkEpoch:
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+		signedblk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{})
+	default:
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{})
+		signedblk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{})
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+	}
+
+	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve head root: %v", err)
+	}
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get head state %v", err)
+	}
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
+	}
+
+	// Set slot, graffiti and parent root.
+	blk.SetSlot(req.Slot)
+	blk.Body().SetGraffiti(req.Graffiti)
+	blk.SetParentRoot(parentRoot)
+
+	// Set eth1 data.
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+	if err != nil {
+		return nil, fmt.Errorf("could not get ETH1 data: %v", err)
+	}
+	blk.Body().SetEth1Data(eth1Data)
+
+	// Set deposit and attestation.
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	blk.Body().SetDeposits(deposits)
+	blk.Body().SetAttestations(atts)
+
+	// Set proposer index
+	idx, err := helpers.BeaconProposerIndex(ctx, head)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate proposer index %v", err)
+	}
+	blk.SetProposerIndex(idx)
+
+	// Set slashings
+	proposerSlashings := vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/)
+	validProposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposerSlashings))
+	for _, slashing := range proposerSlashings {
+		_, err := blocks2.ProcessProposerSlashing(ctx, head, slashing, v.SlashValidator)
+		if err != nil {
+			log.WithError(err).Warn("Proposer: invalid proposer slashing")
+			continue
+		}
+		validProposerSlashings = append(validProposerSlashings, slashing)
+	}
+	attSlashings := vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/)
+	validAttSlashings := make([]*ethpb.AttesterSlashing, 0, len(attSlashings))
+	for _, slashing := range attSlashings {
+		_, err := blocks2.ProcessAttesterSlashing(ctx, head, slashing, v.SlashValidator)
+		if err != nil {
+			log.WithError(err).Warn("Proposer: invalid attester slashing")
+			continue
+		}
+		validAttSlashings = append(validAttSlashings, slashing)
+	}
+	blk.Body().SetProposerSlashings(validProposerSlashings)
+	blk.Body().SetAttesterSlashings(validAttSlashings)
+
+	// Set exits
+	exits := vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/)
+	validExits := make([]*ethpb.SignedVoluntaryExit, 0, len(exits))
+	for _, exit := range exits {
+		val, err := head.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
+		if err != nil {
+			log.WithError(err).Warn("Proposer: invalid exit")
+			continue
+		}
+		if err := blocks2.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
+			log.WithError(err).Warn("Proposer: invalid exit")
+			continue
+		}
+		validExits = append(validExits, exit)
+	}
+	blk.Body().SetVoluntaryExits(validExits)
+
+	// Set sync aggregate. New in Altair
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
+		syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(parentRoot))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute the sync aggregate")
+		}
+
+		err = blk.Body().SetSyncAggregate(syncAggregate)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set sync aggregate")
+		}
+	}
+
+	// Set execution data. New in Bellatrix
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload")
+		}
+		err = blk.Body().SetExecution(executionData)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set execution data")
+		}
+	}
+
+	// Set bls to execution change. New in Capella
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+		changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion(head)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not pack BLSToExecutionChanges")
+		}
+		err = blk.Body().SetBLSToExecutionChanges(changes)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set bls to execution changes")
+		}
+	}
+
+	blk.SetStateRoot(params.BeaconConfig().ZeroHash[:])
+	err = signedblk.SetBlock(blk)
+	if err != nil {
+		return nil, err
+	}
+	sr, err := vs.computeStateRoot(ctx, signedblk)
+	if err != nil {
+		return nil, fmt.Errorf("could not compute state root: %v", err)
+	}
+	blk.SetStateRoot(sr)
+
+	pb, err := blk.Proto()
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
+	case slots.ToEpoch(req.Slot) < params.BeaconConfig().CapellaForkEpoch:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
+	}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
