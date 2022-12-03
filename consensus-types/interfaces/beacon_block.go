@@ -56,6 +56,7 @@ type BeaconBlock interface {
 	ssz.HashRoot
 	Version() int
 	AsSignRequestObject() (validatorpb.SignRequestObject, error)
+	SetBlinded(bool)
 }
 
 // BeaconBlockBody describes the method set employed by an object

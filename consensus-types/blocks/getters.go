@@ -561,6 +561,11 @@ func (b *BeaconBlock) IsBlinded() bool {
 	return b.body.isBlinded
 }
 
+// SetBlinded sets the blinded flag of the beacon block.
+func (b *BeaconBlock) SetBlinded(blinded bool) {
+	b.body.isBlinded = blinded
+}
+
 // Version of the underlying protobuf object.
 func (b *BeaconBlock) Version() int {
 	return b.version
