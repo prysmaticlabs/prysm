@@ -4,19 +4,18 @@
 package beacon_api
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
 const attestationDataEndpoint = "/eth/v1/validator/attestation_data"
@@ -30,31 +29,38 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	expectedTargetEpoch := uint64(8)
 	expectedTargetRoot := "0x246590e8e4c2a9bd13cc776ecc7025bc432219f076e80b27267b8fa0456dc821"
 
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, createAttestationDataHandler(&rpcmiddleware.ProduceAttestationDataResponseJson{
-		Data: &rpcmiddleware.AttestationDataJson{
-			Slot:            strconv.FormatUint(expectedSlot, 10),
-			CommitteeIndex:  strconv.FormatUint(expectedCommitteeIndex, 10),
-			BeaconBlockRoot: expectedBeaconBlockRoot,
-			Source: &rpcmiddleware.CheckpointJson{
-				Epoch: strconv.FormatUint(expectedSourceEpoch, 10),
-				Root:  expectedSourceRoot,
-			},
-			Target: &rpcmiddleware.CheckpointJson{
-				Epoch: strconv.FormatUint(expectedTargetEpoch, 10),
-				Root:  expectedTargetRoot,
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", expectedCommitteeIndex, expectedSlot),
+		&produceAttestationDataResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		rpcmiddleware.ProduceAttestationDataResponseJson{
+			Data: &rpcmiddleware.AttestationDataJson{
+				Slot:            strconv.FormatUint(expectedSlot, 10),
+				CommitteeIndex:  strconv.FormatUint(expectedCommitteeIndex, 10),
+				BeaconBlockRoot: expectedBeaconBlockRoot,
+				Source: &rpcmiddleware.CheckpointJson{
+					Epoch: strconv.FormatUint(expectedSourceEpoch, 10),
+					Root:  expectedSourceRoot,
+				},
+				Target: &rpcmiddleware.CheckpointJson{
+					Epoch: strconv.FormatUint(expectedTargetEpoch, 10),
+					Root:  expectedTargetRoot,
+				},
 			},
 		},
-	}))
-	server := httptest.NewServer(mux)
-	defer server.Close()
+	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
-
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	resp, err := validatorClient.getAttestationData(types.Slot(expectedSlot), types.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
@@ -75,13 +81,13 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 func TestGetAttestationData_InvalidData(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateData         func() *rpcmiddleware.ProduceAttestationDataResponseJson
+		generateData         func() rpcmiddleware.ProduceAttestationDataResponseJson
 		expectedErrorMessage string
 	}{
 		{
 			name: "nil attestation data",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
-				return &rpcmiddleware.ProduceAttestationDataResponseJson{
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
+				return rpcmiddleware.ProduceAttestationDataResponseJson{
 					Data: nil,
 				}
 			},
@@ -89,7 +95,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid committee index",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.CommitteeIndex = "foo"
 				return attestation
@@ -98,7 +104,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid block root",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.BeaconBlockRoot = "foo"
 				return attestation
@@ -107,7 +113,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid slot",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Slot = "foo"
 				return attestation
@@ -116,7 +122,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil source",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source = nil
 				return attestation
@@ -125,7 +131,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source epoch",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Epoch = "foo"
 				return attestation
@@ -134,7 +140,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source root",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Root = "foo"
 				return attestation
@@ -143,7 +149,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil target",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target = nil
 				return attestation
@@ -152,7 +158,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target epoch",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Epoch = "foo"
 				return attestation
@@ -161,7 +167,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target root",
-			generateData: func() *rpcmiddleware.ProduceAttestationDataResponseJson {
+			generateData: func() rpcmiddleware.ProduceAttestationDataResponseJson {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Root = "foo"
 				return attestation
@@ -172,123 +178,54 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			// Mock the attestation_data endpoint
-			mux := http.NewServeMux()
-			mux.HandleFunc(attestationDataEndpoint, createAttestationDataHandler(testCase.generateData()))
-			server := httptest.NewServer(mux)
-			defer server.Close()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			validatorClient := &beaconApiValidatorClient{
-				url:        server.URL,
-				httpClient: http.Client{Timeout: time.Second * 5},
-			}
+			produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
+				&produceAttestationDataResponseJson,
+			).Return(
+				nil,
+				nil,
+			).SetArg(
+				1,
+				testCase.generateData(),
+			).Times(1)
 
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			_, err := validatorClient.getAttestationData(1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
 }
 
-func TestGetAttestationData_InvalidAttestationJson(t *testing.T) {
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("foo"))
-		require.NoError(t, err)
-	}))
-	server := httptest.NewServer(mux)
-	defer server.Close()
+func TestGetAttestationData_JsonResponseError(t *testing.T) {
+	const slot = types.Slot(1)
+	const committeeIndex = types.CommitteeIndex(2)
 
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, fmt.Sprintf("failed to decode response json for %s", server.URL), err)
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
+		&produceAttestationDataResponseJson,
+	).Return(
+		nil,
+		errors.New("some specific json response error"),
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	_, err := validatorClient.getAttestationData(slot, committeeIndex)
+	assert.ErrorContains(t, "failed to get json response", err)
+	assert.ErrorContains(t, "some specific json response error", err)
 }
 
-func TestGetAttestationData_InvalidErrorJson(t *testing.T) {
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, http.HandlerFunc(invalidJsonErrHandler))
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
-
-	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, fmt.Sprintf("failed to decode error json for %s", server.URL), err)
-}
-
-func TestGetAttestationData_404Error(t *testing.T) {
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, http.HandlerFunc(notFoundErrHandler))
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
-
-	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, "error 404: Not found", err)
-}
-
-func TestGetAttestationData_500Error(t *testing.T) {
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, http.HandlerFunc(internalServerErrHandler))
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
-
-	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, "error 500: Internal server error", err)
-}
-
-func TestGetAttestationData_Timeout(t *testing.T) {
-	// Mock the attestation_data endpoint
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, http.HandlerFunc(internalServerErrHandler))
-	server := httptest.NewServer(mux)
-	defer server.Close()
-
-	validatorClient := &beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: 1},
-	}
-
-	_, err := validatorClient.getAttestationData(1, 2)
-	assert.ErrorContains(t, fmt.Sprintf("failed to query REST API %s/eth/v1/validator/attestation_data", server.URL), err)
-	assert.ErrorContains(t, "context deadline exceeded", err)
-}
-
-func createAttestationDataHandler(data *rpcmiddleware.ProduceAttestationDataResponseJson) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		marshalledResponse, err := json.Marshal(data)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = w.Write(marshalledResponse)
-		if err != nil {
-			panic(err)
-		}
-	})
-}
-
-func generateValidAttestation(slot uint64, committeeIndex uint64) *rpcmiddleware.ProduceAttestationDataResponseJson {
-	return &rpcmiddleware.ProduceAttestationDataResponseJson{
+func generateValidAttestation(slot uint64, committeeIndex uint64) rpcmiddleware.ProduceAttestationDataResponseJson {
+	return rpcmiddleware.ProduceAttestationDataResponseJson{
 		Data: &rpcmiddleware.AttestationDataJson{
 			Slot:            strconv.FormatUint(slot, 10),
 			CommitteeIndex:  strconv.FormatUint(committeeIndex, 10),

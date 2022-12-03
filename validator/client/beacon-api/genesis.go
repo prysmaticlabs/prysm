@@ -57,7 +57,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 
 func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, *apimiddleware.DefaultErrorJson, error) {
 	genesisJson := &rpcmiddleware.GenesisResponseJson{}
-	errorJson, err := getRestJsonResponse(c.httpClient, c.url+"/eth/v1/beacon/genesis", genesisJson)
+	errorJson, err := c.jsonRestHandler.GetRestJsonResponse("/eth/v1/beacon/genesis", genesisJson)
 	if err != nil {
 		return nil, errorJson, errors.Wrap(err, "failed to get json response")
 	}

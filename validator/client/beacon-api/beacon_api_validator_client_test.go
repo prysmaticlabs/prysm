@@ -5,14 +5,16 @@ package beacon_api
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
+	"errors"
+	"fmt"
 	"testing"
-	"time"
 
+	"github.com/golang/mock/gomock"
+	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
 func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
@@ -26,16 +28,23 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	const slot = types.Slot(1)
 	const committeeIndex = types.CommitteeIndex(2)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, createAttestationDataHandler(generateValidAttestation(uint64(slot), uint64(committeeIndex))))
-	server := httptest.NewServer(mux)
-	defer server.Close()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	validatorClient := beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
+		&produceAttestationDataResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
+	).Times(2)
 
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(
@@ -51,16 +60,23 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	const slot = types.Slot(1)
 	const committeeIndex = types.CommitteeIndex(2)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(attestationDataEndpoint, notFoundErrHandler)
-	server := httptest.NewServer(mux)
-	defer server.Close()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	validatorClient := beaconApiValidatorClient{
-		url:        server.URL,
-		httpClient: http.Client{Timeout: time.Second * 5},
-	}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
+		&produceAttestationDataResponseJson,
+	).Return(
+		nil,
+		errors.New("some specific json error"),
+	).SetArg(
+		1,
+		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
+	).Times(2)
 
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(

@@ -8,60 +8,25 @@ import (
 	"net/http"
 
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
-func internalServerErrHandler(w http.ResponseWriter, r *http.Request) {
-	internalErrorJson := &apimiddleware.DefaultErrorJson{
-		Code:    http.StatusInternalServerError,
-		Message: "Internal server error",
-	}
+func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		errorJson := &apimiddleware.DefaultErrorJson{
+			Code:    statusCode,
+			Message: errorMessage,
+		}
 
-	marshalledError, err := json.Marshal(internalErrorJson)
-	if err != nil {
-		panic(err)
-	}
+		marshalledError, err := json.Marshal(errorJson)
+		if err != nil {
+			panic(err)
+		}
 
-	w.WriteHeader(http.StatusInternalServerError)
-	_, err = w.Write(marshalledError)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func notFoundErrHandler(w http.ResponseWriter, r *http.Request) {
-	internalErrorJson := &apimiddleware.DefaultErrorJson{
-		Code:    http.StatusNotFound,
-		Message: "Not found",
-	}
-
-	marshalledError, err := json.Marshal(internalErrorJson)
-	if err != nil {
-		panic(err)
-	}
-
-	w.WriteHeader(http.StatusNotFound)
-	_, err = w.Write(marshalledError)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func invalidErr999Handler(w http.ResponseWriter, r *http.Request) {
-	internalErrorJson := &apimiddleware.DefaultErrorJson{
-		Code:    999,
-		Message: "Invalid error",
-	}
-
-	marshalledError, err := json.Marshal(internalErrorJson)
-	if err != nil {
-		panic(err)
-	}
-
-	w.WriteHeader(999)
-	_, err = w.Write(marshalledError)
-	if err != nil {
-		panic(err)
+		w.WriteHeader(statusCode)
+		_, err = w.Write(marshalledError)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -71,19 +36,4 @@ func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func createGenesisHandler(data *rpcmiddleware.GenesisResponse_GenesisJson) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: data}
-		marshalledResponse, err := json.Marshal(genesisResponseJson)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = w.Write(marshalledResponse)
-		if err != nil {
-			panic(err)
-		}
-	})
 }
