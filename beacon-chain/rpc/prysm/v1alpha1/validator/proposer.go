@@ -60,38 +60,38 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	var err error
 	switch {
 	case slots.ToEpoch(req.Slot) < params.BeaconConfig().AltairForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock{})
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
-		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(req.Slot) < params.BeaconConfig().BellatrixForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{})
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
-		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{})
+		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(req.Slot) < params.BeaconConfig().CapellaForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
-		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{})
+		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	default:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{})
+		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
-		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{})
+		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
@@ -110,11 +110,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 	}
 
-	// Set slot, graffiti and parent root.
+	// Set slot, graffiti, randao reveal, and parent root.
 	blk.SetSlot(req.Slot)
 	blk.Body().SetGraffiti(req.Graffiti)
+	blk.Body().SetRandaoReveal(req.RandaoReveal)
 	blk.SetParentRoot(parentRoot)
-
 	// Set eth1 data.
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
@@ -205,11 +205,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				if err := blk.Body().SetExecution(h); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set execution payload")
 				} else {
-					fallBackToLocal = true
+					fallBackToLocal = false
 				}
 			}
 		}
-		if !fallBackToLocal {
+		if fallBackToLocal {
 			executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get execution payload")
