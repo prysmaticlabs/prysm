@@ -6,7 +6,9 @@ go_library(
     srcs = [
         "beacon_api_helpers.go",
         "beacon_api_validator_client.go",
+        "beacon_block.go",
         "genesis.go",
+        "json_rest_handler.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api",
     visibility = ["//validator:__subpackages__"],

@@ -14,15 +14,22 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url            string
-	httpClient     http.Client
-	fallbackClient iface.ValidatorClient
+	url             string
+	httpClient      http.Client
+	jsonRestHandler jsonRestHandler
+	fallbackClient  iface.ValidatorClient
 }
 
 func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
-	return &beaconApiValidatorClient{
-		url:        url,
+	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
+		host:       url,
+	}
+
+	return &beaconApiValidatorClient{
+		url:             url,
+		httpClient:      http.Client{Timeout: timeout},
+		jsonRestHandler: jsonRestHandler,
 	}
 }
 
@@ -143,12 +150,7 @@ func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *e
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ProposeBeaconBlock(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeBeaconBlock is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.proposeBeaconBlock(in)
 }
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
