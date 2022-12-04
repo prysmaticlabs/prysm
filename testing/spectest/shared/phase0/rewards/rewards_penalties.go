@@ -51,9 +51,16 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	_, testsFolderPath := utils.TestFolders(t, config, "phase0", "rewards")
 	testTypes, err := util.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
+	if len(testTypes) == 0 {
+		t.Fatalf("No test types found for %s/%s/%s", config, "phase0", "rewards")
+	}
 
 	for _, testType := range testTypes {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
+		testPath := fmt.Sprintf("rewards/%s/pyspec_tests", testType)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
+		if len(testFolders) == 0 {
+			t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", testPath)
+		}
 		for _, folder := range testFolders {
 			helpers.ClearCache()
 			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {

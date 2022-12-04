@@ -23,6 +23,7 @@ import (
 	f "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -70,6 +71,7 @@ type config struct {
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
+	BLSToExecPool           blstoexec.PoolManager
 	P2p                     p2p.Broadcaster
 	MaxRoutines             int
 	StateNotifier           statefeed.Notifier
