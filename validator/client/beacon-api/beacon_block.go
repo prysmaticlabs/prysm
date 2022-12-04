@@ -6,12 +6,12 @@ package beacon_api
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
-	"strconv"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -91,10 +91,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	}
 
 	headers := map[string]string{"Eth-Consensus-Version": consensusVersion}
-	httpError, err := c.jsonRestHandler.PostRestJson(endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil)
-
-	// This endpoint returns status 202 (StatusAccepted) when broadcast succeeded but block validation failed
-	if err != nil && (httpError == nil || httpError.Code != http.StatusAccepted) {
+	if _, err := c.jsonRestHandler.PostRestJson(endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 
@@ -107,8 +104,8 @@ func marshallBeaconBlockPhase0(block *ethpb.SignedBeaconBlock) ([]byte, error) {
 		Message: &apimiddleware.BeaconBlockJson{
 			Body:          jsonifyBeaconBlockBody(block.Block.Body),
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(block.Block.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(block.Block.Slot), 10),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 		},
 	}
@@ -124,8 +121,8 @@ func marshallBeaconBlockAltair(block *ethpb.SignedBeaconBlockAltair) ([]byte, er
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BeaconBlockAltairJson{
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(block.Block.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(block.Block.Slot), 10),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BeaconBlockBodyAltairJson{
 				// Set the phase0 fields
@@ -164,8 +161,8 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BeaconBlockBellatrixJson{
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(block.Block.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(block.Block.Slot), 10),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BeaconBlockBodyBellatrixJson{
 				// Set the phase0 fields
@@ -184,19 +181,19 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 				},
 				// Set the bellatrix fields
 				ExecutionPayload: &apimiddleware.ExecutionPayloadJson{
-					BaseFeePerGas: string(block.Block.Body.ExecutionPayload.BaseFeePerGas),
+					BaseFeePerGas: uint256BytesToString(block.Block.Body.ExecutionPayload.BaseFeePerGas),
 					BlockHash:     hexutil.Encode(block.Block.Body.ExecutionPayload.BlockHash),
-					BlockNumber:   strconv.FormatUint(block.Block.Body.ExecutionPayload.BlockNumber, 10),
+					BlockNumber:   uint64ToString(block.Block.Body.ExecutionPayload.BlockNumber),
 					ExtraData:     hexutil.Encode(block.Block.Body.ExecutionPayload.ExtraData),
 					FeeRecipient:  hexutil.Encode(block.Block.Body.ExecutionPayload.FeeRecipient),
-					GasLimit:      strconv.FormatUint(block.Block.Body.ExecutionPayload.GasLimit, 10),
-					GasUsed:       strconv.FormatUint(block.Block.Body.ExecutionPayload.GasUsed, 10),
+					GasLimit:      uint64ToString(block.Block.Body.ExecutionPayload.GasLimit),
+					GasUsed:       uint64ToString(block.Block.Body.ExecutionPayload.GasUsed),
 					LogsBloom:     hexutil.Encode(block.Block.Body.ExecutionPayload.LogsBloom),
 					ParentHash:    hexutil.Encode(block.Block.Body.ExecutionPayload.ParentHash),
 					PrevRandao:    hexutil.Encode(block.Block.Body.ExecutionPayload.PrevRandao),
 					ReceiptsRoot:  hexutil.Encode(block.Block.Body.ExecutionPayload.ReceiptsRoot),
 					StateRoot:     hexutil.Encode(block.Block.Body.ExecutionPayload.StateRoot),
-					TimeStamp:     strconv.FormatUint(block.Block.Body.ExecutionPayload.Timestamp, 10),
+					TimeStamp:     uint64ToString(block.Block.Body.ExecutionPayload.Timestamp),
 					Transactions:  executionPayloadTransaction,
 				},
 			},
@@ -214,8 +211,8 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BlindedBeaconBlockBellatrixJson{
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(block.Block.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(block.Block.Slot), 10),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BlindedBeaconBlockBodyBellatrixJson{
 				// Set the phase0 fields
@@ -234,19 +231,19 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 				},
 				// Set the bellatrix fields
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderJson{
-					BaseFeePerGas:    string(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
+					BaseFeePerGas:    uint256BytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
-					BlockNumber:      strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.BlockNumber, 10),
+					BlockNumber:      uint64ToString(block.Block.Body.ExecutionPayloadHeader.BlockNumber),
 					ExtraData:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ExtraData),
 					FeeRecipient:     hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.FeeRecipient),
-					GasLimit:         strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.GasLimit, 10),
-					GasUsed:          strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.GasUsed, 10),
+					GasLimit:         uint64ToString(block.Block.Body.ExecutionPayloadHeader.GasLimit),
+					GasUsed:          uint64ToString(block.Block.Body.ExecutionPayloadHeader.GasUsed),
 					LogsBloom:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.LogsBloom),
 					ParentHash:       hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ParentHash),
 					PrevRandao:       hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.PrevRandao),
 					ReceiptsRoot:     hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ReceiptsRoot),
 					StateRoot:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.StateRoot),
-					TimeStamp:        strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.Timestamp, 10),
+					TimeStamp:        uint64ToString(block.Block.Body.ExecutionPayloadHeader.Timestamp),
 					TransactionsRoot: hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.TransactionsRoot),
 				},
 			},
@@ -263,7 +260,7 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 
 	for _, signedBlsToExecutionChange := range block.Block.Body.BlsToExecutionChanges {
 		blsToExecutionChangeJson := &apimiddleware.BLSToExecutionChangeJson{
-			ValidatorIndex:     strconv.FormatUint(uint64(signedBlsToExecutionChange.Message.ValidatorIndex), 10),
+			ValidatorIndex:     uint64ToString(signedBlsToExecutionChange.Message.ValidatorIndex),
 			FromBLSPubkey:      hexutil.Encode(signedBlsToExecutionChange.Message.FromBlsPubkey),
 			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
 		}
@@ -274,8 +271,8 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BlindedBeaconBlockCapellaJson{
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(block.Block.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(block.Block.Slot), 10),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BlindedBeaconBlockBodyCapellaJson{
 				// Set the phase0 fields
@@ -295,19 +292,19 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 				BLSToExecutionChanges: blsToExecutionChanges,
 				// Set the capella fields
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderCapellaJson{
-					BaseFeePerGas:    string(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
+					BaseFeePerGas:    uint256BytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
-					BlockNumber:      strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.BlockNumber, 10),
+					BlockNumber:      uint64ToString(block.Block.Body.ExecutionPayloadHeader.BlockNumber),
 					ExtraData:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ExtraData),
 					FeeRecipient:     hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.FeeRecipient),
-					GasLimit:         strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.GasLimit, 10),
-					GasUsed:          strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.GasUsed, 10),
+					GasLimit:         uint64ToString(block.Block.Body.ExecutionPayloadHeader.GasLimit),
+					GasUsed:          uint64ToString(block.Block.Body.ExecutionPayloadHeader.GasUsed),
 					LogsBloom:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.LogsBloom),
 					ParentHash:       hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ParentHash),
 					PrevRandao:       hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.PrevRandao),
 					ReceiptsRoot:     hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ReceiptsRoot),
 					StateRoot:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.StateRoot),
-					TimeStamp:        strconv.FormatUint(block.Block.Body.ExecutionPayloadHeader.Timestamp, 10),
+					TimeStamp:        uint64ToString(block.Block.Body.ExecutionPayloadHeader.Timestamp),
 					TransactionsRoot: hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.TransactionsRoot),
 					WithdrawalsRoot:  hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot),
 				},
@@ -358,7 +355,7 @@ func jsonifyBeaconBlockBody(beaconBlockBody phase0BeaconBlockBody) *apimiddlewar
 
 		depositJson := &apimiddleware.DepositJson{
 			Data: &apimiddleware.Deposit_DataJson{
-				Amount:                strconv.FormatUint(deposit.Data.Amount, 10),
+				Amount:                uint64ToString(deposit.Data.Amount),
 				PublicKey:             hexutil.Encode(deposit.Data.PublicKey),
 				Signature:             hexutil.Encode(deposit.Data.Signature),
 				WithdrawalCredentials: hexutil.Encode(deposit.Data.WithdrawalCredentials),
@@ -381,8 +378,8 @@ func jsonifyBeaconBlockBody(beaconBlockBody phase0BeaconBlockBody) *apimiddlewar
 	for _, signedVoluntaryExit := range beaconBlockBody.GetVoluntaryExits() {
 		signedVoluntaryExitJson := &apimiddleware.SignedVoluntaryExitJson{
 			Exit: &apimiddleware.VoluntaryExitJson{
-				Epoch:          strconv.FormatUint(uint64(signedVoluntaryExit.Exit.Epoch), 10),
-				ValidatorIndex: strconv.FormatUint(uint64(signedVoluntaryExit.Exit.ValidatorIndex), 10),
+				Epoch:          uint64ToString(signedVoluntaryExit.Exit.Epoch),
+				ValidatorIndex: uint64ToString(signedVoluntaryExit.Exit.ValidatorIndex),
 			},
 			Signature: hexutil.Encode(signedVoluntaryExit.Signature),
 		}
@@ -395,7 +392,7 @@ func jsonifyBeaconBlockBody(beaconBlockBody phase0BeaconBlockBody) *apimiddlewar
 		Deposits:          deposits,
 		Eth1Data: &apimiddleware.Eth1DataJson{
 			BlockHash:    hexutil.Encode(beaconBlockBody.GetEth1Data().BlockHash),
-			DepositCount: strconv.FormatUint(beaconBlockBody.GetEth1Data().DepositCount, 10),
+			DepositCount: uint64ToString(beaconBlockBody.GetEth1Data().DepositCount),
 			DepositRoot:  hexutil.Encode(beaconBlockBody.GetEth1Data().DepositRoot),
 		},
 		Graffiti:          hexutil.Encode(beaconBlockBody.GetGraffiti()),
@@ -412,8 +409,8 @@ func jsonifySignedBeaconBlockHeader(signedBeaconBlockHeader *ethpb.SignedBeaconB
 		Header: &apimiddleware.BeaconBlockHeaderJson{
 			BodyRoot:      hexutil.Encode(signedBeaconBlockHeader.Header.BodyRoot),
 			ParentRoot:    hexutil.Encode(signedBeaconBlockHeader.Header.ParentRoot),
-			ProposerIndex: strconv.FormatUint(uint64(signedBeaconBlockHeader.Header.ProposerIndex), 10),
-			Slot:          strconv.FormatUint(uint64(signedBeaconBlockHeader.Header.Slot), 10),
+			ProposerIndex: uint64ToString(signedBeaconBlockHeader.Header.ProposerIndex),
+			Slot:          uint64ToString(signedBeaconBlockHeader.Header.Slot),
 			StateRoot:     hexutil.Encode(signedBeaconBlockHeader.Header.StateRoot),
 		},
 		Signature: hexutil.Encode(signedBeaconBlockHeader.Signature),
@@ -423,7 +420,7 @@ func jsonifySignedBeaconBlockHeader(signedBeaconBlockHeader *ethpb.SignedBeaconB
 func jsonifyIndexedAttestation(indexedAttestation *ethpb.IndexedAttestation) *apimiddleware.IndexedAttestationJson {
 	attestingIndices := make([]string, 0, len(indexedAttestation.AttestingIndices))
 	for _, attestingIndex := range indexedAttestation.AttestingIndices {
-		attestingIndex := strconv.FormatUint(attestingIndex, 10)
+		attestingIndex := uint64ToString(attestingIndex)
 		attestingIndices = append(attestingIndices, attestingIndex)
 	}
 
@@ -436,15 +433,20 @@ func jsonifyIndexedAttestation(indexedAttestation *ethpb.IndexedAttestation) *ap
 func jsonifyAttestationData(attestationData *ethpb.AttestationData) *apimiddleware.AttestationDataJson {
 	return &apimiddleware.AttestationDataJson{
 		BeaconBlockRoot: hexutil.Encode(attestationData.BeaconBlockRoot),
-		CommitteeIndex:  strconv.FormatUint(uint64(attestationData.CommitteeIndex), 10),
-		Slot:            strconv.FormatUint(uint64(attestationData.Slot), 10),
+		CommitteeIndex:  uint64ToString(attestationData.CommitteeIndex),
+		Slot:            uint64ToString(attestationData.Slot),
 		Source: &apimiddleware.CheckpointJson{
-			Epoch: strconv.FormatUint(uint64(attestationData.Source.Epoch), 10),
+			Epoch: uint64ToString(attestationData.Source.Epoch),
 			Root:  hexutil.Encode(attestationData.Source.Root),
 		},
 		Target: &apimiddleware.CheckpointJson{
-			Epoch: strconv.FormatUint(uint64(attestationData.Target.Epoch), 10),
+			Epoch: uint64ToString(attestationData.Target.Epoch),
 			Root:  hexutil.Encode(attestationData.Target.Root),
 		},
 	}
+}
+
+func uint256BytesToString(bytes []byte) string {
+	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
+	return new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bytes)).String()
 }

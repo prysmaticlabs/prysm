@@ -34,10 +34,16 @@ func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.Valida
 }
 
 func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
+	jsonRestHandler := beaconApiJsonRestHandler{
+		httpClient: http.Client{Timeout: timeout},
+		host:       url,
+	}
+
 	return &beaconApiValidatorClient{
-		url:            url,
-		httpClient:     http.Client{Timeout: timeout},
-		fallbackClient: fallbackClient,
+		url:             url,
+		httpClient:      http.Client{Timeout: timeout},
+		fallbackClient:  fallbackClient,
+		jsonRestHandler: jsonRestHandler,
 	}
 }
 
