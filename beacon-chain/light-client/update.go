@@ -37,9 +37,9 @@ type Update struct {
 
 func (u *Update) UnmarshalJSON(data []byte) error {
 	value, err := unmarshalGenericUpdate(data, "type", "update", map[string]reflect.Type{
-		"light_client_finality_update":   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
-		"light_client_optimistic_update": reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
-		"light_client_update":            reflect.TypeOf(ethpbv2.LightClientUpdate{}),
+		finalityUpdateTypeName:   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
+		optimisticUpdateTypeName: reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
+		updateTypeName:           reflect.TypeOf(ethpbv2.LightClientUpdate{}),
 	})
 	if err != nil {
 		return err
