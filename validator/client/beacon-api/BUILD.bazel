@@ -6,13 +6,18 @@ go_library(
     srcs = [
         "beacon_api_helpers.go",
         "beacon_api_validator_client.go",
+        "domain_data.go",
         "genesis.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api",
     visibility = ["//validator:__subpackages__"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
+        "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//network/forks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//validator/client/iface:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
@@ -27,6 +32,8 @@ go_test(
     size = "small",
     srcs = [
         "beacon_api_helpers_test.go",
+        "beacon_api_validator_client_test.go",
+        "domain_data_test.go",
         "genesis_test.go",
         "handlers_test.go",
         "wait_for_chain_start_test.go",
@@ -36,9 +43,14 @@ go_test(
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//config/params:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "//validator/client/beacon-api/mock:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
