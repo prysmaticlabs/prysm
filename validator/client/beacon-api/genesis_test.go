@@ -37,14 +37,13 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, httpError, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
+	resp, httpError, err := genesisProvider.GetGenesis()
 	assert.NoError(t, err)
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	assert.Equal(t, "1234", resp.Data.GenesisTime)
-	assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", resp.Data.GenesisValidatorsRoot)
+	assert.Equal(t, "1234", resp.GenesisTime)
+	assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", resp.GenesisValidatorsRoot)
 }
 
 func TestGetGenesis_NilData(t *testing.T) {
@@ -64,10 +63,10 @@ func TestGetGenesis_NilData(t *testing.T) {
 		rpcmiddleware.GenesisResponseJson{Data: nil},
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, httpError, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
+	_, httpError, err := genesisProvider.GetGenesis()
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "GenesisResponseJson.Data is nil", err)
+	assert.ErrorContains(t, "genesis data is nil", err)
 }
 
 func TestGetGenesis_JsonResponseError(t *testing.T) {
@@ -89,8 +88,8 @@ func TestGetGenesis_JsonResponseError(t *testing.T) {
 		errors.New("some specific json response error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, httpError, err := validatorClient.getGenesis()
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
+	_, httpError, err := genesisProvider.GetGenesis()
 	assert.ErrorContains(t, "failed to get json response", err)
 	assert.ErrorContains(t, "some specific json response error", err)
 	assert.DeepEqual(t, expectedHttpErrorJson, httpError)

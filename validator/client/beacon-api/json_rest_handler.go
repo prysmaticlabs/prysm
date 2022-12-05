@@ -20,6 +20,8 @@ type beaconApiJsonRestHandler struct {
 	host       string
 }
 
+// GetRestJsonResponse sends a GET requests to apiEndpoint and decodes the response body as a JSON object into responseJson.
+// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object instead and returned as the first return value.
 func (c beaconApiJsonRestHandler) GetRestJsonResponse(apiEndpoint string, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
 	if responseJson == nil {
 		return nil, errors.New("responseJson is nil")
