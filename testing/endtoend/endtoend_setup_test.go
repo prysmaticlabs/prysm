@@ -182,7 +182,7 @@ func scenarioEvals() []types.Evaluator {
 
 func scenarioEvalsMulti() []types.Evaluator {
 	return []types.Evaluator{
-		//ev.PeersConnect,
+		ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
