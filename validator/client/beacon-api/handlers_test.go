@@ -70,7 +70,7 @@ func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func invalidJsonResultHandler(w http.ResponseWriter, r *http.Request) {
+func invalidJsonResultHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
 		panic(err)

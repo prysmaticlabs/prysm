@@ -20,20 +20,19 @@ type beaconApiValidatorClient struct {
 	genesisProvider genesisProvider
 }
 
-func NewBeaconApiValidatorClient(url string, timeout time.Duration) *beaconApiValidatorClient {
+func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
+	return NewBeaconApiValidatorClientWithFallback(url, timeout, nil)
+}
+
+func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
 	httpClient := http.Client{Timeout: timeout}
 
 	return &beaconApiValidatorClient{
 		url:             url,
 		httpClient:      httpClient,
 		genesisProvider: beaconApiGenesisProvider{httpClient: httpClient, url: url},
+		fallbackClient:  fallbackClient,
 	}
-}
-
-func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) *beaconApiValidatorClient {
-	beaconApiValidatorClient := NewBeaconApiValidatorClient(url, timeout)
-	beaconApiValidatorClient.fallbackClient = fallbackClient
-	return beaconApiValidatorClient
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
