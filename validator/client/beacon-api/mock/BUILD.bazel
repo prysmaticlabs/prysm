@@ -1,0 +1,14 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+# gazelle:build_tags use_beacon_api
+go_library(
+    name = "go_default_library",
+    srcs = ["genesis_mock.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock",
+    visibility = ["//validator:__subpackages__"],
+    deps = [
+        "//api/gateway/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
+    ],
+)
