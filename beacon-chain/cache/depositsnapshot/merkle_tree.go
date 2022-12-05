@@ -25,9 +25,12 @@ type MerkleTreeNode interface {
 	// Finalize marks deposits of the Merkle tree as finalized.
 	Finalize(deposits uint64, depth uint64) MerkleTreeNode
 	// GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
-	GetFinalized(result [][32]byte) uint64
+	GetFinalized(result [][32]byte) (uint64, [][32]byte)
 	// PushLeaf adds a new leaf node at the next available Zero node.
 	PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
+
+	Right() MerkleTreeNode
+	Left() MerkleTreeNode
 }
 
 func create(leaves [][32]byte, depth uint64) MerkleTreeNode {
@@ -70,17 +73,17 @@ func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) Merk
 	return &node
 }
 
-func generateProof(tree InnerNode, index uint64, depth uint64) ([32]byte, [][32]byte) {
+func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [][32]byte) {
 	var proof [][32]byte
 	node := tree
 	for depth > 0 {
 		ithBit := (index >> (depth - 1)) & 0x1
 		if ithBit == 1 {
-			proof = append(proof, node.left.GetRoot())
-			//node = node.right
+			proof = append(proof, node.Left().GetRoot())
+			node = node.Right()
 		} else {
-			proof = append(proof, node.right.GetRoot())
-			//node = node.left
+			proof = append(proof, node.Right().GetRoot())
+			node = node.Left()
 		}
 		depth -= 1
 	}
@@ -101,6 +104,14 @@ type FinalizedNode struct {
 	hash         [32]byte
 }
 
+func (f *FinalizedNode) Right() MerkleTreeNode {
+	return nil
+}
+
+func (f *FinalizedNode) Left() MerkleTreeNode {
+	return nil
+}
+
 func (f *FinalizedNode) GetRoot() [32]byte {
 	return f.hash
 }
@@ -113,9 +124,8 @@ func (f *FinalizedNode) Finalize(deposits uint64, depth uint64) MerkleTreeNode {
 	return f
 }
 
-func (f *FinalizedNode) GetFinalized(result [][32]byte) uint64 {
-	result = append(result, f.hash)
-	return f.depositCount
+func (f *FinalizedNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	return f.depositCount, append(result, f.hash)
 }
 
 func (f *FinalizedNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error) {
@@ -125,6 +135,14 @@ func (f *FinalizedNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, e
 // LeafNode represents a leaf node holding a deposit and satisfies the MerkleTreeNode interface.
 type LeafNode struct {
 	hash [32]byte
+}
+
+func (l *LeafNode) Right() MerkleTreeNode {
+	return nil
+}
+
+func (l *LeafNode) Left() MerkleTreeNode {
+	return nil
 }
 
 func (l *LeafNode) GetRoot() [32]byte {
@@ -139,8 +157,8 @@ func (l *LeafNode) Finalize(deposits uint64, depth uint64) MerkleTreeNode {
 	return &FinalizedNode{1, l.hash}
 }
 
-func (l *LeafNode) GetFinalized(result [][32]byte) uint64 {
-	return 0
+func (l *LeafNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	return 0, nil
 }
 
 func (l *LeafNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error) {
@@ -150,6 +168,14 @@ func (l *LeafNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
 // InnerNode represents an inner node with two children and satisfies the MerkleTreeNode interface.
 type InnerNode struct {
 	left, right MerkleTreeNode
+}
+
+func (n *InnerNode) Right() MerkleTreeNode {
+	return n.right
+}
+
+func (n *InnerNode) Left() MerkleTreeNode {
+	return n.left
 }
 
 func (n *InnerNode) GetRoot() [32]byte {
@@ -175,8 +201,10 @@ func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) MerkleTree
 	return n
 }
 
-func (n *InnerNode) GetFinalized(result [][32]byte) uint64 {
-	return n.left.GetFinalized(result) + n.right.GetFinalized(result)
+func (n *InnerNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	leftDeposits, leftFinalized := n.left.GetFinalized(result)
+	rightDeposits, rightFinalized := n.right.GetFinalized(result)
+	return leftDeposits + rightDeposits, append(leftFinalized, rightFinalized...)
 }
 
 func (n *InnerNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error) {
@@ -203,6 +231,14 @@ type ZeroNode struct {
 	depth uint64
 }
 
+func (z *ZeroNode) Right() MerkleTreeNode {
+	return nil
+}
+
+func (z *ZeroNode) Left() MerkleTreeNode {
+	return nil
+}
+
 func (z *ZeroNode) GetRoot() [32]byte {
 	if z.depth == DepositContractDepth {
 		return hash.Hash(append(Zerohashes[z.depth-1][:], Zerohashes[z.depth-1][:]...))
@@ -218,8 +254,8 @@ func (z *ZeroNode) Finalize(deposits uint64, depth uint64) MerkleTreeNode {
 	return nil
 }
 
-func (z *ZeroNode) GetFinalized(result [][32]byte) uint64 {
-	return 0
+func (z *ZeroNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	return 0, nil
 }
 
 func (z *ZeroNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error) {
