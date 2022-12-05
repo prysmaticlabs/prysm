@@ -33,6 +33,7 @@ go_test(
         "beacon_api_helpers_test.go",
         "genesis_test.go",
         "handlers_test.go",
+        "json_rest_handler_test.go",
         "wait_for_chain_start_test.go",
     ],
     embed = [":go_default_library"],

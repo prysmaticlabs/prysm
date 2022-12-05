@@ -108,7 +108,16 @@ func marshallBeaconBlockPhase0(block *ethpb.SignedBeaconBlock) ([]byte, error) {
 	signedBeaconBlockJson := &apimiddleware.SignedBeaconBlockContainerJson{
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BeaconBlockJson{
-			Body:          jsonifyBeaconBlockBody(block.Block.Body),
+			Body: &apimiddleware.BeaconBlockBodyJson{
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+			},
 			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
 			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
 			Slot:          uint64ToString(block.Block.Slot),
@@ -120,9 +129,6 @@ func marshallBeaconBlockPhase0(block *ethpb.SignedBeaconBlock) ([]byte, error) {
 }
 
 func marshallBeaconBlockAltair(block *ethpb.SignedBeaconBlockAltair) ([]byte, error) {
-	// Convert the phase0 fields of Altair to a BeaconBlockBody to be able to reuse jsonifyBeaconBlockBody
-	phase0BeaconBlockBodyJson := jsonifyBeaconBlockBody(block.Block.Body)
-
 	signedBeaconBlockAltairJson := &apimiddleware.SignedBeaconBlockAltairContainerJson{
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BeaconBlockAltairJson{
@@ -131,16 +137,14 @@ func marshallBeaconBlockAltair(block *ethpb.SignedBeaconBlockAltair) ([]byte, er
 			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BeaconBlockBodyAltairJson{
-				// Set the phase0 fields
-				Attestations:      phase0BeaconBlockBodyJson.Attestations,
-				AttesterSlashings: phase0BeaconBlockBodyJson.AttesterSlashings,
-				Deposits:          phase0BeaconBlockBodyJson.Deposits,
-				Eth1Data:          phase0BeaconBlockBodyJson.Eth1Data,
-				Graffiti:          phase0BeaconBlockBodyJson.Graffiti,
-				ProposerSlashings: phase0BeaconBlockBodyJson.ProposerSlashings,
-				RandaoReveal:      phase0BeaconBlockBodyJson.RandaoReveal,
-				VoluntaryExits:    phase0BeaconBlockBodyJson.VoluntaryExits,
-				// Set the altair fields
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
@@ -153,16 +157,6 @@ func marshallBeaconBlockAltair(block *ethpb.SignedBeaconBlockAltair) ([]byte, er
 }
 
 func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]byte, error) {
-	// Gather the transactions
-	var executionPayloadTransaction []string
-	for _, transaction := range block.Block.Body.ExecutionPayload.Transactions {
-		transactionJson := hexutil.Encode(transaction)
-		executionPayloadTransaction = append(executionPayloadTransaction, transactionJson)
-	}
-
-	// Convert the phase0 fields of Bellatrix to a BeaconBlockBody to be able to reuse jsonifyBeaconBlockBody
-	phase0BeaconBlockBodyJson := jsonifyBeaconBlockBody(block.Block.Body)
-
 	signedBeaconBlockBellatrixJson := &apimiddleware.SignedBeaconBlockBellatrixContainerJson{
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BeaconBlockBellatrixJson{
@@ -171,21 +165,18 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BeaconBlockBodyBellatrixJson{
-				// Set the phase0 fields
-				Attestations:      phase0BeaconBlockBodyJson.Attestations,
-				AttesterSlashings: phase0BeaconBlockBodyJson.AttesterSlashings,
-				Deposits:          phase0BeaconBlockBodyJson.Deposits,
-				Eth1Data:          phase0BeaconBlockBodyJson.Eth1Data,
-				Graffiti:          phase0BeaconBlockBodyJson.Graffiti,
-				ProposerSlashings: phase0BeaconBlockBodyJson.ProposerSlashings,
-				RandaoReveal:      phase0BeaconBlockBodyJson.RandaoReveal,
-				VoluntaryExits:    phase0BeaconBlockBodyJson.VoluntaryExits,
-				// Set the altair fields
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				// Set the bellatrix fields
 				ExecutionPayload: &apimiddleware.ExecutionPayloadJson{
 					BaseFeePerGas: uint256BytesToString(block.Block.Body.ExecutionPayload.BaseFeePerGas),
 					BlockHash:     hexutil.Encode(block.Block.Body.ExecutionPayload.BlockHash),
@@ -200,7 +191,7 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 					ReceiptsRoot:  hexutil.Encode(block.Block.Body.ExecutionPayload.ReceiptsRoot),
 					StateRoot:     hexutil.Encode(block.Block.Body.ExecutionPayload.StateRoot),
 					TimeStamp:     uint64ToString(block.Block.Body.ExecutionPayload.Timestamp),
-					Transactions:  executionPayloadTransaction,
+					Transactions:  jsonifyTransactions(block.Block.Body.ExecutionPayload.Transactions),
 				},
 			},
 		},
@@ -210,9 +201,6 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 }
 
 func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBellatrix) ([]byte, error) {
-	// Convert the phase0 fields of BlindedBellatrix to a BeaconBlockBody to be able to reuse jsonifyBeaconBlockBody
-	phase0BeaconBlockBodyJson := jsonifyBeaconBlockBody(block.Block.Body)
-
 	signedBeaconBlockBellatrixJson := &apimiddleware.SignedBlindedBeaconBlockBellatrixContainerJson{
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BlindedBeaconBlockBellatrixJson{
@@ -221,21 +209,18 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BlindedBeaconBlockBodyBellatrixJson{
-				// Set the phase0 fields
-				Attestations:      phase0BeaconBlockBodyJson.Attestations,
-				AttesterSlashings: phase0BeaconBlockBodyJson.AttesterSlashings,
-				Deposits:          phase0BeaconBlockBodyJson.Deposits,
-				Eth1Data:          phase0BeaconBlockBodyJson.Eth1Data,
-				Graffiti:          phase0BeaconBlockBodyJson.Graffiti,
-				ProposerSlashings: phase0BeaconBlockBodyJson.ProposerSlashings,
-				RandaoReveal:      phase0BeaconBlockBodyJson.RandaoReveal,
-				VoluntaryExits:    phase0BeaconBlockBodyJson.VoluntaryExits,
-				// Set the altair fields
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				// Set the bellatrix fields
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderJson{
 					BaseFeePerGas:    uint256BytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
@@ -260,19 +245,6 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 }
 
 func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCapella) ([]byte, error) {
-	phase0BeaconBlockBodyJson := jsonifyBeaconBlockBody(block.Block.Body)
-
-	blsToExecutionChanges := make([]*apimiddleware.BLSToExecutionChangeJson, 0, len(block.Block.Body.BlsToExecutionChanges))
-
-	for _, signedBlsToExecutionChange := range block.Block.Body.BlsToExecutionChanges {
-		blsToExecutionChangeJson := &apimiddleware.BLSToExecutionChangeJson{
-			ValidatorIndex:     uint64ToString(signedBlsToExecutionChange.Message.ValidatorIndex),
-			FromBLSPubkey:      hexutil.Encode(signedBlsToExecutionChange.Message.FromBlsPubkey),
-			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
-		}
-		blsToExecutionChanges = append(blsToExecutionChanges, blsToExecutionChangeJson)
-	}
-
 	signedBeaconBlockCapellaJson := &apimiddleware.SignedBlindedBeaconBlockCapellaContainerJson{
 		Signature: hexutil.Encode(block.Signature),
 		Message: &apimiddleware.BlindedBeaconBlockCapellaJson{
@@ -281,22 +253,18 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 			Slot:          uint64ToString(block.Block.Slot),
 			StateRoot:     hexutil.Encode(block.Block.StateRoot),
 			Body: &apimiddleware.BlindedBeaconBlockBodyCapellaJson{
-				// Set the phase0 fields
-				Attestations:      phase0BeaconBlockBodyJson.Attestations,
-				AttesterSlashings: phase0BeaconBlockBodyJson.AttesterSlashings,
-				Deposits:          phase0BeaconBlockBodyJson.Deposits,
-				Eth1Data:          phase0BeaconBlockBodyJson.Eth1Data,
-				Graffiti:          phase0BeaconBlockBodyJson.Graffiti,
-				ProposerSlashings: phase0BeaconBlockBodyJson.ProposerSlashings,
-				RandaoReveal:      phase0BeaconBlockBodyJson.RandaoReveal,
-				VoluntaryExits:    phase0BeaconBlockBodyJson.VoluntaryExits,
-				// Set the altair fields
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
 				SyncAggregate: &apimiddleware.SyncAggregateJson{
 					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				BLSToExecutionChanges: blsToExecutionChanges,
-				// Set the capella fields
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderCapellaJson{
 					BaseFeePerGas:    uint256BytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
@@ -314,6 +282,7 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 					TransactionsRoot: hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.TransactionsRoot),
 					WithdrawalsRoot:  hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot),
 				},
+				BLSToExecutionChanges: jsonifyBlsToExecutionChanges(block.Block.Body.BlsToExecutionChanges),
 			},
 		},
 	}
@@ -321,45 +290,70 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 	return json.Marshal(signedBeaconBlockCapellaJson)
 }
 
-type phase0BeaconBlockBody interface {
-	GetRandaoReveal() []byte
-	GetEth1Data() *ethpb.Eth1Data
-	GetGraffiti() []byte
-	GetProposerSlashings() []*ethpb.ProposerSlashing
-	GetAttesterSlashings() []*ethpb.AttesterSlashing
-	GetAttestations() []*ethpb.Attestation
-	GetDeposits() []*ethpb.Deposit
-	GetVoluntaryExits() []*ethpb.SignedVoluntaryExit
+func jsonifyTransactions(transactions [][]byte) []string {
+	jsonTransactions := make([]string, 0, len(transactions))
+	for _, transaction := range transactions {
+		jsonTransaction := hexutil.Encode(transaction)
+		jsonTransactions = append(jsonTransactions, jsonTransaction)
+	}
+	return jsonTransactions
 }
 
-func jsonifyBeaconBlockBody(beaconBlockBody phase0BeaconBlockBody) *apimiddleware.BeaconBlockBodyJson {
-	attestations := []*apimiddleware.AttestationJson{}
-	for _, attestation := range beaconBlockBody.GetAttestations() {
-		attestationJson := &apimiddleware.AttestationJson{
+func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExecutionChange) []*apimiddleware.BLSToExecutionChangeJson {
+	jsonBlsToExecutionChanges := make([]*apimiddleware.BLSToExecutionChangeJson, 0, len(blsToExecutionChanges))
+	for _, signedBlsToExecutionChange := range blsToExecutionChanges {
+		blsToExecutionChangeJson := &apimiddleware.BLSToExecutionChangeJson{
+			ValidatorIndex:     uint64ToString(signedBlsToExecutionChange.Message.ValidatorIndex),
+			FromBLSPubkey:      hexutil.Encode(signedBlsToExecutionChange.Message.FromBlsPubkey),
+			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
+		}
+		jsonBlsToExecutionChanges = append(jsonBlsToExecutionChanges, blsToExecutionChangeJson)
+	}
+	return jsonBlsToExecutionChanges
+}
+
+func jsonifyEth1Data(eth1Data *ethpb.Eth1Data) *apimiddleware.Eth1DataJson {
+	return &apimiddleware.Eth1DataJson{
+		BlockHash:    hexutil.Encode(eth1Data.BlockHash),
+		DepositCount: uint64ToString(eth1Data.DepositCount),
+		DepositRoot:  hexutil.Encode(eth1Data.DepositRoot),
+	}
+}
+
+func jsonifyAttestations(attestations []*ethpb.Attestation) []*apimiddleware.AttestationJson {
+	jsonAttestations := make([]*apimiddleware.AttestationJson, 0, len(attestations))
+	for _, attestation := range attestations {
+		jsonAttestation := &apimiddleware.AttestationJson{
 			AggregationBits: hexutil.Encode(attestation.AggregationBits),
 			Data:            jsonifyAttestationData(attestation.Data),
 			Signature:       hexutil.Encode(attestation.Signature),
 		}
-		attestations = append(attestations, attestationJson)
+		jsonAttestations = append(jsonAttestations, jsonAttestation)
 	}
+	return jsonAttestations
+}
 
-	attesterSlashings := []*apimiddleware.AttesterSlashingJson{}
-	for _, attesterSlashing := range beaconBlockBody.GetAttesterSlashings() {
-		attesterSlashingJson := &apimiddleware.AttesterSlashingJson{
+func jsonifyAttesterSlashings(attesterSlashings []*ethpb.AttesterSlashing) []*apimiddleware.AttesterSlashingJson {
+	jsonAttesterSlashings := make([]*apimiddleware.AttesterSlashingJson, 0, len(attesterSlashings))
+	for _, attesterSlashing := range attesterSlashings {
+		jsonAttesterSlashing := &apimiddleware.AttesterSlashingJson{
 			Attestation_1: jsonifyIndexedAttestation(attesterSlashing.Attestation_1),
 			Attestation_2: jsonifyIndexedAttestation(attesterSlashing.Attestation_2),
 		}
-		attesterSlashings = append(attesterSlashings, attesterSlashingJson)
+		jsonAttesterSlashings = append(jsonAttesterSlashings, jsonAttesterSlashing)
 	}
+	return jsonAttesterSlashings
+}
 
-	deposits := []*apimiddleware.DepositJson{}
-	for _, deposit := range beaconBlockBody.GetDeposits() {
+func jsonifyDeposits(deposits []*ethpb.Deposit) []*apimiddleware.DepositJson {
+	jsonDeposits := make([]*apimiddleware.DepositJson, 0, len(deposits))
+	for _, deposit := range deposits {
 		var proofs []string
 		for _, proof := range deposit.Proof {
 			proofs = append(proofs, hexutil.Encode(proof))
 		}
 
-		depositJson := &apimiddleware.DepositJson{
+		jsonDeposit := &apimiddleware.DepositJson{
 			Data: &apimiddleware.Deposit_DataJson{
 				Amount:                uint64ToString(deposit.Data.Amount),
 				PublicKey:             hexutil.Encode(deposit.Data.PublicKey),
@@ -368,46 +362,36 @@ func jsonifyBeaconBlockBody(beaconBlockBody phase0BeaconBlockBody) *apimiddlewar
 			},
 			Proof: proofs,
 		}
-		deposits = append(deposits, depositJson)
+		jsonDeposits = append(jsonDeposits, jsonDeposit)
 	}
+	return jsonDeposits
+}
 
-	proposerSlashings := []*apimiddleware.ProposerSlashingJson{}
-	for _, proposerSlashing := range beaconBlockBody.GetProposerSlashings() {
-		proposerSlashingJson := &apimiddleware.ProposerSlashingJson{
+func jsonifyProposerSlashings(proposerSlashings []*ethpb.ProposerSlashing) []*apimiddleware.ProposerSlashingJson {
+	jsonProposerSlashings := make([]*apimiddleware.ProposerSlashingJson, 0, len(proposerSlashings))
+	for _, proposerSlashing := range proposerSlashings {
+		jsonProposerSlashing := &apimiddleware.ProposerSlashingJson{
 			Header_1: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_1),
 			Header_2: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_2),
 		}
-		proposerSlashings = append(proposerSlashings, proposerSlashingJson)
+		jsonProposerSlashings = append(jsonProposerSlashings, jsonProposerSlashing)
 	}
+	return jsonProposerSlashings
+}
 
-	signedVoluntaryExits := []*apimiddleware.SignedVoluntaryExitJson{}
-	for _, signedVoluntaryExit := range beaconBlockBody.GetVoluntaryExits() {
-		signedVoluntaryExitJson := &apimiddleware.SignedVoluntaryExitJson{
+func jsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
+	jsonSignedVoluntaryExits := make([]*apimiddleware.SignedVoluntaryExitJson, 0, len(voluntaryExits))
+	for _, signedVoluntaryExit := range voluntaryExits {
+		jsonSignedVoluntaryExit := &apimiddleware.SignedVoluntaryExitJson{
 			Exit: &apimiddleware.VoluntaryExitJson{
 				Epoch:          uint64ToString(signedVoluntaryExit.Exit.Epoch),
 				ValidatorIndex: uint64ToString(signedVoluntaryExit.Exit.ValidatorIndex),
 			},
 			Signature: hexutil.Encode(signedVoluntaryExit.Signature),
 		}
-		signedVoluntaryExits = append(signedVoluntaryExits, signedVoluntaryExitJson)
+		jsonSignedVoluntaryExits = append(jsonSignedVoluntaryExits, jsonSignedVoluntaryExit)
 	}
-
-	beaconBlockBodyJson := &apimiddleware.BeaconBlockBodyJson{
-		Attestations:      attestations,
-		AttesterSlashings: attesterSlashings,
-		Deposits:          deposits,
-		Eth1Data: &apimiddleware.Eth1DataJson{
-			BlockHash:    hexutil.Encode(beaconBlockBody.GetEth1Data().BlockHash),
-			DepositCount: uint64ToString(beaconBlockBody.GetEth1Data().DepositCount),
-			DepositRoot:  hexutil.Encode(beaconBlockBody.GetEth1Data().DepositRoot),
-		},
-		Graffiti:          hexutil.Encode(beaconBlockBody.GetGraffiti()),
-		ProposerSlashings: proposerSlashings,
-		RandaoReveal:      hexutil.Encode(beaconBlockBody.GetRandaoReveal()),
-		VoluntaryExits:    signedVoluntaryExits,
-	}
-
-	return beaconBlockBodyJson
+	return jsonSignedVoluntaryExits
 }
 
 func jsonifySignedBeaconBlockHeader(signedBeaconBlockHeader *ethpb.SignedBeaconBlockHeader) *apimiddleware.SignedBeaconBlockHeaderJson {

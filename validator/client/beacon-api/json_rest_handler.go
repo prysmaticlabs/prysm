@@ -22,6 +22,10 @@ type beaconApiJsonRestHandler struct {
 }
 
 func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[string]string, data *bytes.Buffer, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
+	if data == nil {
+		return nil, errors.New("POST data is nil")
+	}
+
 	url := c.host + apiEndpoint
 	req, err := http.NewRequest("POST", url, data)
 
@@ -31,7 +35,7 @@ func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[s
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to query REST API %s", url)
+		return nil, errors.Wrapf(err, "failed to send POST data to REST endpoint %s", url)
 	}
 	defer func() {
 		if err = resp.Body.Close(); err != nil {
