@@ -177,11 +177,9 @@ func CommitteeAssignments(
 	if err != nil {
 		return nil, nil, err
 	}
-	var minValidStartSlot types.Slot
+	minValidStartSlot := types.Slot(0)
 	if state.Slot() >= params.BeaconConfig().SlotsPerHistoricalRoot {
 		minValidStartSlot = state.Slot() - params.BeaconConfig().SlotsPerHistoricalRoot
-	} else {
-		minValidStartSlot = 0
 	}
 	if startSlot < minValidStartSlot {
 		return nil, nil, fmt.Errorf("start slot %d is smaller than the minimum valid start slot %d", startSlot, minValidStartSlot)
