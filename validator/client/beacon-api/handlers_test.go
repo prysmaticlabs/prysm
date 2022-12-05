@@ -73,6 +73,13 @@ func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func invalidJsonResultHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("foo"))
+	if err != nil {
+		panic(err)
+	}
+}
+
 func createGenesisHandler(data *rpcmiddleware.GenesisResponse_GenesisJson) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		genesisResponseJson := &rpcmiddleware.GenesisResponseJson{Data: data}
