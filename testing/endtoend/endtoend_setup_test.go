@@ -113,7 +113,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
-		ev.PeersConnect,
+		//ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
