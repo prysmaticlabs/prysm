@@ -2,6 +2,7 @@ package depositsnapshot
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/math"
 )
@@ -87,15 +88,8 @@ func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [
 		}
 		depth -= 1
 	}
-	proof = Reverse(proof)
+	proof = slice.Reverse(proof)
 	return node.GetRoot(), proof
-}
-
-func Reverse[E any](s []E) []E {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
-	return s
 }
 
 // FinalizedNode represents a finalized node and satisfies the MerkleTreeNode interface.
