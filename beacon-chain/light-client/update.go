@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	finalityUpdateTypeName   = "light_client_finality_update"
-	optimisticUpdateTypeName = "light_client_optimistic_update"
-	updateTypeName           = "light_client_update"
+	FinalityUpdateTypeName   = "light_client_finality_update"
+	OptimisticUpdateTypeName = "light_client_optimistic_update"
+	UpdateTypeName           = "light_client_update"
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
@@ -37,9 +37,9 @@ type Update struct {
 
 func (u *Update) UnmarshalJSON(data []byte) error {
 	value, err := unmarshalGenericUpdate(data, "type", "update", map[string]reflect.Type{
-		finalityUpdateTypeName:   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
-		optimisticUpdateTypeName: reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
-		updateTypeName:           reflect.TypeOf(ethpbv2.LightClientUpdate{}),
+		FinalityUpdateTypeName:   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
+		OptimisticUpdateTypeName: reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
+		UpdateTypeName:           reflect.TypeOf(ethpbv2.LightClientUpdate{}),
 	})
 	if err != nil {
 		return err

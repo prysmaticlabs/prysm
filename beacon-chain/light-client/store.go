@@ -316,7 +316,7 @@ func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientFinalit
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
 		BeaconChainConfig:        s.BeaconChainConfig,
-		Type:                     finalityUpdateTypeName,
+		Type:                     FinalityUpdateTypeName,
 		LightClientGenericUpdate: finalityUpdate,
 	}, currentSlot, genesisValidatorsRoot)
 }
@@ -326,7 +326,7 @@ func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientOpt
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
 		BeaconChainConfig:        s.BeaconChainConfig,
-		Type:                     optimisticUpdateTypeName,
+		Type:                     OptimisticUpdateTypeName,
 		LightClientGenericUpdate: optimisticUpdate,
 	}, currentSlot, genesisValidatorsRoot)
 }
