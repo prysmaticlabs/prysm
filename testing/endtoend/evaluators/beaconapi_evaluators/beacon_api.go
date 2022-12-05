@@ -422,12 +422,9 @@ func compareJSONResponseObjects(prysmResp interface{}, lighthouseResp interface{
 }
 
 func pathFromParams(path string, params []string) string {
-	var apiPath string
+	apiPath := path
 	for index := range params {
 		apiPath = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
-	}
-	if apiPath == "" {
-		return path
 	}
 	return apiPath
 }
