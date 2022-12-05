@@ -203,7 +203,7 @@ func TestPostRestJson_Error(t *testing.T) {
 }
 
 func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		errorJson := &apimiddleware.DefaultErrorJson{
 			Code:    statusCode,
 			Message: errorMessage,
@@ -222,7 +222,7 @@ func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.Respo
 	}
 }
 
-func invalidJsonResponseHandler(w http.ResponseWriter, r *http.Request) {
+func invalidJsonResponseHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
 		panic(err)
