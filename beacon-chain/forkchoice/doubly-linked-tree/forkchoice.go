@@ -272,7 +272,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 	return node.optimistic, nil
 }
-
+F
 // AncestorRoot returns the ancestor root of input block root at a given slot.
 func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.AncestorRoot")
