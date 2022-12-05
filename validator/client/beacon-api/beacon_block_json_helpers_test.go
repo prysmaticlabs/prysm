@@ -505,3 +505,104 @@ func TestBeaconBlockJsonHelpers_JsonifySignedVoluntaryExits(t *testing.T) {
 	result := jsonifySignedVoluntaryExits(input)
 	assert.DeepEqual(t, expectedResult, result)
 }
+
+func TestBeaconBlockJsonHelpers_JsonifySignedBeaconBlockHeader(t *testing.T) {
+	input := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:          1,
+			ProposerIndex: 2,
+			ParentRoot:    []byte{3},
+			StateRoot:     []byte{4},
+			BodyRoot:      []byte{5},
+		},
+		Signature: []byte{6},
+	}
+
+	expectedResult := &apimiddleware.SignedBeaconBlockHeaderJson{
+		Header: &apimiddleware.BeaconBlockHeaderJson{
+			Slot:          "1",
+			ProposerIndex: "2",
+			ParentRoot:    hexutil.Encode([]byte{3}),
+			StateRoot:     hexutil.Encode([]byte{4}),
+			BodyRoot:      hexutil.Encode([]byte{5}),
+		},
+		Signature: hexutil.Encode([]byte{6}),
+	}
+
+	result := jsonifySignedBeaconBlockHeader(input)
+	assert.DeepEqual(t, expectedResult, result)
+}
+
+func TestBeaconBlockJsonHelpers_JsonifyIndexedAttestation(t *testing.T) {
+	input := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{1, 2},
+		Data: &ethpb.AttestationData{
+			Slot:            3,
+			CommitteeIndex:  4,
+			BeaconBlockRoot: []byte{5},
+			Source: &ethpb.Checkpoint{
+				Epoch: 6,
+				Root:  []byte{7},
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 8,
+				Root:  []byte{9},
+			},
+		},
+		Signature: []byte{10},
+	}
+
+	expectedResult := &apimiddleware.IndexedAttestationJson{
+		AttestingIndices: []string{"1", "2"},
+		Data: &apimiddleware.AttestationDataJson{
+			Slot:            "3",
+			CommitteeIndex:  "4",
+			BeaconBlockRoot: hexutil.Encode([]byte{5}),
+			Source: &apimiddleware.CheckpointJson{
+				Epoch: "6",
+				Root:  hexutil.Encode([]byte{7}),
+			},
+			Target: &apimiddleware.CheckpointJson{
+				Epoch: "8",
+				Root:  hexutil.Encode([]byte{9}),
+			},
+		},
+		Signature: hexutil.Encode([]byte{10}),
+	}
+
+	result := jsonifyIndexedAttestation(input)
+	assert.DeepEqual(t, expectedResult, result)
+}
+
+func TestBeaconBlockJsonHelpers_JsonifyAttestationData(t *testing.T) {
+	input := &ethpb.AttestationData{
+		Slot:            1,
+		CommitteeIndex:  2,
+		BeaconBlockRoot: []byte{3},
+		Source: &ethpb.Checkpoint{
+			Epoch: 4,
+			Root:  []byte{5},
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: 6,
+			Root:  []byte{7},
+		},
+	}
+
+	expectedResult := &apimiddleware.AttestationDataJson{
+		Slot:            "1",
+		CommitteeIndex:  "2",
+		BeaconBlockRoot: hexutil.Encode([]byte{3}),
+		Source: &apimiddleware.CheckpointJson{
+			Epoch: "4",
+			Root:  hexutil.Encode([]byte{5}),
+		},
+		Target: &apimiddleware.CheckpointJson{
+			Epoch: "6",
+			Root:  hexutil.Encode([]byte{7}),
+		},
+	}
+
+	result := jsonifyAttestationData(input)
+	assert.DeepEqual(t, expectedResult, result)
+}
