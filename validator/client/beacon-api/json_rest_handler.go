@@ -21,6 +21,10 @@ type beaconApiJsonRestHandler struct {
 }
 
 func (c beaconApiJsonRestHandler) GetRestJsonResponse(apiEndpoint string, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
+	if responseJson == nil {
+		return nil, errors.New("responseJson is nil")
+	}
+
 	url := c.host + apiEndpoint
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
