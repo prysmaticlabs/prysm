@@ -1,6 +1,5 @@
 load("@prysm//tools/go:def.bzl", "go_library")
 
-# gazelle:build_tags use_beacon_api
 go_library(
     name = "go_default_library",
     srcs = ["genesis_mock.go"],
