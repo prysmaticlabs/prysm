@@ -7,6 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -19,6 +21,17 @@ func TestHashKeyFn_OK(t *testing.T) {
 	key, err := hashKeyFn(hInfo)
 	require.NoError(t, err)
 	assert.Equal(t, hInfo.Hash.Hex(), key)
+}
+
+func TestRandom(t *testing.T) {
+	rawF, err := file.ReadFileAsBytes("/home/nishant/Downloads/genesis.ssz")
+	assert.NoError(t, err)
+
+	st := &pb.BeaconStateBellatrix{}
+	assert.NoError(t, st.UnmarshalSSZ(rawF))
+	h := st.LatestExecutionPayloadHeader
+	t.Errorf("%#x %#x %#x %#x", h.StateRoot, h.ReceiptsRoot, h.BlockHash, h.TransactionsRoot)
+	_ = h
 }
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {

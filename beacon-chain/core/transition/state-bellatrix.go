@@ -2,6 +2,7 @@ package transition
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"

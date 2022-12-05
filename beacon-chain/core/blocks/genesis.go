@@ -34,7 +34,9 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	}
 	return block
 }
+
 var ErrUnrecognizedState = errors.New("uknonwn underlying type for state.BeaconState value")
+
 func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
 	ps := st.ToProto()
 	switch ps.(type) {
@@ -85,14 +87,14 @@ func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.Si
 			Signature: params.BeaconConfig().EmptySignature[:],
 		})
 		/*
-		return blocks.NewSignedBeaconBlock(&ethpb.BeaconBlockBellatrix{
-		Body: })
-		 */
+			return blocks.NewSignedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			Body: })
+		*/
 	default:
 		return nil, ErrUnrecognizedState
-			/*
-	case *ethpb.BeaconStateAltair:
-	case *ethpb.BeaconStateCapella:
-			 */
+		/*
+			case *ethpb.BeaconStateAltair:
+			case *ethpb.BeaconStateCapella:
+		*/
 	}
 }

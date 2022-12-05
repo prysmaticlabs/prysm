@@ -192,6 +192,7 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	genesis.Eth1Data.DepositRoot = dr[:]
 	if e2e.TestParams.Eth1BlockHash != nil {
 		genesis.Eth1Data.BlockHash = e2e.TestParams.Eth1BlockHash.Bytes()
+		genesis.LatestExecutionPayloadHeader.BlockHash = e2e.TestParams.Eth1BlockHash.Bytes()
 	}
 	log.Infof("genesis eth1 block root=%#x", genesis.Eth1Data.BlockHash)
 	return state_native.InitializeFromProtoUnsafeBellatrix(genesis)
