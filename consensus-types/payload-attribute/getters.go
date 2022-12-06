@@ -29,6 +29,9 @@ func (a *data) SuggestedFeeRecipient() []byte {
 // Withdrawals returns the withdrawals of the payload attribute.
 // Support for withdrawals was added in version 2 of the payload attribute.
 func (a *data) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	if a == nil {
+		return nil, errNilPayloadAttribute
+	}
 	if a.version < version.Capella {
 		return nil, blocks.ErrNotSupported("Withdrawals", a.version)
 	}
@@ -37,11 +40,14 @@ func (a *data) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // PbV1 returns the payload attribute in version 1.
 func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
-	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
-		return nil, nil
+	if a == nil {
+		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Bellatrix {
 		return nil, blocks.ErrNotSupported("PayloadAttributePbV1", a.version)
+	}
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
+		return nil, nil
 	}
 	return &enginev1.PayloadAttributes{
 		Timestamp:             a.timeStamp,
@@ -52,11 +58,14 @@ func (a *data) PbV1() (*enginev1.PayloadAttributes, error) {
 
 // PbV2 returns the payload attribute in version 2.
 func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
-	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
-		return nil, nil
+	if a == nil {
+		return nil, errNilPayloadAttribute
 	}
 	if a.version != version.Capella {
 		return nil, blocks.ErrNotSupported("PayloadAttributePbV2", a.version)
+	}
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
+		return nil, nil
 	}
 	return &enginev1.PayloadAttributesV2{
 		Timestamp:             a.timeStamp,
