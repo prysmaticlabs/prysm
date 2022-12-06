@@ -68,3 +68,19 @@ done
 goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
 
+# github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api
+# --------------------------------------------------------
+beacon_api_mock_path="validator/client/beacon-api/mock"
+beacon_api_mocks=(
+      "$beacon_api_mock_path/genesis_mock.go genesis.go"
+)
+
+for ((i = 0; i < ${#beacon_api_mocks[@]}; i++)); do
+    file=${beacon_api_mocks[i]% *};
+    source=${beacon_api_mocks[i]#* };
+    echo "generating $file for file: $source";
+    GO11MODULE=on mockgen -package=mock --build_flags="--tags=use_beacon_api" -source="validator/client/beacon-api/$source" -destination="$file"
+done
+
+goimports -w "$beacon_api_mock_path/."
+gofmt -s -w "$beacon_api_mock_path/."
