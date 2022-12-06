@@ -178,7 +178,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := vs.proposalDependentRoot(s, req.Epoch)
+	root, err := proposalDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -1058,7 +1058,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func (vs *Server) proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
+func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
