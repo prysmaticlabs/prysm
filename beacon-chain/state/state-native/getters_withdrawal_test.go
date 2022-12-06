@@ -26,7 +26,7 @@ func TestNextWithdrawalIndex(t *testing.T) {
 	})
 }
 
-func TestLastWithdrawalValidatorIndex(t *testing.T) {
+func TestNextWithdrawalValidatorIndex(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		s := BeaconState{version: version.Capella, nextWithdrawalValidatorIndex: 123}
 		i, err := s.NextWithdrawalValidatorIndex()
