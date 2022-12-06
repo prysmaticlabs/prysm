@@ -14,7 +14,9 @@ import (
 // a signed beacon block.
 type SignedBeaconBlock interface {
 	Block() BeaconBlock
+	SetBlock(BeaconBlock) error
 	Signature() [field_params.BLSSignatureLength]byte
+	SetSignature(sig []byte)
 	IsNil() bool
 	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
@@ -39,8 +41,11 @@ type SignedBeaconBlock interface {
 // employed by an object that is a beacon block.
 type BeaconBlock interface {
 	Slot() types.Slot
+	SetSlot(slot types.Slot)
 	ProposerIndex() types.ValidatorIndex
+	SetProposerIndex(idx types.ValidatorIndex)
 	ParentRoot() [field_params.RootLength]byte
+	SetParentRoot([]byte)
 	StateRoot() [field_params.RootLength]byte
 	SetStateRoot([]byte)
 	Body() BeaconBlockBody
@@ -53,26 +58,39 @@ type BeaconBlock interface {
 	ssz.HashRoot
 	Version() int
 	AsSignRequestObject() (validatorpb.SignRequestObject, error)
+	SetBlinded(bool)
 }
 
 // BeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
 type BeaconBlockBody interface {
 	RandaoReveal() [field_params.BLSSignatureLength]byte
+	SetRandaoReveal([]byte)
 	Eth1Data() *ethpb.Eth1Data
+	SetEth1Data(*ethpb.Eth1Data)
 	Graffiti() [field_params.RootLength]byte
+	SetGraffiti([]byte)
 	ProposerSlashings() []*ethpb.ProposerSlashing
+	SetProposerSlashings([]*ethpb.ProposerSlashing)
 	AttesterSlashings() []*ethpb.AttesterSlashing
+	SetAttesterSlashings([]*ethpb.AttesterSlashing)
 	Attestations() []*ethpb.Attestation
+	SetAttestations([]*ethpb.Attestation)
 	Deposits() []*ethpb.Deposit
+	SetDeposits([]*ethpb.Deposit)
 	VoluntaryExits() []*ethpb.SignedVoluntaryExit
+	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SyncAggregate() (*ethpb.SyncAggregate, error)
+	SetSyncAggregate(*ethpb.SyncAggregate) error
 	IsNil() bool
 	HashTreeRoot() ([field_params.RootLength]byte, error)
 	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
+	SetExecution(ExecutionData) error
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
+	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error
 	BlobKzgCommitments() ([][]byte, error)
+	SetBlobKzgCommitments(c [][]byte) error
 }
 
 // ExecutionData represents execution layer information that is contained
