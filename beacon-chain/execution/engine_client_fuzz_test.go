@@ -178,7 +178,7 @@ func FuzzExecutionBlock(f *testing.F) {
 		S: big.NewInt(math.MaxInt),
 	}
 	tx := types.NewTx(innerData)
-	execBlock := &pb.ExecutionBlock{
+	execBlock := &pb.ExecutionBlockBellatrix{
 		Header: types.Header{
 			ParentHash:  common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
 			Root:        common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
@@ -203,7 +203,7 @@ func FuzzExecutionBlock(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
 		gethResp := make(map[string]interface{})
-		prysmResp := &pb.ExecutionBlock{}
+		prysmResp := &pb.ExecutionBlockBellatrix{}
 		gethErr := json.Unmarshal(jsonBlob, &gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
 		// Nothing to marshal if we have an error.
@@ -237,7 +237,7 @@ func FuzzExecutionBlock(f *testing.F) {
 	})
 }
 
-func isBogusTransactionHash(blk *pb.ExecutionBlock, jsonMap map[string]interface{}) bool {
+func isBogusTransactionHash(blk *pb.ExecutionBlockBellatrix, jsonMap map[string]interface{}) bool {
 	if blk.Transactions == nil {
 		return false
 	}
@@ -260,7 +260,7 @@ func isBogusTransactionHash(blk *pb.ExecutionBlock, jsonMap map[string]interface
 
 func compareHeaders(t *testing.T, jsonBlob []byte) {
 	gethResp := &types.Header{}
-	prysmResp := &pb.ExecutionBlock{}
+	prysmResp := &pb.ExecutionBlockBellatrix{}
 	gethErr := json.Unmarshal(jsonBlob, gethResp)
 	prysmErr := json.Unmarshal(jsonBlob, prysmResp)
 	assert.Equal(t, gethErr != nil, prysmErr != nil, fmt.Sprintf("geth and prysm unmarshaller return inconsistent errors. %v and %v", gethErr, prysmErr))
@@ -282,7 +282,7 @@ func compareHeaders(t *testing.T, jsonBlob []byte) {
 	assert.DeepEqual(t, newGethResp, newGethResp2)
 }
 
-func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]interface{}) error {
+func validateBlockConsistency(execBlock *pb.ExecutionBlockBellatrix, jsonMap map[string]interface{}) error {
 	blockVal := reflect.ValueOf(execBlock).Elem()
 	bType := reflect.TypeOf(execBlock).Elem()
 
@@ -316,7 +316,7 @@ func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]i
 	return nil
 }
 
-func jsonFieldsAreValid(execBlock *pb.ExecutionBlock, jsonMap map[string]interface{}) (bool, error) {
+func jsonFieldsAreValid(execBlock *pb.ExecutionBlockBellatrix, jsonMap map[string]interface{}) (bool, error) {
 	bType := reflect.TypeOf(execBlock).Elem()
 
 	fieldnum := bType.NumField()
