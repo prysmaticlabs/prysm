@@ -29,8 +29,8 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 }
 
 type Update struct {
-	Config                           *Config `json:"config,omitempty"`
-	Type                             string  `json:"type,omitempty"`
+	Config                           *Config
+	Type                             string `json:"type,omitempty"`
 	ethpbv2.LightClientGenericUpdate `json:"update,omitempty"`
 }
 
