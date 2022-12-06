@@ -49,7 +49,7 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	vi, err := state.LastWithdrawalValidatorIndex()
+	vi, err := state.NextWithdrawalValidatorIndex()
 	if err != nil {
 		return nil, err
 	}
