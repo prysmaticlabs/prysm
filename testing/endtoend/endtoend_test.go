@@ -133,11 +133,11 @@ func (r *testRunner) scenarioRunner() {
 	r.runBase([]runEvent{r.scenarioRun})
 }
 
-func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn validatorHelpers.NodeConnection, extra types.Epoch) error {
+func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, extra types.Epoch) error {
 	spe := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	dl := time.Now().Add(time.Second * time.Duration(uint64(extra)*spe))
 
-	beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := eth.NewBeaconChainClient(conn)
 	ctx, cancel := context.WithDeadline(ctx, dl)
 	defer cancel()
 	for {
@@ -147,7 +147,7 @@ func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn validato
 		default:
 			chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
-				log.Warnf("while querying connection %s for chain head got error=%s", conn.GetGrpcClientConn().Target(), err.Error())
+				log.Warnf("while querying connection %s for chain head got error=%s", conn.Target(), err.Error())
 			}
 			if chainHead.HeadEpoch > e {
 				// no need to wait, other nodes should be caught up
@@ -240,12 +240,12 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
-func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref validatorHelpers.NodeConnection) error {
+func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
 	start := time.Now()
 	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
 	defer cancel()
-	checkClient := service.NewBeaconChainClient(check.GetGrpcClientConn())
-	refClient := service.NewBeaconChainClient(ref.GetGrpcClientConn())
+	checkClient := service.NewBeaconChainClient(check)
+	refClient := service.NewBeaconChainClient(ref)
 	for {
 		select {
 		case <-dctx.Done():
@@ -325,7 +325,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, nodeConn)
-	err = r.waitForMatchingHead(ctx, matchTimeout, nodeConn, conns[0])
+	err = r.waitForMatchingHead(ctx, matchTimeout, nodeConn.GetGrpcClientConn(), conns[0].GetGrpcClientConn())
 	if err != nil {
 		return err
 	}
@@ -527,7 +527,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 	}
 
 	if config.ExtraEpochs > 0 {
-		if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], types.Epoch(config.ExtraEpochs)); err != nil {
+		if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0].GetGrpcClientConn(), types.Epoch(config.ExtraEpochs)); err != nil {
 			return errors.Wrap(err, "error while waiting for ExtraEpochs")
 		}
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 )
 
 // APIGatewayV1Alpha1VerifyIntegrity of our API gateway for the Prysm v1alpha1 API.
@@ -31,13 +32,13 @@ const (
 	v1Alpha1GatewayPathTemplate = "http://localhost:%d/eth/v1alpha1"
 )
 
-type apiComparisonFunc func(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error
+type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
 func apiGatewayV1Alpha1Verify(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
+			conn.GetGrpcClientConn(),
 			withComparePeers,
 			withCompareListAttestations,
 			withCompareValidators,
@@ -49,7 +50,7 @@ func apiGatewayV1Alpha1Verify(_ e2etypes.EvaluationContext, conns ...validatorHe
 	return nil
 }
 
-func withComparePeers(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withComparePeers(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type peerJSON struct {
 		Address         string `json:"address"`
 		Direction       string `json:"direction"`
@@ -61,7 +62,7 @@ func withComparePeers(beaconNodeIdx int, conn validatorHelpers.NodeConnection) e
 		Peers []*peerJSON `json:"peers"`
 	}
 	ctx := context.Background()
-	nodeClient := ethpb.NewNodeClient(conn.GetGrpcClientConn())
+	nodeClient := ethpb.NewNodeClient(conn)
 	resp, err := nodeClient.ListPeers(ctx, &empty.Empty{})
 	if err != nil {
 		return err
@@ -138,7 +139,7 @@ func withComparePeers(beaconNodeIdx int, conn validatorHelpers.NodeConnection) e
 	return nil
 }
 
-func withCompareListAttestations(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareListAttestations(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type checkpointJSON struct {
 		Epoch string `json:"epoch"`
 		Root  string `json:"root"`
@@ -161,7 +162,7 @@ func withCompareListAttestations(beaconNodeIdx int, conn validatorHelpers.NodeCo
 		TotalSize     int32              `json:"totalSize"`
 	}
 	ctx := context.Background()
-	beaconClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := ethpb.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_GenesisEpoch{GenesisEpoch: true},
 	})
@@ -272,7 +273,7 @@ func withCompareListAttestations(beaconNodeIdx int, conn validatorHelpers.NodeCo
 	return nil
 }
 
-func withCompareValidators(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type validatorJSON struct {
 		PublicKey                  string `json:"publicKey"`
 		WithdrawalCredentials      string `json:"withdrawalCredentials"`
@@ -294,7 +295,7 @@ func withCompareValidators(beaconNodeIdx int, conn validatorHelpers.NodeConnecti
 		TotalSize     int32                     `json:"totalSize"`
 	}
 	ctx := context.Background()
-	beaconClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := ethpb.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{
 		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{
 			Genesis: true,
@@ -362,7 +363,7 @@ func withCompareValidators(beaconNodeIdx int, conn validatorHelpers.NodeConnecti
 }
 
 // Compares a regular beacon chain head GET request with no arguments gRPC and gRPC gateway.
-func withCompareChainHead(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type chainHeadResponseJSON struct {
 		HeadSlot           string `json:"headSlot"`
 		HeadEpoch          string `json:"headEpoch"`
@@ -374,7 +375,7 @@ func withCompareChainHead(beaconNodeIdx int, conn validatorHelpers.NodeConnectio
 		JustifiedEpoch     string `json:"justifiedEpoch"`
 		JustifiedBlockRoot string `json:"justifiedBlockRoot"`
 	}
-	beaconClient := ethpb.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := ethpb.NewBeaconChainClient(conn)
 	ctx := context.Background()
 	resp, err := beaconClient.GetChainHead(ctx, &empty.Empty{})
 	if err != nil {
@@ -466,7 +467,7 @@ func doGatewayJSONRequest(requestPath string, beaconNodeIdx int, dst interface{}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func runAPIComparisonFunctions(beaconNodeIdx int, conn validatorHelpers.NodeConnection, fs ...apiComparisonFunc) error {
+func runAPIComparisonFunctions(beaconNodeIdx int, conn *grpc.ClientConn, fs ...apiComparisonFunc) error {
 	for _, f := range fs {
 		if err := f(beaconNodeIdx, conn); err != nil {
 			return err

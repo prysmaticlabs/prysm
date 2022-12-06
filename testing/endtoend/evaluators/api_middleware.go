@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 )
 
 type validatorJson struct {
@@ -55,7 +56,7 @@ func apiMiddlewareVerify(_ e2etypes.EvaluationContext, conns ...validatorHelpers
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
+			conn.GetGrpcClientConn(),
 			withCompareValidatorsEth,
 			withCompareSyncCommittee,
 			withCompareAttesterDuties,
@@ -66,12 +67,12 @@ func apiMiddlewareVerify(_ e2etypes.EvaluationContext, conns ...validatorHelpers
 	return nil
 }
 
-func withCompareValidatorsEth(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareValidatorsEth(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type stateValidatorsResponseJson struct {
 		Data []*validatorContainerJson `json:"data"`
 	}
 	ctx := context.Background()
-	beaconClient := service.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := service.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListValidators(ctx, &ethpbv1.StateValidatorsRequest{
 		StateId: []byte("head"),
 		Status:  []ethpbv1.ValidatorStatus{ethpbv1.ValidatorStatus_EXITED},
@@ -149,7 +150,7 @@ func assertValidator(jsonVal *validatorContainerJson, val *ethpbv1.ValidatorCont
 	return nil
 }
 
-func withCompareSyncCommittee(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareSyncCommittee(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type syncCommitteeValidatorsJson struct {
 		Validators          []string   `json:"validators"`
 		ValidatorAggregates [][]string `json:"validator_aggregates"`
@@ -158,7 +159,7 @@ func withCompareSyncCommittee(beaconNodeIdx int, conn validatorHelpers.NodeConne
 		Data *syncCommitteeValidatorsJson `json:"data"`
 	}
 	ctx := context.Background()
-	beaconClient := service.NewBeaconChainClient(conn.GetGrpcClientConn())
+	beaconClient := service.NewBeaconChainClient(conn)
 	resp, err := beaconClient.ListSyncCommittees(ctx, &ethpbv2.StateSyncCommitteesRequest{
 		StateId: []byte("head"),
 	})
@@ -190,7 +191,7 @@ func withCompareSyncCommittee(beaconNodeIdx int, conn validatorHelpers.NodeConne
 	return nil
 }
 
-func withCompareAttesterDuties(beaconNodeIdx int, conn validatorHelpers.NodeConnection) error {
+func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	type attesterDutyJson struct {
 		Pubkey                  string `json:"pubkey" hex:"true"`
 		ValidatorIndex          string `json:"validator_index"`
@@ -205,7 +206,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn validatorHelpers.NodeConn
 		Data          []*attesterDutyJson `json:"data"`
 	}
 	ctx := context.Background()
-	validatorClient := service.NewBeaconValidatorClient(conn.GetGrpcClientConn())
+	validatorClient := service.NewBeaconValidatorClient(conn)
 	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
 		Epoch: helpers.AltairE2EForkEpoch,
 		Index: []types.ValidatorIndex{0},

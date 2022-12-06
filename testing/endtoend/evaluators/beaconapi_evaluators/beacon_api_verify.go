@@ -3,6 +3,7 @@ package beaconapi_evaluators
 import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"google.golang.org/grpc"
 )
 
@@ -20,14 +21,14 @@ const (
 
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
-func beaconAPIVerify(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+func beaconAPIVerify(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconAPIs,
 	}
 	for beaconNodeIdx, conn := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
+			conn.GetGrpcClientConn(),
 			beacon...,
 		); err != nil {
 			return err
