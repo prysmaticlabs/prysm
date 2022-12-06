@@ -4,25 +4,40 @@
 package beacon_api
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
 func TestGetGenesis_ValidGenesis(t *testing.T) {
-	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
-		GenesisTime:           "1234",
-		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-	}))
-	defer server.Close()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		"/eth/v1/beacon/genesis",
+		&genesisResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		rpcmiddleware.GenesisResponseJson{
+			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
+				GenesisTime:           "1234",
+				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			},
+		},
+	).Times(1)
+
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
 	resp, httpError, err := genesisProvider.GetGenesis()
 	assert.NoError(t, err)
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
@@ -32,71 +47,50 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 }
 
 func TestGetGenesis_NilData(t *testing.T) {
-	server := httptest.NewServer(createGenesisHandler(nil))
-	defer server.Close()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		"/eth/v1/beacon/genesis",
+		&genesisResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		rpcmiddleware.GenesisResponseJson{Data: nil},
+	).Times(1)
+
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
 	_, httpError, err := genesisProvider.GetGenesis()
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "genesis data is nil", err)
 }
 
-func TestGetGenesis_InvalidJsonGenesis(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("foo"))
-		require.NoError(t, err)
-	}))
-	defer server.Close()
+func TestGetGenesis_JsonResponseError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
+	expectedHttpErrorJson := &apimiddleware.DefaultErrorJson{
+		Message: "http error message",
+		Code:    999,
+	}
+
+	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		"/eth/v1/beacon/genesis",
+		&genesisResponseJson,
+	).Return(
+		expectedHttpErrorJson,
+		errors.New("some specific json response error"),
+	).Times(1)
+
+	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
 	_, httpError, err := genesisProvider.GetGenesis()
-	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to decode response body genesis json", err)
-}
-
-func TestGetGenesis_InvalidJsonError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(invalidJsonErrHandler))
-	defer server.Close()
-
-	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, httpError, err := genesisProvider.GetGenesis()
-	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to decode response body genesis error json", err)
-}
-
-func TestGetGenesis_404Error(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(notFoundErrHandler))
-	defer server.Close()
-
-	validatorClient := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, httpError, err := validatorClient.GetGenesis()
-	require.NotNil(t, httpError)
-	assert.Equal(t, http.StatusNotFound, httpError.Code)
-	assert.Equal(t, "Not found", httpError.Message)
-	assert.ErrorContains(t, "error 404: Not found", err)
-}
-
-func TestGetGenesis_500Error(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(internalServerErrHandler))
-	defer server.Close()
-
-	validatorClient := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: time.Second * 5}}
-	_, httpError, err := validatorClient.GetGenesis()
-	require.NotNil(t, httpError)
-	assert.Equal(t, http.StatusInternalServerError, httpError.Code)
-	assert.Equal(t, "Internal server error", httpError.Message)
-	assert.ErrorContains(t, "error 500: Internal server error", err)
-}
-
-func TestGetGenesis_Timeout(t *testing.T) {
-	server := httptest.NewServer(createGenesisHandler(&rpcmiddleware.GenesisResponse_GenesisJson{
-		GenesisTime:           "1234",
-		GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-	}))
-	defer server.Close()
-
-	genesisProvider := &beaconApiGenesisProvider{url: server.URL, httpClient: http.Client{Timeout: 1}}
-	_, httpError, err := genesisProvider.GetGenesis()
-	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
-	assert.ErrorContains(t, "failed to query REST API genesis endpoint", err)
+	assert.ErrorContains(t, "failed to get json response", err)
+	assert.ErrorContains(t, "some specific json response error", err)
+	assert.DeepEqual(t, expectedHttpErrorJson, httpError)
 }
