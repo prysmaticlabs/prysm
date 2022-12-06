@@ -178,7 +178,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := vs.proposalDependentRoot(ctx, s, req.Epoch)
+	root, err := vs.proposalDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -1058,7 +1058,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState, epoch types.Epoch) ([]byte, error) {
+func (vs *Server) proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -1069,21 +1069,10 @@ func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState
 		}
 		dependentRootSlot = epochStartSlot.Sub(1)
 	}
-	var root []byte
-	var err error
-	// Per spec, if the dependent root epoch is greater than current epoch, use the head root.
-	if dependentRootSlot >= s.Slot() {
-		root, err = vs.HeadFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		root, err = helpers.BlockRootAtSlot(s, dependentRootSlot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get block root")
-		}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
 	}
-
 	return root, nil
 }
 
