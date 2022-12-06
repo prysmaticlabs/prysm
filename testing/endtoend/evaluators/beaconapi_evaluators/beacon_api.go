@@ -370,7 +370,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, respJSO
 		respJSONLighthouse,
 		"lighthouse",
 	); err != nil {
-		return errors.Wrap(err, "lighthouse json error")
+		return errors.Wrap(err, "could not perform GET request for Lighthouse JSON")
 	}
 	if customEvaluator != nil {
 		return customEvaluator(respJSONPrysm, respJSONLighthouse)
