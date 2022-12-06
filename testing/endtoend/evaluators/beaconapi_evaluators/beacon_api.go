@@ -387,7 +387,7 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 		"lighthouse",
 	)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "lighthouse json error")
+		return nil, nil, errors.Wrap(err, "could not perform GET request for Lighthouse SSZ")
 	}
 
 	sszrspP, err := doMiddlewareSSZGetRequest(
