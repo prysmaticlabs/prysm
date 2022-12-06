@@ -70,7 +70,7 @@ func (f FieldIndex) String(_ int) string {
 	case NextWithdrawalIndex:
 		return "NextWithdrawalIndex"
 	case NextWithdrawalValidatorIndex:
-		return "LastWithdrawalValidatorIndex"
+		return "NextWithdrawalValidatorIndex"
 	default:
 		return ""
 	}
