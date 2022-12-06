@@ -17,7 +17,7 @@ import (
 )
 
 type Store struct {
-	Config *Config
+	Config *Config `json:"config"`
 	// FinalizedHeader is a header that is finalized
 	FinalizedHeader *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	// CurrentSyncCommittee is the sync committees corresponding to the finalized header
