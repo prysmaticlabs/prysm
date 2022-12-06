@@ -180,23 +180,15 @@ func TestActivation_Nominal(t *testing.T) {
 	assert.ErrorContains(t, "context canceled", err)
 }
 
-func TestActivation_BadValidatorPubKey(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-
-	// GetRestJsonResponse does not return any result for non existing key
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		nil,
-		nil,
-	).SetArg(
-		1,
-		rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+func TestActivation_InvalidData(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		data                 []*rpcmiddleware.ValidatorContainerJson
+		expectedErrorMessage string
+	}{
+		{
+			name: "bad validator public key",
+			data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
@@ -205,38 +197,11 @@ func TestActivation_BadValidatorPubKey(t *testing.T) {
 					},
 				},
 			},
+			expectedErrorMessage: "failed to parse validator public key",
 		},
-	).Times(1)
-
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-
-	waitForActivation, err := validatorClient.WaitForActivation(
-		context.Background(),
-		&ethpb.ValidatorActivationRequest{},
-	)
-	assert.NoError(t, err)
-
-	_, err = waitForActivation.Recv()
-	assert.ErrorContains(t, "failed to parse validator public key", err)
-}
-
-func TestActivation_BadValidatorIndex(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-
-	// GetRestJsonResponse does not return any result for non existing key
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		nil,
-		nil,
-	).SetArg(
-		1,
-		rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		{
+			name: "bad validator index",
+			data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "NotAnIndex",
 					Status: "active_ongoing",
@@ -245,38 +210,11 @@ func TestActivation_BadValidatorIndex(t *testing.T) {
 					},
 				},
 			},
+			expectedErrorMessage: "failed to parse validator index",
 		},
-	).Times(1)
-
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-
-	waitForActivation, err := validatorClient.WaitForActivation(
-		context.Background(),
-		&ethpb.ValidatorActivationRequest{},
-	)
-	assert.NoError(t, err)
-
-	_, err = waitForActivation.Recv()
-	assert.ErrorContains(t, "failed to parse validator index", err)
-}
-
-func TestActivation_InvalidValidatorStatus(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-
-	// GetRestJsonResponse does not return any result for non existing key
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		nil,
-		nil,
-	).SetArg(
-		1,
-		rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		{
+			name: "invalid validator status",
+			data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "12345",
 					Status: "NotAStatus",
@@ -285,19 +223,44 @@ func TestActivation_InvalidValidatorStatus(t *testing.T) {
 					},
 				},
 			},
+			expectedErrorMessage: "invalid validator status: NotAStatus",
 		},
-	).Times(1)
+	}
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	for _, testCase := range testCases {
+		t.Run(testCase.name,
+			func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	waitForActivation, err := validatorClient.WaitForActivation(
-		context.Background(),
-		&ethpb.ValidatorActivationRequest{},
-	)
-	assert.NoError(t, err)
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	_, err = waitForActivation.Recv()
-	assert.ErrorContains(t, "invalid validator status: NotAStatus", err)
+				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					nil,
+					nil,
+				).SetArg(
+					1,
+					rpcmiddleware.StateValidatorsResponseJson{
+						Data: testCase.data,
+					},
+				).Times(1)
+
+				validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+
+				waitForActivation, err := validatorClient.WaitForActivation(
+					context.Background(),
+					&ethpb.ValidatorActivationRequest{},
+				)
+				assert.NoError(t, err)
+
+				_, err = waitForActivation.Recv()
+				assert.ErrorContains(t, testCase.expectedErrorMessage, err)
+			},
+		)
+	}
 }
 
 func TestActivation_JsonResponseError(t *testing.T) {
