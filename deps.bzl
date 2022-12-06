@@ -3973,8 +3973,8 @@ def prysm_deps():
     go_repository(
         name = "io_k8s_klog_v2",
         importpath = "k8s.io/klog/v2",
-        sum = "h1:WmkrnW7fdrm0/DMClc+HIxtftvxVIPAhlVwMQo5yLco=",
-        version = "v2.3.0",
+        sum = "h1:lyJt0TWMPaGoODa8B8bUuxgHS3W/m/bNr2cca3brA/g=",
+        version = "v2.80.0",
     )
     go_repository(
         name = "io_k8s_kube_openapi",
