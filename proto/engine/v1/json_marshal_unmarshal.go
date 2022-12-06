@@ -14,6 +14,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -224,8 +225,10 @@ func (e *ExecutionBlockCapella) UnmarshalJSON(enc []byte) error {
 
 	rawWithdrawals, ok := decoded["withdrawals"]
 	if !ok || rawWithdrawals == nil {
+		log.Error("nil withdrawals")
 		e.Withdrawals = []*Withdrawal{}
 	} else {
+		log.Errorf("withdrawals: %v", rawWithdrawals)
 		j := &withdrawalsJson{}
 		if err := json.Unmarshal(enc, j); err != nil {
 			return err
