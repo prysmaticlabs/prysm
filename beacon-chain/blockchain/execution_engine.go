@@ -324,7 +324,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return false, emptyAttri, 0, err
 		}
 	default:
-		return false, emptyAttri, 0, errors.New("unknown state version")
+		return false, emptyAttri, 0, fmt.Errorf("unknown version %d", st.Version())
 	}
 
 	return true, attr, proposerID, nil

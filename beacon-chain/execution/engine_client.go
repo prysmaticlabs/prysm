@@ -133,7 +133,7 @@ func (s *Service) ForkchoiceUpdated(
 	result := &ForkchoiceUpdatedResponse{}
 
 	if attrs == nil {
-		return nil, nil, errors.New("nil payload attribute")
+		return nil, nil, errors.New("nil payload attributer")
 	}
 	switch attrs.Version() {
 	case version.Bellatrix:
