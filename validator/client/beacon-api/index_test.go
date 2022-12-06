@@ -21,7 +21,7 @@ import (
 
 const stringPubKey = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 
-func getPubKeyAndURL(t *testing.T) ([]byte, string) {
+func getPubKeyAndURL(t *testing.T, stringPubkey string) ([]byte, string) {
 	baseUrl := "/eth/v1/beacon/states/head/validators"
 	url := fmt.Sprintf("%s?id=%s", baseUrl, stringPubKey)
 
@@ -35,7 +35,7 @@ func TestIndex_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t)
+	pubKey, url := getPubKeyAndURL(t, stringPubKey)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -78,7 +78,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t)
+	pubKey, url := getPubKeyAndURL(t, stringPubKey)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -113,7 +113,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t)
+	pubKey, url := getPubKeyAndURL(t, stringPubKey)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -148,48 +148,14 @@ func TestIndex_BadIndexError(t *testing.T) {
 		},
 	)
 
-	assert.ErrorContains(t, "failed to read validator index", err)
-}
-
-func TestIndex_NilDataError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	pubKey, url := getPubKeyAndURL(t)
-
-	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
-		url,
-		&stateValidatorsResponseJson,
-	).Return(
-		nil,
-		nil,
-	).SetArg(
-		1,
-		rpcmiddleware.StateValidatorsResponseJson{
-			Data: nil,
-		},
-	).Times(1)
-
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-
-	_, err := validatorClient.ValidatorIndex(
-		context.Background(),
-		&ethpb.ValidatorIndexRequest{
-			PublicKey: pubKey,
-		},
-	)
-
-	assert.ErrorContains(t, "stateValidatorsJson.Data is nil", err)
+	assert.ErrorContains(t, "failed to parse validator index", err)
 }
 
 func TestIndex_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t)
+	pubKey, url := getPubKeyAndURL(t, stringPubKey)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
