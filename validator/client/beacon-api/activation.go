@@ -18,14 +18,14 @@ import (
 )
 
 func (c beaconApiValidatorClient) waitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
-	return &beaconNodeValidatorWaitForActivationClient{
+	return &waitForActivationClient{
 		ctx:                        ctx,
 		beaconApiValidatorClient:   c,
 		ValidatorActivationRequest: in,
 	}, nil
 }
 
-type beaconNodeValidatorWaitForActivationClient struct {
+type waitForActivationClient struct {
 	grpc.ClientStream
 	ctx context.Context
 	beaconApiValidatorClient
@@ -47,16 +47,16 @@ func computeWaitElements(now time.Time, lastRecvTime time.Time) (time.Duration, 
 	return nextRecvTime.Sub(now), nextRecvTime
 }
 
-func (x *beaconNodeValidatorWaitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, error) {
-	waitDuration, nextRecvTime := computeWaitElements(time.Now(), x.lastRecvTime)
+func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, error) {
+	waitDuration, nextRecvTime := computeWaitElements(time.Now(), c.lastRecvTime)
 
 	select {
 	case <-time.After(waitDuration):
-		x.lastRecvTime = nextRecvTime
+		c.lastRecvTime = nextRecvTime
 
 		// Represents the target set of keys
-		stringTargetPubKeystoPubKeys := make(map[string][]byte, len(x.ValidatorActivationRequest.PublicKeys))
-		stringTargetPubKeys := make([]string, len(x.ValidatorActivationRequest.PublicKeys))
+		stringTargetPubKeystoPubKeys := make(map[string][]byte, len(c.ValidatorActivationRequest.PublicKeys))
+		stringTargetPubKeys := make([]string, len(c.ValidatorActivationRequest.PublicKeys))
 
 		// Represents the set of keys actually returned by the beacon node
 		stringRetrievedPubKeys := make(map[string]struct{})
@@ -66,13 +66,13 @@ func (x *beaconNodeValidatorWaitForActivationClient) Recv() (*ethpb.ValidatorAct
 
 		statuses := []*ethpb.ValidatorActivationResponse_Status{}
 
-		for index, publicKey := range x.ValidatorActivationRequest.PublicKeys {
+		for index, publicKey := range c.ValidatorActivationRequest.PublicKeys {
 			stringPubKey := hexutil.Encode(publicKey)
 			stringTargetPubKeystoPubKeys[stringPubKey] = publicKey
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := x.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys)
+		stateValidators, err := c.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get validators state")
 		}
@@ -119,7 +119,7 @@ func (x *beaconNodeValidatorWaitForActivationClient) Recv() (*ethpb.ValidatorAct
 		return &ethpb.ValidatorActivationResponse{
 			Statuses: statuses,
 		}, nil
-	case <-x.ctx.Done():
+	case <-c.ctx.Done():
 		return nil, errors.New("context canceled")
 	}
 }
