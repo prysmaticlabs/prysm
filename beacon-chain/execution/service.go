@@ -307,7 +307,8 @@ func (s *Service) updateBeaconNodeStats() {
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
 
-func (s *Service) updateConnectedETH1(state bool) {
+func (s *Service) updateConnectedETH1(state bool, reason string) {
+	log.Infof("updateConnectedETH1 - %s", reason)
 	s.connectedETH1 = state
 	s.updateBeaconNodeStats()
 }
@@ -319,10 +320,14 @@ func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 	latestBlockTime := uint64(0)
 	if s.latestEth1Data.BlockTime > followTime {
 		latestBlockTime = s.latestEth1Data.BlockTime - followTime
+		if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+			latestBlockTime = s.latestEth1Data.BlockTime
+		}
 	}
+	log.WithField("distance", params.BeaconConfig().Eth1FollowDistance).WithField("followTime", followTime).WithField("BlockTime", s.latestEth1Data.BlockTime).WithField("BlockHeight", s.latestEth1Data.BlockHeight).WithField("latestBlockTime", latestBlockTime).Info("followedBlockHeight")
 	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "BlockByTimestamp=%d", latestBlockTime)
 	}
 	return blk.Number.Uint64(), nil
 }
@@ -467,7 +472,7 @@ func (s *Service) handleETH1FollowDistance() {
 	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.processChainStartFromBlockNum(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
-			s.runError = err
+			s.runError = errors.Wrap(err, "processChainStartFromBlockNum")
 			log.Error(err)
 			return
 		}
@@ -481,7 +486,7 @@ func (s *Service) handleETH1FollowDistance() {
 		return
 	}
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
-		s.runError = err
+		s.runError = errors.Wrap(err, "requestBatchedHeadersAndLogs")
 		log.Error(err)
 		return
 	}
@@ -511,6 +516,7 @@ func (s *Service) initPOWService() {
 			ctx := s.ctx
 			header, err := s.HeaderByNumber(ctx, nil)
 			if err != nil {
+				err = errors.Wrap(err, "HeaderByNumber")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(err, "Unable to retrieve latest execution client header")
 				continue
@@ -523,6 +529,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
+				err = errors.Wrap(err, "processPastLogs")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(
 					err,
@@ -532,6 +539,7 @@ func (s *Service) initPOWService() {
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				err = errors.Wrap(err, "cacheHeadersForEth1DataVote")
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
 					log.WithError(err).Debug("Unable to cache headers for execution client votes")
@@ -550,6 +558,7 @@ func (s *Service) initPOWService() {
 				if genHash != [32]byte{} {
 					genHeader, err := s.HeaderByHash(ctx, genHash)
 					if err != nil {
+						err = errors.Wrapf(err, "HeaderByHash, hash=%#x", genHash)
 						s.retryExecutionClientConnection(ctx, err)
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
 						continue
@@ -558,6 +567,7 @@ func (s *Service) initPOWService() {
 				}
 				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
+					err = errors.Wrap(err, "savePowchainData")
 					s.retryExecutionClientConnection(ctx, err)
 					errorLogger(err, "Unable to save execution client data")
 					continue
@@ -583,7 +593,7 @@ func (s *Service) run(done <-chan struct{}) {
 			s.isRunning = false
 			s.runError = nil
 			s.rpcClient.Close()
-			s.updateConnectedETH1(false)
+			s.updateConnectedETH1(false, "context canceled in run()")
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.eth1HeadTicker.C:
@@ -641,11 +651,11 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	// Find the end block to request from.
 	end, err := s.followedBlockHeight(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "followedBlockHeight")
 	}
 	start, err := s.determineEarliestVotingBlock(ctx, end)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "determineEarliestVotingBlock=%d", end)
 	}
 	return s.cacheBlockHeaders(start, end)
 }
@@ -677,7 +687,7 @@ func (s *Service) cacheBlockHeaders(start, end uint64) error {
 				}
 				continue
 			}
-			return err
+			return errors.Wrapf(err, "cacheBlockHeaders, start=%d, end=%d", startReq, endReq)
 		}
 	}
 	return nil
@@ -696,15 +706,22 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		}
 		return earliestBlk, nil
 	}
+	if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+		return 0, nil
+	}
 	votingTime := slots.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance
 	if followBackDist > votingTime {
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
 	}
 	earliestValidTime := votingTime - followBackDist
-	if earliestValidTime > s.latestEth1Data.BlockTime {
-		return 0, nil
-	}
+	/*
+		if earliestValidTime > s.latestEth1Data.BlockTime {
+			return 0, nil
+		}
+		log.WithField("earliestValidTime", earliestValidTime).Info("calling BlockByTimestamp")
+	*/
+	log.WithField("distance", params.BeaconConfig().Eth1FollowDistance).WithField("earliestValidTime", earliestValidTime).WithField("BlockTime", s.latestEth1Data.BlockTime).WithField("BlockHeight", s.latestEth1Data.BlockHeight).WithField("followBlock", followBlock).Info("determineEarliestVotingBlock")
 	hdr, err := s.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {
 		return 0, err

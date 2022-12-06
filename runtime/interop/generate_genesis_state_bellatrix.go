@@ -5,6 +5,8 @@ package interop
 import (
 	"context"
 
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+
 	"github.com/pkg/errors"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
@@ -16,7 +18,7 @@ import (
 
 // GenerateGenesisStateBellatrix deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
-func GenerateGenesisStateBellatrix(ctx context.Context, genesisTime, numValidators uint64) (*ethpb.BeaconStateBellatrix, []*ethpb.Deposit, error) {
+func GenerateGenesisStateBellatrix(ctx context.Context, genesisTime, numValidators uint64, ep *enginev1.ExecutionPayload, ed *ethpb.Eth1Data) (*ethpb.BeaconStateBellatrix, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not deterministically generate keys for %d validators", numValidators)
@@ -25,13 +27,13 @@ func GenerateGenesisStateBellatrix(ctx context.Context, genesisTime, numValidato
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
-	return GenerateGenesisStateBellatrixFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots)
+	return GenerateGenesisStateBellatrixFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots, ep, ed)
 }
 
 // GenerateGenesisStateBellatrixFromDepositData creates a genesis state given a list of
 // deposit data items and their corresponding roots.
 func GenerateGenesisStateBellatrixFromDepositData(
-	ctx context.Context, genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
+	ctx context.Context, genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte, ep *enginev1.ExecutionPayload, e1d *ethpb.Eth1Data,
 ) (*ethpb.BeaconStateBellatrix, []*ethpb.Deposit, error) {
 	t, err := trie.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
@@ -41,23 +43,19 @@ func GenerateGenesisStateBellatrixFromDepositData(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
-	root, err := t.HashTreeRoot()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not hash tree root of deposit trie")
-	}
 	if genesisTime == 0 {
 		genesisTime = uint64(time.Now().Unix())
 	}
-	beaconState, err := coreState.GenesisBeaconStateBellatrix(ctx, deposits, genesisTime, &ethpb.Eth1Data{
-		DepositRoot:  root[:],
-		DepositCount: uint64(len(deposits)),
-		BlockHash:    mockEth1BlockHash,
-	})
+	beaconState, err := coreState.GenesisBeaconStateBellatrix(ctx, deposits, genesisTime, e1d, ep)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
-
-	pbState, err := statenative.ProtobufBeaconStateBellatrix(beaconState.ToProtoUnsafe())
+	bsi := beaconState.ToProtoUnsafe()
+	pbb, ok := bsi.(*ethpb.BeaconStateBellatrix)
+	if !ok {
+		return nil, nil, errors.New("unexpected BeaconState version")
+	}
+	pbState, err := statenative.ProtobufBeaconStateBellatrix(pbb)
 	if err != nil {
 		return nil, nil, err
 	}

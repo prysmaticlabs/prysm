@@ -34,7 +34,9 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	}
 	return block
 }
+
 var ErrUnrecognizedState = errors.New("uknonwn underlying type for state.BeaconState value")
+
 func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
 	ps := st.ToProto()
 	switch ps.(type) {
@@ -55,44 +57,52 @@ func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.Si
 			Signature: params.BeaconConfig().EmptySignature[:],
 		})
 	case *ethpb.BeaconStateBellatrix:
-		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
-			Block: &ethpb.BeaconBlockBellatrix{
+		hi, err := st.LatestExecutionPayloadHeader()
+		if err != nil {
+			return nil, err
+		}
+		txr, err := hi.TransactionsRoot()
+		if err != nil {
+			return nil, err
+		}
+		h := &enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.SafeCopyBytes(hi.ParentHash()),
+			FeeRecipient:     bytesutil.SafeCopyBytes(hi.FeeRecipient()),
+			StateRoot:        bytesutil.SafeCopyBytes(hi.StateRoot()),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(hi.ReceiptsRoot()),
+			LogsBloom:        bytesutil.SafeCopyBytes(hi.LogsBloom()),
+			PrevRandao:       bytesutil.SafeCopyBytes(hi.PrevRandao()),
+			BlockNumber:      hi.BlockNumber(),
+			GasLimit:         hi.GasLimit(),
+			GasUsed:          hi.GasUsed(),
+			Timestamp:        hi.Timestamp(),
+			ExtraData:        bytesutil.SafeCopyBytes(hi.ExtraData()),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(hi.BaseFeePerGas()),
+			BlockHash:        bytesutil.SafeCopyBytes(hi.BlockHash()),
+			TransactionsRoot: bytesutil.SafeCopyBytes(txr),
+		}
+		return blocks.NewSignedBeaconBlock(&ethpb.SignedBlindedBeaconBlockBellatrix{
+			Block: &ethpb.BlindedBeaconBlockBellatrix{
 				ParentRoot: params.BeaconConfig().ZeroHash[:],
 				StateRoot:  root[:],
-				Body: &ethpb.BeaconBlockBodyBellatrix{
+				Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
 					RandaoReveal: make([]byte, 96),
-					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot: make([]byte, 32),
-						BlockHash:   make([]byte, 32),
-					},
-					Graffiti: make([]byte, 32),
+					Eth1Data:     st.Eth1Data(),
+					Graffiti:     make([]byte, 32),
 					SyncAggregate: &ethpb.SyncAggregate{
 						SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
 						SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 					},
-					ExecutionPayload: &enginev1.ExecutionPayload{
-						ParentHash:    make([]byte, 32),
-						FeeRecipient:  make([]byte, 20),
-						StateRoot:     make([]byte, 32),
-						ReceiptsRoot:  make([]byte, 32),
-						LogsBloom:     make([]byte, 256),
-						PrevRandao:    make([]byte, 32),
-						BaseFeePerGas: make([]byte, 32),
-						BlockHash:     make([]byte, 32),
-					},
+					ExecutionPayloadHeader: h,
 				},
 			},
 			Signature: params.BeaconConfig().EmptySignature[:],
 		})
-		/*
-		return blocks.NewSignedBeaconBlock(&ethpb.BeaconBlockBellatrix{
-		Body: })
-		 */
 	default:
 		return nil, ErrUnrecognizedState
-			/*
-	case *ethpb.BeaconStateAltair:
-	case *ethpb.BeaconStateCapella:
-			 */
+		/*
+			case *ethpb.BeaconStateAltair:
+			case *ethpb.BeaconStateCapella:
+		*/
 	}
 }

@@ -233,7 +233,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	}
 	log.Infof("genesis block timestamp=%d", block.Time())
 	eth1BlockHash := block.Hash()
-	e2e.TestParams.Eth1BlockHash = &eth1BlockHash
+	e2e.TestParams.Eth1GenesisBlock = block
 	log.Infof("miner says genesis block root=%#x", eth1BlockHash)
 	cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
 	code, err := web3.CodeAt(ctx, cAddr, nil)

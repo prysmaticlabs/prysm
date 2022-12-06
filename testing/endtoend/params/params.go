@@ -14,8 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ethereum/go-ethereum/common"
 	cfgparams "github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
@@ -29,7 +30,7 @@ type params struct {
 	LighthouseBeaconNodeCount int
 	Ports                     *ports
 	Paths                     *paths
-	Eth1BlockHash             *common.Hash
+	Eth1GenesisBlock          *types.Block
 	StartTime                 time.Time
 	CLGenesisTime             uint64
 	Eth1GenesisTime           uint64

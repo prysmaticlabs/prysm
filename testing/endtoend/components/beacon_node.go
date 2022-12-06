@@ -12,6 +12,13 @@ import (
 	"strings"
 	"syscall"
 
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 
@@ -175,10 +182,10 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 }
 
 func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
-	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	if err != nil {
-		return nil, err
+	if e2e.TestParams.Eth1GenesisBlock == nil {
+		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
 	}
+	gb := e2e.TestParams.Eth1GenesisBlock
 
 	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
 	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -189,11 +196,39 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	genesis.Eth1Data.DepositRoot = dr[:]
-	if e2e.TestParams.Eth1BlockHash != nil {
-		genesis.Eth1Data.BlockHash = e2e.TestParams.Eth1BlockHash.Bytes()
+	e1d := &ethpb.Eth1Data{
+		DepositRoot:  dr[:],
+		DepositCount: 0,
+		BlockHash:    gb.Hash().Bytes(),
 	}
-	log.Infof("genesis eth1 block root=%#x", genesis.Eth1Data.BlockHash)
+
+	txRoot, err := ssz.TransactionsRoot(make([][]byte, 0))
+	if err != nil {
+		return nil, errors.Wrap(err, "error computing empty tx root")
+	}
+	payload := &enginev1.ExecutionPayload{
+		ParentHash:    gb.ParentHash().Bytes(),
+		FeeRecipient:  gb.Coinbase().Bytes(),
+		StateRoot:     gb.Root().Bytes(),
+		ReceiptsRoot:  gb.ReceiptHash().Bytes(),
+		LogsBloom:     gb.Bloom().Bytes(),
+		PrevRandao:    params.BeaconConfig().ZeroHash[:],
+		BlockNumber:   gb.NumberU64(),
+		GasLimit:      gb.GasLimit(),
+		GasUsed:       gb.GasUsed(),
+		Timestamp:     gb.Time(),
+		ExtraData:     gb.Extra()[:32],
+		BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
+		BlockHash:     gb.Hash().Bytes(),
+		Transactions:  make([][]byte, 0),
+	}
+	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("tx root = %#x, max len=%d", txRoot, len(genesis.LatestExecutionPayloadHeader.ExtraData))
+	log.WithField("block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).WithField("deposit_count", genesis.Eth1Data.DepositCount).WithField("deposit_root", fmt.Sprintf("%#x", genesis.Eth1Data.DepositRoot)).Info("genesis eth1 data")
+
 	return state_native.InitializeFromProtoUnsafeBellatrix(genesis)
 }
 
@@ -203,6 +238,16 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	root, err := g.HashTreeRoot(ctx)
+	if err != nil {
+		return "", err
+	}
+	lbhr, err := g.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return "", err
+	}
+	log.WithField("fork_version", g.Fork().CurrentVersion).WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).WithField("root", fmt.Sprintf("%#x", root)).Infof("BeaconState infoz")
 
 	genesisBytes, err := g.MarshalSSZ()
 	if err != nil {

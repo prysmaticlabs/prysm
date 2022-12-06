@@ -2,6 +2,10 @@ package transition
 
 import (
 	"context"
+
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -10,7 +14,6 @@ import (
 
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
@@ -60,7 +63,7 @@ import (
 //	  return state
 //
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (state.BeaconState, error) {
 	st, err := EmptyGenesisStateBellatrix()
 	if err != nil {
 		return nil, err
@@ -77,12 +80,18 @@ func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return OptimizedGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data())
+	// After deposits have been processed, overwrite eth1data to what is passed in. This allows us to "pre-mine" validators
+	// without the deposit root and count mismatching the real deposit contract.
+	if err := st.SetEth1Data(eth1Data); err != nil {
+		return nil, err
+	}
+
+	return OptimizedGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data(), ep)
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -128,6 +137,14 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 			scores = append(scores, 0)
 		}
 	}
+	wep, err := blocks.WrappedExecutionPayload(ep)
+	if err != nil {
+		return nil, err
+	}
+	eph, err := blocks.PayloadToHeader(wep)
+	if err != nil {
+		return nil, err
+	}
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot:                  0,
@@ -168,44 +185,22 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		Slashings:       slashings,
 
 		// Eth1 data.
-		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: preState.Eth1DepositIndex(),
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			ParentHash:       make([]byte, 32),
-			FeeRecipient:     make([]byte, 20),
-			StateRoot:        make([]byte, 32),
-			ReceiptsRoot:     make([]byte, 32),
-			LogsBloom:        make([]byte, 256),
-			PrevRandao:       make([]byte, 32),
-			BaseFeePerGas:    make([]byte, 32),
-			BlockHash:        make([]byte, 32),
-			TransactionsRoot: make([]byte, 32),
-		},
-		InactivityScores: scores,
+		Eth1Data:                     eth1Data,
+		Eth1DataVotes:                []*ethpb.Eth1Data{},
+		Eth1DepositIndex:             preState.Eth1DepositIndex(),
+		LatestExecutionPayloadHeader: eph,
+		InactivityScores:             scores,
 	}
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
 		RandaoReveal: make([]byte, 96),
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, 32),
-			BlockHash:   make([]byte, 32),
-		},
-		Graffiti: make([]byte, 32),
+		Eth1Data:     eth1Data,
+		Graffiti:     make([]byte, 32),
 		SyncAggregate: &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		},
-		ExecutionPayload: &enginev1.ExecutionPayload{
-			ParentHash:    make([]byte, 32),
-			FeeRecipient:  make([]byte, 20),
-			StateRoot:     make([]byte, 32),
-			ReceiptsRoot:  make([]byte, 32),
-			LogsBloom:     make([]byte, 256),
-			PrevRandao:    make([]byte, 32),
-			BaseFeePerGas: make([]byte, 32),
-			BlockHash:     make([]byte, 32),
-		},
+		ExecutionPayload: ep,
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
