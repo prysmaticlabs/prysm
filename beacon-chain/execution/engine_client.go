@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -53,7 +54,7 @@ type ForkchoiceUpdatedResponse struct {
 // block with an execution payload from a signed beacon block and a connection
 // to an execution client's engine API.
 type ExecutionPayloadReconstructor interface {
-	ReconstructFullBellatrixBlock(
+	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
 	ReconstructFullBellatrixBlockBatch(
@@ -72,7 +73,7 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
+	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
@@ -295,11 +296,11 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint6
 
 // LatestExecutionBlock fetches the latest execution engine block by calling
 // eth_blockByNumber via JSON-RPC.
-func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
+func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlockBellatrix, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.LatestExecutionBlock")
 	defer span.End()
 
-	result := &pb.ExecutionBlock{}
+	result := &pb.ExecutionBlockBellatrix{}
 	err := s.rpcClient.CallContext(
 		ctx,
 		result,
@@ -312,28 +313,38 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error) {
+func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
-	result := &pb.ExecutionBlock{}
+	result := &pb.ExecutionBlockBellatrix{}
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
+	return result, handleRPCError(err)
+}
+
+// ExecutionBlockCapellaByHash fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC.
+func (s *Service) ExecutionBlockCapellaByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockCapella, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockCapellaByHash")
+	defer span.End()
+	result := &pb.ExecutionBlockCapella{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
 
 // ExecutionBlocksByHashes fetches a batch of execution engine blocks by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlock, error) {
+func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlockBellatrix, error) {
 	_, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlocksByHashes")
 	defer span.End()
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
-	execBlks := make([]*pb.ExecutionBlock, 0, numOfHashes)
+	execBlks := make([]*pb.ExecutionBlockBellatrix, 0, numOfHashes)
 	errs := make([]error, 0, numOfHashes)
 	if numOfHashes == 0 {
 		return execBlks, nil
 	}
 	for _, h := range hashes {
-		blk := &pb.ExecutionBlock{}
+		blk := &pb.ExecutionBlockBellatrix{}
 		err := error(nil)
 		newH := h
 		elems = append(elems, gethRPC.BatchElem{
@@ -377,9 +388,9 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return hdr, err
 }
 
-// ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
+// ReconstructFullBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
-func (s *Service) ReconstructFullBellatrixBlock(
+func (s *Service) ReconstructFullBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
@@ -404,7 +415,12 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	}
 
 	executionBlockHash := common.BytesToHash(header.BlockHash())
-	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	var executionBlock pb.ExecutionBlock
+	if blindedBlock.Version() == version.Bellatrix {
+		executionBlock, err = s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	} else {
+		executionBlock, err = s.ExecutionBlockCapellaByHash(ctx, executionBlockHash, true /* with txs */)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
 	}
@@ -415,7 +431,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload.Proto())
 	if err != nil {
 		return nil, err
 	}
@@ -499,27 +515,52 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 }
 
 func fullPayloadFromExecutionBlock(
-	header interfaces.ExecutionData, block *pb.ExecutionBlock,
-) (*pb.ExecutionPayload, error) {
+	header interfaces.ExecutionData, block pb.ExecutionBlock,
+) (interfaces.ExecutionData, error) {
 	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
-	if !bytes.Equal(header.BlockHash(), block.Hash[:]) {
+	blockHash := block.GetHash()
+	if !bytes.Equal(header.BlockHash(), blockHash[:]) {
 		return nil, fmt.Errorf(
 			"block hash field in execution header %#x does not match execution block hash %#x",
 			header.BlockHash(),
-			block.Hash,
+			blockHash,
 		)
 	}
-	txs := make([][]byte, len(block.Transactions))
-	for i, tx := range block.Transactions {
+	blockTransactions := block.GetTransactions()
+	txs := make([][]byte, len(blockTransactions))
+	for i, tx := range blockTransactions {
 		txBin, err := tx.MarshalBinary()
 		if err != nil {
 			return nil, err
 		}
 		txs[i] = txBin
 	}
-	return &pb.ExecutionPayload{
+
+	if block.Version() == version.Bellatrix {
+		return blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+			ParentHash:    header.ParentHash(),
+			FeeRecipient:  header.FeeRecipient(),
+			StateRoot:     header.StateRoot(),
+			ReceiptsRoot:  header.ReceiptsRoot(),
+			LogsBloom:     header.LogsBloom(),
+			PrevRandao:    header.PrevRandao(),
+			BlockNumber:   header.BlockNumber(),
+			GasLimit:      header.GasLimit(),
+			GasUsed:       header.GasUsed(),
+			Timestamp:     header.Timestamp(),
+			ExtraData:     header.ExtraData(),
+			BaseFeePerGas: header.BaseFeePerGas(),
+			BlockHash:     blockHash[:],
+			Transactions:  txs,
+		})
+	}
+	withdrawals, err := block.GetWithdrawals()
+	if err != nil {
+		return nil, err
+	}
+	return blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
 		ParentHash:    header.ParentHash(),
 		FeeRecipient:  header.FeeRecipient(),
 		StateRoot:     header.StateRoot(),
@@ -532,9 +573,10 @@ func fullPayloadFromExecutionBlock(
 		Timestamp:     header.Timestamp(),
 		ExtraData:     header.ExtraData(),
 		BaseFeePerGas: header.BaseFeePerGas(),
-		BlockHash:     block.Hash[:],
+		BlockHash:     blockHash[:],
 		Transactions:  txs,
-	}, nil
+		Withdrawals:   withdrawals,
+	})
 }
 
 // Handles errors received from the RPC server according to the specification.

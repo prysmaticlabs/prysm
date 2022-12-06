@@ -163,7 +163,7 @@ func TestService_logTtdStatus(t *testing.T) {
 			require.NoError(t, r.Body.Close())
 		}()
 
-		resp := &pb.ExecutionBlock{
+		resp := &pb.ExecutionBlockBellatrix{
 			Header: gethtypes.Header{
 				ParentHash:  common.Hash{},
 				UncleHash:   common.Hash{},
@@ -219,7 +219,7 @@ func TestService_logTtdStatus_NotSyncedClient(t *testing.T) {
 			require.NoError(t, r.Body.Close())
 		}()
 
-		resp := (*pb.ExecutionBlock)(nil) // Nil response when a client is not synced
+		resp := (*pb.ExecutionBlockBellatrix)(nil) // Nil response when a client is not synced
 		respJSON := map[string]interface{}{
 			"jsonrpc": "2.0",
 			"id":      1,

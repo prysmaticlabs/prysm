@@ -177,14 +177,13 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
+	if !blk.IsBlinded() {
+		return nil, errors.New("can only build signed beacon block from blinded format")
+	}
 	b := blk.Block()
 	payloadHeader, err := b.Body().Execution()
-	switch {
-	case errors.Is(err, ErrUnsupportedGetter):
-		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
-	case err != nil:
+	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload header")
-	default:
 	}
 
 	var wrappedPayload interfaces.ExecutionData
