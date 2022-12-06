@@ -17,8 +17,17 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
+type genesisProvider interface {
+	GetGenesis() (*rpcmiddleware.GenesisResponse_GenesisJson, *apimiddleware.DefaultErrorJson, error)
+}
+
+type beaconApiGenesisProvider struct {
+	httpClient http.Client
+	url        string
+}
+
 func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
-	genesis, httpError, err := c.getGenesis()
+	genesis, httpError, err := c.genesisProvider.GetGenesis()
 
 	for err != nil {
 		if httpError == nil || httpError.Code != http.StatusNotFound {
@@ -28,26 +37,26 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 		// Error 404 means that the chain genesis info is not yet known, so we query it every second until it's ready
 		select {
 		case <-time.After(time.Second):
-			genesis, httpError, err = c.getGenesis()
+			genesis, httpError, err = c.genesisProvider.GetGenesis()
 		case <-ctx.Done():
 			return nil, errors.New("context canceled")
 		}
 	}
 
-	genesisTime, err := strconv.ParseUint(genesis.Data.GenesisTime, 10, 64)
+	genesisTime, err := strconv.ParseUint(genesis.GenesisTime, 10, 64)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.Data.GenesisTime)
+		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.GenesisTime)
 	}
 
 	chainStartResponse := &ethpb.ChainStartResponse{}
 	chainStartResponse.Started = true
 	chainStartResponse.GenesisTime = genesisTime
 
-	if !validRoot(genesis.Data.GenesisValidatorsRoot) {
-		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.Data.GenesisValidatorsRoot)
+	if !validRoot(genesis.GenesisValidatorsRoot) {
+		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.GenesisValidatorsRoot)
 	}
 
-	genesisValidatorRoot, err := hexutil.Decode(genesis.Data.GenesisValidatorsRoot)
+	genesisValidatorRoot, err := hexutil.Decode(genesis.GenesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
@@ -56,7 +65,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 	return chainStartResponse, nil
 }
 
-func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJson, *apimiddleware.DefaultErrorJson, error) {
+func (c beaconApiGenesisProvider) GetGenesis() (*rpcmiddleware.GenesisResponse_GenesisJson, *apimiddleware.DefaultErrorJson, error) {
 	resp, err := c.httpClient.Get(c.url + "/eth/v1/beacon/genesis")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to query REST API genesis endpoint")
@@ -82,8 +91,8 @@ func (c beaconApiValidatorClient) getGenesis() (*rpcmiddleware.GenesisResponseJs
 	}
 
 	if genesisJson.Data == nil {
-		return nil, nil, errors.New("GenesisResponseJson.Data is nil")
+		return nil, nil, errors.New("genesis data is nil")
 	}
 
-	return genesisJson, nil, nil
+	return genesisJson.Data, nil, nil
 }

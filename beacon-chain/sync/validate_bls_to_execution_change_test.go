@@ -148,6 +148,43 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 			want: pubsub.ValidationIgnore,
 		},
 		{
+			name: "Non-capella Head state",
+			svc: NewService(context.Background(),
+				WithP2P(mockp2p.NewTestP2P(t)),
+				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+				WithChainService(chainService),
+				WithStateNotifier(chainService.StateNotifier()),
+				WithOperationNotifier(chainService.OperationNotifier()),
+				WithBlsToExecPool(blstoexec.NewPool()),
+			),
+			setupSvc: func(s *Service, msg *ethpb.SignedBLSToExecutionChange, topic string) (*Service, string) {
+				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
+				s.cfg.beaconDB = beaconDB
+				s.initCaches()
+				st, _ := util.DeterministicGenesisStateBellatrix(t, 128)
+				s.cfg.chain = &mockChain.ChainService{
+					ValidatorsRoot: [32]byte{'A'},
+					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
+					State:          st,
+				}
+
+				return s, topic
+			},
+			args: args{
+				ctx:   context.Background(),
+				pid:   "random",
+				topic: fmt.Sprintf(defaultTopic, fakeDigest),
+				msg: &ethpb.SignedBLSToExecutionChange{
+					Message: &ethpb.BLSToExecutionChange{
+						ValidatorIndex:     0,
+						FromBlsPubkey:      make([]byte, 48),
+						ToExecutionAddress: make([]byte, 20),
+					},
+					Signature: emptySig[:],
+				}},
+			want: pubsub.ValidationIgnore,
+		},
+		{
 			name: "Non-existent Validator Index",
 			svc: NewService(context.Background(),
 				WithP2P(mockp2p.NewTestP2P(t)),
