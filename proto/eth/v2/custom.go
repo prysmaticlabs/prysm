@@ -14,7 +14,7 @@ const (
 	FinalizedRootIndex        = uint64(105)
 )
 
-type Update interface {
+type LightClientGenericUpdate interface {
 	GetAttestedHeader() *ethpbv1.BeaconBlockHeader
 	GetNextSyncCommittee() *SyncCommittee
 	GetNextSyncCommitteeBranch() [][]byte
@@ -30,7 +30,7 @@ func FloorLog2(x uint64) int {
 	return bits.Len64(uint64(x - 1))
 }
 
-var _ Update = (*LightClientFinalityUpdate)(nil)
+var _ LightClientGenericUpdate = (*LightClientFinalityUpdate)(nil)
 
 func (x *LightClientFinalityUpdate) GetNextSyncCommittee() *SyncCommittee {
 	return &SyncCommittee{}
@@ -44,7 +44,7 @@ func (x *LightClientFinalityUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlo
 	x.FinalizedHeader = header
 }
 
-var _ Update = (*LightClientOptimisticUpdate)(nil)
+var _ LightClientGenericUpdate = (*LightClientOptimisticUpdate)(nil)
 
 func (x *LightClientOptimisticUpdate) GetNextSyncCommittee() *SyncCommittee {
 	return &SyncCommittee{}
@@ -74,4 +74,10 @@ func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 		}
 	}
 	return bytes.Equal(x.AggregatePubkey, other.AggregatePubkey)
+}
+
+var _ LightClientGenericUpdate = (*LightClientUpdate)(nil)
+
+func (x *LightClientUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
+	x.FinalizedHeader = header
 }
