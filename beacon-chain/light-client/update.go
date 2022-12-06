@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
@@ -30,8 +29,8 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 }
 
 type Update struct {
-	BeaconChainConfig                *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
-	Type                             string                    `json:"type,omitempty"`
+	Config                           *Config `json:"config,omitempty"`
+	Type                             string  `json:"type,omitempty"`
 	ethpbv2.LightClientGenericUpdate `json:"update,omitempty"`
 }
 
@@ -70,11 +69,11 @@ func unmarshalGenericUpdate(data []byte, typeJsonField, valueJsonField string,
 }
 
 func (u *Update) computeEpochAtSlot(slot types.Slot) types.Epoch {
-	return types.Epoch(slot / u.BeaconChainConfig.SlotsPerEpoch)
+	return types.Epoch(slot / u.Config.SlotsPerEpoch)
 }
 
 func (u *Update) computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
-	return uint64(epoch / u.BeaconChainConfig.EpochsPerSyncCommitteePeriod)
+	return uint64(epoch / u.Config.EpochsPerSyncCommitteePeriod)
 }
 
 func (u *Update) computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {

@@ -7,7 +7,6 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
@@ -18,8 +17,7 @@ import (
 )
 
 type Store struct {
-	// BeaconChainConfig is the config for the beacon chain
-	BeaconChainConfig *params.BeaconChainConfig `json:"beacon_chain_config,omitempty"`
+	Config *Config
 	// FinalizedHeader is a header that is finalized
 	FinalizedHeader *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	// CurrentSyncCommittee is the sync committees corresponding to the finalized header
@@ -56,7 +54,7 @@ func hashTreeRoot(committee *ethpbv2.SyncCommittee) ([]byte, error) {
 }
 
 // NewStore implements initialize_light_client_store from the spec.
-func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
+func NewStore(config *Config, trustedBlockRoot [32]byte,
 	bootstrap *ethpbv2.LightClientBootstrap) (*Store, error) {
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
@@ -78,7 +76,7 @@ func NewStore(config *params.BeaconChainConfig, trustedBlockRoot [32]byte,
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
-		BeaconChainConfig:    config,
+		Config:               config,
 		FinalizedHeader:      bootstrap.Header,
 		CurrentSyncCommittee: bootstrap.CurrentSyncCommittee,
 		NextSyncCommittee:    nil,
@@ -102,10 +100,10 @@ func (s *Store) getSafetyThreshold() uint64 {
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
-	if epoch >= s.BeaconChainConfig.AltairForkEpoch {
-		return s.BeaconChainConfig.AltairForkVersion
+	if epoch >= s.Config.AltairForkEpoch {
+		return s.Config.AltairForkVersion
 	}
-	return s.BeaconChainConfig.GenesisForkVersion
+	return s.Config.GenesisForkVersion
 }
 
 func (s *Store) validateUpdate(update *Update,
@@ -113,7 +111,7 @@ func (s *Store) validateUpdate(update *Update,
 	genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.GetSyncAggregate()
-	if syncAggregate.SyncCommitteeBits.Count() < s.BeaconChainConfig.MinSyncCommitteeParticipants {
+	if syncAggregate.SyncCommitteeBits.Count() < s.Config.MinSyncCommitteeParticipants {
 		return errors.New("sync committee does not have sufficient participants")
 	}
 
@@ -151,7 +149,7 @@ func (s *Store) validateUpdate(update *Update,
 		}
 	} else {
 		var finalizedRoot [32]byte
-		if update.GetFinalizedHeader().Slot == s.BeaconChainConfig.GenesisSlot {
+		if update.GetFinalizedHeader().Slot == s.Config.GenesisSlot {
 			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
 				return errors.New("finality branch is present but update is not finality")
 			}
@@ -217,7 +215,7 @@ func (s *Store) validateUpdate(update *Update,
 		}
 	}
 	forkVersion := s.computeForkVersion(update.computeEpochAtSlot(update.GetSignatureSlot()))
-	domain, err := signing.ComputeDomain(s.BeaconChainConfig.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
+	domain, err := signing.ComputeDomain(s.Config.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
 	}
@@ -259,8 +257,8 @@ func (s *Store) applyUpdate(update *Update) error {
 }
 
 func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
-	if currentSlot > s.FinalizedHeader.Slot+s.BeaconChainConfig.SlotsPerEpoch+types.Slot(s.BeaconChainConfig.
-		EpochsPerSyncCommitteePeriod) && s.BestValidUpdate != nil {
+	if currentSlot > s.FinalizedHeader.Slot+s.Config.SlotsPerEpoch+types.Slot(s.Config.EpochsPerSyncCommitteePeriod) &&
+		s.BestValidUpdate != nil {
 		// Forced best update when the update timeout has elapsed.
 		// Because the apply logic waits for `finalized_header.slot` to indicate sync committee finality,
 		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
@@ -315,7 +313,7 @@ func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientFinalit
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
-		BeaconChainConfig:        s.BeaconChainConfig,
+		Config:                   s.Config,
 		Type:                     FinalityUpdateTypeName,
 		LightClientGenericUpdate: finalityUpdate,
 	}, currentSlot, genesisValidatorsRoot)
@@ -325,7 +323,7 @@ func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientOpt
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
-		BeaconChainConfig:        s.BeaconChainConfig,
+		Config:                   s.Config,
 		Type:                     OptimisticUpdateTypeName,
 		LightClientGenericUpdate: optimisticUpdate,
 	}, currentSlot, genesisValidatorsRoot)
