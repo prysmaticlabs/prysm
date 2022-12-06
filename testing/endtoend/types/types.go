@@ -37,6 +37,12 @@ func WithValidatorRESTApi() E2EConfigOpt {
 	}
 }
 
+func WithValidatorCrossClient() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseValidatorCrossClient = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestCheckpointSync      bool

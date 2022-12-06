@@ -1,6 +1,8 @@
 package beacon_api
 
 import (
+	"fmt"
+	neturl "net/url"
 	"regexp"
 )
 
@@ -10,4 +12,12 @@ func validRoot(root string) bool {
 		return false
 	}
 	return matchesRegex
+}
+
+func buildURL(path string, queryParams ...neturl.Values) string {
+	if len(queryParams) == 0 {
+		return path
+	}
+
+	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }

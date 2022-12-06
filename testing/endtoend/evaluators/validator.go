@@ -20,14 +20,13 @@ import (
 	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var expectedParticipation = 0.99
 
-var expectedMulticlientParticipation = 0.98
+var expectedMulticlientParticipation = 0.95
 
 var expectedSyncParticipation = 0.99
 
