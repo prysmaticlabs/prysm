@@ -72,6 +72,17 @@ func TestGetRestJsonResponse_Error(t *testing.T) {
 			responseJson:         nil,
 		},
 		{
+			name:                 "400 error",
+			funcHandler:          httpErrorJsonHandler(http.StatusBadRequest, "Bad request"),
+			expectedErrorMessage: "error 400: Bad request",
+			expectedErrorJson: &apimiddleware.DefaultErrorJson{
+				Code:    http.StatusBadRequest,
+				Message: "Bad request",
+			},
+			timeout:      time.Second * 5,
+			responseJson: &rpcmiddleware.GenesisResponseJson{},
+		},
+		{
 			name:                 "404 error",
 			funcHandler:          httpErrorJsonHandler(http.StatusNotFound, "Not found"),
 			expectedErrorMessage: "error 404: Not found",
