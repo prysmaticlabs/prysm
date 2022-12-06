@@ -22,7 +22,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionBlock              *pb.ExecutionBlock
+	ExecutionBlock              *pb.ExecutionBlockBellatrix
 	Err                         error
 	ErrLatestExecBlock          error
 	ErrExecBlockByHash          error
@@ -30,7 +30,7 @@ type EngineClient struct {
 	ErrNewPayload               error
 	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
-	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
+	BlockByHashMap              map[[32]byte]*pb.ExecutionBlockBellatrix
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
@@ -68,12 +68,12 @@ func (e *EngineClient) ExchangeTransitionConfiguration(_ context.Context, _ *pb.
 }
 
 // LatestExecutionBlock --
-func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlock, error) {
+func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlockBellatrix, error) {
 	return e.ExecutionBlock, e.ErrLatestExecBlock
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlock, error) {
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -81,7 +81,7 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 	return b, e.ErrExecBlockByHash
 }
 
-func (e *EngineClient) ReconstructFullBellatrixBlock(
+func (e *EngineClient) ReconstructFullBlock(
 	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
@@ -104,7 +104,7 @@ func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
 ) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
 	for _, b := range blindedBlocks {
-		newBlock, err := e.ReconstructFullBellatrixBlock(ctx, b)
+		newBlock, err := e.ReconstructFullBlock(ctx, b)
 		if err != nil {
 			return nil, err
 		}

@@ -146,7 +146,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
-	if err := s.handleBlockBLSToExecChanges(ctx, signed.Block()); err != nil {
+	if err := s.handleBlockBLSToExecChanges(signed.Block()); err != nil {
 		return errors.Wrap(err, "could not handle block's BLSToExecutionChanges")
 	}
 
@@ -559,7 +559,7 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Be
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(ctx context.Context, blk interfaces.BeaconBlock) error {
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
 	if blk.Version() < version.Capella {
 		return nil
 	}
@@ -568,9 +568,6 @@ func (s *Service) handleBlockBLSToExecChanges(ctx context.Context, blk interface
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
 	for _, change := range changes {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
 			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
 		}

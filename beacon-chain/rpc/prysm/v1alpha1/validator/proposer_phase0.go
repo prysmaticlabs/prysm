@@ -228,7 +228,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 					AggregatedProof: aggregatedProof[:],
 				})
 
-				changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion()
+				changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion(head)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not pack BLSToExecutionChanges")
 				}

@@ -21,9 +21,10 @@ type data struct {
 
 var (
 	errNilPayloadAttribute         = errors.New("received nil payload attribute")
-	ErrUnsupportedPayloadAttribute = errors.New("unsupported payload attribute")
+	errUnsupportedPayloadAttribute = errors.New("unsupported payload attribute")
 )
 
+// New returns a new payload attribute with the given input object.
 func New(i interface{}) (Attributer, error) {
 	switch a := i.(type) {
 	case nil:
@@ -33,10 +34,11 @@ func New(i interface{}) (Attributer, error) {
 	case *enginev1.PayloadAttributesV2:
 		return initPayloadAttributeFromV2(a)
 	default:
-		return nil, errors.Wrapf(ErrUnsupportedPayloadAttribute, "unable to create payload attribute from type %T", i)
+		return nil, errors.Wrapf(errUnsupportedPayloadAttribute, "unable to create payload attribute from type %T", i)
 	}
 }
 
+// EmptyWithVersion returns an empty payload attribute with the given version.
 func EmptyWithVersion(version int) Attributer {
 	return &data{
 		version: version,
