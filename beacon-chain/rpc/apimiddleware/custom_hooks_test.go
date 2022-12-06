@@ -949,6 +949,21 @@ func TestSerializeV2State(t *testing.T) {
 		require.NoError(t, json.Unmarshal(j, &bellatrixStateResponseJson{}))
 	})
 
+	t.Run("Capella", func(t *testing.T) {
+		response := &BeaconStateV2ResponseJson{
+			Version: ethpbv2.Version_CAPELLA.String(),
+			Data: &BeaconStateContainerV2Json{
+				Phase0State:  nil,
+				CapellaState: &BeaconStateCapellaJson{},
+			},
+		}
+		runDefault, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &capellaStateResponseJson{}))
+	})
+
 	t.Run("incorrect response type", func(t *testing.T) {
 		runDefault, j, errJson := serializeV2State(&types.Empty{})
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
