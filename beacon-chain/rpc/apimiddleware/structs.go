@@ -849,7 +849,7 @@ type BeaconStateCapellaJson struct {
 	NextSyncCommittee            *SyncCommitteeJson                 `json:"next_sync_committee"`
 	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"latest_execution_payload_header"`
 	NextWithdrawalIndex          string                             `json:"next_withdrawal_index"`
-	LastWithdrawalValidatorIndex string                             `json:"latest_withdrawal_validator_index"`
+	NextWithdrawalValidatorIndex string                             `json:"next_withdrawal_validator_index"`
 }
 
 type BeaconStateContainerV2Json struct {
