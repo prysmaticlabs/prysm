@@ -76,7 +76,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 		}
 		_, err = blocks.ValidateBLSToExecutionChange(st, change)
 		if err != nil {
-			logrus.Warning("removing invalid BLSToExecutionChange from pool")
+			logrus.WithError(err).Warning("removing invalid BLSToExecutionChange from pool")
 			// MarkIncluded removes the invalid change from the pool
 			p.lock.RUnlock()
 			if err := p.MarkIncluded(change); err != nil {
@@ -99,22 +99,23 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 	// We now verify the signatures in batches
 	cSet, err := blocks.BLSChangesSignatureBatch(st, result)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges signatures")
-	}
-	ok, err := cSet.Verify()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not batch verify BLSToExecutionChanges signatures")
-	}
-	if ok {
-		return result, nil
+		logrus.WithError(err).Warning("could not get BLSToExecutionChanges signatures")
+	} else {
+		ok, err := cSet.Verify()
+		if err != nil {
+			logrus.WithError(err).Warning("could not batch verify BLSToExecutionChanges signatures")
+		} else if ok {
+			return result, nil
 
+		}
 	}
 	// Batch signature failed, check signatures individually
 	verified := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
 	for i, sig := range cSet.Signatures {
 		signature, err := blst.SignatureFromBytes(sig)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get signature from bytes")
+			logrus.WithError(err).Warning("could not get signature from bytes")
+			continue
 		}
 		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
 			logrus.Warning("removing BLSToExecutionChange with invalid signature from pool")
