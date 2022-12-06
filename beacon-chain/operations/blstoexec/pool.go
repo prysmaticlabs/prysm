@@ -106,7 +106,6 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 			logrus.WithError(err).Warning("could not batch verify BLSToExecutionChanges signatures")
 		} else if ok {
 			return result, nil
-
 		}
 	}
 	// Batch signature failed, check signatures individually
