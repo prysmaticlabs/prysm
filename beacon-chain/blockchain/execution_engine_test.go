@@ -792,7 +792,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	st, _ := util.DeterministicGenesisState(t, 1)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, st, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, hasPayload)
