@@ -155,6 +155,8 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		PrevRandao:            random,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
 	}
+
+	// This will change in subsequent hardforks like Capella.
 	pa, err := payloadattribute.New(p)
 	if err != nil {
 		return nil, err

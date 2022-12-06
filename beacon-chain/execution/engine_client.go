@@ -154,6 +154,8 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
+	default:
+		return nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
 	}
 
 	if result.Status == nil {
