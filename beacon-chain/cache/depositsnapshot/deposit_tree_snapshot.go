@@ -30,12 +30,12 @@ func (ds *DepositTreeSnapshot) CalculateRoot() [32]byte {
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...))
 }
 
-func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlockHash [32]byte, executionBlockDepth uint64) DepositTreeSnapshot {
+func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock ExecutionBlock) DepositTreeSnapshot {
 	return DepositTreeSnapshot{
 		finalized:            finalised,
 		depositRoot:          Zerohashes[0],
 		depositCount:         depositCount,
-		executionBlockHash:   executionBlockHash,
-		executionBlockHeight: executionBlockDepth,
+		executionBlockHash:   executionBlock.Hash,
+		executionBlockHeight: executionBlock.Depth,
 	}
 }
