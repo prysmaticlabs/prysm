@@ -567,6 +567,11 @@ type bellatrixStateResponseJson struct {
 	Data    *BeaconStateBellatrixJson `json:"data"`
 }
 
+type capellaStateResponseJson struct {
+	Version string                  `json:"version"`
+	Data    *BeaconStateCapellaJson `json:"data"`
+}
+
 func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*BeaconStateV2ResponseJson)
 	if !ok {
@@ -589,6 +594,11 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 		actualRespContainer = &bellatrixStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.BellatrixState,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaStateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.CapellaState,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))

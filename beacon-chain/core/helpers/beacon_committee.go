@@ -177,6 +177,14 @@ func CommitteeAssignments(
 	if err != nil {
 		return nil, nil, err
 	}
+	minValidStartSlot := types.Slot(0)
+	if state.Slot() >= params.BeaconConfig().SlotsPerHistoricalRoot {
+		minValidStartSlot = state.Slot() - params.BeaconConfig().SlotsPerHistoricalRoot
+	}
+	if startSlot < minValidStartSlot {
+		return nil, nil, fmt.Errorf("start slot %d is smaller than the minimum valid start slot %d", startSlot, minValidStartSlot)
+	}
+
 	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.

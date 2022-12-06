@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators"
 	"os"
 	"strconv"
 	"testing"
@@ -115,16 +116,17 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
-		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
+		ev.DepositedValidatorsAreActive,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.FeeRecipientIsPresent,
