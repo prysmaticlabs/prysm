@@ -195,7 +195,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("validator_%d is starting with offset keys %d", index, offset)
 	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
 	if err != nil {
 		return err
