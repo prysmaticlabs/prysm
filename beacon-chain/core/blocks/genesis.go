@@ -81,7 +81,7 @@ func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.Si
 						PrevRandao:    make([]byte, 32),
 						BaseFeePerGas: make([]byte, 32),
 						BlockHash:     make([]byte, 32),
-						Transactions: make([][]byte, 0),
+						Transactions:  make([][]byte, 0),
 					},
 				},
 			},

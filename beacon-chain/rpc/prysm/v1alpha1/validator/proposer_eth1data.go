@@ -47,14 +47,19 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	eth1DataNotification = false
 
 	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
-	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	latestValidTime := votingPeriodStartTime - followDistanceSeconds
+	earliestValidTime := votingPeriodStartTime - followDistanceSeconds
 
+	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
+	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
+	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
 	log.WithField("votingPeriodStartTime", votingPeriodStartTime-genesisTime).WithField("latestValidTime", latestValidTime-genesisTime).WithField("earliestValidTime", earliestValidTime-genesisTime).Info("eth1DataMajorityVote")
-	if latestValidTime < genesisTime + eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block {
+	if latestValidTime < genesisTime+followDistanceSeconds {
+		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Info("voting period before genesis + follow distance, return head eth1data")
 		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
+
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by latest valid time")

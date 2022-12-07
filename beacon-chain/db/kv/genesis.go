@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 
 	"github.com/pkg/errors"
@@ -26,14 +27,14 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 		return errors.Wrap(err, "could not get genesis block root")
 	}
 	/*
-	lbhr, err := genesisState.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return errors.Wrap(err, "unable to compute HTR of latest block header from genesis state")
-	}
-	if genesisBlkRoot != lbhr {
-		return fmt.Errorf("state.latest_block_header=%#x does not match derived genessis block root=%#x", genesisBlkRoot, lbhr)
-	}
-	 */
+		lbhr, err := genesisState.LatestBlockHeader().HashTreeRoot()
+		if err != nil {
+			return errors.Wrap(err, "unable to compute HTR of latest block header from genesis state")
+		}
+		if genesisBlkRoot != lbhr {
+			return fmt.Errorf("state.latest_block_header=%#x does not match derived genessis block root=%#x", genesisBlkRoot, lbhr)
+		}
+	*/
 	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}

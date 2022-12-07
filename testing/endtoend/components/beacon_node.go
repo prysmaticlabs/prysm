@@ -12,11 +12,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -202,10 +203,6 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 		BlockHash:    gb.Hash().Bytes(),
 	}
 
-	txRoot, err := ssz.TransactionsRoot(make([][]byte, 0))
-	if err != nil {
-		return nil, errors.Wrap(err, "error computing empty tx root")
-	}
 	payload := &enginev1.ExecutionPayload{
 		ParentHash:    gb.ParentHash().Bytes(),
 		FeeRecipient:  gb.Coinbase().Bytes(),
@@ -226,10 +223,34 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("tx root = %#x, max len=%d", txRoot, len(genesis.LatestExecutionPayloadHeader.ExtraData))
-	log.WithField("block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).WithField("deposit_count", genesis.Eth1Data.DepositCount).WithField("deposit_root", fmt.Sprintf("%#x", genesis.Eth1Data.DepositRoot)).Info("genesis eth1 data")
-
-	return state_native.InitializeFromProtoUnsafeBellatrix(genesis)
+	sr, err := genesis.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	lbhr, err := genesis.LatestBlockHeader.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	si, err := state_native.InitializeFromProtoUnsafeBellatrix(genesis)
+	if err != nil {
+		return nil, err
+	}
+	genb, err := blocks.NewGenesisBlockForState(sr, si)
+	if err != nil {
+		return nil, err
+	}
+	gbr, err := genb.Block().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("el_block_time", gb.Time()).
+		WithField("cl_genesis_time", genesis.GenesisTime).
+		WithField("state_root", fmt.Sprintf("%#x", sr)).
+		WithField("latest_block_header_root", fmt.Sprintf("%#x", lbhr)).
+		WithField("derived_block_root", fmt.Sprintf("%#x", gbr)).
+		WithField("el_block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).
+		Info("genesis eth1 data")
+	return si, nil
 }
 
 func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {

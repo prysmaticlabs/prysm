@@ -67,7 +67,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			return nil, nil
 		}
 		eth1BlockHash = sp.BlockHash()
-        if len(sp.BlockHash()) != 32 || bytes.Equal(eth1BlockHash, params.BeaconConfig().ZeroHash[:]) {
+		if len(sp.BlockHash()) != 32 || bytes.Equal(eth1BlockHash, params.BeaconConfig().ZeroHash[:]) {
 			log.Infof("notifyForkchoiceUpdate, skipping non-execution block with root=%#x and empty payload header block hash", br)
 			return nil, nil
 		}
