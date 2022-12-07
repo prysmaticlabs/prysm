@@ -59,9 +59,14 @@ var (
 		Value:       "",
 	}
 	generateGenesisStateCmd = &cli.Command{
-		Name:   "generate-genesis",
-		Usage:  "Generate a beacon chain genesis state",
-		Action: cliActionGenerateGenesisState,
+		Name:  "generate-genesis",
+		Usage: "Generate a beacon chain genesis state",
+		Action: func(cliCtx *cli.Context) error {
+			if err := cliActionGenerateGenesisState(cliCtx); err != nil {
+				log.WithError(err).Fatal("Could not generate beacon chain genesis state")
+			}
+			return nil
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "chain-config-file",
