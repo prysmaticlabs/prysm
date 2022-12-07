@@ -62,7 +62,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		stringRetrievedPubKeys := make(map[string]struct{})
 
 		// Contains all keys in targetPubKeys but not in retrievedPubKeys
-		stringMissingPubKeystoPubKeys := make(map[string][]byte)
+		missingPubKeys := [][]byte{}
 
 		statuses := []*ethpb.ValidatorActivationResponse_Status{}
 
@@ -104,11 +104,11 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 
 		for stringTargetPubKey, targetPubKey := range stringTargetPubKeystoPubKeys {
 			if _, ok := stringRetrievedPubKeys[stringTargetPubKey]; !ok {
-				stringMissingPubKeystoPubKeys[stringTargetPubKey] = targetPubKey
+				missingPubKeys = append(missingPubKeys, targetPubKey)
 			}
 		}
 
-		for _, missingPubKey := range stringMissingPubKeystoPubKeys {
+		for _, missingPubKey := range missingPubKeys {
 			statuses = append(statuses, &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: missingPubKey,
 				Index:     types.ValidatorIndex(^uint64(0)),
