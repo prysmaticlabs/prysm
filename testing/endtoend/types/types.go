@@ -4,9 +4,7 @@ package types
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"google.golang.org/grpc"
 )
@@ -33,7 +31,7 @@ func WithCheckpointSync() E2EConfigOpt {
 
 func WithValidatorRESTApi() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
-		cfg.ValidatorFlags = append(cfg.ValidatorFlags, fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
+		cfg.UseBeaconRestApi = true
 	}
 }
 
@@ -54,6 +52,7 @@ type E2EConfig struct {
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
+	UseBeaconRestApi        bool
 	EpochsToRun             uint64
 	Seed                    int64
 	TracingSinkEndpoint     string
