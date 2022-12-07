@@ -247,6 +247,9 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 		WithField("cl_genesis_time", genesis.GenesisTime).
 		WithField("state_root", fmt.Sprintf("%#x", sr)).
 		WithField("latest_block_header_root", fmt.Sprintf("%#x", lbhr)).
+		WithField("latest_block_header_state_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.StateRoot)).
+		WithField("latest_block_header_parent_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.ParentRoot)).
+		WithField("latest_block_header_body_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.BodyRoot)).
 		WithField("derived_block_root", fmt.Sprintf("%#x", gbr)).
 		WithField("el_block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).
 		Info("genesis eth1 data")

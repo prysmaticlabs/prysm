@@ -85,6 +85,9 @@ func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 	if err := st.SetEth1Data(eth1Data); err != nil {
 		return nil, err
 	}
+	if err := st.SetEth1DepositIndex(eth1Data.DepositCount); err != nil {
+		return nil, err
+	}
 
 	return OptimizedGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data(), ep)
 }
@@ -203,7 +206,17 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		},
-		ExecutionPayload: ep,
+		ExecutionPayload: &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, 32),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, 32),
+			ReceiptsRoot:  make([]byte, 32),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, 32),
+			BaseFeePerGas: make([]byte, 32),
+			BlockHash:     make([]byte, 32),
+			Transactions:  make([][]byte, 0),
+		},
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
