@@ -43,5 +43,5 @@ func (e *EnumValue) String() string {
 func (e EnumValue) GenericFlag() *cli.GenericFlag {
 	*e.Destination = e.Value
 	var i cli.Generic = &e
-	return &cli.GenericFlag{Name: e.Name, Usage: e.Usage, Destination: &i, Value: i}
+	return &cli.GenericFlag{Name: e.Name, Usage: e.Usage, Destination: i, Value: i}
 }
