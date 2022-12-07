@@ -34,7 +34,7 @@ func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpo
 	}
 	s.depositContractCaller = depositContractCaller
 
-	// Ensure we have the correct chain and deposit IDs.
+	//Ensure we have the correct chain and deposit IDs.
 	if err := ensureCorrectExecutionChain(ctx, fetcher); err != nil {
 		client.Close()
 		errStr := err.Error()
