@@ -19,7 +19,11 @@ type beaconApiValidatorClient struct {
 	fallbackClient  iface.ValidatorClient
 }
 
-func NewBeaconApiValidatorClient(host string, timeout time.Duration) *beaconApiValidatorClient {
+func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
+	return NewBeaconApiValidatorClientWithFallback(host, timeout, nil)
+}
+
+func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
 		host:       host,
@@ -28,13 +32,8 @@ func NewBeaconApiValidatorClient(host string, timeout time.Duration) *beaconApiV
 	return &beaconApiValidatorClient{
 		genesisProvider: beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler: jsonRestHandler,
+		fallbackClient:  fallbackClient,
 	}
-}
-
-func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) *beaconApiValidatorClient {
-	beaconApiValidatorClient := NewBeaconApiValidatorClient(url, timeout)
-	beaconApiValidatorClient.fallbackClient = fallbackClient
-	return beaconApiValidatorClient
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {

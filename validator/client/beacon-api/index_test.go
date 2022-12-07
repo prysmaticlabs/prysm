@@ -18,7 +18,7 @@ import (
 
 const stringPubKey = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 
-func getPubKeyAndURL(t *testing.T, stringPubkey string) ([]byte, string) {
+func getPubKeyAndURL(t *testing.T) ([]byte, string) {
 	baseUrl := "/eth/v1/beacon/states/head/validators"
 	url := fmt.Sprintf("%s?id=%s", baseUrl, stringPubKey)
 
@@ -32,7 +32,7 @@ func TestIndex_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t, stringPubKey)
+	pubKey, url := getPubKeyAndURL(t)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -75,7 +75,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t, stringPubKey)
+	pubKey, url := getPubKeyAndURL(t)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -110,7 +110,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t, stringPubKey)
+	pubKey, url := getPubKeyAndURL(t)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -152,7 +152,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	pubKey, url := getPubKeyAndURL(t, stringPubKey)
+	pubKey, url := getPubKeyAndURL(t)
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
