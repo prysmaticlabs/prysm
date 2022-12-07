@@ -226,7 +226,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+	update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -307,7 +307,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context,
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+	update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
