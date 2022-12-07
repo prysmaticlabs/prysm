@@ -2,13 +2,13 @@ package endtoend
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators"
 	"os"
 	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
