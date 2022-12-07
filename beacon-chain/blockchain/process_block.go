@@ -256,6 +256,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return
 		}
 
+		update.NextSyncCommittee = nil
+
 		// Return the result
 		result := &ethpbv2.LightClientUpdateResponse{
 			Version: ethpbv2.Version(signed.Version()),
@@ -356,6 +358,8 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					log.WithError(err).Error("Could not create light client update")
 					return
 				}
+
+				update.NextSyncCommittee = nil
 
 				// Return the result
 				result := &ethpbv2.LightClientUpdateResponse{
