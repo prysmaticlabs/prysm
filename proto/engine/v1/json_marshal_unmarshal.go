@@ -25,6 +25,7 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Bytes(b[:]))
 }
 
+// ExecutionBlock represents a block received from the execution client via JSON-RPC.
 type ExecutionBlock interface {
 	Version() int
 	GetHeader() gethtypes.Header
