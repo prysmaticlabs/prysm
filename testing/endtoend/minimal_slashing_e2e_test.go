@@ -12,14 +12,6 @@ import (
 )
 
 func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
-	e2eMinimalSlashing(t)
-}
-
-func TestEndToEnd_Slasher_MinimalConfig_ValidatorRESTApi(t *testing.T) {
-	e2eMinimalSlashing(t, types.WithValidatorRESTApi())
-}
-
-func e2eMinimalSlashing(t *testing.T, cfgo ...types.E2EConfigOpt) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
@@ -46,9 +38,6 @@ func e2eMinimalSlashing(t *testing.T, cfgo ...types.E2EConfigOpt) {
 		},
 		EvalInterceptor:     defaultInterceptor,
 		TracingSinkEndpoint: tracingEndpoint,
-	}
-	for _, o := range cfgo {
-		o(testConfig)
 	}
 
 	newTestRunner(t, testConfig).run()
