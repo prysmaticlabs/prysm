@@ -10,10 +10,6 @@ func TestEndToEnd_MainnetConfig_MultiClient(t *testing.T) {
 	e2eMainnet(t, false /*usePrysmSh*/, true /*useMultiClient*/).run()
 }
 
-func TestEndToEnd_MainnetConfig_Multiclient_CrossClient(t *testing.T) {
-	e2eMainnet(t, false /*usePrysmSh*/, true /*useMultiClient*/, types.WithValidatorCrossClient()).run()
-}
-
 func TestEndToEnd_MultiScenarioRun_Multiclient(t *testing.T) {
 	runner := e2eMainnet(t, false /*usePrysmSh*/, true /*useMultiClient*/, types.WithEpochs(22))
 	runner.config.Evaluators = scenarioEvalsMulti()

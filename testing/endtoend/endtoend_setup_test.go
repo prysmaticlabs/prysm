@@ -126,11 +126,13 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
-		beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
+	}
+	if crossClient {
+		evals = append(evals, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
