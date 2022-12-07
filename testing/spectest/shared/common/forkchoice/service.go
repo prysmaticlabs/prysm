@@ -94,7 +94,7 @@ func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]by
 	return m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlockBellatrix, error) {
 	return nil, nil
 }
 
@@ -102,7 +102,7 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
+func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {
 		return nil, nil
@@ -110,7 +110,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 
 	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
 	tdHex := hexutil.EncodeBig(td)
-	return &pb.ExecutionBlock{
+	return &pb.ExecutionBlockBellatrix{
 		Header: gethtypes.Header{
 			ParentHash: common.BytesToHash(b.ParentHash),
 		},
