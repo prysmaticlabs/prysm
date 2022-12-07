@@ -250,12 +250,7 @@ func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethp
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.WaitForActivation(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.WaitForActivation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.waitForActivation(ctx, in)
 }
 
 // Deprecated: Do not use.
