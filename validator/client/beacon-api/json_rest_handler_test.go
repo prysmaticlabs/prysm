@@ -157,7 +157,7 @@ func TestGetRestJsonResponse_Error(t *testing.T) {
 }
 
 func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		errorJson := &apimiddleware.DefaultErrorJson{
 			Code:    statusCode,
 			Message: errorMessage,
@@ -176,7 +176,7 @@ func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.Respo
 	}
 }
 
-func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
+func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
@@ -184,7 +184,7 @@ func invalidJsonErrHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func invalidJsonResponseHandler(w http.ResponseWriter, r *http.Request) {
+func invalidJsonResponseHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
 		panic(err)
