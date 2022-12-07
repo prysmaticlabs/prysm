@@ -10,23 +10,23 @@ import (
 )
 
 func jsonifyTransactions(transactions [][]byte) []string {
-	jsonTransactions := make([]string, 0, len(transactions))
-	for _, transaction := range transactions {
+	jsonTransactions := make([]string, len(transactions))
+	for index, transaction := range transactions {
 		jsonTransaction := hexutil.Encode(transaction)
-		jsonTransactions = append(jsonTransactions, jsonTransaction)
+		jsonTransactions[index] = jsonTransaction
 	}
 	return jsonTransactions
 }
 
 func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExecutionChange) []*apimiddleware.BLSToExecutionChangeJson {
-	jsonBlsToExecutionChanges := make([]*apimiddleware.BLSToExecutionChangeJson, 0, len(blsToExecutionChanges))
-	for _, signedBlsToExecutionChange := range blsToExecutionChanges {
+	jsonBlsToExecutionChanges := make([]*apimiddleware.BLSToExecutionChangeJson, len(blsToExecutionChanges))
+	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
 		blsToExecutionChangeJson := &apimiddleware.BLSToExecutionChangeJson{
 			ValidatorIndex:     uint64ToString(signedBlsToExecutionChange.Message.ValidatorIndex),
 			FromBLSPubkey:      hexutil.Encode(signedBlsToExecutionChange.Message.FromBlsPubkey),
 			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
 		}
-		jsonBlsToExecutionChanges = append(jsonBlsToExecutionChanges, blsToExecutionChangeJson)
+		jsonBlsToExecutionChanges[index] = blsToExecutionChangeJson
 	}
 	return jsonBlsToExecutionChanges
 }
@@ -40,36 +40,36 @@ func jsonifyEth1Data(eth1Data *ethpb.Eth1Data) *apimiddleware.Eth1DataJson {
 }
 
 func jsonifyAttestations(attestations []*ethpb.Attestation) []*apimiddleware.AttestationJson {
-	jsonAttestations := make([]*apimiddleware.AttestationJson, 0, len(attestations))
-	for _, attestation := range attestations {
+	jsonAttestations := make([]*apimiddleware.AttestationJson, len(attestations))
+	for index, attestation := range attestations {
 		jsonAttestation := &apimiddleware.AttestationJson{
 			AggregationBits: hexutil.Encode(attestation.AggregationBits),
 			Data:            jsonifyAttestationData(attestation.Data),
 			Signature:       hexutil.Encode(attestation.Signature),
 		}
-		jsonAttestations = append(jsonAttestations, jsonAttestation)
+		jsonAttestations[index] = jsonAttestation
 	}
 	return jsonAttestations
 }
 
 func jsonifyAttesterSlashings(attesterSlashings []*ethpb.AttesterSlashing) []*apimiddleware.AttesterSlashingJson {
-	jsonAttesterSlashings := make([]*apimiddleware.AttesterSlashingJson, 0, len(attesterSlashings))
-	for _, attesterSlashing := range attesterSlashings {
+	jsonAttesterSlashings := make([]*apimiddleware.AttesterSlashingJson, len(attesterSlashings))
+	for index, attesterSlashing := range attesterSlashings {
 		jsonAttesterSlashing := &apimiddleware.AttesterSlashingJson{
 			Attestation_1: jsonifyIndexedAttestation(attesterSlashing.Attestation_1),
 			Attestation_2: jsonifyIndexedAttestation(attesterSlashing.Attestation_2),
 		}
-		jsonAttesterSlashings = append(jsonAttesterSlashings, jsonAttesterSlashing)
+		jsonAttesterSlashings[index] = jsonAttesterSlashing
 	}
 	return jsonAttesterSlashings
 }
 
 func jsonifyDeposits(deposits []*ethpb.Deposit) []*apimiddleware.DepositJson {
-	jsonDeposits := make([]*apimiddleware.DepositJson, 0, len(deposits))
-	for _, deposit := range deposits {
-		var proofs []string
-		for _, proof := range deposit.Proof {
-			proofs = append(proofs, hexutil.Encode(proof))
+	jsonDeposits := make([]*apimiddleware.DepositJson, len(deposits))
+	for depositIndex, deposit := range deposits {
+		proofs := make([]string, len(deposit.Proof))
+		for proofIndex, proof := range deposit.Proof {
+			proofs[proofIndex] = hexutil.Encode(proof)
 		}
 
 		jsonDeposit := &apimiddleware.DepositJson{
@@ -81,26 +81,26 @@ func jsonifyDeposits(deposits []*ethpb.Deposit) []*apimiddleware.DepositJson {
 			},
 			Proof: proofs,
 		}
-		jsonDeposits = append(jsonDeposits, jsonDeposit)
+		jsonDeposits[depositIndex] = jsonDeposit
 	}
 	return jsonDeposits
 }
 
 func jsonifyProposerSlashings(proposerSlashings []*ethpb.ProposerSlashing) []*apimiddleware.ProposerSlashingJson {
-	jsonProposerSlashings := make([]*apimiddleware.ProposerSlashingJson, 0, len(proposerSlashings))
-	for _, proposerSlashing := range proposerSlashings {
+	jsonProposerSlashings := make([]*apimiddleware.ProposerSlashingJson, len(proposerSlashings))
+	for index, proposerSlashing := range proposerSlashings {
 		jsonProposerSlashing := &apimiddleware.ProposerSlashingJson{
 			Header_1: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_1),
 			Header_2: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_2),
 		}
-		jsonProposerSlashings = append(jsonProposerSlashings, jsonProposerSlashing)
+		jsonProposerSlashings[index] = jsonProposerSlashing
 	}
 	return jsonProposerSlashings
 }
 
 func jsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*apimiddleware.SignedVoluntaryExitJson {
-	jsonSignedVoluntaryExits := make([]*apimiddleware.SignedVoluntaryExitJson, 0, len(voluntaryExits))
-	for _, signedVoluntaryExit := range voluntaryExits {
+	jsonSignedVoluntaryExits := make([]*apimiddleware.SignedVoluntaryExitJson, len(voluntaryExits))
+	for index, signedVoluntaryExit := range voluntaryExits {
 		jsonSignedVoluntaryExit := &apimiddleware.SignedVoluntaryExitJson{
 			Exit: &apimiddleware.VoluntaryExitJson{
 				Epoch:          uint64ToString(signedVoluntaryExit.Exit.Epoch),
@@ -108,7 +108,7 @@ func jsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []
 			},
 			Signature: hexutil.Encode(signedVoluntaryExit.Signature),
 		}
-		jsonSignedVoluntaryExits = append(jsonSignedVoluntaryExits, jsonSignedVoluntaryExit)
+		jsonSignedVoluntaryExits[index] = jsonSignedVoluntaryExit
 	}
 	return jsonSignedVoluntaryExits
 }
@@ -127,10 +127,10 @@ func jsonifySignedBeaconBlockHeader(signedBeaconBlockHeader *ethpb.SignedBeaconB
 }
 
 func jsonifyIndexedAttestation(indexedAttestation *ethpb.IndexedAttestation) *apimiddleware.IndexedAttestationJson {
-	attestingIndices := make([]string, 0, len(indexedAttestation.AttestingIndices))
-	for _, attestingIndex := range indexedAttestation.AttestingIndices {
+	attestingIndices := make([]string, len(indexedAttestation.AttestingIndices))
+	for index, attestingIndex := range indexedAttestation.AttestingIndices {
 		attestingIndex := uint64ToString(attestingIndex)
-		attestingIndices = append(attestingIndices, attestingIndex)
+		attestingIndices[index] = attestingIndex
 	}
 
 	return &apimiddleware.IndexedAttestationJson{
@@ -154,4 +154,24 @@ func jsonifyAttestationData(attestationData *ethpb.AttestationData) *apimiddlewa
 			Root:  hexutil.Encode(attestationData.Target.Root),
 		},
 	}
+}
+
+func fillByteSlice(sliceLength int, value byte) []byte {
+	bytes := make([]byte, sliceLength)
+
+	for index := range bytes {
+		bytes[index] = value
+	}
+
+	return bytes
+}
+
+func fillByteArraySlice(sliceLength int, value []byte) [][]byte {
+	bytes := make([][]byte, sliceLength)
+
+	for index := range bytes {
+		bytes[index] = value
+	}
+
+	return bytes
 }

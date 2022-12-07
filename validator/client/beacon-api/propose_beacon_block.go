@@ -11,12 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	var consensusVersion string
-	var beaconBlockRoot []byte
+	var beaconBlockRoot [32]byte
 
 	var err error
 	var marshalledSignedBeaconBlockJson []byte
@@ -25,8 +26,9 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	switch blockType := in.Block.(type) {
 	case *ethpb.GenericSignedBeaconBlock_Phase0:
 		consensusVersion = "phase0"
-		if len(blockType.Phase0.Block.Body.Attestations) > 0 {
-			beaconBlockRoot = blockType.Phase0.Block.Body.Attestations[0].Data.BeaconBlockRoot
+		beaconBlockRoot, err = blockType.Phase0.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for phase0 beacon block")
 		}
 
 		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockPhase0(blockType.Phase0)
@@ -35,8 +37,9 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 		}
 	case *ethpb.GenericSignedBeaconBlock_Altair:
 		consensusVersion = "altair"
-		if len(blockType.Altair.Block.Body.Attestations) > 0 {
-			beaconBlockRoot = blockType.Altair.Block.Body.Attestations[0].Data.BeaconBlockRoot
+		beaconBlockRoot, err = blockType.Altair.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for altair beacon block")
 		}
 
 		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockAltair(blockType.Altair)
@@ -45,8 +48,9 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 		}
 	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
 		consensusVersion = "bellatrix"
-		if len(blockType.Bellatrix.Block.Body.Attestations) > 0 {
-			beaconBlockRoot = blockType.Bellatrix.Block.Body.Attestations[0].Data.BeaconBlockRoot
+		beaconBlockRoot, err = blockType.Bellatrix.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for bellatrix beacon block")
 		}
 
 		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockBellatrix(blockType.Bellatrix)
@@ -56,29 +60,31 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	case *ethpb.GenericSignedBeaconBlock_BlindedBellatrix:
 		blinded = true
 		consensusVersion = "bellatrix"
-		if len(blockType.BlindedBellatrix.Block.Body.Attestations) > 0 {
-			beaconBlockRoot = blockType.BlindedBellatrix.Block.Body.Attestations[0].Data.BeaconBlockRoot
+		beaconBlockRoot, err = blockType.BlindedBellatrix.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for blinded bellatrix beacon block")
 		}
 
 		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockBlindedBellatrix(blockType.BlindedBellatrix)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to marshall blinded bellatrix beacon block")
 		}
 	case *ethpb.GenericSignedBeaconBlock_BlindedCapella:
 		blinded = true
 		consensusVersion = "capella"
-		if len(blockType.BlindedCapella.Block.Body.Attestations) > 0 {
-			beaconBlockRoot = blockType.BlindedCapella.Block.Body.Attestations[0].Data.BeaconBlockRoot
+		beaconBlockRoot, err = blockType.BlindedCapella.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for blinded capella beacon block")
 		}
 
 		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockBlindedCapella(blockType.BlindedCapella)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to marshall blinded capella beacon block")
 		}
 	case *ethpb.GenericSignedBeaconBlock_Capella:
 		return nil, errors.Errorf("Capella blocks are not supported yet")
 	default:
-		return nil, errors.Errorf("unsupported block type")
+		return nil, errors.Errorf("unsupported block type %T", in.Block)
 	}
 
 	var endpoint string
@@ -99,7 +105,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 
-	return &ethpb.ProposeResponse{BlockRoot: beaconBlockRoot}, nil
+	return &ethpb.ProposeResponse{BlockRoot: beaconBlockRoot[:]}, nil
 }
 
 func marshallBeaconBlockPhase0(block *ethpb.SignedBeaconBlock) ([]byte, error) {
@@ -176,7 +182,7 @@ func marshallBeaconBlockBellatrix(block *ethpb.SignedBeaconBlockBellatrix) ([]by
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
 				ExecutionPayload: &apimiddleware.ExecutionPayloadJson{
-					BaseFeePerGas: littleEndianBytesToString(block.Block.Body.ExecutionPayload.BaseFeePerGas),
+					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(block.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
 					BlockHash:     hexutil.Encode(block.Block.Body.ExecutionPayload.BlockHash),
 					BlockNumber:   uint64ToString(block.Block.Body.ExecutionPayload.BlockNumber),
 					ExtraData:     hexutil.Encode(block.Block.Body.ExecutionPayload.ExtraData),
@@ -220,7 +226,7 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderJson{
-					BaseFeePerGas:    littleEndianBytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
+					BaseFeePerGas:    bytesutil.LittleEndianBytesToBigInt(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas).String(),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
 					BlockNumber:      uint64ToString(block.Block.Body.ExecutionPayloadHeader.BlockNumber),
 					ExtraData:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ExtraData),
@@ -264,7 +270,7 @@ func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCape
 					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
 				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderCapellaJson{
-					BaseFeePerGas:    littleEndianBytesToString(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas),
+					BaseFeePerGas:    bytesutil.LittleEndianBytesToBigInt(block.Block.Body.ExecutionPayloadHeader.BaseFeePerGas).String(),
 					BlockHash:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.BlockHash),
 					BlockNumber:      uint64ToString(block.Block.Body.ExecutionPayloadHeader.BlockNumber),
 					ExtraData:        hexutil.Encode(block.Block.Body.ExecutionPayloadHeader.ExtraData),

@@ -40,20 +40,7 @@ func (c beaconApiJsonRestHandler) GetRestJsonResponse(apiEndpoint string, respon
 		}
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		errorJson := &apimiddleware.DefaultErrorJson{}
-		if err := json.NewDecoder(resp.Body).Decode(errorJson); err != nil {
-			return nil, errors.Wrapf(err, "failed to decode error json for %s", url)
-		}
-
-		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(responseJson); err != nil {
-		return nil, errors.Wrapf(err, "failed to decode response json for %s", url)
-	}
-
-	return nil, nil
+	return decodeJsonResp(resp, responseJson)
 }
 
 // PostRestJson sends a POST requests to apiEndpoint and decodes the response body as a JSON object into responseJson. If responseJson
@@ -81,10 +68,14 @@ func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[s
 		}
 	}()
 
+	return decodeJsonResp(resp, responseJson)
+}
+
+func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
 	if resp.StatusCode != http.StatusOK {
 		errorJson := &apimiddleware.DefaultErrorJson{}
 		if err := json.NewDecoder(resp.Body).Decode(errorJson); err != nil {
-			return nil, errors.Wrapf(err, "failed to decode error json for %s", url)
+			return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
 		}
 
 		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
@@ -92,7 +83,7 @@ func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[s
 
 	if responseJson != nil {
 		if err := json.NewDecoder(resp.Body).Decode(responseJson); err != nil {
-			return nil, errors.Wrapf(err, "failed to decode response json for %s", url)
+			return nil, errors.Wrapf(err, "failed to decode response json for %s", resp.Request.URL)
 		}
 	}
 

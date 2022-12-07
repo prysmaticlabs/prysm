@@ -4,7 +4,6 @@
 package beacon_api
 
 import (
-	"encoding/binary"
 	"net/url"
 	"testing"
 
@@ -66,13 +65,6 @@ func TestBeaconApiHelpers_TestUint64ToString(t *testing.T) {
 	assert.Equal(t, expectedResult, uint64ToString(types.ValidatorIndex(val)))
 	assert.Equal(t, expectedResult, uint64ToString(types.CommitteeIndex(val)))
 	assert.Equal(t, expectedResult, uint64ToString(types.Epoch(val)))
-}
-
-func TestLittleEndianBytesToString(t *testing.T) {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, 1234567890)
-	converted := littleEndianBytesToString(bytes)
-	assert.Equal(t, "1234567890", converted)
 }
 
 func TestBuildURL_NoParams(t *testing.T) {

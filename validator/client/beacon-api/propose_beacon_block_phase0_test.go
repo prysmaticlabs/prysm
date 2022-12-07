@@ -64,8 +64,11 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)
 
+	expectedBlockRoot, err := phase0Block.Phase0.Block.HashTreeRoot()
+	require.NoError(t, err)
+
 	// Make sure that the block root is set
-	assert.DeepEqual(t, phase0Block.Phase0.Block.Body.Attestations[0].Data.BeaconBlockRoot, proposeResponse.BlockRoot)
+	assert.DeepEqual(t, expectedBlockRoot[:], proposeResponse.BlockRoot)
 }
 
 func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
@@ -74,37 +77,37 @@ func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 			Block: &ethpb.BeaconBlock{
 				Slot:          1,
 				ProposerIndex: 2,
-				ParentRoot:    []byte{3},
-				StateRoot:     []byte{4},
+				ParentRoot:    fillByteSlice(32, 3),
+				StateRoot:     fillByteSlice(32, 4),
 				Body: &ethpb.BeaconBlockBody{
-					RandaoReveal: []byte{5},
+					RandaoReveal: fillByteSlice(96, 5),
 					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot:  []byte{6},
+						DepositRoot:  fillByteSlice(32, 6),
 						DepositCount: 7,
-						BlockHash:    []byte{8},
+						BlockHash:    fillByteSlice(32, 8),
 					},
-					Graffiti: []byte{9},
+					Graffiti: fillByteSlice(32, 9),
 					ProposerSlashings: []*ethpb.ProposerSlashing{
 						{
 							Header_1: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          10,
 									ProposerIndex: 11,
-									ParentRoot:    []byte{12},
-									StateRoot:     []byte{13},
-									BodyRoot:      []byte{14},
+									ParentRoot:    fillByteSlice(32, 12),
+									StateRoot:     fillByteSlice(32, 13),
+									BodyRoot:      fillByteSlice(32, 14),
 								},
-								Signature: []byte{15},
+								Signature: fillByteSlice(96, 15),
 							},
 							Header_2: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          16,
 									ProposerIndex: 17,
-									ParentRoot:    []byte{18},
-									StateRoot:     []byte{19},
-									BodyRoot:      []byte{20},
+									ParentRoot:    fillByteSlice(32, 18),
+									StateRoot:     fillByteSlice(32, 19),
+									BodyRoot:      fillByteSlice(32, 20),
 								},
-								Signature: []byte{21},
+								Signature: fillByteSlice(96, 21),
 							},
 						},
 						{
@@ -112,21 +115,21 @@ func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          22,
 									ProposerIndex: 23,
-									ParentRoot:    []byte{24},
-									StateRoot:     []byte{25},
-									BodyRoot:      []byte{26},
+									ParentRoot:    fillByteSlice(32, 24),
+									StateRoot:     fillByteSlice(32, 25),
+									BodyRoot:      fillByteSlice(32, 26),
 								},
-								Signature: []byte{27},
+								Signature: fillByteSlice(96, 27),
 							},
 							Header_2: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          28,
 									ProposerIndex: 29,
-									ParentRoot:    []byte{30},
-									StateRoot:     []byte{31},
-									BodyRoot:      []byte{32},
+									ParentRoot:    fillByteSlice(32, 30),
+									StateRoot:     fillByteSlice(32, 31),
+									BodyRoot:      fillByteSlice(32, 32),
 								},
-								Signature: []byte{33},
+								Signature: fillByteSlice(96, 33),
 							},
 						},
 					},
@@ -137,34 +140,34 @@ func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 								Data: &ethpb.AttestationData{
 									Slot:            36,
 									CommitteeIndex:  37,
-									BeaconBlockRoot: []byte{38},
+									BeaconBlockRoot: fillByteSlice(32, 38),
 									Source: &ethpb.Checkpoint{
 										Epoch: 39,
-										Root:  []byte{40},
+										Root:  fillByteSlice(32, 40),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 41,
-										Root:  []byte{42},
+										Root:  fillByteSlice(32, 42),
 									},
 								},
-								Signature: []byte{43},
+								Signature: fillByteSlice(96, 43),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{44, 45},
 								Data: &ethpb.AttestationData{
 									Slot:            46,
 									CommitteeIndex:  47,
-									BeaconBlockRoot: []byte{38},
+									BeaconBlockRoot: fillByteSlice(32, 48),
 									Source: &ethpb.Checkpoint{
 										Epoch: 49,
-										Root:  []byte{50},
+										Root:  fillByteSlice(32, 50),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 51,
-										Root:  []byte{52},
+										Root:  fillByteSlice(32, 52),
 									},
 								},
-								Signature: []byte{53},
+								Signature: fillByteSlice(96, 53),
 							},
 						},
 						{
@@ -173,96 +176,90 @@ func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 								Data: &ethpb.AttestationData{
 									Slot:            56,
 									CommitteeIndex:  57,
-									BeaconBlockRoot: []byte{38},
+									BeaconBlockRoot: fillByteSlice(32, 58),
 									Source: &ethpb.Checkpoint{
 										Epoch: 59,
-										Root:  []byte{60},
+										Root:  fillByteSlice(32, 60),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 61,
-										Root:  []byte{62},
+										Root:  fillByteSlice(32, 62),
 									},
 								},
-								Signature: []byte{63},
+								Signature: fillByteSlice(96, 63),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{64, 65},
 								Data: &ethpb.AttestationData{
 									Slot:            66,
 									CommitteeIndex:  67,
-									BeaconBlockRoot: []byte{38},
+									BeaconBlockRoot: fillByteSlice(32, 68),
 									Source: &ethpb.Checkpoint{
 										Epoch: 69,
-										Root:  []byte{70},
+										Root:  fillByteSlice(32, 70),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 71,
-										Root:  []byte{72},
+										Root:  fillByteSlice(32, 72),
 									},
 								},
-								Signature: []byte{73},
+								Signature: fillByteSlice(96, 73),
 							},
 						},
 					},
 					Attestations: []*ethpb.Attestation{
 						{
-							AggregationBits: []byte{74},
+							AggregationBits: fillByteSlice(32, 74),
 							Data: &ethpb.AttestationData{
 								Slot:            75,
 								CommitteeIndex:  76,
-								BeaconBlockRoot: []byte{38},
+								BeaconBlockRoot: fillByteSlice(32, 77),
 								Source: &ethpb.Checkpoint{
 									Epoch: 78,
-									Root:  []byte{79},
+									Root:  fillByteSlice(32, 79),
 								},
 								Target: &ethpb.Checkpoint{
 									Epoch: 80,
-									Root:  []byte{81},
+									Root:  fillByteSlice(32, 81),
 								},
 							},
-							Signature: []byte{82},
+							Signature: fillByteSlice(96, 82),
 						},
 						{
-							AggregationBits: []byte{83},
+							AggregationBits: fillByteSlice(4, 83),
 							Data: &ethpb.AttestationData{
 								Slot:            84,
 								CommitteeIndex:  85,
-								BeaconBlockRoot: []byte{38},
+								BeaconBlockRoot: fillByteSlice(32, 38),
 								Source: &ethpb.Checkpoint{
 									Epoch: 87,
-									Root:  []byte{88},
+									Root:  fillByteSlice(32, 88),
 								},
 								Target: &ethpb.Checkpoint{
 									Epoch: 89,
-									Root:  []byte{90},
+									Root:  fillByteSlice(32, 90),
 								},
 							},
-							Signature: []byte{91},
+							Signature: fillByteSlice(96, 91),
 						},
 					},
 					Deposits: []*ethpb.Deposit{
 						{
-							Proof: [][]byte{
-								{92},
-								{93},
-							},
+							Proof: fillByteArraySlice(33, fillByteSlice(32, 92)),
 							Data: &ethpb.Deposit_Data{
-								PublicKey:             []byte{94},
-								WithdrawalCredentials: []byte{95},
+								PublicKey:             fillByteSlice(48, 94),
+								WithdrawalCredentials: fillByteSlice(32, 95),
 								Amount:                96,
-								Signature:             []byte{97},
+								Signature:             fillByteSlice(96, 97),
 							},
 						},
 						{
-							Proof: [][]byte{
-								{98},
-								{99},
-							},
+							Proof: fillByteArraySlice(33, fillByteSlice(32, 98)),
 							Data: &ethpb.Deposit_Data{
-								PublicKey:             []byte{100},
-								WithdrawalCredentials: []byte{101},
+								PublicKey:             fillByteSlice(48, 100),
+								WithdrawalCredentials: fillByteSlice(32, 101),
 								Amount:                102,
-								Signature:             []byte{103},
+								Signature:             fillByteSlice(96, 103),
 							},
 						},
 					},
@@ -272,19 +269,19 @@ func generateSignedPhase0Block() *ethpb.GenericSignedBeaconBlock_Phase0 {
 								Epoch:          104,
 								ValidatorIndex: 105,
 							},
-							Signature: []byte{106},
+							Signature: fillByteSlice(96, 106),
 						},
 						{
 							Exit: &ethpb.VoluntaryExit{
 								Epoch:          107,
 								ValidatorIndex: 108,
 							},
-							Signature: []byte{109},
+							Signature: fillByteSlice(96, 109),
 						},
 					},
 				},
 			},
-			Signature: []byte{110},
+			Signature: fillByteSlice(96, 110),
 		},
 	}
 }

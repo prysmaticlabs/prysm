@@ -606,3 +606,28 @@ func TestBeaconBlockJsonHelpers_JsonifyAttestationData(t *testing.T) {
 	result := jsonifyAttestationData(input)
 	assert.DeepEqual(t, expectedResult, result)
 }
+
+func TestBeaconBlockJsonHelpers_FillByteSlice(t *testing.T) {
+	expectedResult := make([]byte, 20)
+	for index := range expectedResult {
+		expectedResult[index] = 5
+	}
+
+	actualResult := fillByteSlice(20, 5)
+	assert.DeepEqual(t, expectedResult, actualResult)
+}
+
+func TestBeaconBlockJsonHelpers_FillByteArraySlice(t *testing.T) {
+	bytes := make([]byte, 20)
+	for index := range bytes {
+		bytes[index] = 5
+	}
+
+	expectedResult := make([][]byte, 30)
+	for index := range expectedResult {
+		expectedResult[index] = bytes
+	}
+
+	actualResult := fillByteArraySlice(30, bytes)
+	assert.DeepEqual(t, expectedResult, actualResult)
+}
