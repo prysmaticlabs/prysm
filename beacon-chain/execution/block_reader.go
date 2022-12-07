@@ -106,7 +106,11 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	latestBlkTime := s.latestEth1Data.BlockTime
 	s.latestEth1DataLock.RUnlock()
 
+	log.WithField("time (req val)", time).WithField("latestBlockTime", latestBlkTime).WithField("latestBlockHeight", s.latestEth1Data.BlockHeight).Info("BlockByTimestamp")
 	if time > latestBlkTime {
+		if latestBlkHeight < params.BeaconConfig().Eth1FollowDistance {
+
+		}
 		return nil, errors.Wrap(errBlockTimeTooLate, fmt.Sprintf("(%d > %d)", time, latestBlkTime))
 	}
 	// Initialize a pointer to eth1 chain's history to start our search from.

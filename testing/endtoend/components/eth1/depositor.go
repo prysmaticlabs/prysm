@@ -3,10 +3,11 @@ package eth1
 import (
 	"context"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ethereum/go-ethereum/common"
 

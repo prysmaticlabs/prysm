@@ -194,7 +194,10 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 
 	bodyRoot, err := (&ethpb.BeaconBlockBodyBellatrix{
 		RandaoReveal: make([]byte, 96),
-		Eth1Data:     eth1Data,
+		Eth1Data:     &ethpb.Eth1Data{
+			DepositRoot: make([]byte, 32),
+			BlockHash:   make([]byte, 32),
+		},
 		Graffiti:     make([]byte, 32),
 		SyncAggregate: &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),

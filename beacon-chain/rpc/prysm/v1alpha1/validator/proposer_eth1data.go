@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -41,25 +42,33 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 		return vs.mockETH1DataVote(ctx, slot)
 	}
 	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
-		return vs.randomETH1DataVote(ctx)
+		return vs.randomETH1DataVote(ctx, "ExecutionClientConnected == false")
 	}
 	eth1DataNotification = false
 
+	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 
+	log.WithField("votingPeriodStartTime", votingPeriodStartTime-genesisTime).WithField("latestValidTime", latestValidTime-genesisTime).WithField("earliestValidTime", earliestValidTime-genesisTime).Info("eth1DataMajorityVote")
+	if latestValidTime < genesisTime + eth1FollowDistance*params.BeaconConfig().SecondsPerETH1Block {
+		return vs.HeadFetcher.HeadETH1Data(), nil
+	}
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by latest valid time")
-		return vs.randomETH1DataVote(ctx)
+		return vs.randomETH1DataVote(ctx, "error from BlockByTimestamp")
 	}
 	if lastBlockByLatestValidTime.Time < earliestValidTime {
-		return vs.HeadFetcher.HeadETH1Data(), nil
+		ed := vs.HeadFetcher.HeadETH1Data()
+		log.WithFields(logFields(ed)).WithField("condition", "lastBlockByLatestValidTime.Time < earliestValidTime").Info("eth1DataMajorityVote")
+		return ed, nil
 	}
 
 	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
 	if lastBlockDepositCount == 0 {
+		log.WithFields(logFields(vs.ChainStartFetcher.ChainStartEth1Data())).WithField("condition", "ChainStartEth1Data").Info("eth1DataMajorityVote")
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
@@ -67,15 +76,25 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 		h, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
 		if err != nil {
 			log.WithError(err).Error("Could not get hash of last block by latest valid time")
-			return vs.randomETH1DataVote(ctx)
+			return vs.randomETH1DataVote(ctx, "deposit count too high")
 		}
-		return &ethpb.Eth1Data{
+		ed := &ethpb.Eth1Data{
 			BlockHash:    h.Bytes(),
 			DepositCount: lastBlockDepositCount,
 			DepositRoot:  lastBlockDepositRoot[:],
-		}, nil
+		}
+		log.WithFields(logFields(ed)).WithField("condition", "lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount").Info("eth1DataMajorityVote")
+		return ed, nil
 	}
 	return vs.HeadFetcher.HeadETH1Data(), nil
+}
+
+func logFields(ed *ethpb.Eth1Data) map[string]interface{} {
+	fields := make(map[string]interface{})
+	fields["deposit_root"] = fmt.Sprintf("%#x", ed.DepositRoot)
+	fields["deposit_count"] = ed.DepositCount
+	fields["block_hash"] = fmt.Sprintf("%#x", ed.BlockHash)
+	return fields
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
@@ -147,7 +166,8 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 	}, nil
 }
 
-func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
+func (vs *Server) randomETH1DataVote(ctx context.Context, reason string) (*ethpb.Eth1Data, error) {
+	log.WithField("reason", reason).Warn("randomETH1DataVote")
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true

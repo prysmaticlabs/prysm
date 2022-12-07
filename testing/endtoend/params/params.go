@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	cfgparams "github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
@@ -205,12 +204,12 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
-	cfg := cfgparams.BeaconConfig()
+	//cfg := cfgparams.BeaconConfig()
 	now := time.Now()
 	clGenTime := uint64(now.Unix()) + StartupBufferSecs
-	epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
+	//epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
 	// TODO: support starting from any fork, make the genesis offset variable
-	forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
+	//forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
 
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
@@ -220,7 +219,7 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		Ports:           testPorts,
 		StartTime:       now,
 		CLGenesisTime:   clGenTime,
-		Eth1GenesisTime: clGenTime + forkOffset,
+		Eth1GenesisTime: clGenTime,
 	}
 	return nil
 }
@@ -264,12 +263,12 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	cfg := cfgparams.BeaconConfig()
+	//cfg := cfgparams.BeaconConfig()
 	now := time.Now()
 	clGenTime := uint64(now.Unix()) + StartupBufferSecs
-	epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
+	//epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
 	// TODO: support starting from any fork, make the genesis offset variable
-	forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
+	//forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -279,7 +278,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		Ports:                     testPorts,
 		StartTime:                 now,
 		CLGenesisTime:             clGenTime,
-		Eth1GenesisTime:           clGenTime + forkOffset,
+		Eth1GenesisTime:           clGenTime,
 	}
 	return nil
 }

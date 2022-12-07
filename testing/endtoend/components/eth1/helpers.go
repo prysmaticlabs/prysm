@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -49,7 +47,7 @@ func WaitForBlocks(web3 *ethclient.Client, key *keystore.Key, blocksToWait uint6
 	finishBlock := block.NumberU64() + blocksToWait
 
 	for block.NumberU64() <= finishBlock {
-		log.Infof("waiting for block number %d, last saw %d", finishBlock, block.NumberU64())
+		//log.Infof("waiting for block number %d, last saw %d", finishBlock, block.NumberU64())
 		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), params.SpamTxGasLimit, big.NewInt(1e6), []byte{})
 		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), key.PrivateKey)
 		if err != nil {

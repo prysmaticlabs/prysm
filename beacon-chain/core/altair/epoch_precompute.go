@@ -3,6 +3,8 @@ package altair
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -29,6 +31,7 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 	// This shouldn't happen with a correct beacon state,
 	// but rather be safe to defend against index out of bound panics.
 	if beaconState.NumValidators() != len(inactivityScores) {
+		log.Errorf("NumValidators=%d inactivityScores=%d", beaconState.NumValidators(), len(inactivityScores))
 		return nil, nil, errors.New("num of validators is different than num of inactivity scores")
 	}
 	if err := beaconState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {

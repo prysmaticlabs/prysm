@@ -96,12 +96,30 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	if err != nil {
 		return nil, fmt.Errorf("could not get head state %v", err)
 	}
+	headRoot, err := head.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	lbhr, err := head.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("header_parent", fmt.Sprintf("%#x", head.LatestBlockHeader().ParentRoot)).WithField("header_state_root", fmt.Sprintf("%#x", head.LatestBlockHeader().StateRoot)).WithField("slot", head.Slot()).WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).WithField("root", fmt.Sprintf("%#x", headRoot)).Info("buildPhase0BlockData head state")
 
 	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not advance slots to calculate proposer index: %v", err)
 	}
 
+	headRoot, err = head.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	lbhr, err = head.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("header_parent", fmt.Sprintf("%#x", head.LatestBlockHeader().ParentRoot)).WithField("header_state_root", fmt.Sprintf("%#x", head.LatestBlockHeader().StateRoot)).WithField("slot", head.Slot()).WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).WithField("root", fmt.Sprintf("%#x", headRoot)).Info("buildPhase0BlockData - after process_slots")
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not get ETH1 data: %v", err)

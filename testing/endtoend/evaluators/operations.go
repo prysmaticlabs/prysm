@@ -407,6 +407,7 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 
+	slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 	for _, blk := range blks.BlockContainers {
 		var slot types.Slot
 		var vote []byte
@@ -415,22 +416,25 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 			b := blk.GetPhase0Block().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("phase0 block vote")
 		case *ethpb.BeaconBlockContainer_AltairBlock:
 			b := blk.GetAltairBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("altair block vote")
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
 			b := blk.GetBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("bellatrix block vote")
 		case *ethpb.BeaconBlockContainer_BlindedBellatrixBlock:
 			b := blk.GetBlindedBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("blinded bellatrix block vote")
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}
-		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently

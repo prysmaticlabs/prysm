@@ -47,7 +47,7 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				// Disconnect from peers that are considered bad by any of the registered scorers.
 				if s.cfg.p2p.Peers().IsBad(id) {
-					s.disconnectBadPeer(s.ctx, id)
+					s.disconnectBadPeer(s.ctx, id, "maintainPeerStatuses")
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
@@ -170,7 +170,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	err = s.validateStatusMessage(ctx, msg)
 	s.cfg.p2p.Peers().Scorers().PeerStatusScorer().SetPeerStatus(id, msg, err)
 	if s.cfg.p2p.Peers().IsBad(id) {
-		s.disconnectBadPeer(s.ctx, id)
+		s.disconnectBadPeer(s.ctx, id, "sendRPCStatusRequest")
 	}
 	return err
 }
@@ -222,6 +222,11 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			}
 			// Close before disconnecting, and wait for the other end to ack our response.
 			closeStreamAndWait(stream, log)
+			forkDigest, err := s.currentForkDigest()
+			if err != nil {
+				log.WithError(err).Error("failed to compute fork digest")
+			}
+			log.Errorf("fork digest mismatch, expected=%#x, saw=%#x", forkDigest, m.ForkDigest)
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, remotePeer); err != nil {
 				return err
 			}

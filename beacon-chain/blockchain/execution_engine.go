@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -38,7 +39,7 @@ type notifyForkchoiceUpdateArg struct {
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
-	log.Infof("notifyForkchoiceUpdate, headRoot=%#x, headState.latest_block_header=%#x", arg.headRoot, arg.headState.LatestBlockHeader().BodyRoot)
+	log.Infof("notifyForkchoiceUpdate, fork version=%#x, headRoot=%#x, headState.latest_block_header=%#x", arg.headState.Fork().CurrentVersion, arg.headRoot, arg.headState.LatestBlockHeader().BodyRoot)
 
 	headBlk := arg.headBlock
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
@@ -51,7 +52,25 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not determine if head block is execution block")
 		return nil, nil
 	}
+	var eth1BlockHash []byte
 	if !isExecutionBlk {
+		br, err := headBlk.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: this is a hack
+		// try to grab the payload header from the state in case the block doesn't have it but the state does
+		sp, err := arg.headState.LatestExecutionPayloadHeader()
+		if err != nil {
+			log.WithError(err).Infof("notifyForkchoiceUpdate, skipping non-execution block with root=%#x", br)
+			return nil, nil
+		}
+		eth1BlockHash = sp.BlockHash()
+        if len(sp.BlockHash()) != 32 || bytes.Equal(eth1BlockHash, params.BeaconConfig().ZeroHash[:]) {
+			log.Infof("notifyForkchoiceUpdate, skipping non-execution block with root=%#x and empty payload header block hash", br)
+			return nil, nil
+		}
 		return nil, nil
 	}
 	headPayload, err := headBlk.Body().Execution()
@@ -59,10 +78,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not get execution payload for head block")
 		return nil, nil
 	}
+	eth1BlockHash = headPayload.BlockHash()
 	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
 	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
-		HeadBlockHash:      headPayload.BlockHash(),
+		HeadBlockHash:      eth1BlockHash,
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
@@ -81,7 +101,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
-				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(eth1BlockHash)),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
@@ -146,18 +166,21 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			return nil, nil
 		}
 	}
+	log.WithField("payloadID", fmt.Sprintf("%#x", payloadID)).WithField("lastValidHash", fmt.Sprintf("%#x", lastValidHash)).Infof("notifyForkchoiceUpdate, no error from ee call")
 	forkchoiceUpdatedValidNodeCount.Inc()
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
-		log.WithError(err).Error("Could not set head root to valid")
+		log.WithField("headRoot", fmt.Sprintf("%#x", arg.headRoot)).WithField("payloadID", fmt.Sprintf("%#x", payloadID)).WithField("lastValidHash", fmt.Sprintf("%#x", lastValidHash)).WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
+	log.Infof("notifyForkchoiceUpdate, set optimistic to valid for root=%#x", arg.headRoot)
 	if hasAttr && payloadID != nil { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
+		log.Infof("notifyForkchoiceUpdate, SetProposerAndPayloadIDs(nextSlot=%d, proposerId=%d, pId=%#x, arg.headRoot=%#x)", arg.headRoot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
-			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
+			"blockHash": fmt.Sprintf("%#x", eth1BlockHash),
 			"slot":      headBlk.Slot(),
 		}).Error("Received nil payload ID on VALID engine response")
 	}
