@@ -49,6 +49,7 @@ type BeaconBlock interface {
 	Body() BeaconBlockBody
 	IsNil() bool
 	IsBlinded() bool
+	SetBlinded(bool)
 	HashTreeRoot() ([field_params.RootLength]byte, error)
 	Proto() (proto.Message, error)
 	ssz.Marshaler
@@ -56,7 +57,7 @@ type BeaconBlock interface {
 	ssz.HashRoot
 	Version() int
 	AsSignRequestObject() (validatorpb.SignRequestObject, error)
-	SetBlinded(bool)
+	Copy() (BeaconBlock, error)
 }
 
 // BeaconBlockBody describes the method set employed by an object
