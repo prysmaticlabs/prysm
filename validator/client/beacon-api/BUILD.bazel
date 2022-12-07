@@ -50,6 +50,7 @@ go_test(
         "propose_beacon_block_blinded_bellatrix_test.go",
         "propose_beacon_block_blinded_capella_test.go",
         "propose_beacon_block_phase0_test.go",
+        "propose_beacon_block_test.go",
         "state_validators_test.go",
         "wait_for_chain_start_test.go",
     ],

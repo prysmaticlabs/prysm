@@ -56,6 +56,9 @@ func (c beaconApiJsonRestHandler) GetRestJsonResponse(apiEndpoint string, respon
 	return nil, nil
 }
 
+// PostRestJson sends a POST requests to apiEndpoint and decodes the response body as a JSON object into responseJson. If responseJson
+// is nil, nothing is decoded. If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object instead and returned
+// as the first return value.
 func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[string]string, data *bytes.Buffer, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
 	if data == nil {
 		return nil, errors.New("POST data is nil")

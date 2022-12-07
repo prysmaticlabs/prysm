@@ -93,7 +93,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	if httpError, err := c.jsonRestHandler.PostRestJson(endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
 		if httpError != nil && httpError.Code == http.StatusAccepted {
 			// Error 202 means that the block was successfully broadcasted, but validation failed
-			return nil, errors.Wrap(err, "block was successfully broadasted but failed validation")
+			return nil, errors.Wrap(err, "block was successfully broadcasted but failed validation")
 		}
 
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
