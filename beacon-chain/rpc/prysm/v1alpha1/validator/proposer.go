@@ -125,7 +125,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 					SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
 					SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 				}); err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not set sync aggregate: %v", err)
+					return nil, status.Errorf(codes.Internal, "Could not set default sync aggregate: %v", err)
 				}
 			}
 		}
