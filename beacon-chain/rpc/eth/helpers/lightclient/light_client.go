@@ -85,7 +85,176 @@ func NewLightClientBootstrapFromBeaconState(ctx context.Context, state state.Bea
 	return result, nil
 }
 
-// NewLightClientUpdateFromBeaconState - implements https://github.com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
+func NewLightClientOptimisticUpdateFromBeaconState(
+	ctx context.Context,
+	config *params.BeaconChainConfig,
+	slotsPerPeriod uint64,
+	state state.BeaconState,
+	block interfaces.SignedBeaconBlock,
+	attestedState state.BeaconState,
+	finalizedBlock interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
+
+	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
+	attestedEpoch := types.Epoch(uint64(attestedState.Slot()) / uint64(config.SlotsPerEpoch))
+	if attestedEpoch < types.Epoch(config.AltairForkEpoch) {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested epoch: %d", attestedEpoch)
+	}
+
+	// assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
+	syncAggregate, err := block.Block().Body().SyncAggregate()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get sync aggregate: %v", err)
+	}
+
+	if syncAggregate.SyncCommitteeBits.Count() < config.MinSyncCommitteeParticipants {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid sync committee bits count: %d", syncAggregate.SyncCommitteeBits.Count())
+	}
+
+	// assert state.slot == state.latest_block_header.slot
+	if state.Slot() != state.LatestBlockHeader().Slot {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid state slot: %d", state.Slot())
+	}
+
+	// assert hash_tree_root(header) == hash_tree_root(block.message)
+	header := *state.LatestBlockHeader()
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
+	}
+	header.StateRoot = stateRoot[:]
+
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get header root: %v", err)
+	}
+
+	blockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+	}
+
+	if headerRoot != blockRoot {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid header root: %v", headerRoot)
+	}
+
+	// assert attested_state.slot == attested_state.latest_block_header.slot
+	if attestedState.Slot() != attestedState.LatestBlockHeader().Slot {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested state slot: %d", attestedState.Slot())
+	}
+
+	// attested_header = attested_state.latest_block_header.copy()
+	attestedHeader := *attestedState.LatestBlockHeader()
+
+	// attested_header.state_root = hash_tree_root(attested_state)
+	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get attested state root: %v", err)
+	}
+	attestedHeader.StateRoot = attestedStateRoot[:]
+
+	// assert hash_tree_root(attested_header) == block.message.parent_root
+	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
+	if err != nil || attestedHeaderRoot != block.Block().ParentRoot() {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested header root: %v", attestedHeaderRoot)
+	}
+
+	// Return result
+	attestedHeaderResult := &ethpbv1.BeaconBlockHeader{
+		Slot:          attestedHeader.Slot,
+		ProposerIndex: attestedHeader.ProposerIndex,
+		ParentRoot:    attestedHeader.ParentRoot,
+		StateRoot:     attestedHeader.StateRoot,
+		BodyRoot:      attestedHeader.BodyRoot,
+	}
+
+	syncAggregateResult := &ethpbv1.SyncAggregate{
+		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
+		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
+	}
+
+	result := &ethpbv2.LightClientUpdate{
+		AttestedHeader: attestedHeaderResult,
+		SyncAggregate:  syncAggregateResult,
+		SignatureSlot:  block.Block().Slot(),
+	}
+
+	return result, nil
+}
+
+func NewLightClientFinalityUpdateFromBeaconState(
+	ctx context.Context,
+	config *params.BeaconChainConfig,
+	slotsPerPeriod uint64,
+	state state.BeaconState,
+	block interfaces.SignedBeaconBlock,
+	attestedState state.BeaconState,
+	finalizedBlock interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
+
+	result, err := NewLightClientOptimisticUpdateFromBeaconState(ctx, config, slotsPerPeriod, state, block,
+		attestedState, finalizedBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	// Indicate finality whenever possible
+	var finalizedHeader *ethpbv1.BeaconBlockHeader
+	var finalityBranch [][]byte
+	if finalizedBlock != nil && !finalizedBlock.IsNil() {
+		if finalizedBlock.Block().Slot() != 0 {
+			tempFinalizedHeader, err := finalizedBlock.Header()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get finalized header: %v", err)
+			}
+			finalizedHeader = migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
+
+			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get finalized header root: %v", err)
+			}
+
+			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", finalizedHeaderRoot)
+			}
+		} else {
+			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
+				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", attestedState.FinalizedCheckpoint().Root)
+			}
+
+			finalizedHeader = &ethpbv1.BeaconBlockHeader{
+				Slot:          0,
+				ProposerIndex: 0,
+				ParentRoot:    make([]byte, 32),
+				StateRoot:     make([]byte, 32),
+				BodyRoot:      make([]byte, 32),
+			}
+		}
+
+		finalityBranch, err = attestedState.FinalizedRootProof(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get finalized root proof: %v", err)
+		}
+	} else {
+		finalizedHeader = &ethpbv1.BeaconBlockHeader{
+			Slot:          0,
+			ProposerIndex: 0,
+			ParentRoot:    make([]byte, 32),
+			StateRoot:     make([]byte, 32),
+			BodyRoot:      make([]byte, 32),
+		}
+
+		finalityBranch = make([][]byte, 6)
+		for i := 0; i < 6; i++ {
+			finalityBranch[i] = make([]byte, 32)
+		}
+	}
+
+	result.FinalizedHeader = finalizedHeader
+	result.FinalityBranch = finalityBranch
+	return result, nil
+}
+
+// NewLightClientUpdateFromBeaconState - implements https://github.
+// com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
 // def create_light_client_update(state: BeaconState,
 //
 //	                           block: SignedBeaconBlock,
@@ -151,79 +320,22 @@ func NewLightClientUpdateFromBeaconState(
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 
-	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
-	attestedEpoch := types.Epoch(uint64(attestedState.Slot()) / uint64(config.SlotsPerEpoch))
-	if attestedEpoch < types.Epoch(config.AltairForkEpoch) {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested epoch: %d", attestedEpoch)
-	}
-
-	// assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
-	syncAggregate, err := block.Block().Body().SyncAggregate()
+	result, err := NewLightClientFinalityUpdateFromBeaconState(ctx, config, slotsPerPeriod, state, block, attestedState,
+		finalizedBlock)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync aggregate: %v", err)
+		return nil, err
 	}
-
-	if syncAggregate.SyncCommitteeBits.Count() < config.MinSyncCommitteeParticipants {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid sync committee bits count: %d", syncAggregate.SyncCommitteeBits.Count())
-	}
-
-	// assert state.slot == state.latest_block_header.slot
-	if state.Slot() != state.LatestBlockHeader().Slot {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid state slot: %d", state.Slot())
-	}
-
-	// assert hash_tree_root(header) == hash_tree_root(block.message)
-	header := *state.LatestBlockHeader()
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
-	}
-	header.StateRoot = stateRoot[:]
-
-	headerRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get header root: %v", err)
-	}
-
-	blockRoot, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-	}
-
-	if headerRoot != blockRoot {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid header root: %v", headerRoot)
-	}
-
-	// update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
-	updateSignaturePeriod := uint64(block.Block().Slot()) / slotsPerPeriod
-
-	// assert attested_state.slot == attested_state.latest_block_header.slot
-	if attestedState.Slot() != attestedState.LatestBlockHeader().Slot {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested state slot: %d", attestedState.Slot())
-	}
-
-	// attested_header = attested_state.latest_block_header.copy()
-	attestedHeader := *attestedState.LatestBlockHeader()
-
-	// attested_header.state_root = hash_tree_root(attested_state)
-	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get attested state root: %v", err)
-	}
-	attestedHeader.StateRoot = attestedStateRoot[:]
-
-	// assert hash_tree_root(attested_header) == block.message.parent_root
-	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
-	if err != nil || attestedHeaderRoot != block.Block().ParentRoot() {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid attested header root: %v", attestedHeaderRoot)
-	}
-
-	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := uint64(attestedHeader.Slot) / slotsPerPeriod
 
 	// Generate next sync committee and proof
 	var nextSyncCommittee *ethpbv2.SyncCommittee
 	var nextSyncCommitteeBranch [][]byte
+
+	// update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
+	updateSignaturePeriod := uint64(block.Block().Slot()) / slotsPerPeriod
+
+	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
+	updateAttestedPeriod := uint64(result.AttestedHeader.Slot) / slotsPerPeriod
+
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
 		if err != nil {
@@ -255,81 +367,7 @@ func NewLightClientUpdateFromBeaconState(
 		}
 	}
 
-	// Indicate finality whenever possible
-	var finalizedHeader *ethpbv1.BeaconBlockHeader
-	var finalityBranch [][]byte
-	if finalizedBlock != nil && !finalizedBlock.IsNil() {
-		if finalizedBlock.Block().Slot() != 0 {
-			tempFinalizedHeader, err := finalizedBlock.Header()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get finalized header: %v", err)
-			}
-			finalizedHeader = migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
-
-			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get finalized header root: %v", err)
-			}
-
-			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", finalizedHeaderRoot)
-			}
-		} else {
-			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
-				return nil, status.Errorf(codes.InvalidArgument, "Invalid finalized header root: %v", attestedState.FinalizedCheckpoint().Root)
-			}
-
-			finalizedHeader = &ethpbv1.BeaconBlockHeader{
-				Slot:          0,
-				ProposerIndex: 0,
-				ParentRoot:    make([]byte, 32),
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      make([]byte, 32),
-			}
-		}
-
-		finalityBranch, err = attestedState.FinalizedRootProof(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get finalized root proof: %v", err)
-		}
-	} else {
-		finalizedHeader = &ethpbv1.BeaconBlockHeader{
-			Slot:          0,
-			ProposerIndex: 0,
-			ParentRoot:    make([]byte, 32),
-			StateRoot:     make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
-		}
-
-		finalityBranch = make([][]byte, 6)
-		for i := 0; i < 6; i++ {
-			finalityBranch[i] = make([]byte, 32)
-		}
-	}
-
-	// Return result
-	attestedHeaderResult := &ethpbv1.BeaconBlockHeader{
-		Slot:          attestedHeader.Slot,
-		ProposerIndex: attestedHeader.ProposerIndex,
-		ParentRoot:    attestedHeader.ParentRoot,
-		StateRoot:     attestedHeader.StateRoot,
-		BodyRoot:      attestedHeader.BodyRoot,
-	}
-
-	syncAggregateResult := &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
-		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-	}
-
-	result := &ethpbv2.LightClientUpdate{
-		AttestedHeader:          attestedHeaderResult,
-		NextSyncCommittee:       nextSyncCommittee,
-		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
-		FinalizedHeader:         finalizedHeader,
-		FinalityBranch:          finalityBranch,
-		SyncAggregate:           syncAggregateResult,
-		SignatureSlot:           block.Block().Slot(),
-	}
-
+	result.NextSyncCommittee = nextSyncCommittee
+	result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
 	return result, nil
 }

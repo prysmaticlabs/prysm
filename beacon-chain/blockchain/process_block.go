@@ -241,7 +241,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			}
 		}
 
-		update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+		update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
 			ctx,
 			config,
 			slotsPerPeriod,
@@ -255,8 +255,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			log.WithError(err).Error("Could not create light client update")
 			return
 		}
-
-		update.NextSyncCommittee = nil
 
 		// Return the result
 		result := &ethpbv2.LightClientUpdateResponse{
@@ -344,7 +342,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					}
 				}
 
-				update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+				update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
 					ctx,
 					config,
 					slotsPerPeriod,
@@ -358,8 +356,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					log.WithError(err).Error("Could not create light client update")
 					return
 				}
-
-				update.NextSyncCommittee = nil
 
 				// Return the result
 				result := &ethpbv2.LightClientUpdateResponse{
