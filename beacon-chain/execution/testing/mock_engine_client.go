@@ -66,7 +66,7 @@ func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlo
 	return e.ExecutionBlock, e.ErrLatestExecBlock
 }
 
-// ExecutionBlockByHash --
+// ExecutionBlockByHashBellatrix --
 func (e *EngineClient) ExecutionBlockByHashBellatrix(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
@@ -75,6 +75,7 @@ func (e *EngineClient) ExecutionBlockByHashBellatrix(_ context.Context, h common
 	return b, e.ErrExecBlockByHash
 }
 
+// ReconstructFullBlock --
 func (e *EngineClient) ReconstructFullBlock(
 	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
@@ -93,6 +94,7 @@ func (e *EngineClient) ReconstructFullBlock(
 	return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
+// ReconstructFullBellatrixBlockBatch --
 func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
 	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
 ) ([]interfaces.SignedBeaconBlock, error) {
