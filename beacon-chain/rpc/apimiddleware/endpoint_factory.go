@@ -180,9 +180,9 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareLightClientUpdates,
 		}
 	case "/eth/v1/beacon/light_client/finality_update":
-		endpoint.GetResponse = &LightClientFinalityUpdateResponseJson{}
+		endpoint.GetResponse = &LightClientUpdateJson{}
 	case "/eth/v1/beacon/light_client/optimistic_update":
-		endpoint.GetResponse = &LightClientOptimisticUpdateResponseJson{}
+		endpoint.GetResponse = &LightClientUpdateJson{}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &IdentityResponseJson{}
 	case "/eth/v1/node/peers":

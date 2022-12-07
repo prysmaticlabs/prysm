@@ -241,7 +241,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			}
 		}
 
-		update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+		update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
 			ctx,
 			config,
 			slotsPerPeriod,
@@ -256,12 +256,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return
 		}
 
-		optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
-
 		// Return the result
-		result := &ethpbv2.LightClientOptimisticUpdateResponse{
+		result := &ethpbv2.LightClientUpdateResponse{
 			Version: ethpbv2.Version(signed.Version()),
-			Data:    optimisticUpdate,
+			Data:    update,
 		}
 
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
@@ -344,7 +342,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					}
 				}
 
-				update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+				update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
 					ctx,
 					config,
 					slotsPerPeriod,
@@ -359,12 +357,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 					return
 				}
 
-				finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
-
 				// Return the result
-				result := &ethpbv2.LightClientFinalityUpdateResponse{
+				result := &ethpbv2.LightClientUpdateResponse{
 					Version: ethpbv2.Version(signed.Version()),
-					Data:    finalityUpdate,
+					Data:    update,
 				}
 
 				// Send event

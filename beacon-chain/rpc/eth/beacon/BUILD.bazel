@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "blocks.go",
         "config.go",
-        "light_client.go",
+        "lightclient.go",
         "log.go",
         "pool.go",
         "server.go",

@@ -170,7 +170,7 @@ func (bs *Server) GetLightClientUpdatesByRange(ctx context.Context, req *ethpbv2
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
-func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientFinalityUpdateResponse, error) {
+func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientUpdateResponse, error) {
 	// Prepare
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientFinalityUpdate")
 	defer span.End()
@@ -226,7 +226,7 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+	update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -240,19 +240,18 @@ func (bs *Server) GetLightClientFinalityUpdate(ctx context.Context, _ *empty.Emp
 		return nil, err
 	}
 
-	finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
-
 	// Return the result
-	result := &ethpbv2.LightClientFinalityUpdateResponse{
+	result := &ethpbv2.LightClientUpdateResponse{
 		Version: ethpbv2.Version(attestedState.Version()),
-		Data:    finalityUpdate,
+		Data:    update,
 	}
 
 	return result, nil
 }
 
 // GetLightClientOptimisticUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/optimistic_update.yaml
-func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.Empty) (*ethpbv2.LightClientOptimisticUpdateResponse, error) {
+func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context,
+	_ *empty.Empty) (*ethpbv2.LightClientUpdateResponse, error) {
 	// Prepare
 	ctx, span := trace.StartSpan(ctx, "beacon.GetLightClientOptimisticUpdate")
 	defer span.End()
@@ -308,7 +307,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		}
 	}
 
-	update, err := lightclienthelpers.NewLightClientUpdateFromBeaconState(
+	update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
 		config,
 		slotsPerPeriod,
@@ -322,12 +321,10 @@ func (bs *Server) GetLightClientOptimisticUpdate(ctx context.Context, _ *empty.E
 		return nil, err
 	}
 
-	optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
-
 	// Return the result
-	result := &ethpbv2.LightClientOptimisticUpdateResponse{
+	result := &ethpbv2.LightClientUpdateResponse{
 		Version: ethpbv2.Version(attestedState.Version()),
-		Data:    optimisticUpdate,
+		Data:    update,
 	}
 
 	return result, nil

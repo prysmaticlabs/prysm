@@ -1,18 +1,10 @@
-package light_client
+package lightclient
 
 import (
 	"bytes"
-	"encoding/json"
-	"reflect"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-)
-
-const (
-	FinalityUpdateTypeName   = "light_client_finality_update"
-	OptimisticUpdateTypeName = "light_client_optimistic_update"
-	UpdateTypeName           = "light_client_update"
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
@@ -29,43 +21,8 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 }
 
 type Update struct {
-	Config                           *Config
-	Type                             string `json:"type,omitempty"`
-	ethpbv2.LightClientGenericUpdate `json:"update,omitempty"`
-}
-
-func (u *Update) UnmarshalJSON(data []byte) error {
-	value, err := unmarshalGenericUpdate(data, "type", "update", map[string]reflect.Type{
-		FinalityUpdateTypeName:   reflect.TypeOf(ethpbv2.LightClientFinalityUpdate{}),
-		OptimisticUpdateTypeName: reflect.TypeOf(ethpbv2.LightClientOptimisticUpdate{}),
-		UpdateTypeName:           reflect.TypeOf(ethpbv2.LightClientUpdate{}),
-	})
-	if err != nil {
-		return err
-	}
-	u.LightClientGenericUpdate = value
-	return nil
-}
-
-func unmarshalGenericUpdate(data []byte, typeJsonField, valueJsonField string,
-	customTypes map[string]reflect.Type) (ethpbv2.LightClientGenericUpdate, error) {
-	m := map[string]interface{}{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-	typeName := m[typeJsonField].(string)
-	var value ethpbv2.LightClientGenericUpdate
-	if ty, found := customTypes[typeName]; found {
-		value = reflect.New(ty).Interface().(ethpbv2.LightClientGenericUpdate)
-	}
-	valueBytes, err := json.Marshal(m[valueJsonField])
-	if err != nil {
-		return nil, err
-	}
-	if err = json.Unmarshal(valueBytes, &value); err != nil {
-		return nil, err
-	}
-	return value, nil
+	Config                     *Config
+	*ethpbv2.LightClientUpdate `json:"update,omitempty"`
 }
 
 func (u *Update) computeEpochAtSlot(slot types.Slot) types.Epoch {

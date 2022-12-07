@@ -110,36 +110,12 @@ type LightClientUpdateJson struct {
 
 type LightClientUpdateDataJson struct {
 	AttestedHeader          *BeaconBlockHeaderJson `json:"attested_header"`
-	NextSyncCommittee       *SyncCommitteeJson     `json:"next_sync_committee"`
-	NextSyncCommitteeBranch []string               `json:"next_sync_committee_branch" hex:"true"`
-	FinalizedHeader         *BeaconBlockHeaderJson `json:"finalized_header"`
-	FinalityBranch          []string               `json:"finality_branch" hex:"true"`
+	NextSyncCommittee       *SyncCommitteeJson     `json:"next_sync_committee,omitempty"`
+	NextSyncCommitteeBranch []string               `json:"next_sync_committee_branch,omitempty" hex:"true"`
+	FinalizedHeader         *BeaconBlockHeaderJson `json:"finalized_header,omitempty"`
+	FinalityBranch          []string               `json:"finality_branch,omitempty" hex:"true"`
 	SyncAggregate           *SyncAggregateJson     `json:"sync_aggregate"`
 	SignatureSlot           string                 `json:"signature_slot"`
-}
-
-type LightClientFinalityUpdateResponseJson struct {
-	Version string                         `json:"version" enum:"true"`
-	Data    *LightClientFinalityUpdateJson `json:"data"`
-}
-
-type LightClientFinalityUpdateJson struct {
-	AttestedHeader  *BeaconBlockHeaderJson `json:"attested_header"`
-	FinalizedHeader *BeaconBlockHeaderJson `json:"finalized_header"`
-	FinalityBranch  []string               `json:"finality_branch" hex:"true"`
-	SyncAggregate   *SyncAggregateJson     `json:"sync_aggregate"`
-	SignatureSlot   string                 `json:"signature_slot"`
-}
-
-type LightClientOptimisticUpdateResponseJson struct {
-	Version string                           `json:"version" enum:"true"`
-	Data    *LightClientOptimisticUpdateJson `json:"data"`
-}
-
-type LightClientOptimisticUpdateJson struct {
-	AttestedHeader *BeaconBlockHeaderJson `json:"attested_header"`
-	SyncAggregate  *SyncAggregateJson     `json:"sync_aggregate"`
-	SignatureSlot  string                 `json:"signature_slot"`
 }
 
 type BlockHeadersResponseJson struct {

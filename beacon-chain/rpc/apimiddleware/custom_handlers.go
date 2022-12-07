@@ -405,9 +405,9 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 			case events.SyncCommitteeContributionTopic:
 				data = &SignedContributionAndProofJson{}
 			case events.LightClientFinalityUpdateTopic:
-				data = &LightClientFinalityUpdateResponseJson{}
+				data = &LightClientUpdateJson{}
 			case events.LightClientOptimisticUpdateTopic:
-				data = &LightClientOptimisticUpdateResponseJson{}
+				data = &LightClientUpdateJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:

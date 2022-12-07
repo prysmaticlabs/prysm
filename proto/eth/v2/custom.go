@@ -30,40 +30,6 @@ func FloorLog2(x uint64) int {
 	return bits.Len64(uint64(x - 1))
 }
 
-var _ LightClientGenericUpdate = (*LightClientFinalityUpdate)(nil)
-
-func (x *LightClientFinalityUpdate) GetNextSyncCommittee() *SyncCommittee {
-	return &SyncCommittee{}
-}
-
-func (x *LightClientFinalityUpdate) GetNextSyncCommitteeBranch() [][]byte {
-	return make([][]byte, FloorLog2(NextSyncCommitteeIndex))
-}
-
-func (x *LightClientFinalityUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
-	x.FinalizedHeader = header
-}
-
-var _ LightClientGenericUpdate = (*LightClientOptimisticUpdate)(nil)
-
-func (x *LightClientOptimisticUpdate) GetNextSyncCommittee() *SyncCommittee {
-	return &SyncCommittee{}
-}
-
-func (x *LightClientOptimisticUpdate) GetNextSyncCommitteeBranch() [][]byte {
-	return make([][]byte, FloorLog2(NextSyncCommitteeIndex))
-}
-
-func (x *LightClientOptimisticUpdate) GetFinalizedHeader() *ethpbv1.BeaconBlockHeader {
-	return &ethpbv1.BeaconBlockHeader{}
-}
-
-func (x *LightClientOptimisticUpdate) GetFinalityBranch() [][]byte {
-	return make([][]byte, FloorLog2(FinalizedRootIndex))
-}
-
-func (x *LightClientOptimisticUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {}
-
 func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 	if len(x.Pubkeys) != len(other.Pubkeys) {
 		return false
@@ -74,10 +40,4 @@ func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 		}
 	}
 	return bytes.Equal(x.AggregatePubkey, other.AggregatePubkey)
-}
-
-var _ LightClientGenericUpdate = (*LightClientUpdate)(nil)
-
-func (x *LightClientUpdate) SetFinalizedHeader(header *ethpbv1.BeaconBlockHeader) {
-	x.FinalizedHeader = header
 }
