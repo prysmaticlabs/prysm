@@ -2,14 +2,9 @@ package lightclient
 
 import (
 	"bytes"
+
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-)
-
-const (
-	FinalityUpdateTypeName   = "light_client_finality_update"
-	OptimisticUpdateTypeName = "light_client_optimistic_update"
-	UpdateTypeName           = "light_client_update"
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
