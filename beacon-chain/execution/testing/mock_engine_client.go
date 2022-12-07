@@ -72,7 +72,7 @@ func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlo
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
+func (e *EngineClient) ExecutionBlockByHashBellatrix(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -140,7 +140,7 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash, false /* with txs */)
+		parentBlk, err := e.ExecutionBlockByHashBellatrix(ctx, parentHash, false /* with txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}

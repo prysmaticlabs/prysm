@@ -82,7 +82,7 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error)
+	ExecutionBlockByHashBellatrix(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
@@ -304,7 +304,7 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint6
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash, false /* no txs */)
+		parentBlk, err := s.ExecutionBlockByHashBellatrix(ctx, parentHash, false /* no txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
@@ -361,20 +361,20 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlockB
 	return result, handleRPCError(err)
 }
 
-// ExecutionBlockByHash fetches an execution engine block by hash by calling
+// ExecutionBlockByHashBellatrix fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
+func (s *Service) ExecutionBlockByHashBellatrix(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHashBellatrix")
 	defer span.End()
 	result := &pb.ExecutionBlockBellatrix{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
 
-// ExecutionBlockCapellaByHash fetches an execution engine block by hash by calling
+// ExecutionBlockByHashCapella fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockCapellaByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockCapella, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockCapellaByHash")
+func (s *Service) ExecutionBlockByHashCapella(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockCapella, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHashCapella")
 	defer span.End()
 	result := &pb.ExecutionBlockCapella{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
@@ -467,9 +467,9 @@ func (s *Service) ReconstructFullBlock(
 	executionBlockHash := common.BytesToHash(header.BlockHash())
 	var executionBlock pb.ExecutionBlock
 	if blindedBlock.Version() == version.Bellatrix {
-		executionBlock, err = s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+		executionBlock, err = s.ExecutionBlockByHashBellatrix(ctx, executionBlockHash, true /* with txs */)
 	} else {
-		executionBlock, err = s.ExecutionBlockCapellaByHash(ctx, executionBlockHash, true /* with txs */)
+		executionBlock, err = s.ExecutionBlockByHashCapella(ctx, executionBlockHash, true /* with txs */)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
