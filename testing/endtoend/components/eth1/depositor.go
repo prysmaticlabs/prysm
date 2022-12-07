@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"time"
 
@@ -227,4 +228,8 @@ func (d *Depositor) contractDepositor() (*contracts.DepositContract, error) {
 		d.cd = contract
 	}
 	return d.cd, nil
+}
+
+func (d *Depositor) UnderlyingProcess() *os.Process {
+	return nil // No subprocess for this component.
 }

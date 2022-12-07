@@ -273,3 +273,7 @@ func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
 
 	return configPath, nil
 }
+
+func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
+	return w.cmd.Process
+}

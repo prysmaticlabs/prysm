@@ -450,6 +450,8 @@ func (r *testRunner) defaultEndToEndRun() error {
 		return errors.Wrap(err, "components take too long to start")
 	}
 
+	r.comHandler.printPIDs(t.Logf)
+
 	// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
 	defer helpers.LogOutput(t)
 	if config.UsePprof {
@@ -551,6 +553,8 @@ func (r *testRunner) scenarioRun() error {
 	if err := helpers.ComponentsStarted(ctxAllNodesReady, r.comHandler.required()); err != nil {
 		return errors.Wrap(err, "components take too long to start")
 	}
+
+	r.comHandler.printPIDs(t.Logf)
 
 	// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
 	defer helpers.LogOutput(t)
