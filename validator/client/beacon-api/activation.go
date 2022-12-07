@@ -55,7 +55,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		c.lastRecvTime = nextRecvTime
 
 		// Represents the target set of keys
-		stringTargetPubKeystoPubKeys := make(map[string][]byte, len(c.ValidatorActivationRequest.PublicKeys))
+		stringTargetPubKeysToPubKeys := make(map[string][]byte, len(c.ValidatorActivationRequest.PublicKeys))
 		stringTargetPubKeys := make([]string, len(c.ValidatorActivationRequest.PublicKeys))
 
 		// Represents the set of keys actually returned by the beacon node
@@ -68,7 +68,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 
 		for index, publicKey := range c.ValidatorActivationRequest.PublicKeys {
 			stringPubKey := hexutil.Encode(publicKey)
-			stringTargetPubKeystoPubKeys[stringPubKey] = publicKey
+			stringTargetPubKeysToPubKeys[stringPubKey] = publicKey
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
@@ -102,7 +102,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			})
 		}
 
-		for stringTargetPubKey, targetPubKey := range stringTargetPubKeystoPubKeys {
+		for stringTargetPubKey, targetPubKey := range stringTargetPubKeysToPubKeys {
 			if _, ok := stringRetrievedPubKeys[stringTargetPubKey]; !ok {
 				missingPubKeys = append(missingPubKeys, targetPubKey)
 			}
