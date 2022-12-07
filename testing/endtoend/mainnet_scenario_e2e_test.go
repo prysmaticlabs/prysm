@@ -1,8 +1,9 @@
 package endtoend
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 )
 
 func TestEndToEnd_MainnetConfig_MultiClient(t *testing.T) {
