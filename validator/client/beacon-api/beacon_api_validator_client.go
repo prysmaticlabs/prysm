@@ -17,33 +17,24 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	url             string
-	httpClient      http.Client
-	jsonRestHandler jsonRestHandler
 	genesisProvider genesisProvider
+	jsonRestHandler jsonRestHandler
 	fallbackClient  iface.ValidatorClient
 }
 
-func NewBeaconApiValidatorClient(url string, timeout time.Duration) iface.ValidatorClient {
-	return NewBeaconApiValidatorClientWithFallback(url, timeout, nil)
+func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
+	return NewBeaconApiValidatorClientWithFallback(host, timeout, nil)
 }
 
-func NewBeaconApiValidatorClientWithFallback(url string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
+func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
-		host:       url,
-	}
-
-	genesisProvider := beaconApiGenesisProvider{
-		httpClient: http.Client{Timeout: timeout},
-		url:        url,
+		host:       host,
 	}
 
 	return &beaconApiValidatorClient{
-		url:             url,
-		httpClient:      http.Client{Timeout: timeout},
+		genesisProvider: beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler: jsonRestHandler,
-		genesisProvider: genesisProvider,
 		fallbackClient:  fallbackClient,
 	}
 }
@@ -75,13 +66,12 @@ func (c *beaconApiValidatorClient) DomainData(_ context.Context, in *ethpb.Domai
 	return c.getDomainData(in.Epoch, domainType)
 }
 
-func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetAttestationData(ctx, in)
+func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
+	if in == nil {
+		return nil, errors.New("GetAttestationData received nil argument `in`")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetAttestationData is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.getAttestationData(in.Slot, in.CommitteeIndex)
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -241,13 +231,8 @@ func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context
 	panic("beaconApiValidatorClient.SubscribeCommitteeSubnets is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ValidatorIndex(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ValidatorIndex is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ValidatorIndex(_ context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
+	return c.validatorIndex(in)
 }
 
 func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {

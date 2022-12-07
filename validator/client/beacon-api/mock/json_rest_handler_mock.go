@@ -35,6 +35,21 @@ func (m *MockjsonRestHandler) EXPECT() *MockjsonRestHandlerMockRecorder {
 	return m.recorder
 }
 
+// GetRestJsonResponse mocks base method.
+func (m *MockjsonRestHandler) GetRestJsonResponse(query string, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRestJsonResponse", query, responseJson)
+	ret0, _ := ret[0].(*apimiddleware.DefaultErrorJson)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRestJsonResponse indicates an expected call of GetRestJsonResponse.
+func (mr *MockjsonRestHandlerMockRecorder) GetRestJsonResponse(query, responseJson interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRestJsonResponse", reflect.TypeOf((*MockjsonRestHandler)(nil).GetRestJsonResponse), query, responseJson)
+}
+
 // PostRestJson mocks base method.
 func (m *MockjsonRestHandler) PostRestJson(apiEndpoint string, headers map[string]string, data *bytes.Buffer, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
 	m.ctrl.T.Helper()

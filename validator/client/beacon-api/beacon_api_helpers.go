@@ -4,7 +4,9 @@
 package beacon_api
 
 import (
+	"fmt"
 	"math/big"
+	neturl "net/url"
 	"regexp"
 	"strconv"
 
@@ -27,4 +29,12 @@ func uint64ToString[T uint64 | types.Slot | types.ValidatorIndex | types.Committ
 func littleEndianBytesToString(bytes []byte) string {
 	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
 	return new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bytes)).String()
+}
+
+func buildURL(path string, queryParams ...neturl.Values) string {
+	if len(queryParams) == 0 {
+		return path
+	}
+
+	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
