@@ -309,20 +309,40 @@ func (s *Store) ProcessUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientUpdate,
+func validateFinalityUpdate(update *ethpbv2.LightClientUpdate) error {
+	if update.NextSyncCommittee != nil || update.NextSyncCommitteeBranch != nil {
+		return errors.New("update should not have next sync committee")
+	}
+	return nil
+}
+
+func validateOptimisticUpdate(update *ethpbv2.LightClientUpdate) error {
+	if update.FinalizedHeader != nil || update.FinalityBranch != nil {
+		return errors.New("update should not have finalized header")
+	}
+	return validateFinalityUpdate(update)
+}
+
+func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
+	if err := validateFinalityUpdate(update); err != nil {
+		return err
+	}
 	return s.ProcessUpdate(&Update{
 		Config:            s.Config,
-		LightClientUpdate: finalityUpdate,
+		LightClientUpdate: update,
 	}, currentSlot, genesisValidatorsRoot)
 }
 
-func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientUpdate,
+func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
+	if err := validateOptimisticUpdate(update); err != nil {
+		return err
+	}
 	return s.ProcessUpdate(&Update{
 		Config:            s.Config,
-		LightClientUpdate: optimisticUpdate,
+		LightClientUpdate: update,
 	}, currentSlot, genesisValidatorsRoot)
 }
