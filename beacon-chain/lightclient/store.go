@@ -1,7 +1,7 @@
 // Package light_client implements the light client for the Ethereum 2.0 Beacon Chain.
 // It is based on the Altair light client spec at this revision:
 // https://github.com/ethereum/consensus-specs/tree/208da34ac4e75337baf79adebf036ab595e39f15/specs/altair/light-client
-package light_client
+package lightclient
 
 import (
 	"errors"
@@ -264,7 +264,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
 		// to guarantee progression into later sync committee periods according to `is_better_update`.
 		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
-			s.BestValidUpdate.SetFinalizedHeader(s.BestValidUpdate.GetAttestedHeader())
+			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.GetAttestedHeader()
 		}
 		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
 			return err
@@ -309,22 +309,20 @@ func (s *Store) ProcessUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientFinalityUpdate,
+func (s *Store) ProcessFinalityUpdate(finalityUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
-		Config:                   s.Config,
-		Type:                     FinalityUpdateTypeName,
-		LightClientGenericUpdate: finalityUpdate,
+		Config:            s.Config,
+		LightClientUpdate: finalityUpdate,
 	}, currentSlot, genesisValidatorsRoot)
 }
 
-func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientOptimisticUpdate,
+func (s *Store) ProcessOptimisticUpdate(optimisticUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(&Update{
-		Config:                   s.Config,
-		Type:                     OptimisticUpdateTypeName,
-		LightClientGenericUpdate: optimisticUpdate,
+		Config:            s.Config,
+		LightClientUpdate: optimisticUpdate,
 	}, currentSlot, genesisValidatorsRoot)
 }

@@ -1,7 +1,4 @@
-// Package light_client implements the light client for the Ethereum 2.0 Beacon Chain.
-// It is based on the Altair light client spec at this revision:
-// https://github.com/ethereum/consensus-specs/tree/208da34ac4e75337baf79adebf036ab595e39f15/specs/altair/light-client
-package light_client
+package lightclient
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
