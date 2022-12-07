@@ -297,6 +297,10 @@ func (v *ValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
 }
 
+func (v *ValidatorNode) UnderlyingProcess() *os.Process {
+	return v.cmd.Process
+}
+
 func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", validatorIndex)
 	configPath := filepath.Join(testNetDir, "config.json")
