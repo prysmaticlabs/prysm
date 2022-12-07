@@ -222,15 +222,10 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err)
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
-	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-	require.NoError(t, err, "Could not set up genesis state")
-	// Set state to non-epoch start slot.
-	require.NoError(t, bs.SetSlot(5))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
-	require.NoError(t, bs.SetBlockRoots(roots))
 	db := dbutil.SetupDB(t)
 
 	pubKeys := make([][]byte, len(deposits))
@@ -238,20 +233,24 @@ func TestGetProposerDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
-	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-	}
-	vs := &Server{
-		StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
-		HeadFetcher:            chain,
-		TimeFetcher:            chain,
-		OptimisticModeFetcher:  chain,
-		SyncChecker:            &mockSync.Sync{IsSyncing: false},
-		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-	}
-
 	t.Run("Ok", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 0,
 		}
@@ -268,13 +267,30 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(12289), vid)
+		require.Equal(t, types.ValidatorIndex(9982), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 1,
 		}
@@ -282,7 +298,7 @@ func TestGetProposerDuties(t *testing.T) {
 		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
 		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
 
-		_, err := vs.GetProposerDuties(ctx, req)
+		_, err = vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
 
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
@@ -293,20 +309,43 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, types.ValidatorIndex(0), vid)
 		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(10565), vid)
+		require.Equal(t, types.ValidatorIndex(4309), vid)
 	})
 
 	t.Run("Epoch out of bound", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		// Set state to non-epoch start slot.
+		require.NoError(t, bs.SetSlot(5))
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := types.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		vs := &Server{
+			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			HeadFetcher:            chain,
+			TimeFetcher:            chain,
+			OptimisticModeFetcher:  chain,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: currentEpoch + 2,
 		}
-		_, err := vs.GetProposerDuties(ctx, req)
+		_, err = vs.GetProposerDuties(ctx, req)
 		require.NotNil(t, err)
 		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		// Set state to non-epoch start slot.
+		require.NoError(t, bs.SetSlot(5))
+		require.NoError(t, bs.SetBlockRoots(roots))
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
