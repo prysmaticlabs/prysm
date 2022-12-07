@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -85,8 +85,8 @@ var metricComparisonTests = []comparisonTest{
 	},
 }
 
-func metricsTest(_ types.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
-	genesis, err := eth.NewNodeClient(conns[0].GetGrpcClientConn()).GetGenesis(context.Background(), &emptypb.Empty{})
+func metricsTest(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+	genesis, err := eth.NewNodeClient(conns[0]).GetGenesis(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func metricsTest(_ types.EvaluationContext, conns ...validatorHelpers.NodeConnec
 		}
 		time.Sleep(connTimeDelay)
 
-		beaconClient := eth.NewBeaconChainClient(conns[i].GetGrpcClientConn())
-		nodeClient := eth.NewNodeClient(conns[i].GetGrpcClientConn())
+		beaconClient := eth.NewBeaconChainClient(conns[i])
+		nodeClient := eth.NewNodeClient(conns[i])
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return err

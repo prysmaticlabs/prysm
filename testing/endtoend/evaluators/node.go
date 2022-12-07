@@ -16,7 +16,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -52,7 +52,7 @@ var AllNodesHaveSameHead = e2etypes.Evaluator{
 	Evaluation: allNodesHaveSameHead,
 }
 
-func healthzCheck(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
+func healthzCheck(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	count := len(conns)
 	for i := 0; i < count; i++ {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
@@ -94,13 +94,13 @@ func healthzCheck(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeCo
 	return nil
 }
 
-func peersConnect(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
+func peersConnect(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	if len(conns) == 1 {
 		return nil
 	}
 	ctx := context.Background()
 	for _, conn := range conns {
-		nodeClient := eth.NewNodeClient(conn.GetGrpcClientConn())
+		nodeClient := eth.NewNodeClient(conn)
 		peersResp, err := nodeClient.ListPeers(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
@@ -114,9 +114,9 @@ func peersConnect(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeCo
 	return nil
 }
 
-func finishedSyncing(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
+func finishedSyncing(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	syncNodeClient := eth.NewNodeClient(conn.GetGrpcClientConn())
+	syncNodeClient := eth.NewNodeClient(conn)
 	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -127,13 +127,13 @@ func finishedSyncing(_ e2etypes.EvaluationContext, conns ...validatorHelpers.Nod
 	return nil
 }
 
-func allNodesHaveSameHead(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
+func allNodesHaveSameHead(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	headEpochs := make([]types.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))
 	for i, conn := range conns {
-		beaconClient := eth.NewBeaconChainClient(conn.GetGrpcClientConn())
+		beaconClient := eth.NewBeaconChainClient(conn)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
 			return errors.Wrapf(err, "connection number=%d", i)

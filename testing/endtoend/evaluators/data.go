@@ -7,7 +7,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
+	"google.golang.org/grpc"
 )
 
 const epochToCheck = 50 // must be more than 46 (32 hot states + 16 chkpt interval)
@@ -22,9 +22,9 @@ var ColdStateCheckpoint = e2etypes.Evaluator{
 }
 
 // Checks the first node for an old checkpoint using cold state storage.
-func checkColdStateCheckpoint(_ e2etypes.EvaluationContext, conns ...validatorHelpers.NodeConnection) error {
+func checkColdStateCheckpoint(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
-	client := eth.NewBeaconChainClient(conns[0].GetGrpcClientConn())
+	client := eth.NewBeaconChainClient(conns[0])
 
 	for i := types.Epoch(0); i < epochToCheck; i++ {
 		res, err := client.ListValidatorAssignments(ctx, &eth.ListValidatorAssignmentsRequest{
