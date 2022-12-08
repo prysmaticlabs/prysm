@@ -230,9 +230,3 @@ build --modify_execution_info='GoStdlib.*=+no-remote-cache'
 
 # Set bazel gotag
 build --define gotags=bazel
-
-# Build the binary with Beacon API calls for the validator
-build --flag_alias=use_beacon_api=//validator/client/validator-client-factory:use_beacon_api
-
-build:beacon_api --use_beacon_api
-build:beacon_api --define=gotags=use_beacon_api

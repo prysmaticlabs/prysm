@@ -86,6 +86,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			flags.BeaconRPCProviderFlag,
 			flags.BeaconRPCGatewayProviderFlag,
+			flags.BeaconRESTApiProviderFlag,
 			flags.CertFlag,
 			flags.EnableWebFlag,
 			flags.DisablePenaltyRewardLogFlag,
@@ -128,16 +129,6 @@ var appHelpFlagGroups = []flagGroup{
 }
 
 func init() {
-	// Append the Beacon REST API flags
-	if flags.BuiltWithBeaconApi {
-		for groupIndex := range appHelpFlagGroups {
-			group := &appHelpFlagGroups[groupIndex]
-			if group.Name == "validator" {
-				group.Flags = append(group.Flags, flags.BeaconRESTApiProviderFlag)
-			}
-		}
-	}
-
 	cli.AppHelpTemplate = appHelpTemplate
 
 	type helpData struct {
