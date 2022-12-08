@@ -103,7 +103,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -131,9 +130,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
-	if crossClient {
-		evals = append(evals, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
-	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
@@ -141,22 +137,26 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 			"--enable-tracing",
 			"--trace-sample-fraction=1.0",
 		},
-		ValidatorFlags:          []string{},
-		EpochsToRun:             uint64(epochsToRun),
-		TestSync:                true,
-		TestFeature:             true,
-		TestDeposits:            true,
-		UseFixedPeerIDs:         true,
-		UseValidatorCrossClient: crossClient,
-		UsePrysmShValidator:     usePrysmSh,
-		UsePprof:                !longRunning,
-		TracingSinkEndpoint:     tracingEndpoint,
-		Evaluators:              evals,
-		EvalInterceptor:         defaultInterceptor,
-		Seed:                    int64(seed),
+		ValidatorFlags:      []string{},
+		EpochsToRun:         uint64(epochsToRun),
+		TestSync:            true,
+		TestFeature:         true,
+		TestDeposits:        true,
+		UseFixedPeerIDs:     true,
+		UsePrysmShValidator: usePrysmSh,
+		UsePprof:            !longRunning,
+		TracingSinkEndpoint: tracingEndpoint,
+		Evaluators:          evals,
+		EvalInterceptor:     defaultInterceptor,
+		Seed:                int64(seed),
 	}
 	for _, o := range cfgo {
 		o(testConfig)
+	}
+	// In the event we use the cross-client e2e option, we add in an additional
+	// evaluator for multiclient runs to verify the beacon api conformance.
+	if testConfig.UseValidatorCrossClient {
+		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
 	}
 	return newTestRunner(t, testConfig)
 }

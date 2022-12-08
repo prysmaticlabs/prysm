@@ -151,3 +151,7 @@ func (node *Node) Resume() error {
 func (node *Node) Stop() error {
 	return node.cmd.Process.Kill()
 }
+
+func (node *Node) UnderlyingProcess() *os.Process {
+	return node.cmd.Process
+}
