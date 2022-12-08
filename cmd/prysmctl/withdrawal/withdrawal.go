@@ -21,13 +21,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const (
+	basePath = "/eth/v1"
+	apiPath  = "/beacon/pool/bls_to_execution_changes"
+)
+
 var withdrawalFlags = struct {
 	BeaconNodeHost string
 	File           string
 }{}
 
 func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
-	apiPath := "/blsToExecutionAddress"
 	f := withdrawalFlags
 	cleanpath := filepath.Clean(f.File)
 	b, err := os.ReadFile(cleanpath)
@@ -70,7 +74,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.blsToExecutionAddress")
 	defer span.End()
 
-	fullpath := f.BeaconNodeHost + apiPath
+	fullpath := f.BeaconNodeHost + basePath + apiPath
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
 	if err != nil {
