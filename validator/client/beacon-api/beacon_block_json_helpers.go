@@ -1,6 +1,3 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
@@ -154,24 +151,4 @@ func jsonifyAttestationData(attestationData *ethpb.AttestationData) *apimiddlewa
 			Root:  hexutil.Encode(attestationData.Target.Root),
 		},
 	}
-}
-
-func fillByteSlice(sliceLength int, value byte) []byte {
-	bytes := make([]byte, sliceLength)
-
-	for index := range bytes {
-		bytes[index] = value
-	}
-
-	return bytes
-}
-
-func fillByteArraySlice(sliceLength int, value []byte) [][]byte {
-	bytes := make([][]byte, sliceLength)
-
-	for index := range bytes {
-		bytes[index] = value
-	}
-
-	return bytes
 }

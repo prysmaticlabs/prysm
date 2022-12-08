@@ -1,6 +1,3 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
@@ -15,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
+	test_helpers "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/test-helpers"
 )
 
 func TestProposeBeaconBlock_Altair(t *testing.T) {
@@ -81,37 +79,37 @@ func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 			Block: &ethpb.BeaconBlockAltair{
 				Slot:          1,
 				ProposerIndex: 2,
-				ParentRoot:    fillByteSlice(32, 3),
-				StateRoot:     fillByteSlice(32, 4),
+				ParentRoot:    test_helpers.FillByteSlice(32, 3),
+				StateRoot:     test_helpers.FillByteSlice(32, 4),
 				Body: &ethpb.BeaconBlockBodyAltair{
-					RandaoReveal: fillByteSlice(96, 5),
+					RandaoReveal: test_helpers.FillByteSlice(96, 5),
 					Eth1Data: &ethpb.Eth1Data{
-						DepositRoot:  fillByteSlice(32, 6),
+						DepositRoot:  test_helpers.FillByteSlice(32, 6),
 						DepositCount: 7,
-						BlockHash:    fillByteSlice(32, 8),
+						BlockHash:    test_helpers.FillByteSlice(32, 8),
 					},
-					Graffiti: fillByteSlice(32, 9),
+					Graffiti: test_helpers.FillByteSlice(32, 9),
 					ProposerSlashings: []*ethpb.ProposerSlashing{
 						{
 							Header_1: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          10,
 									ProposerIndex: 11,
-									ParentRoot:    fillByteSlice(32, 12),
-									StateRoot:     fillByteSlice(32, 13),
-									BodyRoot:      fillByteSlice(32, 14),
+									ParentRoot:    test_helpers.FillByteSlice(32, 12),
+									StateRoot:     test_helpers.FillByteSlice(32, 13),
+									BodyRoot:      test_helpers.FillByteSlice(32, 14),
 								},
-								Signature: fillByteSlice(96, 15),
+								Signature: test_helpers.FillByteSlice(96, 15),
 							},
 							Header_2: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          16,
 									ProposerIndex: 17,
-									ParentRoot:    fillByteSlice(32, 18),
-									StateRoot:     fillByteSlice(32, 19),
-									BodyRoot:      fillByteSlice(32, 20),
+									ParentRoot:    test_helpers.FillByteSlice(32, 18),
+									StateRoot:     test_helpers.FillByteSlice(32, 19),
+									BodyRoot:      test_helpers.FillByteSlice(32, 20),
 								},
-								Signature: fillByteSlice(96, 21),
+								Signature: test_helpers.FillByteSlice(96, 21),
 							},
 						},
 						{
@@ -119,21 +117,21 @@ func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          22,
 									ProposerIndex: 23,
-									ParentRoot:    fillByteSlice(32, 24),
-									StateRoot:     fillByteSlice(32, 25),
-									BodyRoot:      fillByteSlice(32, 26),
+									ParentRoot:    test_helpers.FillByteSlice(32, 24),
+									StateRoot:     test_helpers.FillByteSlice(32, 25),
+									BodyRoot:      test_helpers.FillByteSlice(32, 26),
 								},
-								Signature: fillByteSlice(96, 27),
+								Signature: test_helpers.FillByteSlice(96, 27),
 							},
 							Header_2: &ethpb.SignedBeaconBlockHeader{
 								Header: &ethpb.BeaconBlockHeader{
 									Slot:          28,
 									ProposerIndex: 29,
-									ParentRoot:    fillByteSlice(32, 30),
-									StateRoot:     fillByteSlice(32, 31),
-									BodyRoot:      fillByteSlice(32, 32),
+									ParentRoot:    test_helpers.FillByteSlice(32, 30),
+									StateRoot:     test_helpers.FillByteSlice(32, 31),
+									BodyRoot:      test_helpers.FillByteSlice(32, 32),
 								},
-								Signature: fillByteSlice(96, 33),
+								Signature: test_helpers.FillByteSlice(96, 33),
 							},
 						},
 					},
@@ -144,34 +142,34 @@ func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 								Data: &ethpb.AttestationData{
 									Slot:            36,
 									CommitteeIndex:  37,
-									BeaconBlockRoot: fillByteSlice(32, 38),
+									BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 									Source: &ethpb.Checkpoint{
 										Epoch: 39,
-										Root:  fillByteSlice(32, 40),
+										Root:  test_helpers.FillByteSlice(32, 40),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 41,
-										Root:  fillByteSlice(32, 42),
+										Root:  test_helpers.FillByteSlice(32, 42),
 									},
 								},
-								Signature: fillByteSlice(96, 43),
+								Signature: test_helpers.FillByteSlice(96, 43),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{44, 45},
 								Data: &ethpb.AttestationData{
 									Slot:            46,
 									CommitteeIndex:  47,
-									BeaconBlockRoot: fillByteSlice(32, 38),
+									BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 									Source: &ethpb.Checkpoint{
 										Epoch: 49,
-										Root:  fillByteSlice(32, 50),
+										Root:  test_helpers.FillByteSlice(32, 50),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 51,
-										Root:  fillByteSlice(32, 52),
+										Root:  test_helpers.FillByteSlice(32, 52),
 									},
 								},
-								Signature: fillByteSlice(96, 53),
+								Signature: test_helpers.FillByteSlice(96, 53),
 							},
 						},
 						{
@@ -180,90 +178,90 @@ func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 								Data: &ethpb.AttestationData{
 									Slot:            56,
 									CommitteeIndex:  57,
-									BeaconBlockRoot: fillByteSlice(32, 38),
+									BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 									Source: &ethpb.Checkpoint{
 										Epoch: 59,
-										Root:  fillByteSlice(32, 60),
+										Root:  test_helpers.FillByteSlice(32, 60),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 61,
-										Root:  fillByteSlice(32, 62),
+										Root:  test_helpers.FillByteSlice(32, 62),
 									},
 								},
-								Signature: fillByteSlice(96, 63),
+								Signature: test_helpers.FillByteSlice(96, 63),
 							},
 							Attestation_2: &ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{64, 65},
 								Data: &ethpb.AttestationData{
 									Slot:            66,
 									CommitteeIndex:  67,
-									BeaconBlockRoot: fillByteSlice(32, 38),
+									BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 									Source: &ethpb.Checkpoint{
 										Epoch: 69,
-										Root:  fillByteSlice(32, 70),
+										Root:  test_helpers.FillByteSlice(32, 70),
 									},
 									Target: &ethpb.Checkpoint{
 										Epoch: 71,
-										Root:  fillByteSlice(32, 72),
+										Root:  test_helpers.FillByteSlice(32, 72),
 									},
 								},
-								Signature: fillByteSlice(96, 73),
+								Signature: test_helpers.FillByteSlice(96, 73),
 							},
 						},
 					},
 					Attestations: []*ethpb.Attestation{
 						{
-							AggregationBits: fillByteSlice(4, 74),
+							AggregationBits: test_helpers.FillByteSlice(4, 74),
 							Data: &ethpb.AttestationData{
 								Slot:            75,
 								CommitteeIndex:  76,
-								BeaconBlockRoot: fillByteSlice(32, 38),
+								BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 								Source: &ethpb.Checkpoint{
 									Epoch: 78,
-									Root:  fillByteSlice(32, 79),
+									Root:  test_helpers.FillByteSlice(32, 79),
 								},
 								Target: &ethpb.Checkpoint{
 									Epoch: 80,
-									Root:  fillByteSlice(32, 81),
+									Root:  test_helpers.FillByteSlice(32, 81),
 								},
 							},
-							Signature: fillByteSlice(96, 82),
+							Signature: test_helpers.FillByteSlice(96, 82),
 						},
 						{
-							AggregationBits: fillByteSlice(4, 83),
+							AggregationBits: test_helpers.FillByteSlice(4, 83),
 							Data: &ethpb.AttestationData{
 								Slot:            84,
 								CommitteeIndex:  85,
-								BeaconBlockRoot: fillByteSlice(32, 38),
+								BeaconBlockRoot: test_helpers.FillByteSlice(32, 38),
 								Source: &ethpb.Checkpoint{
 									Epoch: 87,
-									Root:  fillByteSlice(32, 88),
+									Root:  test_helpers.FillByteSlice(32, 88),
 								},
 								Target: &ethpb.Checkpoint{
 									Epoch: 89,
-									Root:  fillByteSlice(32, 90),
+									Root:  test_helpers.FillByteSlice(32, 90),
 								},
 							},
-							Signature: fillByteSlice(96, 91),
+							Signature: test_helpers.FillByteSlice(96, 91),
 						},
 					},
 					Deposits: []*ethpb.Deposit{
 						{
-							Proof: fillByteArraySlice(33, fillByteSlice(32, 92)),
+							Proof: test_helpers.FillByteArraySlice(33, test_helpers.FillByteSlice(32, 92)),
 							Data: &ethpb.Deposit_Data{
-								PublicKey:             fillByteSlice(48, 94),
-								WithdrawalCredentials: fillByteSlice(32, 95),
+								PublicKey:             test_helpers.FillByteSlice(48, 94),
+								WithdrawalCredentials: test_helpers.FillByteSlice(32, 95),
 								Amount:                96,
-								Signature:             fillByteSlice(96, 97),
+								Signature:             test_helpers.FillByteSlice(96, 97),
 							},
 						},
 						{
-							Proof: fillByteArraySlice(33, fillByteSlice(32, 98)),
+							Proof: test_helpers.FillByteArraySlice(33, test_helpers.FillByteSlice(32, 98)),
 							Data: &ethpb.Deposit_Data{
-								PublicKey:             fillByteSlice(48, 100),
-								WithdrawalCredentials: fillByteSlice(32, 101),
+								PublicKey:             test_helpers.FillByteSlice(48, 100),
+								WithdrawalCredentials: test_helpers.FillByteSlice(32, 101),
 								Amount:                102,
-								Signature:             fillByteSlice(96, 103),
+								Signature:             test_helpers.FillByteSlice(96, 103),
 							},
 						},
 					},
@@ -273,23 +271,23 @@ func generateSignedAltairBlock() *ethpb.GenericSignedBeaconBlock_Altair {
 								Epoch:          104,
 								ValidatorIndex: 105,
 							},
-							Signature: fillByteSlice(96, 106),
+							Signature: test_helpers.FillByteSlice(96, 106),
 						},
 						{
 							Exit: &ethpb.VoluntaryExit{
 								Epoch:          107,
 								ValidatorIndex: 108,
 							},
-							Signature: fillByteSlice(96, 109),
+							Signature: test_helpers.FillByteSlice(96, 109),
 						},
 					},
 					SyncAggregate: &ethpb.SyncAggregate{
-						SyncCommitteeBits:      fillByteSlice(64, 110),
-						SyncCommitteeSignature: fillByteSlice(96, 111),
+						SyncCommitteeBits:      test_helpers.FillByteSlice(64, 110),
+						SyncCommitteeSignature: test_helpers.FillByteSlice(96, 111),
 					},
 				},
 			},
-			Signature: fillByteSlice(96, 112),
+			Signature: test_helpers.FillByteSlice(96, 112),
 		},
 	}
 }
