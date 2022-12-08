@@ -71,8 +71,8 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 
 		withdrawalConfirmation := to.BLSToExecutionChange.ToExecutionAddress
 		fmt.Println(au.Red("===================================="))
-		fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + fmt.Sprint(au.Red(to.BLSToExecutionChange.FromBLSPubkey)) + ") ADDRESS " +
-			"TO AN ETHEREUM ADDRESS(" + fmt.Sprint(au.Red(to.BLSToExecutionChange.ToExecutionAddress)) + ") FOR VALIDATOR INDEX(" + fmt.Sprint(au.Red(to.BLSToExecutionChange.ValidatorIndex)) + "). ")
+		fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + au.Red(to.BLSToExecutionChange.FromBLSPubkey).String() + ") ADDRESS " +
+			"TO AN ETHEREUM ADDRESS(" + au.Red(to.BLSToExecutionChange.ToExecutionAddress).String() + ") FOR VALIDATOR INDEX(" + au.Red(to.BLSToExecutionChange.ValidatorIndex).String() + "). ")
 
 		_, err = withdrawalPrompt(withdrawalConfirmation, r)
 		if err != nil {
