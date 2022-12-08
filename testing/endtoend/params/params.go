@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
@@ -156,6 +157,18 @@ const (
 
 	StartupBufferSecs = 5
 )
+
+func logDir() string {
+	wTime := func(p string) string {
+		return path.Join(p, time.Now().Format("20060102/150405"))
+	}
+	path, ok := os.LookupEnv("E2E_LOG_PATH")
+	if ok {
+		return wTime(path)
+	}
+	path, _ = os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
+	return wTime(path)
+}
 
 func logDir() string {
 	wTime := func(p string) string {
