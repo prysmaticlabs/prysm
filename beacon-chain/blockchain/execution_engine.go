@@ -263,12 +263,12 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	st, err := transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		log.WithError(err).Error("Could not process slots to get payload attribute")
-		return false, nil, 0
+		return false, emptyAttri, 0
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		log.WithError(err).Error("Could not get randao mix to get payload attribute")
-		return false, nil, 0
+		return false, emptyAttri, 0
 	}
 
 	// Get fee recipient.
@@ -287,7 +287,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		}
 	case err != nil:
 		log.WithError(err).Error("Could not get fee recipient to get payload attribute")
-		return false, nil, 0
+		return false, emptyAttri, 0
 	default:
 		feeRecipient = recipient
 	}
@@ -296,7 +296,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
 		log.WithError(err).Error("Could not get timestamp to get payload attribute")
-		return false, nil, 0
+		return false, emptyAttri, 0
 	}
 
 	var attr payloadattribute.Attributer
@@ -305,7 +305,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
-			return false, nil, 0
+			return false, emptyAttri, 0
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
@@ -315,7 +315,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, nil, 0
+			return false, emptyAttri, 0
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
@@ -325,11 +325,11 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, nil, 0
+			return false, emptyAttri, 0
 		}
 	default:
 		log.WithField("version", st.Version()).Error("Could not get payload attribute due to unknown state version")
-		return false, nil, 0
+		return false, emptyAttri, 0
 	}
 
 	return true, attr, proposerID
