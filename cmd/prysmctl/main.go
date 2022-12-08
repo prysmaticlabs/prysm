@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/signing"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/weaksubjectivity"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/withdrawal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -30,11 +31,12 @@ func init() {
 	// contains the old checkpoint sync subcommands. these commands should display help/warn messages
 	// pointing to their new locations
 	prysmctlCommands = append(prysmctlCommands, deprecated.Commands...)
-
 	prysmctlCommands = append(prysmctlCommands, checkpointsync.Commands...)
 	prysmctlCommands = append(prysmctlCommands, db.Commands...)
 	prysmctlCommands = append(prysmctlCommands, p2p.Commands...)
 	prysmctlCommands = append(prysmctlCommands, testnet.Commands...)
 	prysmctlCommands = append(prysmctlCommands, weaksubjectivity.Commands...)
 	prysmctlCommands = append(prysmctlCommands, signing.Commands...)
+	prysmctlCommands = append(prysmctlCommands, withdrawal.Commands...)
+
 }
