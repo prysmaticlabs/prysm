@@ -38,9 +38,11 @@ func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *eth
 	if err != nil {
 		return err
 	}
+	root32 := bytesutil.ToBytes32(checkpoint.Root)
+	hasStateSummaryInCache := s.stateSummaryCache.has(root32)
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
+		hasStateSummary := hasStateSummaryInCache || s.hasStateSummaryBytes(tx, root32)
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 		if !(hasStateInDB || hasStateSummary) {
 			log.Warnf("Recovering state summary for last validated root: %#x", bytesutil.Trunc(checkpoint.Root))
