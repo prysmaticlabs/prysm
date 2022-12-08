@@ -121,3 +121,24 @@ func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson)
 		CurrentSyncCommitteeBranch: branchFromJSON(bootstrap.CurrentSyncCommitteeBranch),
 	}, nil
 }
+
+func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateDataJson) (*LightClientUpdate, error) {
+	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
+	if err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	return &LightClientUpdate{
+		AttestedHeader:          attestedHeader,
+		NextSyncCommittee:       syncCommitteeFromJSON(update.NextSyncCommittee),
+		NextSyncCommitteeBranch: branchFromJSON(update.NextSyncCommitteeBranch),
+		FinalizedHeader:         finalizedHeader,
+		FinalityBranch:          branchFromJSON(update.FinalityBranch),
+		SyncAggregate:           ethpbv1.NewSyncAggregateFromJSON(update.SyncAggregate),
+		SignatureSlot:           types.Slot(signatureSlot),
+	}, nil
+}
