@@ -144,10 +144,6 @@ func branchFromJSON(branch []string) [][]byte {
 	return branchBytes
 }
 
-func trustedBlockRoot(bootstrap *ethpbv2.LightClientBootstrap) ([32]byte, error) {
-	return bootstrap.Header.HashTreeRoot()
-}
-
 func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson) (*ethpbv2.LightClientBootstrap,
 	error) {
 	header, err := headerFromJSON(bootstrap.Header)
