@@ -4,6 +4,7 @@ package types
 
 import (
 	"context"
+	"os"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"google.golang.org/grpc"
@@ -108,6 +109,8 @@ type ComponentRunner interface {
 	Resume() error
 	// Stop stops a component.
 	Stop() error
+	// UnderlyingProcess is the underlying process, once started.
+	UnderlyingProcess() *os.Process
 }
 
 type MultipleComponentRunners interface {
