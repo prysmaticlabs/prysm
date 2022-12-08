@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/testing/endtoend/evaluators/beaconapi_evaluators"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ev "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -131,9 +131,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
-	if crossClient {
-		evals = append(evals, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
-	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
@@ -157,6 +154,11 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 	}
 	for _, o := range cfgo {
 		o(testConfig)
+	}
+	// In the event we use the cross-client e2e option, we add in an additional
+	// evaluator for multiclient runs to verify the beacon api conformance.
+	if crossClient || testConfig.UseValidatorCrossClient {
+		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
 	}
 	return newTestRunner(t, testConfig)
 }
