@@ -1,14 +1,15 @@
 package helpers
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"math/big"
 	"math/bits"
 	"strconv"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"

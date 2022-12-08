@@ -2,6 +2,7 @@ package lightclient
 
 import (
 	"bytes"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"

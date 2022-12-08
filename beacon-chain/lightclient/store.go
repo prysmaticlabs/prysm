@@ -5,6 +5,7 @@ package lightclient
 
 import (
 	"errors"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
