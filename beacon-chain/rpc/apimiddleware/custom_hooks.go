@@ -399,7 +399,7 @@ type tempSyncSubcommitteeValidatorsJson struct {
 }
 
 type tempLightClientUpdatesByRangeJson struct {
-	Updates []*LightClientUpdateJson `json:"updates"`
+	Updates []*LightClientUpdateResponseJson `json:"updates"`
 }
 
 // https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getLightClientUpdatesByRange
@@ -410,7 +410,7 @@ func prepareLightClientUpdates(body []byte, responseContainer interface{}) (apim
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
 	}
 
-	container, ok := responseContainer.(*[]*LightClientUpdateJson)
+	container, ok := responseContainer.(*[]*LightClientUpdateResponseJson)
 	if !ok {
 		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
