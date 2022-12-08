@@ -176,7 +176,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
-		log.Infof("notifyForkchoiceUpdate, SetProposerAndPayloadIDs(nextSlot=%d, proposerId=%d, pId=%#x, arg.headRoot=%#x)", arg.headRoot, proposerId, pId, arg.headRoot)
+		log.Infof("notifyForkchoiceUpdate, SetProposerAndPayloadIDs(nextSlot=%d, proposerId=%d, pId=%#x, arg.headRoot=%#x)", nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", eth1BlockHash),
@@ -280,6 +280,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	if !ok { // There's no need to build attribute if there is no proposer for slot.
 		return false, nil, 0, nil
 	}
+	log.Infof("getPayloadAttribute, GetProposerPayloadIDs(nextSlot=%d, arg.headRoot=%#x,idx=%v)", slot, [32]byte{}, proposerID)
 
 	// Get previous randao.
 	st = st.Copy()
