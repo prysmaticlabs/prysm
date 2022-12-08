@@ -792,8 +792,8 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, nil, 0)
-	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, types.ValidatorIndex(0), vId)
 
@@ -801,24 +801,65 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	suggestedVid := types.ValidatorIndex(1)
 	slot := types.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	st, _ := util.DeterministicGenesisState(t, 1)
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId, err := service.getPayloadAttribute(ctx, st, slot)
-	require.NoError(t, err)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient).String())
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
 	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId, err = service.getPayloadAttribute(ctx, st, slot)
-	require.NoError(t, err)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient))
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+}
+
+func Test_GetPayloadAttributeV2(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+
+	// Cache miss
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateCapella(t, 1)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	require.Equal(t, false, hasPayload)
+	require.Equal(t, types.ValidatorIndex(0), vId)
+
+	// Cache hit, advance state, no fee recipient
+	suggestedVid := types.ValidatorIndex(1)
+	slot := types.Slot(1)
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hook := logTest.NewGlobal()
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
+	a, err := attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
+
+	// Cache hit, advance state, has fee recipient
+	suggestedAddr := common.HexToAddress("123")
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+	a, err = attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
 }
 
 func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
