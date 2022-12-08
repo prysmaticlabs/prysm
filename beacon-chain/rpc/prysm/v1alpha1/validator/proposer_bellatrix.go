@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -212,7 +211,7 @@ func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltai
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
 func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 
@@ -331,7 +330,7 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err = coreBlock.BeaconBlockIsNil(b); err != nil {
+	if err = consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return false, err
 	}
 	return blocks.IsExecutionBlock(b.Block().Body())
@@ -445,7 +444,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func (_ *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
