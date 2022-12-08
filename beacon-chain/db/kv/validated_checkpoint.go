@@ -39,7 +39,6 @@ func (s *Store) SaveLastValidatedCheckpoint(ctx context.Context, checkpoint *eth
 		return err
 	}
 	hasStateSummary := s.HasStateSummary(ctx, bytesutil.ToBytes32(checkpoint.Root))
-
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
