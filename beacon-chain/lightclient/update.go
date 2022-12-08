@@ -2,13 +2,14 @@ package lightclient
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
-	l := ethpbv2.FloorLog2(length)
+	l := helpers.FloorLog2(length)
 	if len(bb) != l {
 		return false
 	}
@@ -38,11 +39,11 @@ func (u *Update) computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
 }
 
 func (u *Update) isSyncCommiteeUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.NextSyncCommitteeIndex)
+	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
 }
 
 func (u *Update) isFinalityUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.FinalizedRootIndex)
+	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.FinalizedRootIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {

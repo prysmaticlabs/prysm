@@ -5,6 +5,7 @@ package lightclient
 
 import (
 	"errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -37,7 +38,7 @@ type Store struct {
 }
 
 func getSubtreeIndex(index uint64) uint64 {
-	return index % (uint64(1) << ethpbv2.FloorLog2(index-1))
+	return index % (uint64(1) << helpers.FloorLog2(index-1))
 }
 
 // TODO: this should be in the proto
@@ -70,9 +71,9 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	if !trie.VerifyMerkleProofWithDepth(
 		bootstrap.Header.StateRoot,
 		root,
-		getSubtreeIndex(ethpbv2.CurrentSyncCommitteeIndex),
+		getSubtreeIndex(helpers.CurrentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch,
-		uint64(ethpbv2.FloorLog2(ethpbv2.CurrentSyncCommitteeIndex))) {
+		uint64(helpers.FloorLog2(helpers.CurrentSyncCommitteeIndex))) {
 		panic("current sync committee merkle proof is invalid")
 	}
 	return &Store{
@@ -163,9 +164,9 @@ func (s *Store) validateUpdate(update *Update,
 		if !trie.VerifyMerkleProofWithDepth(
 			update.GetAttestedHeader().StateRoot,
 			finalizedRoot[:],
-			getSubtreeIndex(ethpbv2.FinalizedRootIndex),
+			getSubtreeIndex(helpers.FinalizedRootIndex),
 			update.GetFinalityBranch(),
-			uint64(ethpbv2.FloorLog2(ethpbv2.FinalizedRootIndex))) {
+			uint64(helpers.FloorLog2(helpers.FinalizedRootIndex))) {
 			return errors.New("finality branch is invalid")
 		}
 	}
@@ -189,9 +190,9 @@ func (s *Store) validateUpdate(update *Update,
 		if !trie.VerifyMerkleProofWithDepth(
 			update.GetAttestedHeader().StateRoot,
 			root[:],
-			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
+			getSubtreeIndex(helpers.NextSyncCommitteeIndex),
 			update.GetNextSyncCommitteeBranch(),
-			uint64(ethpbv2.FloorLog2(ethpbv2.NextSyncCommitteeIndex))) {
+			uint64(helpers.FloorLog2(helpers.NextSyncCommitteeIndex))) {
 			return errors.New("sync committee branch is invalid")
 		}
 	}

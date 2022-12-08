@@ -5,6 +5,7 @@ import (
 	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"math/big"
 	"math/bits"
 	"strconv"
 	"time"
@@ -19,6 +20,14 @@ const (
 	NextSyncCommitteeIndex    = uint64(55)
 	FinalizedRootIndex        = uint64(105)
 )
+
+func bytesFromBigInt(numStr string) ([]byte, error) {
+	num, err := strconv.ParseUint(numStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return big.NewInt(0).SetUint64(num).Bytes(), nil
+}
 
 func NewExecutionPayloadHeaderFromJSON(header *ethrpc.ExecutionPayloadHeaderJson) (*v11.ExecutionPayloadHeader,
 	error) {
@@ -38,6 +47,10 @@ func NewExecutionPayloadHeaderFromJSON(header *ethrpc.ExecutionPayloadHeaderJson
 	if err != nil {
 		return nil, err
 	}
+	baseFeePerGas, err := bytesFromBigInt(header.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
 	return &v11.ExecutionPayloadHeader{
 		ParentHash:       hexutil.MustDecode(header.ParentHash),
 		FeeRecipient:     hexutil.MustDecode(header.FeeRecipient),
@@ -50,22 +63,25 @@ func NewExecutionPayloadHeaderFromJSON(header *ethrpc.ExecutionPayloadHeaderJson
 		GasUsed:          gasUsed,
 		Timestamp:        timestamp,
 		ExtraData:        hexutil.MustDecode(header.ExtraData),
-		BaseFeePerGas:    hexutil.MustDecode(header.BaseFeePerGas),
+		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        hexutil.MustDecode(header.BlockHash),
 		TransactionsRoot: hexutil.MustDecode(header.TransactionsRoot),
 	}, nil
 }
 
-// TODO: move this somewhere common
 func FloorLog2(x uint64) int {
 	return bits.Len64(uint64(x - 1))
 }
 
-func NewSyncAggregateFromJSON(syncAggregate *ethrpc.SyncAggregateJson) *ethpbv1.SyncAggregate {
-	return &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      hexutil.MustDecode(syncAggregate.SyncCommitteeBits),
-		SyncCommitteeSignature: hexutil.MustDecode(syncAggregate.SyncCommitteeSignature),
+func NewSyncAggregateFromJSON(syncAggregate *ethrpc.SyncAggregateJson) (*ethpbv1.SyncAggregate, error) {
+	bits, err := bytesFromBigInt(syncAggregate.SyncCommitteeBits)
+	if err != nil {
+		return nil, err
 	}
+	return &ethpbv1.SyncAggregate{
+		SyncCommitteeBits:      bits,
+		SyncCommitteeSignature: hexutil.MustDecode(syncAggregate.SyncCommitteeSignature),
+	}, nil
 }
 
 func timeFromJSON(timestamp string) (*time.Time, error) {
@@ -153,14 +169,21 @@ func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateDataJson) (*et
 	if err != nil {
 		return nil, err
 	}
+	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
 	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpbv2.LightClientUpdate{
 		AttestedHeader:          attestedHeader,
 		NextSyncCommittee:       syncCommitteeFromJSON(update.NextSyncCommittee),
 		NextSyncCommitteeBranch: branchFromJSON(update.NextSyncCommitteeBranch),
 		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          branchFromJSON(update.FinalityBranch),
-		SyncAggregate:           NewSyncAggregateFromJSON(update.SyncAggregate),
+		SyncAggregate:           syncAggregate,
 		SignatureSlot:           types.Slot(signatureSlot),
 	}, nil
 }
