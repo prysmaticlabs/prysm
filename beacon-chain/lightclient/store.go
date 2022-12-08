@@ -63,7 +63,7 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 		panic(err)
 	}
 	if trustedBlockRoot == bootstrapRoot {
-		panic("trusted block root does not match bootstrap header")
+		return nil, errors.New("trusted block root does not match bootstrap header")
 	}
 	root, err := hashTreeRoot(bootstrap.CurrentSyncCommittee)
 	if err != nil {
@@ -75,7 +75,7 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 		getSubtreeIndex(helpers.CurrentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch,
 		uint64(helpers.FloorLog2(helpers.CurrentSyncCommitteeIndex))) {
-		panic("current sync committee merkle proof is invalid")
+		return nil, errors.New("current sync committee merkle proof is invalid")
 	}
 	return &Store{
 		Config:               config,
