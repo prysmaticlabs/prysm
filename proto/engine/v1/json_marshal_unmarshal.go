@@ -176,7 +176,6 @@ func (e *ExecutionBlockBellatrix) UnmarshalJSON(enc []byte) error {
 		return errors.Errorf("expected transaction list to be of a slice interface type.")
 	}
 
-	//
 	for _, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.

@@ -27,6 +27,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -108,7 +109,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := srv.ExecutionBlockByHashBellatrix(ctx, arg, true /* with txs */)
+		resp, err := srv.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -424,7 +425,7 @@ func TestClient_HTTP(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := service.ExecutionBlockByHashBellatrix(ctx, arg, true /* with txs */)
+		resp, err := service.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -1199,7 +1200,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *pb.ExecutionPayload
+		want func() interfaces.ExecutionData
 		err  string
 	}{
 		{
@@ -1224,19 +1225,26 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					Hash: wantedHash,
 				},
 			},
-			want: &pb.ExecutionPayload{
-				BlockHash: wantedHash[:],
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				})
+				require.NoError(t, err)
+				return p
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
+			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
-			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
-				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
 			}
-			require.DeepEqual(t, tt.want, got)
 		})
 	}
 }
