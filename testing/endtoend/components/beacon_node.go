@@ -271,7 +271,10 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.WithField("fork_version", g.Fork().CurrentVersion).WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).WithField("root", fmt.Sprintf("%#x", root)).Infof("BeaconState infoz")
+	log.WithField("fork_version", g.Fork().CurrentVersion).
+		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
+		WithField("state_root", fmt.Sprintf("%#x", root)).
+		Infof("BeaconState info")
 
 	genesisBytes, err := g.MarshalSSZ()
 	if err != nil {

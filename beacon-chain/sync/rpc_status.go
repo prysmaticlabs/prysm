@@ -47,7 +47,7 @@ func (s *Service) maintainPeerStatuses() {
 				}
 				// Disconnect from peers that are considered bad by any of the registered scorers.
 				if s.cfg.p2p.Peers().IsBad(id) {
-					s.disconnectBadPeer(s.ctx, id, "maintainPeerStatuses")
+					s.disconnectBadPeer(s.ctx, id)
 					return
 				}
 				// If the status hasn't been updated in the recent interval time.
@@ -170,7 +170,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	err = s.validateStatusMessage(ctx, msg)
 	s.cfg.p2p.Peers().Scorers().PeerStatusScorer().SetPeerStatus(id, msg, err)
 	if s.cfg.p2p.Peers().IsBad(id) {
-		s.disconnectBadPeer(s.ctx, id, "sendRPCStatusRequest")
+		s.disconnectBadPeer(s.ctx, id)
 	}
 	return err
 }

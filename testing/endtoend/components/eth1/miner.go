@@ -143,7 +143,6 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		"--vmdebug",
 		"--mine",
 		fmt.Sprintf("--unlock=%s", EthAddress),
 		"--allow-insecure-unlock",
@@ -175,16 +174,6 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	if err = runCmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start eth1 chain: %w", err)
 	}
-	/*
-		// check logs for common issues that prevent the EL miner from starting up.
-		if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
-			kerr := runCmd.Process.Kill()
-			if kerr != nil {
-				log.WithError(kerr).Error("error sending kill to failed miner command process")
-			}
-			return nil, fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
-		}
-	*/
 	if err = helpers.WaitForTextInFile(minerLog, "Started P2P networking"); err != nil {
 		kerr := runCmd.Process.Kill()
 		if kerr != nil {

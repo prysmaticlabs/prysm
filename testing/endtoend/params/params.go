@@ -204,12 +204,8 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
-	//cfg := cfgparams.BeaconConfig()
 	now := time.Now()
 	clGenTime := uint64(now.Unix()) + StartupBufferSecs
-	//epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
-	// TODO: support starting from any fork, make the genesis offset variable
-	//forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
 
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
@@ -263,12 +259,8 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	//cfg := cfgparams.BeaconConfig()
 	now := time.Now()
 	clGenTime := uint64(now.Unix()) + StartupBufferSecs
-	//epochSecs := cfg.SecondsPerSlot * uint64(cfg.SlotsPerEpoch)
-	// TODO: support starting from any fork, make the genesis offset variable
-	//forkOffset := epochSecs * uint64(cfg.CapellaForkEpoch)
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,

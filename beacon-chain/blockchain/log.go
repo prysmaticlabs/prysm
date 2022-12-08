@@ -87,7 +87,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
-			"deposits":                  fmt.Sprintf("%d/%d", len(block.Body().Deposits()), block.Body().Eth1Data().DepositCount),
+			"deposits":                  len(block.Body().Deposits()),
 		}).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{

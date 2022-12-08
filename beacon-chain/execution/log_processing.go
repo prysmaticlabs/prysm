@@ -288,13 +288,13 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	headersMap := make(map[uint64]*types.HeaderInfo)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
-		return errors.Wrap(err, "GetDepositCount")
+		return err
 	}
 	logCount := binary.LittleEndian.Uint64(rawLogCount)
 
 	latestFollowHeight, err := s.followedBlockHeight(ctx)
 	if err != nil {
-		return errors.Wrap(err, "followedBlockHeight")
+		return err
 	}
 
 	batchSize := s.cfg.eth1HeaderReqLimit
@@ -303,7 +303,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	for currentBlockNum < latestFollowHeight {
 		currentBlockNum, batchSize, err = s.processBlockInBatch(ctx, currentBlockNum, latestFollowHeight, batchSize, additiveFactor, logCount, headersMap)
 		if err != nil {
-			return errors.Wrapf(err, "processBlockInBatch, num=%d, height=%d", currentBlockNum, latestFollowHeight)
+			return err
 		}
 	}
 
@@ -313,7 +313,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	c, err := s.cfg.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
-		return errors.Wrap(err, "FinalizedCheckpoint")
+		return err
 	}
 	fRoot := bytesutil.ToBytes32(c.Root)
 	// Return if no checkpoint exists yet.
@@ -333,7 +333,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if isNil || slots.ToEpoch(fState.Slot()) != c.Epoch {
 		fState, err = s.cfg.stateGen.StateByRoot(ctx, fRoot)
 		if err != nil {
-			return errors.Wrapf(err, "StateByRoot=%#x", fRoot)
+			return err
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {

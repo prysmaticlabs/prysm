@@ -326,7 +326,6 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 				return
 			case <-ticker.C():
 				if s.chainStarted.IsSet() && s.cfg.initialSync.Syncing() {
-					log.Debug("(subscribeStaticWithSubnets) chain started set, but in initial sync")
 					continue
 				}
 				valid, err := isDigestValid(digest, genesis, genRoot)
@@ -397,7 +396,6 @@ func (s *Service) subscribeDynamicWithSubnets(
 				return
 			case currentSlot := <-ticker.C():
 				if s.chainStarted.IsSet() && s.cfg.initialSync.Syncing() {
-					log.Debug("(subscribeDynamicWithSubnets) chain started set, but in initial sync")
 					continue
 				}
 				valid, err := isDigestValid(digest, genesis, genRoot)
@@ -528,7 +526,6 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrapped
 				return
 			case <-ticker.C():
 				if s.chainStarted.IsSet() && s.cfg.initialSync.Syncing() {
-					log.Debug("(subscribeStaticWithSyncSubnets) chain started set, but in initial sync")
 					continue
 				}
 				valid, err := isDigestValid(digest, genesis, genRoot)
@@ -598,7 +595,6 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 				return
 			case currentSlot := <-ticker.C():
 				if s.chainStarted.IsSet() && s.cfg.initialSync.Syncing() {
-					log.Debug("(subscribeDynamicWithSyncSubnets) chain started set, but in initial sync")
 					continue
 				}
 				valid, err := isDigestValid(digest, genesis, genRoot)

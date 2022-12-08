@@ -54,7 +54,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 
 // disconnectBadPeer checks whether peer is considered bad by some scorer, and tries to disconnect
 // the peer, if that is the case. Additionally, disconnection reason is obtained from scorer.
-func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID, from string) {
+func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 	if !s.cfg.p2p.Peers().IsBad(id) {
 		return
 	}
@@ -63,7 +63,6 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID, from string
 	if err == nil {
 		goodbyeCode = p2ptypes.GoodbyeCodeBanned
 	}
-	log.Infof("disconnectBadPeer from %s", from)
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
 		log.WithError(err).Debug("Error when disconnecting with bad peer")
 	}

@@ -307,8 +307,7 @@ func (s *Service) updateBeaconNodeStats() {
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
 
-func (s *Service) updateConnectedETH1(state bool, reason string) {
-	log.Infof("updateConnectedETH1 - %s", reason)
+func (s *Service) updateConnectedETH1(state bool) {
 	s.connectedETH1 = state
 	s.updateBeaconNodeStats()
 }
@@ -324,7 +323,6 @@ func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 			latestBlockTime = s.latestEth1Data.BlockTime
 		}
 	}
-	log.WithField("distance", params.BeaconConfig().Eth1FollowDistance).WithField("followTime", followTime).WithField("BlockTime", s.latestEth1Data.BlockTime).WithField("BlockHeight", s.latestEth1Data.BlockHeight).WithField("latestBlockTime", latestBlockTime).Info("followedBlockHeight")
 	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
 	if err != nil {
 		return 0, errors.Wrapf(err, "BlockByTimestamp=%d", latestBlockTime)
@@ -483,8 +481,7 @@ func (s *Service) handleETH1FollowDistance() {
 	// logs for the powchain service to process. Also it is a potential
 	// failure condition as would mean we have not respected the protocol threshold.
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
-		// TODO this is usually an error but temporarily setting it to warn because its noisy when starting from genesis
-		log.Warn("Beacon node is not respecting the follow distance")
+		log.Error("Beacon node is not respecting the follow distance")
 		return
 	}
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
@@ -595,7 +592,7 @@ func (s *Service) run(done <-chan struct{}) {
 			s.isRunning = false
 			s.runError = nil
 			s.rpcClient.Close()
-			s.updateConnectedETH1(false, "context canceled in run()")
+			s.updateConnectedETH1(false)
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.eth1HeadTicker.C:
@@ -717,12 +714,6 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
 	}
 	earliestValidTime := votingTime - followBackDist
-	/*
-		if earliestValidTime > s.latestEth1Data.BlockTime {
-			return 0, nil
-		}
-		log.WithField("earliestValidTime", earliestValidTime).Info("calling BlockByTimestamp")
-	*/
 	log.WithField("distance", params.BeaconConfig().Eth1FollowDistance).WithField("earliestValidTime", earliestValidTime).WithField("BlockTime", s.latestEth1Data.BlockTime).WithField("BlockHeight", s.latestEth1Data.BlockHeight).WithField("followBlock", followBlock).Info("determineEarliestVotingBlock")
 	hdr, err := s.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {

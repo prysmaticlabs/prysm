@@ -120,15 +120,7 @@ func processesDepositsInBlocks(ec e2etypes.EvaluationContext, conns ...*grpc.Cli
 			return errors.Wrap(err, "failed to convert api response type to SignedBeaconBlock interface")
 		}
 		b := sb.Block()
-		slot := b.Slot()
-		eth1Data := b.Body().Eth1Data()
 		deposits := b.Body().Deposits()
-		fmt.Printf(
-			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
-			slot,
-			len(deposits),
-			eth1Data.BlockHash, eth1Data.DepositCount,
-		)
 		for _, d := range deposits {
 			k := bytesutil.ToBytes48(d.Data.PublicKey)
 			v := observed[k]
@@ -416,22 +408,18 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 			b := blk.GetPhase0Block().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
-			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("phase0 block vote")
 		case *ethpb.BeaconBlockContainer_AltairBlock:
 			b := blk.GetAltairBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
-			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("altair block vote")
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
 			b := blk.GetBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
-			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("bellatrix block vote")
 		case *ethpb.BeaconBlockContainer_BlindedBellatrixBlock:
 			b := blk.GetBlindedBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
-			log.WithField("slot", slot).WithField("vote", fmt.Sprintf("%#x", vote)).Warn("blinded bellatrix block vote")
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}

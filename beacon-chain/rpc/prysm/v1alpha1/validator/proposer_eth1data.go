@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -42,7 +41,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 		return vs.mockETH1DataVote(ctx, slot)
 	}
 	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
-		return vs.randomETH1DataVote(ctx, "ExecutionClientConnected == false")
+		return vs.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
@@ -54,26 +53,22 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
 	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
 	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
-	log.WithField("votingPeriodStartTime", votingPeriodStartTime-genesisTime).WithField("latestValidTime", latestValidTime-genesisTime).WithField("earliestValidTime", earliestValidTime-genesisTime).Info("eth1DataMajorityVote")
 	if latestValidTime < genesisTime+followDistanceSeconds {
-		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Info("voting period before genesis + follow distance, return head eth1data")
+		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Warn("voting period before genesis + follow distance, using eth1data from head")
 		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by latest valid time")
-		return vs.randomETH1DataVote(ctx, "error from BlockByTimestamp")
+		return vs.randomETH1DataVote(ctx)
 	}
 	if lastBlockByLatestValidTime.Time < earliestValidTime {
-		ed := vs.HeadFetcher.HeadETH1Data()
-		log.WithField("latestBlock.Time", lastBlockByLatestValidTime.Time).WithField("latestBlock.Height", lastBlockByLatestValidTime.Number).WithFields(logFields(ed)).WithField("condition", "lastBlockByLatestValidTime.Time < earliestValidTime").Info("eth1DataMajorityVote")
-		return ed, nil
+		return vs.HeadFetcher.HeadETH1Data(), nil
 	}
 
 	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
 	if lastBlockDepositCount == 0 {
-		log.WithFields(logFields(vs.ChainStartFetcher.ChainStartEth1Data())).WithField("condition", "ChainStartEth1Data").Info("eth1DataMajorityVote")
 		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
@@ -81,25 +76,15 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 		h, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
 		if err != nil {
 			log.WithError(err).Error("Could not get hash of last block by latest valid time")
-			return vs.randomETH1DataVote(ctx, "deposit count too high")
+			return vs.randomETH1DataVote(ctx)
 		}
-		ed := &ethpb.Eth1Data{
+		return &ethpb.Eth1Data{
 			BlockHash:    h.Bytes(),
 			DepositCount: lastBlockDepositCount,
 			DepositRoot:  lastBlockDepositRoot[:],
-		}
-		log.WithFields(logFields(ed)).WithField("condition", "lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount").Info("eth1DataMajorityVote")
-		return ed, nil
+		}, nil
 	}
 	return vs.HeadFetcher.HeadETH1Data(), nil
-}
-
-func logFields(ed *ethpb.Eth1Data) map[string]interface{} {
-	fields := make(map[string]interface{})
-	fields["deposit_root"] = fmt.Sprintf("%#x", ed.DepositRoot)
-	fields["deposit_count"] = ed.DepositCount
-	fields["block_hash"] = fmt.Sprintf("%#x", ed.BlockHash)
-	return fields
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
@@ -171,8 +156,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot types.Slot) (*ethpb
 	}, nil
 }
 
-func (vs *Server) randomETH1DataVote(ctx context.Context, reason string) (*ethpb.Eth1Data, error) {
-	log.WithField("reason", reason).Warn("randomETH1DataVote")
+func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true

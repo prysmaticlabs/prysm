@@ -207,7 +207,7 @@ func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, sta
 		block: bCp,
 		state: state.Copy(),
 	}
-	return err
+	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state. The method

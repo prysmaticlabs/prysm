@@ -16,25 +16,16 @@ import (
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	if err != nil {
-		return errors.Wrap(err, "HashTreeRoot")
+		return err
 	}
 	wsb, err := blocks.NewGenesisBlockForState(stateRoot, genesisState)
 	if err != nil {
-		return errors.Wrap(err, "NewGenesisBlockForState")
+		return err
 	}
 	genesisBlkRoot, err := wsb.Block().HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	/*
-		lbhr, err := genesisState.LatestBlockHeader().HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "unable to compute HTR of latest block header from genesis state")
-		}
-		if genesisBlkRoot != lbhr {
-			return fmt.Errorf("state.latest_block_header=%#x does not match derived genessis block root=%#x", genesisBlkRoot, lbhr)
-		}
-	*/
 	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
