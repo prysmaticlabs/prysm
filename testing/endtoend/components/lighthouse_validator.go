@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -248,6 +249,8 @@ func (v *LighthouseValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
 }
 
+var _ types.ComponentRunner = &KeystoreGenerator{}
+
 type KeystoreGenerator struct {
 	started chan struct{}
 }
@@ -361,4 +364,8 @@ func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {
 		}
 	}
 	return testNetDir, nil
+}
+
+func (k *KeystoreGenerator) UnderlyingProcess() *os.Process {
+	return nil // No subprocess for this component.
 }
