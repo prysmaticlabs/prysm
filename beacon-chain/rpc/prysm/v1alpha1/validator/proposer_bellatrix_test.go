@@ -943,10 +943,10 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 		Message:   bid,
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
-	require.NoError(t, s.validateBuilderSignature(sBid))
+	require.NoError(t, validateBuilderSignature(sBid))
 
 	sBid.Message.Value = make([]byte, 32)
-	require.ErrorIs(t, s.validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
+	require.ErrorIs(t, validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
 }
 
 func TestServer_circuitBreakBuilder(t *testing.T) {

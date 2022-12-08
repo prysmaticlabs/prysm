@@ -154,7 +154,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
 	}
 
-	if err := vs.validateBuilderSignature(bid); err != nil {
+	if err := validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
@@ -444,7 +444,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func (*Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
