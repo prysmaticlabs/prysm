@@ -75,12 +75,8 @@ func FloorLog2(x uint64) int {
 }
 
 func NewSyncAggregateFromJSON(syncAggregate *ethrpc.SyncAggregateJson) (*ethpbv1.SyncAggregate, error) {
-	bits, err := bytesFromBigInt(syncAggregate.SyncCommitteeBits)
-	if err != nil {
-		return nil, err
-	}
 	return &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      bits,
+		SyncCommitteeBits:      hexutil.MustDecode(syncAggregate.SyncCommitteeBits),
 		SyncCommitteeSignature: hexutil.MustDecode(syncAggregate.SyncCommitteeSignature),
 	}, nil
 }
