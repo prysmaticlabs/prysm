@@ -224,6 +224,11 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 
 	if v.config.UseBeaconRestApi {
 		beaconRestApiPort := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + index
+		if beaconRestApiPort >= e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+e2e.TestParams.BeaconNodeCount {
+			// Point any extra validator clients to a node we know is running.
+			beaconRestApiPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.BeaconRESTApiProviderFlag.Name, beaconRestApiPort))
 		args = append(args, fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
 	}
