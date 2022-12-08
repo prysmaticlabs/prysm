@@ -69,12 +69,11 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	if err != nil {
 		return nil, err
 	}
-	if !trie.VerifyMerkleProofWithDepth(
+	if !trie.VerifyMerkleProof(
 		bootstrap.Header.StateRoot,
 		root,
 		getSubtreeIndex(helpers.CurrentSyncCommitteeIndex),
-		bootstrap.CurrentSyncCommitteeBranch,
-		uint64(helpers.FloorLog2(helpers.CurrentSyncCommitteeIndex))) {
+		bootstrap.CurrentSyncCommitteeBranch) {
 		return nil, errors.New("current sync committee merkle proof is invalid")
 	}
 	return &Store{
@@ -162,12 +161,11 @@ func (s *Store) validateUpdate(update *Update,
 				return err
 			}
 		}
-		if !trie.VerifyMerkleProofWithDepth(
+		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			finalizedRoot[:],
 			getSubtreeIndex(helpers.FinalizedRootIndex),
-			update.GetFinalityBranch(),
-			uint64(helpers.FloorLog2(helpers.FinalizedRootIndex))) {
+			update.GetFinalityBranch()) {
 			return errors.New("finality branch is invalid")
 		}
 	}
@@ -188,12 +186,11 @@ func (s *Store) validateUpdate(update *Update,
 		if err != nil {
 			return err
 		}
-		if !trie.VerifyMerkleProofWithDepth(
+		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			root[:],
 			getSubtreeIndex(helpers.NextSyncCommitteeIndex),
-			update.GetNextSyncCommitteeBranch(),
-			uint64(helpers.FloorLog2(helpers.NextSyncCommitteeIndex))) {
+			update.GetNextSyncCommitteeBranch()) {
 			return errors.New("sync committee branch is invalid")
 		}
 	}
