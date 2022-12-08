@@ -35,7 +35,6 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.blsToExecutionAddress")
 	defer span.End()
 	f := withdrawalFlags
-	cleanpath := filepath.Clean(f.File)
 
 	u, err := url.ParseRequestURI(f.BeaconNodeHost)
 	if err != nil {
@@ -45,7 +44,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", f.BeaconNodeHost)
 	}
 
-	foundFilePaths, err := findWithdrawalFiles(cleanpath)
+	foundFilePaths, err := findWithdrawalFiles(f.File)
 	if err != nil {
 		return err
 	}
@@ -106,9 +105,10 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func findWithdrawalFiles(cleanpath string) ([]string, error) {
+func findWithdrawalFiles(path string) ([]string, error) {
 	var foundpaths []string
 	maxdepth := 3
+	cleanpath := filepath.Clean(path)
 	if err := filepath.WalkDir(cleanpath, func(s string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e
