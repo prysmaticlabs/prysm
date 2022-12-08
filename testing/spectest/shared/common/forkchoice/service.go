@@ -101,7 +101,7 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) ExecutionBlockByHashBellatrix(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
+func (m *engineMock) ExecutionBlockByHash(_ context.Context, _ int, hash common.Hash, _ bool) (interface{}, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {
 		return nil, nil
