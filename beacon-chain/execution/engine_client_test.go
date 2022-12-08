@@ -1188,7 +1188,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *pb.ExecutionPayload
+		want func() interfaces.ExecutionData
 		err  string
 	}{
 		{
@@ -1213,19 +1213,26 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					Hash: wantedHash,
 				},
 			},
-			want: &pb.ExecutionPayload{
-				BlockHash: wantedHash[:],
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				})
+				require.NoError(t, err)
+				return p
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
+			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
-			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
-				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
 			}
-			require.DeepEqual(t, tt.want, got)
 		})
 	}
 }

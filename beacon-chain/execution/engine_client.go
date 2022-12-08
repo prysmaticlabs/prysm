@@ -494,7 +494,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
 		if err != nil {
 			return nil, err
 		}
