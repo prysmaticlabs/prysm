@@ -1,11 +1,11 @@
 module github.com/prysmaticlabs/prysm/v3
 
-go 1.19
+go 1.18
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20221202121132-bd37e8fb1d0d
-	github.com/MariusVanDerWijden/tx-fuzz v0.0.0-00010101000000-000000000000
+	github.com/MariusVanDerWijden/tx-fuzz v0.0.0-20221025103147-20aacf826612
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
