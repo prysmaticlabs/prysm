@@ -73,17 +73,13 @@ func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 
 	var hasSummary bool
 	if err := s.db.View(func(tx *bolt.Tx) error {
-		hasSummary = s.hasStateSummaryBytes(tx, blockRoot)
+		enc := tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
+		hasSummary = len(enc) > 0
 		return nil
 	}); err != nil {
 		return false
 	}
 	return hasSummary
-}
-
-func (s *Store) hasStateSummaryBytes(tx *bolt.Tx, blockRoot [32]byte) bool {
-	enc := tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
-	return len(enc) > 0
 }
 
 // This saves all cached state summary objects to DB, and clears up the cache.
