@@ -49,7 +49,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	latestValidTime := votingPeriodStartTime - followDistanceSeconds
-	earliestValidTime := votingPeriodStartTime - followDistanceSeconds
+	earliestValidTime := votingPeriodStartTime - 2*followDistanceSeconds
 
 	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
 	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
@@ -67,7 +67,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	}
 	if lastBlockByLatestValidTime.Time < earliestValidTime {
 		ed := vs.HeadFetcher.HeadETH1Data()
-		log.WithFields(logFields(ed)).WithField("condition", "lastBlockByLatestValidTime.Time < earliestValidTime").Info("eth1DataMajorityVote")
+		log.WithField("latestBlock.Time", lastBlockByLatestValidTime.Time).WithField("latestBlock.Height", lastBlockByLatestValidTime.Number).WithFields(logFields(ed)).WithField("condition", "lastBlockByLatestValidTime.Time < earliestValidTime").Info("eth1DataMajorityVote")
 		return ed, nil
 	}
 

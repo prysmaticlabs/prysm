@@ -34,7 +34,7 @@ var churnLimit = 4
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
-var depositsInBlockStart = types.Epoch(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
+var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
 
 // deposits included + finalization + MaxSeedLookahead for activation.
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
