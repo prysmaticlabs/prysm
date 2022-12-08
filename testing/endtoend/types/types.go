@@ -36,6 +36,12 @@ func WithValidatorCrossClient() E2EConfigOpt {
 	}
 }
 
+func WithValidatorRESTApi() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseBeaconRestApi = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestCheckpointSync      bool
@@ -47,6 +53,7 @@ type E2EConfig struct {
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
+	UseBeaconRestApi        bool
 	EpochsToRun             uint64
 	Seed                    int64
 	TracingSinkEndpoint     string
