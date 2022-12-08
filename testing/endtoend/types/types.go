@@ -29,6 +29,12 @@ func WithCheckpointSync() E2EConfigOpt {
 	}
 }
 
+func WithValidatorCrossClient() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseValidatorCrossClient = true
+	}
+}
+
 func WithValidatorRESTApi() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.UseBeaconRestApi = true
