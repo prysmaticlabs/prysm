@@ -92,12 +92,12 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 		return nil, nil, errors.Wrap(err, "could not get pow block")
 	}
 
-	if blk == nil {
-		return nil, nil, errors.New("pow block is nil")
-	}
 	blkBellatrix, ok := blk.(*pb.ExecutionBlockBellatrix)
 	if !ok {
 		return nil, nil, fmt.Errorf("wrong execution block type %T", blk)
+	}
+	if blkBellatrix == nil {
+		return nil, nil, errors.New("pow block is nil")
 	}
 	blkTDBig, err := hexutil.DecodeBig(blkBellatrix.TotalDifficulty)
 	if err != nil {
