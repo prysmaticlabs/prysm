@@ -73,7 +73,7 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	ExecutionBlockByHashBellatrix(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error)
+	ExecutionBlockByHash(ctx context.Context, forkVersion int, hash common.Hash, withTxs bool) (interface{}, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
@@ -254,16 +254,20 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint6
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := s.ExecutionBlockByHashBellatrix(ctx, parentHash, false /* no txs */)
+		parentBlk, err := s.ExecutionBlockByHash(ctx, version.Bellatrix, parentHash, false /* no txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
 		if parentBlk == nil {
 			return nil, false, errors.New("parent execution block is nil")
 		}
+		bellatrixParentBlk, ok := parentBlk.(*pb.ExecutionBlockBellatrix)
+		if !ok {
+			return nil, false, fmt.Errorf("wrong execution block type %T", parentBlk)
+		}
 
 		if blockReachedTTD {
-			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
+			parentTotalDifficulty, err := tDStringToUint256(bellatrixParentBlk.TotalDifficulty)
 			if err != nil {
 				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 			}
@@ -282,7 +286,7 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint6
 					"number":   blk.Number,
 					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash[:])),
 					"td":       blk.TotalDifficulty,
-					"parentTd": parentBlk.TotalDifficulty,
+					"parentTd": bellatrixParentBlk.TotalDifficulty,
 					"ttd":      terminalTotalDifficulty,
 				}).Info("Retrieved terminal block hash")
 				return blk.Hash[:], true, nil
@@ -290,7 +294,7 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint6
 		} else {
 			return nil, false, nil
 		}
-		blk = parentBlk
+		blk = bellatrixParentBlk
 	}
 }
 
@@ -311,22 +315,21 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlockB
 	return result, handleRPCError(err)
 }
 
-// ExecutionBlockByHashBellatrix fetches an execution engine block by hash by calling
-// eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHashBellatrix(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockBellatrix, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHashBellatrix")
+// ExecutionBlockByHash fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC. The forkVersion parameter determines which fork's
+// execution block will be returned.
+func (s *Service) ExecutionBlockByHash(ctx context.Context, forkVersion int, hash common.Hash, withTxs bool) (interface{}, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
-	result := &pb.ExecutionBlockBellatrix{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
-	return result, handleRPCError(err)
-}
-
-// ExecutionBlockByHashCapella fetches an execution engine block by hash by calling
-// eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHashCapella(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlockCapella, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHashCapella")
-	defer span.End()
-	result := &pb.ExecutionBlockCapella{}
+	var result interface{}
+	switch forkVersion {
+	case version.Capella:
+		result = &pb.ExecutionBlockCapella{}
+	case version.Bellatrix:
+		result = &pb.ExecutionBlockBellatrix{}
+	default:
+		return nil, fmt.Errorf("unsupported execution block version %s", version.String(forkVersion))
+	}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
@@ -415,14 +418,18 @@ func (s *Service) ReconstructFullBlock(
 	}
 
 	executionBlockHash := common.BytesToHash(header.BlockHash())
-	var executionBlock pb.ExecutionBlock
+	var executionBlockIface interface{}
 	if blindedBlock.Version() == version.Bellatrix {
-		executionBlock, err = s.ExecutionBlockByHashBellatrix(ctx, executionBlockHash, true /* with txs */)
+		executionBlockIface, err = s.ExecutionBlockByHash(ctx, version.Bellatrix, executionBlockHash, true /* with txs */)
 	} else {
-		executionBlock, err = s.ExecutionBlockByHashCapella(ctx, executionBlockHash, true /* with txs */)
+		executionBlockIface, err = s.ExecutionBlockByHash(ctx, version.Capella, executionBlockHash, true /* with txs */)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+	}
+	executionBlock, ok := executionBlockIface.(pb.ExecutionBlock)
+	if !ok {
+		return nil, fmt.Errorf("block type %T does not implement ExecutionBlock", executionBlockIface)
 	}
 	if executionBlock == nil {
 		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)

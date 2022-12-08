@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -105,7 +106,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := srv.ExecutionBlockByHashBellatrix(ctx, arg, true /* with txs */)
+		resp, err := srv.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -413,7 +414,7 @@ func TestClient_HTTP(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := service.ExecutionBlockByHashBellatrix(ctx, arg, true /* with txs */)
+		resp, err := service.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
