@@ -83,8 +83,6 @@ func (s *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 
 func (s *Store) hasStateSummaryBytes(tx *bolt.Tx, blockRoot [32]byte) bool {
 	enc := tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
-
-	tx.Bucket(stateSummaryBucket)
 	return len(enc) > 0
 }
 
