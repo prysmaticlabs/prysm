@@ -2,7 +2,12 @@ package eth
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"math/bits"
+	"strconv"
+	"time"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -40,4 +45,79 @@ func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 		}
 	}
 	return bytes.Equal(x.AggregatePubkey, other.AggregatePubkey)
+}
+
+func headerFromJSON(header *ethrpc.BeaconBlockHeaderJson) (*ethpbv1.BeaconBlockHeader, error) {
+	slot, err := strconv.ParseUint(header.Slot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	proposerIndex, err := strconv.ParseUint(header.ProposerIndex, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv1.BeaconBlockHeader{
+		Slot:          types.Slot(slot),
+		ProposerIndex: types.ValidatorIndex(proposerIndex),
+		ParentRoot:    hexutil.MustDecode(header.ParentRoot),
+		StateRoot:     hexutil.MustDecode(header.StateRoot),
+		BodyRoot:      hexutil.MustDecode(header.BodyRoot),
+	}, nil
+}
+
+func syncCommitteeFromJSON(syncCommittee *ethrpc.SyncCommitteeJson) *SyncCommittee {
+	pubKeys := make([][]byte, len(syncCommittee.Pubkeys))
+	for i, pubKey := range syncCommittee.Pubkeys {
+		pubKeys[i] = hexutil.MustDecode(pubKey)
+	}
+	return &SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: hexutil.MustDecode(syncCommittee.AggregatePubkey),
+	}
+}
+
+func branchFromJSON(branch []string) [][]byte {
+	branchBytes := [][]byte{}
+	for _, root := range branch {
+		branchBytes = append(branchBytes, hexutil.MustDecode(root))
+	}
+	return branchBytes
+}
+
+func trustedBlockRoot(bootstrap *LightClientBootstrap) ([32]byte, error) {
+	return bootstrap.Header.HashTreeRoot()
+}
+
+func timeFromJSON(timestamp string) (*time.Time, error) {
+	timeInt, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	t := time.Unix(timeInt, 0)
+	return &t, nil
+}
+
+func NewGenesisResponse_GenesisFromJSON(genesis *ethrpc.GenesisResponse_GenesisJson) (
+	*ethpbv1.GenesisResponse_Genesis, error) {
+	genesisTime, err := timeFromJSON(genesis.GenesisTime)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv1.GenesisResponse_Genesis{
+		GenesisTime:           timestamppb.New(*genesisTime),
+		GenesisValidatorsRoot: hexutil.MustDecode(genesis.GenesisValidatorsRoot),
+		GenesisForkVersion:    hexutil.MustDecode(genesis.GenesisForkVersion),
+	}, nil
+}
+
+func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson) (*LightClientBootstrap, error) {
+	header, err := headerFromJSON(bootstrap.Header)
+	if err != nil {
+		return nil, err
+	}
+	return &LightClientBootstrap{
+		Header:                     header,
+		CurrentSyncCommittee:       syncCommitteeFromJSON(bootstrap.CurrentSyncCommittee),
+		CurrentSyncCommitteeBranch: branchFromJSON(bootstrap.CurrentSyncCommitteeBranch),
+	}, nil
 }
