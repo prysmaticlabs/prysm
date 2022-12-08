@@ -1,22 +1,29 @@
 package bls
 
-import "github.com/pkg/errors"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/pkg/errors"
+)
 
 // SignatureBatch refers to the defined set of
 // signatures and its respective public keys and
 // messages required to verify it.
 type SignatureBatch struct {
-	Signatures [][]byte
-	PublicKeys []PublicKey
-	Messages   [][32]byte
+	Signatures   [][]byte
+	PublicKeys   []PublicKey
+	Messages     [][32]byte
+	Descriptions []string
 }
 
 // NewSet constructs an empty signature batch object.
 func NewSet() *SignatureBatch {
 	return &SignatureBatch{
-		Signatures: [][]byte{},
-		PublicKeys: []PublicKey{},
-		Messages:   [][32]byte{},
+		Signatures:   [][]byte{},
+		PublicKeys:   []PublicKey{},
+		Messages:     [][32]byte{},
+		Descriptions: []string{},
 	}
 }
 
@@ -25,6 +32,11 @@ func (s *SignatureBatch) Join(set *SignatureBatch) *SignatureBatch {
 	s.Signatures = append(s.Signatures, set.Signatures...)
 	s.PublicKeys = append(s.PublicKeys, set.PublicKeys...)
 	s.Messages = append(s.Messages, set.Messages...)
+	if s.Descriptions != nil && set.Descriptions != nil {
+		s.Descriptions = append(s.Descriptions, set.Descriptions...)
+	} else {
+		s.Descriptions = nil
+	}
 	return s
 }
 
@@ -33,12 +45,61 @@ func (s *SignatureBatch) Verify() (bool, error) {
 	return VerifyMultipleSignatures(s.Signatures, s.Messages, s.PublicKeys)
 }
 
+// Verify signatures as a whole at first, if fails, fallback to verify each
+// single signature to identify invalid ones.
+func (s *SignatureBatch) VerifyVerbosely() (bool, error) {
+	valid, err := s.Verify()
+	if err != nil || valid {
+		return valid, err
+	}
+
+	// if signature batch is invalid, we then verify signatures one by one.
+
+	var sb strings.Builder
+
+	for i := 0; i < len(s.Signatures); i++ {
+		sig := s.Signatures[i]
+		msg := s.Messages[i]
+		pubKey := s.PublicKeys[i]
+
+		valid, err := VerifySignature(sig, msg, pubKey)
+		if !valid {
+			var desc string
+			if len(s.Descriptions) != len(s.Signatures) {
+				desc = "non-specific signature"
+			} else {
+				desc = s.Descriptions[i]
+			}
+
+			if err != nil {
+				_, e := fmt.Fprintf(&sb, "signature '%s' is invalid."+
+					" signature: %v, public key: %v, message: %v, error: %v\n", desc, sig, pubKey, msg, err)
+				if e != nil {
+					// ignore
+				}
+			} else {
+				_, e := fmt.Fprintf(&sb, "signature '%s' is invalid."+
+					" signature: %v, public key: %v, message: %v\n", desc, sig, pubKey, msg)
+				if e != nil {
+					// ignore
+				}
+			}
+		}
+	}
+
+	return false, errors.Errorf(sb.String())
+}
+
 // Copy the attached signature batch and return it
 // to the caller.
 func (s *SignatureBatch) Copy() *SignatureBatch {
 	signatures := make([][]byte, len(s.Signatures))
 	pubkeys := make([]PublicKey, len(s.PublicKeys))
 	messages := make([][32]byte, len(s.Messages))
+	var descriptions []string
+	if s.Descriptions != nil {
+		descriptions = make([]string, len(s.Descriptions))
+	}
 	for i := range s.Signatures {
 		sig := make([]byte, len(s.Signatures[i]))
 		copy(sig, s.Signatures[i])
@@ -50,10 +111,14 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	for i := range s.Messages {
 		copy(messages[i][:], s.Messages[i][:])
 	}
+	for i := range s.Descriptions {
+		descriptions[i] = s.Descriptions[i]
+	}
 	return &SignatureBatch{
-		Signatures: signatures,
-		PublicKeys: pubkeys,
-		Messages:   messages,
+		Signatures:   signatures,
+		PublicKeys:   pubkeys,
+		Messages:     messages,
+		Descriptions: descriptions,
 	}
 }
 
@@ -82,6 +147,10 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 	sigs := s.Signatures[:0]
 	pubs := s.PublicKeys[:0]
 	msgs := s.Messages[:0]
+	var descs []string
+	if s.Descriptions != nil {
+		descs = s.Descriptions[:0]
+	}
 
 	for i := 0; i < len(s.Signatures); i++ {
 		if duplicateSet[i] {
@@ -90,11 +159,15 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 		sigs = append(sigs, s.Signatures[i])
 		pubs = append(pubs, s.PublicKeys[i])
 		msgs = append(msgs, s.Messages[i])
+		if descs != nil {
+			descs = append(descs, s.Descriptions[i])
+		}
 	}
 
 	s.Signatures = sigs
 	s.PublicKeys = pubs
 	s.Messages = msgs
+	s.Descriptions = descs
 
 	return len(duplicateSet), s, nil
 }

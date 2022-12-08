@@ -2,10 +2,12 @@ package bls
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
@@ -46,6 +48,46 @@ func TestCopySignatureSet(t *testing.T) {
 
 		assert.DeepEqual(t, aggSet, aggSet2)
 	})
+}
+
+func TestVerifyVerbosely_AllSignaturesValid(t *testing.T) {
+	set := NewValidSignatureSet(3)
+	valid, err := set.VerifyVerbosely()
+	assert.NoError(t, err)
+	assert.Equal(t, true, valid, "SignatureSet is expected to be valid")
+}
+
+func TestVerifyVerbosely_SomeSignaturesInvalid(t *testing.T) {
+	goodSet := NewValidSignatureSet(3)
+	badSet := NewInvalidSignatureSet(3, false)
+	set := NewSet().Join(goodSet).Join(badSet)
+	valid, err := set.VerifyVerbosely()
+	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
+	assert.ErrorContains(t, "signature 'signature of hello0' is invalid", err)
+	assert.ErrorContains(t, "signature 'signature of hello1' is invalid", err)
+	assert.ErrorContains(t, "signature 'signature of hello2' is invalid", err)
+}
+
+func TestVerifyVerbosely_VerificationThrowsError(t *testing.T) {
+	goodSet := NewValidSignatureSet(1)
+	badSet := NewInvalidSignatureSet(1, true)
+	set := NewSet().Join(goodSet).Join(badSet)
+	valid, err := set.VerifyVerbosely()
+	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
+	assert.ErrorContains(t, "signature 'signature of hello0' is invalid", err)
+	assert.ErrorContains(t, "erroorr: could not unmarshal bytes into signature", err)
+}
+
+func TestVerifyVerbosely_SignatureInvalidHasNoDescription(t *testing.T) {
+	goodSet := NewValidSignatureSet(1)
+	badSet := NewInvalidSignatureSet(1, false)
+	// remove descriptions
+	goodSet.Descriptions = nil
+	badSet.Descriptions = nil
+	set := NewSet().Join(goodSet).Join(badSet)
+	valid, err := set.VerifyVerbosely()
+	assert.Equal(t, false, valid, "Signatures is expected to be invalid")
+	assert.ErrorContains(t, "signature 'non-specific signature' is invalid", err)
 }
 
 func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
@@ -558,6 +600,66 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 			}
 		})
 	}
+}
+
+func NewValidSignatureSet(num int) *SignatureBatch {
+	set := &SignatureBatch{
+		Signatures:   make([][]byte, num),
+		PublicKeys:   make([]common.PublicKey, num),
+		Messages:     make([][32]byte, num),
+		Descriptions: make([]string, num),
+	}
+
+	for i := 0; i < num; i++ {
+		priv, _ := RandKey()
+		pubkey := priv.PublicKey()
+		msg := messageBytes(fmt.Sprintf("hello%d", i))
+		sig := priv.Sign(msg[:]).Marshal()
+		desc := fmt.Sprintf("signature of hello%d", i)
+
+		set.Signatures[i] = sig
+		set.PublicKeys[i] = pubkey
+		set.Messages[i] = msg
+		set.Descriptions[i] = desc
+	}
+
+	return set
+}
+
+func NewInvalidSignatureSet(num int, throwErr bool) *SignatureBatch {
+	set := &SignatureBatch{
+		Signatures:   make([][]byte, num),
+		PublicKeys:   make([]common.PublicKey, num),
+		Messages:     make([][32]byte, num),
+		Descriptions: make([]string, num),
+	}
+
+	for i := 0; i < num; i++ {
+		priv, _ := RandKey()
+		pubkey := priv.PublicKey()
+		msg := messageBytes(fmt.Sprintf("hello%d", i))
+		var sig []byte
+		if throwErr {
+			sig = make([]byte, 96)
+		} else {
+			badMsg := messageBytes(fmt.Sprintf("badmsg%d", i))
+			sig = priv.Sign(badMsg[:]).Marshal()
+		}
+		desc := fmt.Sprintf("signature of hello%d", i)
+
+		set.Signatures[i] = sig
+		set.PublicKeys[i] = pubkey
+		set.Messages[i] = msg
+		set.Descriptions[i] = desc
+	}
+
+	return set
+}
+
+func messageBytes(message string) [32]byte {
+	bytes := [32]byte{}
+	copy(bytes[:], []byte(message))
+	return bytes
 }
 
 func sortSet(s *SignatureBatch) *SignatureBatch {

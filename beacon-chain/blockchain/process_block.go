@@ -333,11 +333,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
-	sigSet := &bls.SignatureBatch{
-		Signatures: [][]byte{},
-		PublicKeys: []bls.PublicKey{},
-		Messages:   [][32]byte{},
-	}
+	sigSet := bls.NewSet()
 	type versionAndHeader struct {
 		version int
 		header  interfaces.ExecutionData

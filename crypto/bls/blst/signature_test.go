@@ -90,6 +90,29 @@ func TestVerifyCompressed(t *testing.T) {
 	assert.Equal(t, true, VerifyCompressed(sig.Marshal(), pub.Marshal(), msg), "Compressed signatures and pubkeys did not verify")
 }
 
+func TestVerifySingleSignature_InvalidSignature(t *testing.T) {
+	priv, err := RandKey()
+	require.NoError(t, err)
+	pub := priv.PublicKey()
+	msgA := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	msgB := [32]byte{'o', 'l', 'l', 'e', 'h'}
+	sigA := priv.Sign(msgA[:]).Marshal()
+	valid, err := VerifySignature(sigA, msgB, pub)
+	assert.NoError(t, err)
+	assert.Equal(t, false, valid, "Signature did verify")
+}
+
+func TestVerifySingleSignature_ValidSignature(t *testing.T) {
+	priv, err := RandKey()
+	require.NoError(t, err)
+	pub := priv.PublicKey()
+	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	sig := priv.Sign(msg[:]).Marshal()
+	valid, err := VerifySignature(sig, msg, pub)
+	assert.NoError(t, err)
+	assert.Equal(t, true, valid, "Signature did not verify")
+}
+
 func TestMultipleSignatureVerification(t *testing.T) {
 	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([][]byte, 0, 100)
