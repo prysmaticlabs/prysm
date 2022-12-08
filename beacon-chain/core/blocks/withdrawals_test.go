@@ -548,7 +548,7 @@ func TestProcessWithdrawals(t *testing.T) {
 	}
 
 	checkPostState := func(t *testing.T, expected control, st state.BeaconState) {
-		l, err := st.LastWithdrawalValidatorIndex()
+		l, err := st.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		require.Equal(t, expected.NextWithdrawalValidatorIndex, l)
 

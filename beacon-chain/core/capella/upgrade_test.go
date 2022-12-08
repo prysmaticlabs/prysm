@@ -95,7 +95,7 @@ func TestUpgradeToCapella(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), nwi)
 
-	lwvi, err := mSt.LastWithdrawalValidatorIndex()
+	lwvi, err := mSt.NextWithdrawalValidatorIndex()
 	require.NoError(t, err)
 	require.Equal(t, types.ValidatorIndex(0), lwvi)
 }
