@@ -26,7 +26,6 @@ var Commands = []*cli.Command{
 				Name:        "file",
 				Usage:       "file location for for the blsToExecutionAddress JSON or Yaml",
 				Destination: &withdrawalFlags.File,
-				Value:       "./blsToExecutionAddress.json",
 			},
 			features.Mainnet,
 			features.PraterTestnet,
