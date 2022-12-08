@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"google.golang.org/protobuf/types/known/timestamppb"
-	"math/bits"
-	"strconv"
-	"time"
-
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"math/bits"
+	"strconv"
 )
 
 const (
@@ -86,28 +83,6 @@ func branchFromJSON(branch []string) [][]byte {
 
 func trustedBlockRoot(bootstrap *LightClientBootstrap) ([32]byte, error) {
 	return bootstrap.Header.HashTreeRoot()
-}
-
-func timeFromJSON(timestamp string) (*time.Time, error) {
-	timeInt, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	t := time.Unix(timeInt, 0)
-	return &t, nil
-}
-
-func NewGenesisResponse_GenesisFromJSON(genesis *ethrpc.GenesisResponse_GenesisJson) (
-	*ethpbv1.GenesisResponse_Genesis, error) {
-	genesisTime, err := timeFromJSON(genesis.GenesisTime)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv1.GenesisResponse_Genesis{
-		GenesisTime:           timestamppb.New(*genesisTime),
-		GenesisValidatorsRoot: hexutil.MustDecode(genesis.GenesisValidatorsRoot),
-		GenesisForkVersion:    hexutil.MustDecode(genesis.GenesisForkVersion),
-	}, nil
 }
 
 func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson) (*LightClientBootstrap, error) {
