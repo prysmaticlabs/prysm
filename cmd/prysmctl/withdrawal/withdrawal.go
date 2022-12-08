@@ -13,6 +13,7 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -25,7 +26,7 @@ var withdrawalFlags = struct {
 	File           string
 }{}
 
-func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
+func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	apiPath := "/blsToExecutionAddress"
 	f := withdrawalFlags
 	cleanpath := filepath.Clean(f.File)
@@ -33,11 +34,11 @@ func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to open file")
 	}
-	var to BlsToExecutionEngineFile
+	var to apimiddleware.SignedBLSToExecutionChangeJson
 	if err := yaml.Unmarshal(b, to); err != nil {
 		return errors.Wrap(err, "failed to unmarshal file")
 	}
-	if to.Message == nil {
+	if to.BLSToExecutionChange == nil {
 		return errors.New("the message field in file is empty")
 	}
 
@@ -48,7 +49,8 @@ func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
 	if u.Scheme == "" || u.Host == "" {
 		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", f.BeaconNodeHost)
 	}
-	withdrawalConfirmation := to.Message.ToExecutionAddress
+
+	withdrawalConfirmation := to.BLSToExecutionChange.ToExecutionAddress
 
 	withdraw, err := withdrawalPrompt(withdrawalConfirmation, r)
 	if err != nil {
@@ -60,7 +62,7 @@ func setWithdrawlAddress(c *cli.Context, r io.Reader) error {
 		return nil
 	}
 
-	body, err := json.Marshal(to) //:todo: change this to apimiddleware object.
+	body, err := json.Marshal(to)
 	if err != nil {
 		return errors.Wrap(err, "error encoding the BlsToExecutionEngineFile")
 	}
@@ -99,10 +101,8 @@ func withdrawalPrompt(confirmationMessage string, r io.Reader) (string, error) {
 		"of changing your bls withdrawal address to an ethereum address. " +
 		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
 		"You will NOT be able to change the address again once changed. "
-	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
-	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please input a phrase found at the end " +
-		"of the page from the above URL"
-	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
+	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please reenter the address you'd like to withdraw to. "
+	promptText := fmt.Sprintf("%s\n%s\n%s", promptHeader, promptDescription, promptQuestion)
 	return prompt.ValidatePrompt(r, promptText, func(input string) error {
 		return prompt.ValidatePhrase(input, confirmationMessage)
 	})

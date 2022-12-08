@@ -41,7 +41,7 @@ var Commands = []*cli.Command{
 			return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			if err := setWithdrawlAddress(cliCtx, os.Stdin); err != nil {
+			if err := setWithdrawalAddress(cliCtx, os.Stdin); err != nil {
 				log.WithError(err).Fatal("Could not set withdrawal address")
 			}
 			return nil
