@@ -56,7 +56,7 @@ type ExecutionBlockCapella struct {
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
 }
 
-func (e *ExecutionBlockBellatrix) Version() int {
+func (*ExecutionBlockBellatrix) Version() int {
 	return version.Bellatrix
 }
 
@@ -76,11 +76,11 @@ func (e *ExecutionBlockBellatrix) GetTotalDifficulty() string {
 	return e.TotalDifficulty
 }
 
-func (e *ExecutionBlockBellatrix) GetWithdrawals() ([]*Withdrawal, error) {
+func (*ExecutionBlockBellatrix) GetWithdrawals() ([]*Withdrawal, error) {
 	return nil, errors.New("unsupported getter")
 }
 
-func (e *ExecutionBlockCapella) Version() int {
+func (*ExecutionBlockCapella) Version() int {
 	return version.Capella
 }
 
