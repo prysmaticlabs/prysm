@@ -30,7 +30,10 @@ func (o OrderedSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 
 // Less implements the Less method of sort.Interface
 func (o OrderedSchedule) Less(i, j int) bool {
-	return bytes.Compare(o[i].Version[:], o[j].Version[:]) < 0
+	if o[i].Epoch == o[j].Epoch {
+		return bytes.Compare(o[i].Version[:], o[j].Version[:]) < 0
+	}
+	return o[i].Epoch < o[j].Epoch
 }
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
