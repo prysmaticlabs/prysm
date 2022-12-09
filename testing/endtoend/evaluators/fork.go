@@ -4,12 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ptypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"

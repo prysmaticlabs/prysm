@@ -10,17 +10,15 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // Node represents an ETH1 node.
