@@ -517,7 +517,7 @@ message BeaconBlockBody4844 {
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
-    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
 }
 
 message SignedBeaconBlockCapella {
@@ -706,7 +706,7 @@ message BlindedBeaconBlockBody4844 {
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in 4844 network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
-    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+    repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
 }
 
 message ValidatorRegistrationV1 {
