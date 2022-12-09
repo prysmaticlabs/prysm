@@ -159,7 +159,7 @@ func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson)
 	}, nil
 }
 
-func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateDataJson) (*ethpbv2.LightClientUpdate, error) {
+func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
 	attestedHeader, err := headerFromJSON(update.AttestedHeader)
 	if err != nil {
 		return nil, err
