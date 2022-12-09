@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -1009,7 +1008,7 @@ func createState(
 		BlockRoots:                 make([][]byte, 1),
 		CurrentJustifiedCheckpoint: justified,
 		FinalizedCheckpoint:        finalized,
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+		LatestExecutionPayloadHeader: &v1.ExecutionPayloadHeader{
 			BlockHash: payloadHash[:],
 		},
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{
