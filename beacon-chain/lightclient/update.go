@@ -1,8 +1,27 @@
 package lightclient
 
 import (
+	"bytes"
+
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
+
+func isEmptyWithLength(bb [][]byte, length uint64) bool {
+	if bb == nil || len(bb) == 0 {
+		return true
+	}
+	l := helpers.FloorLog2(length)
+	if len(bb) != l {
+		return false
+	}
+	for _, b := range bb {
+		if !bytes.Equal(b, []byte{}) {
+			return false
+		}
+	}
+	return true
+}
 
 type Update struct {
 	Config                     *Config
@@ -10,11 +29,11 @@ type Update struct {
 }
 
 func (u *Update) isSyncCommiteeUpdate() bool {
-	return u.GetNextSyncCommitteeBranch() == nil
+	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
 }
 
 func (u *Update) isFinalityUpdate() bool {
-	return u.GetNextSyncCommitteeBranch() == nil
+	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.NextSyncCommitteeIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {

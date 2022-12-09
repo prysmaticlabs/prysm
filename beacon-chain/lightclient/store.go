@@ -155,7 +155,7 @@ func (s *Store) validateUpdate(update *Update,
 		var finalizedRoot [32]byte
 		if update.GetFinalizedHeader().Slot == s.Config.GenesisSlot {
 			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
-				return errors.New("finality branch is present but update is not finality")
+				return errors.New("genesis finalized checkpoint root is not represented as a zero hash")
 			}
 			finalizedRoot = [32]byte{}
 		} else {
@@ -301,7 +301,8 @@ func (s *Store) ProcessUpdate(update *Update,
 		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
 		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
-		(update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot || updateHasFinalizedNextSyncCommittee) {
+		((update.GetFinalizedHeader() != nil && update.GetFinalizedHeader().Slot > s.FinalizedHeader.
+			Slot) || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
 		if err := s.applyUpdate(update); err != nil {
 			return err
