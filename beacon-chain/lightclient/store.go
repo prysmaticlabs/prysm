@@ -122,7 +122,7 @@ func (s *Store) validateUpdate(update *Update,
 	// Verify update does not skip a sync committee period
 	if !(currentSlot >= update.GetSignatureSlot() &&
 		update.GetSignatureSlot() > update.GetAttestedHeader().Slot &&
-		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
+		(update.GetFinalizedHeader() == nil || update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot)) {
 		return errors.New("update skips a sync committee period")
 	}
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
