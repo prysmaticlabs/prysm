@@ -104,11 +104,11 @@ type LightClientBootstrapJson struct {
 }
 
 type LightClientUpdateResponseJson struct {
-	Version string                     `json:"version" enum:"true"`
-	Data    *LightClientUpdateDataJson `json:"data"`
+	Version string                 `json:"version" enum:"true"`
+	Data    *LightClientUpdateJson `json:"data"`
 }
 
-type LightClientUpdateDataJson struct {
+type LightClientUpdateJson struct {
 	AttestedHeader          *BeaconBlockHeaderJson `json:"attested_header"`
 	NextSyncCommittee       *SyncCommitteeJson     `json:"next_sync_committee,omitempty"`
 	NextSyncCommitteeBranch []string               `json:"next_sync_committee_branch,omitempty" hex:"true"`
