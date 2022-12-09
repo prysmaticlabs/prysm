@@ -104,6 +104,9 @@ func NewGenesisResponse_GenesisFromJSON(genesis *ethrpc.GenesisResponse_GenesisJ
 }
 
 func headerFromJSON(header *ethrpc.BeaconBlockHeaderJson) (*ethpbv1.BeaconBlockHeader, error) {
+	if header == nil {
+		return nil, nil
+	}
 	slot, err := strconv.ParseUint(header.Slot, 10, 64)
 	if err != nil {
 		return nil, err
@@ -122,6 +125,9 @@ func headerFromJSON(header *ethrpc.BeaconBlockHeaderJson) (*ethpbv1.BeaconBlockH
 }
 
 func syncCommitteeFromJSON(syncCommittee *ethrpc.SyncCommitteeJson) *ethpbv2.SyncCommittee {
+	if syncCommittee == nil {
+		return nil
+	}
 	pubKeys := make([][]byte, len(syncCommittee.Pubkeys))
 	for i, pubKey := range syncCommittee.Pubkeys {
 		pubKeys[i] = hexutil.MustDecode(pubKey)
