@@ -101,6 +101,9 @@ func (s *Store) getSafetyThreshold() uint64 {
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
+	if epoch >= s.Config.BellatrixForkEpoch {
+		return s.Config.BellatrixForkVersion
+	}
 	if epoch >= s.Config.AltairForkEpoch {
 		return s.Config.AltairForkVersion
 	}
