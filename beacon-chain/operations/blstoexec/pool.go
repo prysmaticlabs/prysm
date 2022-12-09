@@ -4,17 +4,22 @@ import (
 	"math"
 	"sync"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 // PoolManager maintains pending and seen BLS-to-execution-change objects.
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
 	PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
-	BLSToExecChangesForInclusion() ([]*ethpb.SignedBLSToExecutionChange, error)
+	BLSToExecChangesForInclusion(state.BeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
 	ValidatorExists(idx types.ValidatorIndex) bool
@@ -58,25 +63,69 @@ func (p *Pool) PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, e
 
 // BLSToExecChangesForInclusion returns objects that are ready for inclusion at the given slot.
 // This method will not return more than the block enforced MaxBlsToExecutionChanges.
-func (p *Pool) BLSToExecChangesForInclusion() ([]*ethpb.SignedBLSToExecutionChange, error) {
+func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.SignedBLSToExecutionChange, error) {
 	p.lock.RLock()
-	defer p.lock.RUnlock()
-
 	length := int(math.Min(float64(params.BeaconConfig().MaxBlsToExecutionChanges), float64(p.pending.Len())))
-	result := make([]*ethpb.SignedBLSToExecutionChange, length)
+	result := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
 	node := p.pending.First()
-	var err error
-	for i := 0; node != nil && i < length; i++ {
-		result[i], err = node.Value()
+	for node != nil && len(result) < length {
+		change, err := node.Value()
 		if err != nil {
+			p.lock.RUnlock()
 			return nil, err
+		}
+		_, err = blocks.ValidateBLSToExecutionChange(st, change)
+		if err != nil {
+			logrus.WithError(err).Warning("removing invalid BLSToExecutionChange from pool")
+			// MarkIncluded removes the invalid change from the pool
+			p.lock.RUnlock()
+			if err := p.MarkIncluded(change); err != nil {
+				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
+			}
+			p.lock.RLock()
+		} else {
+			result = append(result, change)
 		}
 		node, err = node.Next()
 		if err != nil {
+			p.lock.RUnlock()
 			return nil, err
 		}
 	}
-	return result, nil
+	p.lock.RUnlock()
+	if len(result) == 0 {
+		return result, nil
+	}
+	// We now verify the signatures in batches
+	cSet, err := blocks.BLSChangesSignatureBatch(st, result)
+	if err != nil {
+		logrus.WithError(err).Warning("could not get BLSToExecutionChanges signatures")
+	} else {
+		ok, err := cSet.Verify()
+		if err != nil {
+			logrus.WithError(err).Warning("could not batch verify BLSToExecutionChanges signatures")
+		} else if ok {
+			return result, nil
+		}
+	}
+	// Batch signature failed, check signatures individually
+	verified := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
+	for i, sig := range cSet.Signatures {
+		signature, err := blst.SignatureFromBytes(sig)
+		if err != nil {
+			logrus.WithError(err).Warning("could not get signature from bytes")
+			continue
+		}
+		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
+			logrus.Warning("removing BLSToExecutionChange with invalid signature from pool")
+			if err := p.MarkIncluded(result[i]); err != nil {
+				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
+			}
+		} else {
+			verified = append(verified, result[i])
+		}
+	}
+	return verified, nil
 }
 
 // InsertBLSToExecChange inserts an object into the pool.

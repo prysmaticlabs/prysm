@@ -49,6 +49,7 @@ func startNode(ctx *cli.Context) error {
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.BeaconRPCGatewayProviderFlag,
+	flags.BeaconRESTApiProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.DisablePenaltyRewardLogFlag,
@@ -112,11 +113,6 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
-	// Append the Beacon REST API flags
-	if flags.BuiltWithBeaconApi {
-		appFlags = append(appFlags, flags.BeaconRESTApiProviderFlag)
-	}
-
 	appFlags = cmd.WrapFlags(append(appFlags, features.ValidatorFlags...))
 }
 
