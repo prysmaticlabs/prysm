@@ -22,7 +22,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionBlock              *pb.ExecutionBlockBellatrix
+	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
 	ErrExecBlockByHash          error
@@ -30,7 +30,7 @@ type EngineClient struct {
 	ErrNewPayload               error
 	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
-	BlockByHashMap              map[[32]byte]*pb.ExecutionBlockBellatrix
+	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
@@ -63,7 +63,7 @@ func (e *EngineClient) ExchangeTransitionConfiguration(_ context.Context, _ *pb.
 }
 
 // LatestExecutionBlock --
-func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlockBellatrix, error) {
+func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlock, error) {
 	return e.ExecutionBlock, e.ErrLatestExecBlock
 }
 
@@ -142,7 +142,7 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
-		parentBlkBellatrix, ok := parentBlk.(*pb.ExecutionBlockBellatrix)
+		parentBlkBellatrix, ok := parentBlk.(*pb.ExecutionBlock)
 		if !ok {
 			return nil, false, fmt.Errorf("wrong execution block type %T", parentBlk)
 		}

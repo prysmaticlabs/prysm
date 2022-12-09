@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -87,19 +86,15 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 
 // getBlkParentHashAndTD retrieves the parent hash and total difficulty of the given block.
 func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]byte, *uint256.Int, error) {
-	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, version.Bellatrix, common.BytesToHash(blkHash), false /* no txs */)
+	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(blkHash), false /* no txs */)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get pow block")
 	}
-
-	blkBellatrix, ok := blk.(*pb.ExecutionBlockBellatrix)
-	if !ok {
-		return nil, nil, fmt.Errorf("wrong execution block type %T", blk)
-	}
-	if blkBellatrix == nil {
+	if blk == nil {
 		return nil, nil, errors.New("pow block is nil")
 	}
-	blkTDBig, err := hexutil.DecodeBig(blkBellatrix.TotalDifficulty)
+	blk.Version = version.Bellatrix
+	blkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not decode merge block total difficulty")
 	}
@@ -107,7 +102,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 	if overflows {
 		return nil, nil, errors.New("total difficulty overflows")
 	}
-	return blkBellatrix.ParentHash[:], blkTDUint256, nil
+	return blk.ParentHash[:], blkTDUint256, nil
 }
 
 // validateTerminalBlockHash validates if the merge block is a valid terminal PoW block.
