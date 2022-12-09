@@ -33,7 +33,7 @@ func (u *Update) isSyncCommiteeUpdate() bool {
 }
 
 func (u *Update) isFinalityUpdate() bool {
-	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.NextSyncCommitteeIndex)
+	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.FinalizedRootIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {
