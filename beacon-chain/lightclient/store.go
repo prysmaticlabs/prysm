@@ -235,7 +235,7 @@ func (s *Store) validateUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) applyUpdate(update *Update) error {
+func (s *Store) applyUpdate(update *ethpbv2.LightClientUpdate) error {
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
 	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
@@ -268,7 +268,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
 			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.GetAttestedHeader()
 		}
-		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
+		if err := s.applyUpdate(s.BestValidUpdate.LightClientUpdate); err != nil {
 			return err
 		}
 		s.BestValidUpdate = nil
@@ -276,8 +276,12 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
-func (s *Store) ProcessUpdate(update *Update,
+func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	update := &Update{
+		LightClientUpdate: lightClientUpdate,
+		config:            s.Config,
+	}
 	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 		return err
 	}
@@ -304,7 +308,7 @@ func (s *Store) ProcessUpdate(update *Update,
 		((update.GetFinalizedHeader() != nil && update.GetFinalizedHeader().Slot > s.FinalizedHeader.
 			Slot) || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
-		if err := s.applyUpdate(update); err != nil {
+		if err := s.applyUpdate(update.LightClientUpdate); err != nil {
 			return err
 		}
 		s.BestValidUpdate = nil
@@ -332,10 +336,7 @@ func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientUpdate,
 	if err := validateFinalityUpdate(update); err != nil {
 		return err
 	}
-	return s.ProcessUpdate(&Update{
-		Config:            s.Config,
-		LightClientUpdate: update,
-	}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
@@ -344,8 +345,5 @@ func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
 	if err := validateOptimisticUpdate(update); err != nil {
 		return err
 	}
-	return s.ProcessUpdate(&Update{
-		Config:            s.Config,
-		LightClientUpdate: update,
-	}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
 }

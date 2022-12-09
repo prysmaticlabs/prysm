@@ -24,8 +24,8 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 }
 
 type Update struct {
-	Config                     *Config
-	*ethpbv2.LightClientUpdate `json:"update,omitempty"`
+	config                     *Config
+	*ethpbv2.LightClientUpdate `json:"update"`
 }
 
 func (u *Update) isSyncCommiteeUpdate() bool {
@@ -38,13 +38,13 @@ func (u *Update) isFinalityUpdate() bool {
 
 func (u *Update) hasRelevantSyncCommittee() bool {
 	return u.isSyncCommiteeUpdate() &&
-		computeSyncCommitteePeriodAtSlot(u.Config, u.GetAttestedHeader().Slot) ==
-			computeSyncCommitteePeriodAtSlot(u.Config, u.GetSignatureSlot())
+		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
+			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {
-	return computeSyncCommitteePeriodAtSlot(u.Config, u.GetFinalizedHeader().Slot) ==
-		computeSyncCommitteePeriodAtSlot(u.Config, u.GetAttestedHeader().Slot)
+	return computeSyncCommitteePeriodAtSlot(u.config, u.GetFinalizedHeader().Slot) ==
+		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot)
 }
 
 func (u *Update) isBetterUpdate(newUpdate *Update) bool {
