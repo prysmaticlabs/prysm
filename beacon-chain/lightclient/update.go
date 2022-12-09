@@ -8,7 +8,7 @@ import (
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
-	if bb == nil || len(bb) == 0 {
+	if len(bb) == 0 {
 		return true
 	}
 	l := helpers.FloorLog2(length)
