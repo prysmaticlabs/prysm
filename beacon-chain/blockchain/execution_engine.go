@@ -61,11 +61,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not get execution payload for head block")
 		return nil, nil
 	}
-	eth1BlockHash := headPayload.BlockHash()
 	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
 	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
-		HeadBlockHash:      eth1BlockHash,
+		HeadBlockHash:      headPayload.BlockHash(),
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
@@ -80,7 +79,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
-				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(eth1BlockHash)),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
@@ -147,6 +146,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
+		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
 	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
@@ -156,7 +156,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil {
 		log.WithFields(logrus.Fields{
-			"blockHash": fmt.Sprintf("%#x", eth1BlockHash),
+			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
 			"slot":      headBlk.Slot(),
 		}).Error("Received nil payload ID on VALID engine response")
 	}
