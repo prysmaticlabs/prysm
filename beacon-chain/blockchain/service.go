@@ -311,6 +311,7 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
+
 	return nil
 }
 
