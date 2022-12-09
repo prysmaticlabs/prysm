@@ -57,12 +57,17 @@ func (s *Service) CanSubscribe(topic string) bool {
 		log.WithError(err).Error("Could not determine Capella fork digest")
 		return false
 	}
-
+	eip4844ForkDigest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, s.genesisValidatorsRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not determine Capella fork digest")
+		return false
+	}
 	switch parts[2] {
 	case fmt.Sprintf("%x", phase0ForkDigest):
 	case fmt.Sprintf("%x", altairForkDigest):
 	case fmt.Sprintf("%x", bellatrixForkDigest):
 	case fmt.Sprintf("%x", capellaForkDigest):
+	case fmt.Sprintf("%x", eip4844ForkDigest):
 	default:
 		return false
 	}

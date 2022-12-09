@@ -49,8 +49,8 @@ func (s *Service) registerRPCHandlers() {
 			s.pingHandler,
 		)
 		s.registerRPCHandlersAltair()
-		if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
-			s.registerRPCHandlersCapella()
+		if currEpoch >= params.BeaconConfig().EIP4844ForkEpoch {
+			s.registerRPCHandlers4844()
 		}
 		return
 	}
@@ -96,7 +96,7 @@ func (s *Service) registerRPCHandlersAltair() {
 	)
 }
 
-func (s *Service) registerRPCHandlersCapella() {
+func (s *Service) registerRPCHandlers4844() {
 	s.registerRPC(
 		p2p.RPCBlobsSidecarsByRangeTopicV1,
 		s.blobsSidecarsByRangeRPCHandler,

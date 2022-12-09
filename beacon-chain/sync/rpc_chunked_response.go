@@ -95,7 +95,7 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 		return err
 	}
 	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().CapellaForkEpoch, valRoot[:])
+	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, valRoot[:])
 	if err != nil {
 		return err
 	}
