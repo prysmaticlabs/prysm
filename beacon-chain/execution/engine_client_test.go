@@ -99,14 +99,14 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		resp, err := srv.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
 		resp, err := srv.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
@@ -324,7 +324,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -393,7 +393,7 @@ func TestClient_HTTP(t *testing.T) {
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -689,8 +689,8 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 	tests := []struct {
 		name                  string
 		paramsTd              string
-		currentPowBlock       *pb.ExecutionBlockBellatrix
-		parentPowBlock        *pb.ExecutionBlockBellatrix
+		currentPowBlock       *pb.ExecutionBlock
+		parentPowBlock        *pb.ExecutionBlock
 		errLatestExecutionBlk error
 		wantTerminalBlockHash []byte
 		wantExists            bool
@@ -715,7 +715,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "current execution block invalid TD",
 			paramsTd: "1",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash:            common.BytesToHash([]byte("a")),
 				TotalDifficulty: "1115792089237316195423570985008687907853269984665640564039457584007913129638912",
 			},
@@ -724,7 +724,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "current execution block has zero hash parent",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash(params.BeaconConfig().ZeroHash[:]),
@@ -735,7 +735,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "could not get parent block",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -747,14 +747,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "parent execution block invalid TD",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -766,14 +766,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "happy case",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -786,7 +786,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "happy case, but invalid timestamp",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -794,7 +794,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -805,14 +805,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "ttd not reached",
 			paramsTd: "3",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x2",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -826,9 +826,9 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			params.OverrideBeaconConfig(cfg)
-			var m map[[32]byte]*pb.ExecutionBlockBellatrix
+			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
-				m = map[[32]byte]*pb.ExecutionBlockBellatrix{
+				m = map[[32]byte]*pb.ExecutionBlock{
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
@@ -1091,7 +1091,7 @@ func fixtures() map[string]interface{} {
 	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	executionBlock := &pb.ExecutionBlockBellatrix{
+	executionBlock := &pb.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash:  common.BytesToHash(parent),
 			UncleHash:   common.BytesToHash(sha3Uncles),
@@ -1194,7 +1194,7 @@ func fixtures() map[string]interface{} {
 func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	type args struct {
 		header *pb.ExecutionPayloadHeader
-		block  *pb.ExecutionBlockBellatrix
+		block  *pb.ExecutionBlock
 	}
 	wantedHash := common.BytesToHash([]byte("foo"))
 	tests := []struct {
@@ -1209,7 +1209,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 				header: &pb.ExecutionPayloadHeader{
 					BlockHash: []byte("foo"),
 				},
-				block: &pb.ExecutionBlockBellatrix{
+				block: &pb.ExecutionBlock{
 					Hash: common.BytesToHash([]byte("bar")),
 				},
 			},
@@ -1221,7 +1221,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 				header: &pb.ExecutionPayloadHeader{
 					BlockHash: wantedHash[:],
 				},
-				block: &pb.ExecutionBlockBellatrix{
+				block: &pb.ExecutionBlock{
 					Hash: wantedHash,
 				},
 			},
@@ -1327,9 +1327,9 @@ func (*testEngineService) NoArgsRets() {}
 
 func (*testEngineService) GetBlockByHash(
 	_ context.Context, _ common.Hash, _ bool,
-) *pb.ExecutionBlockBellatrix {
+) *pb.ExecutionBlock {
 	fix := fixtures()
-	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 	if !ok {
 		panic("not found")
 	}
@@ -1338,9 +1338,9 @@ func (*testEngineService) GetBlockByHash(
 
 func (*testEngineService) GetBlockByNumber(
 	_ context.Context, _ string, _ bool,
-) *pb.ExecutionBlockBellatrix {
+) *pb.ExecutionBlock {
 	fix := fixtures()
-	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 	if !ok {
 		panic("not found")
 	}

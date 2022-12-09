@@ -2,6 +2,9 @@ package endtoend
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -218,6 +221,37 @@ func (c *componentHandler) required() []e2etypes.ComponentRunner {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)
 	}
 	return requiredComponents
+}
+
+func (c *componentHandler) printPIDs(logger func(string, ...interface{})) {
+	msg := "\nPID of components. Attach a debugger... if you dare!\n\n"
+
+	msg = "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
+
+	// Beacon chain nodes
+	msg += fmt.Sprintf("Beacon chain nodes: %v\n", PIDsFromMultiComponentRunner(c.beaconNodes))
+	// Validator nodes
+	msg += fmt.Sprintf("Validators: %v\n", PIDsFromMultiComponentRunner(c.validatorNodes))
+	// ETH1 nodes
+	msg += fmt.Sprintf("ETH1 nodes: %v\n", PIDsFromMultiComponentRunner(c.eth1Nodes))
+
+	logger(msg)
+}
+
+func PIDsFromMultiComponentRunner(runner e2etypes.MultipleComponentRunners) []int {
+	var pids []int
+
+	for i := 0; true; i++ {
+		c, err := runner.ComponentAtIndex(i)
+		if c == nil || err != nil {
+			break
+		}
+		p := c.UnderlyingProcess()
+		if p != nil {
+			pids = append(pids, p.Pid)
+		}
+	}
+	return pids
 }
 
 func appendDebugEndpoints(cfg *e2etypes.E2EConfig) {
