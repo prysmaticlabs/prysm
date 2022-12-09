@@ -106,7 +106,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := srv.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
+		resp, err := srv.ExecutionBlockByHash(ctx, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -414,7 +414,7 @@ func TestClient_HTTP(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := service.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
+		resp, err := service.ExecutionBlockByHash(ctx, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -1081,6 +1081,7 @@ func fixtures() map[string]interface{} {
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	executionBlock := &pb.ExecutionBlock{
+		Version: version.Bellatrix,
 		Header: gethtypes.Header{
 			ParentHash:  common.BytesToHash(parent),
 			UncleHash:   common.BytesToHash(sha3Uncles),
@@ -1199,7 +1200,8 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: []byte("foo"),
 				},
 				block: &pb.ExecutionBlock{
-					Hash: common.BytesToHash([]byte("bar")),
+					Version: version.Bellatrix,
+					Hash:    common.BytesToHash([]byte("bar")),
 				},
 			},
 			err: "does not match execution block hash",
@@ -1211,7 +1213,8 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: wantedHash[:],
 				},
 				block: &pb.ExecutionBlock{
-					Hash: wantedHash,
+					Version: version.Bellatrix,
+					Hash:    wantedHash,
 				},
 			},
 			want: func() interfaces.ExecutionData {

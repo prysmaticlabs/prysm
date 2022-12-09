@@ -2,7 +2,6 @@ package testing
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -68,7 +67,7 @@ func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlo
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, _ int, h common.Hash, _ bool) (interface{}, error) {
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -138,16 +137,12 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := e.ExecutionBlockByHash(ctx, 0, parentHash, false /* with txs */)
+		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash, false /* with txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
-		parentBlkBellatrix, ok := parentBlk.(*pb.ExecutionBlock)
-		if !ok {
-			return nil, false, fmt.Errorf("wrong execution block type %T", parentBlk)
-		}
 		if blockReachedTTD {
-			b, err := hexutil.DecodeBig(parentBlkBellatrix.TotalDifficulty)
+			b, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
 			if err != nil {
 				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 			}
@@ -162,6 +157,6 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		} else {
 			return nil, false, nil
 		}
-		blk = parentBlkBellatrix
+		blk = parentBlk
 	}
 }
