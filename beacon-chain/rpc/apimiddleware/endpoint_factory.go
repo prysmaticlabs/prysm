@@ -39,6 +39,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
+		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
@@ -143,6 +144,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: serializeBlindedBlock,
 		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBlindedBeaconBlockSSZ}
 	case "/eth/v1/beacon/pool/attestations":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
 		endpoint.GetResponse = &AttestationsPoolResponseJson{}
@@ -160,6 +162,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/pool/voluntary_exits":
 		endpoint.PostRequest = &SignedVoluntaryExitJson{}
 		endpoint.GetResponse = &VoluntaryExitsPoolResponseJson{}
+	case "/eth/v1/beacon/pool/bls_to_execution_changes":
+		endpoint.PostRequest = &SignedBLSToExecutionChangeJson{}
 	case "/eth/v1/beacon/pool/sync_committees":
 		endpoint.PostRequest = &SubmitSyncCommitteeSignaturesRequestJson{}
 		endpoint.Err = &IndexedVerificationFailureErrorJson{}

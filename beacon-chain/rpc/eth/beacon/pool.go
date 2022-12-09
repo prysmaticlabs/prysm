@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -300,6 +301,31 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
 	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+// SubmitSignedBLSToExecutionChange submits said object to the node's pool
+// if it passes validation the node must broadcast it to the network.
+func (bs *Server) SubmitSignedBLSToExecutionChange(ctx context.Context, req *ethpbv2.SignedBLSToExecutionChange) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
+	defer span.End()
+	alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(req)
+	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate SignedBLSToExecutionChange: %v", err)
+	}
+	if err := blocks.VerifyBLSChangeSignature(st, req); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
+	}
+	bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
+	if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil

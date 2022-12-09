@@ -64,6 +64,19 @@ func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
+func handleGetBlindedBeaconBlockSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+) (handled bool) {
+	config := sszConfig{
+		fileName:     "beacon_block.ssz",
+		responseJson: &VersionedSSZResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
 func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	return handlePostSSZ(m, endpoint, w, req)
 }

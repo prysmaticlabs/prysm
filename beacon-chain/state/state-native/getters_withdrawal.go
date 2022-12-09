@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -48,7 +49,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
+	withdrawals := make([]*enginev1.Withdrawal, 0, fieldparams.MaxWithdrawalsPerPayload)
 	validatorIndex := b.nextWithdrawalValidatorIndex
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
@@ -57,22 +58,22 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 		balance := b.balances[validatorIndex]
 		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance,
 			})
 			withdrawalIndex++
 		} else if isPartiallyWithdrawableValidator(val, balance) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
 		}
-		if uint64(len(withdrawals)) == params.BeaconConfig().MaxWithdrawalsPerPayload {
+		if uint64(len(withdrawals)) == fieldparams.MaxWithdrawalsPerPayload {
 			break
 		}
 		validatorIndex += 1

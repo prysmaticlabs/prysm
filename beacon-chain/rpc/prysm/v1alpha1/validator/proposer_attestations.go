@@ -80,7 +80,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
+func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts, error) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
@@ -88,7 +88,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	switch st.Version() {
 	case version.Phase0:
 		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
-	case version.Altair, version.Bellatrix:
+	case version.Altair, version.Bellatrix, version.Capella:
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)
@@ -99,7 +99,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 		}
 	default:
 		// Exit early if there is an unknown state type.
-		return validAtts, invalidAtts
+		return validAtts, invalidAtts, errors.Errorf("unknown state type: %v", st.Version())
 	}
 	for _, att := range a {
 		if _, err := attestationProcessor(ctx, st, att); err == nil {
@@ -108,7 +108,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 		}
 		invalidAtts = append(invalidAtts, att)
 	}
-	return validAtts, invalidAtts
+	return validAtts, invalidAtts, nil
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
@@ -247,7 +247,10 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
-	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
+	validAtts, invalidAtts, err := proposerAtts(atts).filter(ctx, st)
+	if err != nil {
+		return nil, err
+	}
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}

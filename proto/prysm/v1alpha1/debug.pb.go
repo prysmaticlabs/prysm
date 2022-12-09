@@ -186,6 +186,7 @@ type BeaconStateRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to QueryFilter:
+	//
 	//	*BeaconStateRequest_Slot
 	//	*BeaconStateRequest_BlockRoot
 	QueryFilter isBeaconStateRequest_QueryFilter `protobuf_oneof:"query_filter"`
