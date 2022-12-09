@@ -4,8 +4,6 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
-
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
@@ -27,18 +25,6 @@ type Update struct {
 	*ethpbv2.LightClientUpdate `json:"update,omitempty"`
 }
 
-func (u *Update) computeEpochAtSlot(slot types.Slot) types.Epoch {
-	return types.Epoch(slot / u.Config.SlotsPerEpoch)
-}
-
-func (u *Update) computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
-	return uint64(epoch / u.Config.EpochsPerSyncCommitteePeriod)
-}
-
-func (u *Update) computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
-	return u.computeSyncCommitteePeriod(u.computeEpochAtSlot(slot))
-}
-
 func (u *Update) isSyncCommiteeUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
 }
@@ -49,13 +35,13 @@ func (u *Update) isFinalityUpdate() bool {
 
 func (u *Update) hasRelevantSyncCommittee() bool {
 	return u.isSyncCommiteeUpdate() &&
-		u.computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
-			GetSignatureSlot())
+		computeSyncCommitteePeriodAtSlot(u.Config, u.GetAttestedHeader().Slot) ==
+			computeSyncCommitteePeriodAtSlot(u.Config, u.GetSignatureSlot())
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {
-	return u.computeSyncCommitteePeriodAtSlot(u.GetFinalizedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
-		GetAttestedHeader().Slot)
+	return computeSyncCommitteePeriodAtSlot(u.Config, u.GetFinalizedHeader().Slot) ==
+		computeSyncCommitteePeriodAtSlot(u.Config, u.GetAttestedHeader().Slot)
 }
 
 func (u *Update) isBetterUpdate(newUpdate *Update) bool {

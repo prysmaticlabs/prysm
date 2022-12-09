@@ -122,8 +122,8 @@ func (s *Store) validateUpdate(update *Update,
 		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
 		return errors.New("update skips a sync committee period")
 	}
-	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateSignaturePeriod := update.computeSyncCommitteePeriodAtSlot(update.GetSignatureSlot())
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
+	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetSignatureSlot())
 	if s.isNextSyncCommitteeKnown() {
 		if !(updateSignaturePeriod == storePeriod || updateSignaturePeriod == storePeriod+1) {
 			return errors.New("update skips a sync committee period")
@@ -135,7 +135,7 @@ func (s *Store) validateUpdate(update *Update,
 	}
 
 	// Verify update is relevant
-	updateAttestedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.isSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
 	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
@@ -213,7 +213,7 @@ func (s *Store) validateUpdate(update *Update,
 			participantPubkeys = append(participantPubkeys, publicKey)
 		}
 	}
-	forkVersion := s.computeForkVersion(update.computeEpochAtSlot(update.GetSignatureSlot()))
+	forkVersion := s.computeForkVersion(computeEpochAtSlot(s.Config, update.GetSignatureSlot()))
 	domain, err := signing.ComputeDomain(s.Config.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
@@ -233,8 +233,8 @@ func (s *Store) validateUpdate(update *Update,
 }
 
 func (s *Store) applyUpdate(update *Update) error {
-	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateFinalizedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
+	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
@@ -295,8 +295,8 @@ func (s *Store) ProcessUpdate(update *Update,
 
 	// Update finalized header
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
-		update.isFinalityUpdate() && update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
-		Slot) == update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
+		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
 		(update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
