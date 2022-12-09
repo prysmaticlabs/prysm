@@ -4,13 +4,28 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
+
+// Update is an interface that exposes the attributes common to all types of updates
+type Update interface {
+	GetAttestedHeader() *ethpbv1.BeaconBlockHeader
+	GetSyncAggregate() *ethpbv1.SyncAggregate
+	GetSignatureSlot() types.Slot
+}
+
+var _ Update = (*ethpbv2.LightClientUpdate)(nil)
+var _ Update = (*ethpbv2.LightClientFinalityUpdate)(nil)
+var _ Update = (*ethpbv2.LightClientOptimisticUpdate)(nil)
 
 type update struct {
 	config *Config
 	*ethpbv2.LightClientUpdate
 }
+
+var _ Update = (*update)(nil)
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	if len(bb) == 0 {
