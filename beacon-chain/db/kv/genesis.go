@@ -19,7 +19,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	}
 	wsb, err := blocks.NewGenesisBlockForState(stateRoot, genesisState)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get genesis block root")
 	}
 	genesisBlkRoot, err := wsb.Block().HashTreeRoot()
 	if err != nil {
