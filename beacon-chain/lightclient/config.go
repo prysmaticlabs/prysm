@@ -6,6 +6,8 @@ import (
 )
 
 type Config struct {
+	BellatrixForkEpoch           types.Epoch `json:"bellatrix_fork_epoch"`
+	BellatrixForkVersion         []byte      `json:"bellatrix_fork_version"`
 	AltairForkEpoch              types.Epoch `json:"altair_fork_epoch"`
 	AltairForkVersion            []byte      `json:"altair_fork_version"`
 	GenesisForkVersion           []byte      `json:"genesis_fork_version"`
@@ -19,6 +21,8 @@ type Config struct {
 
 func NewConfig(chainConfig *params.BeaconChainConfig) *Config {
 	return &Config{
+		BellatrixForkEpoch:           chainConfig.BellatrixForkEpoch,
+		BellatrixForkVersion:         chainConfig.BellatrixForkVersion,
 		AltairForkEpoch:              chainConfig.AltairForkEpoch,
 		AltairForkVersion:            chainConfig.AltairForkVersion,
 		GenesisForkVersion:           chainConfig.GenesisForkVersion,

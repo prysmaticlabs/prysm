@@ -6,6 +6,8 @@ package lightclient
 import (
 	"errors"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
+
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
@@ -37,7 +39,7 @@ type Store struct {
 }
 
 func getSubtreeIndex(index uint64) uint64 {
-	return index % (uint64(1) << ethpbv2.FloorLog2(index-1))
+	return index % (uint64(1) << helpers.FloorLog2(index-1))
 }
 
 // TODO: this should be in the proto
@@ -61,19 +63,18 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 		panic(err)
 	}
 	if trustedBlockRoot == bootstrapRoot {
-		panic("trusted block root does not match bootstrap header")
+		return nil, errors.New("trusted block root does not match bootstrap header")
 	}
 	root, err := hashTreeRoot(bootstrap.CurrentSyncCommittee)
 	if err != nil {
 		return nil, err
 	}
-	if !trie.VerifyMerkleProofWithDepth(
+	if !trie.VerifyMerkleProof(
 		bootstrap.Header.StateRoot,
 		root,
-		getSubtreeIndex(ethpbv2.CurrentSyncCommitteeIndex),
-		bootstrap.CurrentSyncCommitteeBranch,
-		uint64(ethpbv2.FloorLog2(ethpbv2.CurrentSyncCommitteeIndex))) {
-		panic("current sync committee merkle proof is invalid")
+		getSubtreeIndex(helpers.CurrentSyncCommitteeIndex),
+		bootstrap.CurrentSyncCommitteeBranch) {
+		return nil, errors.New("current sync committee merkle proof is invalid")
 	}
 	return &Store{
 		Config:               config,
@@ -100,6 +101,9 @@ func (s *Store) getSafetyThreshold() uint64 {
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
+	if epoch >= s.Config.BellatrixForkEpoch {
+		return s.Config.BellatrixForkVersion
+	}
 	if epoch >= s.Config.AltairForkEpoch {
 		return s.Config.AltairForkVersion
 	}
@@ -118,11 +122,11 @@ func (s *Store) validateUpdate(update *Update,
 	// Verify update does not skip a sync committee period
 	if !(currentSlot >= update.GetSignatureSlot() &&
 		update.GetSignatureSlot() > update.GetAttestedHeader().Slot &&
-		update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot) {
+		(update.GetFinalizedHeader() == nil || update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot)) {
 		return errors.New("update skips a sync committee period")
 	}
-	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateSignaturePeriod := update.computeSyncCommitteePeriodAtSlot(update.GetSignatureSlot())
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
+	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetSignatureSlot())
 	if s.isNextSyncCommitteeKnown() {
 		if !(updateSignaturePeriod == storePeriod || updateSignaturePeriod == storePeriod+1) {
 			return errors.New("update skips a sync committee period")
@@ -134,7 +138,7 @@ func (s *Store) validateUpdate(update *Update,
 	}
 
 	// Verify update is relevant
-	updateAttestedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.isSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
 	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
@@ -151,7 +155,7 @@ func (s *Store) validateUpdate(update *Update,
 		var finalizedRoot [32]byte
 		if update.GetFinalizedHeader().Slot == s.Config.GenesisSlot {
 			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
-				return errors.New("finality branch is present but update is not finality")
+				return errors.New("genesis finalized checkpoint root is not represented as a zero hash")
 			}
 			finalizedRoot = [32]byte{}
 		} else {
@@ -160,12 +164,11 @@ func (s *Store) validateUpdate(update *Update,
 				return err
 			}
 		}
-		if !trie.VerifyMerkleProofWithDepth(
+		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			finalizedRoot[:],
-			getSubtreeIndex(ethpbv2.FinalizedRootIndex),
-			update.GetFinalityBranch(),
-			uint64(ethpbv2.FloorLog2(ethpbv2.FinalizedRootIndex))) {
+			getSubtreeIndex(helpers.FinalizedRootIndex),
+			update.GetFinalityBranch()) {
 			return errors.New("finality branch is invalid")
 		}
 	}
@@ -186,12 +189,11 @@ func (s *Store) validateUpdate(update *Update,
 		if err != nil {
 			return err
 		}
-		if !trie.VerifyMerkleProofWithDepth(
+		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			root[:],
-			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
-			update.GetNextSyncCommitteeBranch(),
-			uint64(ethpbv2.FloorLog2(ethpbv2.NextSyncCommitteeIndex))) {
+			getSubtreeIndex(helpers.NextSyncCommitteeIndex),
+			update.GetNextSyncCommitteeBranch()) {
 			return errors.New("sync committee branch is invalid")
 		}
 	}
@@ -214,7 +216,7 @@ func (s *Store) validateUpdate(update *Update,
 			participantPubkeys = append(participantPubkeys, publicKey)
 		}
 	}
-	forkVersion := s.computeForkVersion(update.computeEpochAtSlot(update.GetSignatureSlot()))
+	forkVersion := s.computeForkVersion(computeEpochAtSlot(s.Config, update.GetSignatureSlot()))
 	domain, err := signing.ComputeDomain(s.Config.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
@@ -233,9 +235,9 @@ func (s *Store) validateUpdate(update *Update,
 	return nil
 }
 
-func (s *Store) applyUpdate(update *Update) error {
-	storePeriod := update.computeSyncCommitteePeriodAtSlot(s.FinalizedHeader.Slot)
-	updateFinalizedPeriod := update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().Slot)
+func (s *Store) applyUpdate(update *ethpbv2.LightClientUpdate) error {
+	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
+	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
@@ -266,7 +268,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
 			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.GetAttestedHeader()
 		}
-		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
+		if err := s.applyUpdate(s.BestValidUpdate.LightClientUpdate); err != nil {
 			return err
 		}
 		s.BestValidUpdate = nil
@@ -274,8 +276,12 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
-func (s *Store) ProcessUpdate(update *Update,
+func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	update := &Update{
+		LightClientUpdate: lightClientUpdate,
+		config:            s.Config,
+	}
 	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 		return err
 	}
@@ -296,12 +302,13 @@ func (s *Store) ProcessUpdate(update *Update,
 
 	// Update finalized header
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
-		update.isFinalityUpdate() && update.computeSyncCommitteePeriodAtSlot(update.GetFinalizedHeader().
-		Slot) == update.computeSyncCommitteePeriodAtSlot(update.GetAttestedHeader().Slot)
+		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
+		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
-		(update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot || updateHasFinalizedNextSyncCommittee) {
+		((update.GetFinalizedHeader() != nil && update.GetFinalizedHeader().Slot > s.FinalizedHeader.
+			Slot) || updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
-		if err := s.applyUpdate(update); err != nil {
+		if err := s.applyUpdate(update.LightClientUpdate); err != nil {
 			return err
 		}
 		s.BestValidUpdate = nil
@@ -329,10 +336,7 @@ func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientUpdate,
 	if err := validateFinalityUpdate(update); err != nil {
 		return err
 	}
-	return s.ProcessUpdate(&Update{
-		Config:            s.Config,
-		LightClientUpdate: update,
-	}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
 }
 
 func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
@@ -341,8 +345,5 @@ func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
 	if err := validateOptimisticUpdate(update); err != nil {
 		return err
 	}
-	return s.ProcessUpdate(&Update{
-		Config:            s.Config,
-		LightClientUpdate: update,
-	}, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
 }

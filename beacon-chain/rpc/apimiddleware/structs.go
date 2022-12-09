@@ -103,7 +103,7 @@ type LightClientBootstrapJson struct {
 	CurrentSyncCommitteeBranch []string               `json:"current_sync_committee_branch" hex:"true"`
 }
 
-type LightClientUpdateJson struct {
+type LightClientUpdateResponseJson struct {
 	Version string                     `json:"version" enum:"true"`
 	Data    *LightClientUpdateDataJson `json:"data"`
 }

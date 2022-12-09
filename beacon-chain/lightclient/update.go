@@ -3,12 +3,15 @@ package lightclient
 import (
 	"bytes"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
-	l := ethpbv2.FloorLog2(length)
+	if len(bb) == 0 {
+		return true
+	}
+	l := helpers.FloorLog2(length)
 	if len(bb) != l {
 		return false
 	}
@@ -21,39 +24,27 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 }
 
 type Update struct {
-	Config                     *Config
-	*ethpbv2.LightClientUpdate `json:"update,omitempty"`
-}
-
-func (u *Update) computeEpochAtSlot(slot types.Slot) types.Epoch {
-	return types.Epoch(slot / u.Config.SlotsPerEpoch)
-}
-
-func (u *Update) computeSyncCommitteePeriod(epoch types.Epoch) uint64 {
-	return uint64(epoch / u.Config.EpochsPerSyncCommitteePeriod)
-}
-
-func (u *Update) computeSyncCommitteePeriodAtSlot(slot types.Slot) uint64 {
-	return u.computeSyncCommitteePeriod(u.computeEpochAtSlot(slot))
+	config                     *Config
+	*ethpbv2.LightClientUpdate `json:"update"`
 }
 
 func (u *Update) isSyncCommiteeUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.NextSyncCommitteeIndex)
+	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
 }
 
 func (u *Update) isFinalityUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), ethpbv2.FinalizedRootIndex)
+	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.FinalizedRootIndex)
 }
 
 func (u *Update) hasRelevantSyncCommittee() bool {
 	return u.isSyncCommiteeUpdate() &&
-		u.computeSyncCommitteePeriodAtSlot(u.GetAttestedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
-			GetSignatureSlot())
+		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
+			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
 }
 
 func (u *Update) hasSyncCommitteeFinality() bool {
-	return u.computeSyncCommitteePeriodAtSlot(u.GetFinalizedHeader().Slot) == u.computeSyncCommitteePeriodAtSlot(u.
-		GetAttestedHeader().Slot)
+	return computeSyncCommitteePeriodAtSlot(u.config, u.GetFinalizedHeader().Slot) ==
+		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot)
 }
 
 func (u *Update) isBetterUpdate(newUpdate *Update) bool {
