@@ -915,7 +915,6 @@ func TestServer_validatorRegistered(t *testing.T) {
 }
 
 func TestServer_validateBuilderSignature(t *testing.T) {
-	s := &Server{}
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
 	bid := &ethpb.BuilderBid{
