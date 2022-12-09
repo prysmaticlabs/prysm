@@ -510,6 +510,7 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
+
 	return json.Marshal(executionPayload4844JSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
@@ -549,7 +550,6 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if dec.ReceiptsRoot == nil {
 		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
 	}
-
 	if dec.LogsBloom == nil {
 		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
 	}

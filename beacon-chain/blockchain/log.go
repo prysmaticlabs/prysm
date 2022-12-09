@@ -108,6 +108,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"finalizedEpoch": finalized.Epoch,
 			"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 			"epoch":          slots.ToEpoch(block.Slot()),
+			"version":        version.String(block.Version()),
 		}).Info("Synced new block")
 	}
 	return nil

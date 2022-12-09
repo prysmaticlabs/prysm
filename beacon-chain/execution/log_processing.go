@@ -479,7 +479,7 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 func (s *Service) retrieveBlockHashAndTime(ctx context.Context, blkNum *big.Int) ([32]byte, uint64, error) {
 	bHash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
-		return [32]byte{}, 0, errors.Wrap(err, "could not get eth1 block hash")
+		return [32]byte{}, 0, nil
 	}
 	if bHash == [32]byte{} {
 		return [32]byte{}, 0, errors.Wrap(err, "got empty block hash")

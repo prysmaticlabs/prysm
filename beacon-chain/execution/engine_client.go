@@ -34,6 +34,7 @@ const (
 	NewPayloadMethod = "engine_newPayloadV1"
 	// NewPayloadMethod v2 request string for JSON-RPC.
 	NewPayloadMethodV2 = "engine_newPayloadV2"
+	NewPayloadMethodV3 = "engine_newPayloadV3"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethod v2 request string for JSON-RPC.
@@ -42,6 +43,7 @@ const (
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethod v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
+	GetPayloadMethodV3 = "engine_getPayloadV3"
 	// GetBlobsBundleMethod v1 request string for JSON-RPC.
 	GetBlobsBundleMethod = "engine_getBlobsBundleV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
@@ -102,18 +104,23 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
-	if !ok {
-		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
-		if !ok {
-			return nil, errors.New("execution data must be a Bellatrix or Capella execution payload")
-		}
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
+	v1Pb, ok := payload.Proto().(*pb.ExecutionPayload)
+	if ok {
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, v1Pb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-	} else {
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, payloadPb)
+	}
+	v2Pb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
+	if ok {
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, v2Pb)
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+	}
+	v3Pb, ok := payload.Proto().(*pb.ExecutionPayload4844)
+	if ok {
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, v3Pb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
@@ -201,6 +208,15 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot types2
 	d := time.Now().Add(defaultEngineTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
+
+	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		result := &pb.ExecutionPayload4844{}
+		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+		return blocks.WrappedExecutionPayloadEIP4844(result)
+	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
 		result := &pb.ExecutionPayloadCapella{}
