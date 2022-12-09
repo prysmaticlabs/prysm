@@ -17,6 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -154,7 +155,13 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		PrevRandao:            random,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
+
+	// This will change in subsequent hardforks like Capella.
+	pa, err := payloadattribute.New(p)
+	if err != nil {
+		return nil, err
+	}
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, pa)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
