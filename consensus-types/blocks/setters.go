@@ -85,11 +85,6 @@ func (b *BeaconBlock) SetStateRoot(root []byte) {
 	copy(b.stateRoot[:], root)
 }
 
-// SetGraffiti sets the graffiti in the block.
-func (b *BeaconBlockBody) SetGraffiti(g []byte) {
-	copy(b.graffiti[:], g)
-}
-
 // SetBlinded sets the blinded flag of the beacon block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlock) SetBlinded(blinded bool) {

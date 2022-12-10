@@ -155,6 +155,16 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbV1 --
+func (e executionPayload) PbV1() (*enginev1.ExecutionPayload, error) {
+	return e.p, nil
+}
+
+// PbV2 --
+func (e executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -293,6 +303,16 @@ func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV2 --
+func (e executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV1 --
+func (e executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -465,6 +485,16 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbV2 --
+func (e executionPayloadCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return e.p, nil
+}
+
+// PbV1 --
+func (e executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -604,6 +634,16 @@ func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, er
 // WitdrawalsRoot --
 func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
+}
+
+// PbV2 --
+func (e executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbV1 --
+func (e executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.

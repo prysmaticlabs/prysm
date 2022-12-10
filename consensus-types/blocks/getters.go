@@ -786,6 +786,11 @@ func (b *BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	return b.graffiti
 }
 
+// SetGraffiti sets the graffiti in the block.
+func (b *BeaconBlockBody) SetGraffiti(g []byte) {
+	copy(b.graffiti[:], g)
+}
+
 // ProposerSlashings returns the proposer slashings in the block.
 func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	return b.proposerSlashings
