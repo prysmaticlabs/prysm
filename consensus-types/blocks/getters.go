@@ -29,9 +29,61 @@ func (b *SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	return b.signature
 }
 
+// SetSignature sets the signature of the signed beacon block.
+func (b *SignedBeaconBlock) SetSignature(sig []byte) {
+	copy(b.signature[:], sig)
+}
+
 // Block returns the underlying beacon block object.
 func (b *SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return b.block
+}
+
+// SetBlock sets the underlying beacon block object.
+func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
+	copied, err := blk.Copy()
+	if err != nil {
+		return err
+	}
+	b.block.slot = copied.Slot()
+	b.block.parentRoot = copied.ParentRoot()
+	b.block.stateRoot = copied.StateRoot()
+	b.block.stateRoot = copied.StateRoot()
+	b.block.proposerIndex = copied.ProposerIndex()
+	b.block.body.randaoReveal = copied.Body().RandaoReveal()
+	b.block.body.eth1Data = copied.Body().Eth1Data()
+	b.block.body.graffiti = copied.Body().Graffiti()
+	b.block.body.proposerSlashings = copied.Body().ProposerSlashings()
+	b.block.body.attesterSlashings = copied.Body().AttesterSlashings()
+	b.block.body.attestations = copied.Body().Attestations()
+	b.block.body.deposits = copied.Body().Deposits()
+	b.block.body.voluntaryExits = copied.Body().VoluntaryExits()
+	if b.version >= version.Altair {
+		syncAggregate, err := copied.Body().SyncAggregate()
+		if err != nil {
+			return err
+		}
+		b.block.body.syncAggregate = syncAggregate
+	}
+	if b.version >= version.Bellatrix {
+		executionData, err := copied.Body().Execution()
+		if err != nil {
+			return err
+		}
+		if b.block.body.isBlinded {
+			b.block.body.executionPayloadHeader = executionData
+		} else {
+			b.block.body.executionPayload = executionData
+		}
+	}
+	if b.version >= version.Capella {
+		changes, err := copied.Body().BLSToExecutionChanges()
+		if err != nil {
+			return err
+		}
+		b.block.body.blsToExecutionChanges = changes
+	}
+	return nil
 }
 
 // IsNil checks if the underlying beacon block is nil.
@@ -458,14 +510,32 @@ func (b *BeaconBlock) Slot() types.Slot {
 	return b.slot
 }
 
+// SetSlot sets the respective slot of the block.
+// This function is not thread safe, it is only used during block creation.
+func (b *BeaconBlock) SetSlot(slot types.Slot) {
+	b.slot = slot
+}
+
 // ProposerIndex returns the proposer index of the beacon block.
 func (b *BeaconBlock) ProposerIndex() types.ValidatorIndex {
 	return b.proposerIndex
 }
 
+// SetProposerIndex sets the proposer index of the beacon block.
+// This function is not thread safe, it is only used during block creation.
+func (b *BeaconBlock) SetProposerIndex(proposerIndex types.ValidatorIndex) {
+	b.proposerIndex = proposerIndex
+}
+
 // ParentRoot returns the parent root of beacon block.
 func (b *BeaconBlock) ParentRoot() [field_params.RootLength]byte {
 	return b.parentRoot
+}
+
+// SetParentRoot sets the parent root of beacon block.
+// This function is not thread safe, it is only used during block creation.
+func (b *BeaconBlock) SetParentRoot(parentRoot []byte) {
+	copy(b.parentRoot[:], parentRoot)
 }
 
 // StateRoot returns the state root of the beacon block.
@@ -493,6 +563,11 @@ func (b *BeaconBlock) IsNil() bool {
 // IsBlinded checks if the beacon block is a blinded block.
 func (b *BeaconBlock) IsBlinded() bool {
 	return b.body.isBlinded
+}
+
+// SetBlinded sets the blinded flag of the beacon block.
+func (b *BeaconBlock) SetBlinded(blinded bool) {
+	b.body.isBlinded = blinded
 }
 
 // Version of the underlying protobuf object.
@@ -738,6 +813,41 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 	}
 }
 
+func (b *BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
+	if b == nil {
+		return nil, nil
+	}
+
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	switch b.version {
+	case version.Phase0:
+		cp := eth.CopyBeaconBlock(pb.(*eth.BeaconBlock))
+		return initBlockFromProtoPhase0(cp)
+	case version.Altair:
+		cp := eth.CopyBeaconBlockAltair(pb.(*eth.BeaconBlockAltair))
+		return initBlockFromProtoAltair(cp)
+	case version.Bellatrix:
+		if b.IsBlinded() {
+			cp := eth.CopyBlindedBeaconBlockBellatrix(pb.(*eth.BlindedBeaconBlockBellatrix))
+			return initBlindedBlockFromProtoBellatrix(cp)
+		}
+		cp := eth.CopyBeaconBlockBellatrix(pb.(*eth.BeaconBlockBellatrix))
+		return initBlockFromProtoBellatrix(cp)
+	case version.Capella:
+		if b.IsBlinded() {
+			cp := eth.CopyBlindedBeaconBlockCapella(pb.(*eth.BlindedBeaconBlockCapella))
+			return initBlindedBlockFromProtoCapella(cp)
+		}
+		cp := eth.CopyBeaconBlockCapella(pb.(*eth.BeaconBlockCapella))
+		return initBlockFromProtoCapella(cp)
+	default:
+		return nil, errIncorrectBlockVersion
+	}
+}
+
 // IsNil checks if the block body is nil.
 func (b *BeaconBlockBody) IsNil() bool {
 	return b == nil
@@ -748,9 +858,19 @@ func (b *BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	return b.randaoReveal
 }
 
+// SetRandaoReveal sets the randao reveal in the block body.
+func (b *BeaconBlockBody) SetRandaoReveal(r []byte) {
+	copy(b.randaoReveal[:], r)
+}
+
 // Eth1Data returns the eth1 data in the block.
 func (b *BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	return b.eth1Data
+}
+
+// SetEth1Data sets the eth1 data in the block.
+func (b *BeaconBlockBody) SetEth1Data(e *eth.Eth1Data) {
+	b.eth1Data = eth.CopyETH1Data(e)
 }
 
 // Graffiti returns the graffiti in the block.
@@ -758,9 +878,19 @@ func (b *BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	return b.graffiti
 }
 
+// SetGraffiti sets the graffiti in the block.
+func (b *BeaconBlockBody) SetGraffiti(g []byte) {
+	copy(b.graffiti[:], g)
+}
+
 // ProposerSlashings returns the proposer slashings in the block.
 func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	return b.proposerSlashings
+}
+
+// SetProposerSlashings sets the proposer slashings in the block.
+func (b *BeaconBlockBody) SetProposerSlashings(p []*eth.ProposerSlashing) {
+	b.proposerSlashings = eth.CopyProposerSlashings(p)
 }
 
 // AttesterSlashings returns the attester slashings in the block.
@@ -768,9 +898,19 @@ func (b *BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
 	return b.attesterSlashings
 }
 
+// SetAttesterSlashings sets the attester slashings in the block.
+func (b *BeaconBlockBody) SetAttesterSlashings(a []*eth.AttesterSlashing) {
+	b.attesterSlashings = eth.CopyAttesterSlashings(a)
+}
+
 // Attestations returns the stored attestations in the block.
 func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
 	return b.attestations
+}
+
+// SetAttestations sets the attestations in the block.
+func (b *BeaconBlockBody) SetAttestations(a []*eth.Attestation) {
+	b.attestations = eth.CopyAttestations(a)
 }
 
 // Deposits returns the stored deposits in the block.
@@ -778,9 +918,19 @@ func (b *BeaconBlockBody) Deposits() []*eth.Deposit {
 	return b.deposits
 }
 
+// SetDeposits sets the deposits in the block.
+func (b *BeaconBlockBody) SetDeposits(d []*eth.Deposit) {
+	b.deposits = eth.CopyDeposits(d)
+}
+
 // VoluntaryExits returns the voluntary exits in the block.
 func (b *BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 	return b.voluntaryExits
+}
+
+// SetVoluntaryExits sets the voluntary exits in the block.
+func (b *BeaconBlockBody) SetVoluntaryExits(v []*eth.SignedVoluntaryExit) {
+	b.voluntaryExits = eth.CopySignedVoluntaryExits(v)
 }
 
 // SyncAggregate returns the sync aggregate in the block.
@@ -789,6 +939,15 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 		return nil, ErrNotSupported("SyncAggregate", b.version)
 	}
 	return b.syncAggregate, nil
+}
+
+// SetSyncAggregate sets the sync aggregate in the block.
+func (b *BeaconBlockBody) SetSyncAggregate(s *eth.SyncAggregate) error {
+	if b.version == version.Phase0 {
+		return ErrNotSupported("SyncAggregate", b.version)
+	}
+	b.syncAggregate = eth.CopySyncAggregate(s)
+	return nil
 }
 
 // Execution returns the execution payload of the block body.
@@ -843,11 +1002,33 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	}
 }
 
+// SetExecution sets the execution payload of the block body.
+func (b *BeaconBlockBody) SetExecution(e interfaces.ExecutionData) error {
+	if b.version == version.Phase0 || b.version == version.Altair {
+		return ErrNotSupported("Execution", b.version)
+	}
+	if b.isBlinded {
+		b.executionPayloadHeader = e // TODO: Copy?
+		return nil
+	}
+	b.executionPayload = e
+	return nil
+}
+
 func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
 	if b.version < version.Capella {
 		return nil, ErrNotSupported("BLSToExecutionChanges", b.version)
 	}
 	return b.blsToExecutionChanges, nil
+}
+
+// SetBLSToExecutionChanges sets the BLS to execution changes in the block.
+func (b *BeaconBlockBody) SetBLSToExecutionChanges(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) error {
+	if b.version < version.Capella {
+		return ErrNotSupported("BLSToExecutionChanges", b.version)
+	}
+	b.blsToExecutionChanges = eth.CopyBLSToExecutionChanges(blsToExecutionChanges)
+	return nil
 }
 
 // HashTreeRoot returns the ssz root of the block body.

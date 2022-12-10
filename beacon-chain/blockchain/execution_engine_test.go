@@ -698,14 +698,14 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockExecution.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlockBellatrix{}}
-			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlockBellatrix{
+			e := &mockExecution.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x2",
 			}
-			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlockBellatrix{
+			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("3")),
 				},
@@ -759,14 +759,14 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlockBellatrix{}}
-	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlockBellatrix{
+	e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: common.BytesToHash([]byte("b")),
 		},
 		TotalDifficulty: "0x2",
 	}
-	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlockBellatrix{
+	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: common.BytesToHash([]byte("3")),
 		},

@@ -195,7 +195,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("validator_%d is starting with offset keys %d", index, offset)
 	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
 	if err != nil {
 		return err
@@ -214,6 +213,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", flags.MonitoringPortFlag.Name, e2e.TestParams.Ports.ValidatorMetricsPort+index),
 		fmt.Sprintf("--%s=%d", flags.GRPCGatewayPort.Name, e2e.TestParams.Ports.ValidatorGatewayPort+index),
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
+
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
@@ -221,6 +221,18 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
+
+	if v.config.UseBeaconRestApi {
+		beaconRestApiPort := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + index
+		if beaconRestApiPort >= e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+e2e.TestParams.BeaconNodeCount {
+			// Point any extra validator clients to a node we know is running.
+			beaconRestApiPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
+		}
+
+		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.BeaconRESTApiProviderFlag.Name, beaconRestApiPort))
+		args = append(args, fmt.Sprintf("--%s", features.EnableBeaconRESTApi.Name))
+	}
+
 	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
 	if !v.config.UsePrysmShValidator {
 		args = append(args, features.E2EValidatorFlags...)
@@ -296,6 +308,10 @@ func (v *ValidatorNode) Resume() error {
 // Stop stops the component and its underlying process.
 func (v *ValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
+}
+
+func (v *ValidatorNode) UnderlyingProcess() *os.Process {
+	return v.cmd.Process
 }
 
 func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {

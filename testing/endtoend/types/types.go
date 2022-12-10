@@ -4,6 +4,7 @@ package types
 
 import (
 	"context"
+	"os"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"google.golang.org/grpc"
@@ -35,6 +36,12 @@ func WithValidatorCrossClient() E2EConfigOpt {
 	}
 }
 
+func WithValidatorRESTApi() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseBeaconRestApi = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestCheckpointSync      bool
@@ -46,6 +53,7 @@ type E2EConfig struct {
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
+	UseBeaconRestApi        bool
 	EpochsToRun             uint64
 	Seed                    int64
 	TracingSinkEndpoint     string
@@ -101,6 +109,8 @@ type ComponentRunner interface {
 	Resume() error
 	// Stop stops a component.
 	Stop() error
+	// UnderlyingProcess is the underlying process, once started.
+	UnderlyingProcess() *os.Process
 }
 
 type MultipleComponentRunners interface {
