@@ -731,41 +731,6 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 	}
 }
 
-func (b *BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
-	if b == nil {
-		return nil, nil
-	}
-
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	switch b.version {
-	case version.Phase0:
-		cp := eth.CopyBeaconBlock(pb.(*eth.BeaconBlock))
-		return initBlockFromProtoPhase0(cp)
-	case version.Altair:
-		cp := eth.CopyBeaconBlockAltair(pb.(*eth.BeaconBlockAltair))
-		return initBlockFromProtoAltair(cp)
-	case version.Bellatrix:
-		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockBellatrix(pb.(*eth.BlindedBeaconBlockBellatrix))
-			return initBlindedBlockFromProtoBellatrix(cp)
-		}
-		cp := eth.CopyBeaconBlockBellatrix(pb.(*eth.BeaconBlockBellatrix))
-		return initBlockFromProtoBellatrix(cp)
-	case version.Capella:
-		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockCapella(pb.(*eth.BlindedBeaconBlockCapella))
-			return initBlindedBlockFromProtoCapella(cp)
-		}
-		cp := eth.CopyBeaconBlockCapella(pb.(*eth.BeaconBlockCapella))
-		return initBlockFromProtoCapella(cp)
-	default:
-		return nil, errIncorrectBlockVersion
-	}
-}
-
 // IsNil checks if the block body is nil.
 func (b *BeaconBlockBody) IsNil() bool {
 	return b == nil
@@ -784,11 +749,6 @@ func (b *BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 // Graffiti returns the graffiti in the block.
 func (b *BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
 	return b.graffiti
-}
-
-// SetGraffiti sets the graffiti in the block.
-func (b *BeaconBlockBody) SetGraffiti(g []byte) {
-	copy(b.graffiti[:], g)
 }
 
 // ProposerSlashings returns the proposer slashings in the block.
