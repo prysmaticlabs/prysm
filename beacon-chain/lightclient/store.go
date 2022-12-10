@@ -4,9 +4,11 @@
 package lightclient
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
+	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers/lightclient"
 
@@ -50,6 +52,45 @@ type Update interface {
 var _ Update = (*ethpbv2.LightClientUpdate)(nil)
 var _ Update = (*ethpbv2.LightClientFinalityUpdate)(nil)
 var _ Update = (*ethpbv2.LightClientOptimisticUpdate)(nil)
+
+func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (Update, error) {
+	var update Update
+	switch typedUpdate.TypeName {
+	case ethrpc.LightClientUpdateTypeName:
+		var fullUpdate ethrpc.LightClientUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, fullUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientUpdateFromJSON(&fullUpdate)
+		if err != nil {
+			return nil, err
+		}
+	case ethrpc.LightClientFinalityUpdateTypeName:
+		var finalityUpdate ethrpc.LightClientFinalityUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, finalityUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientFinalityUpdateFromJSON(&finalityUpdate)
+		if err != nil {
+			return nil, err
+		}
+	case ethrpc.LightClientOptimisticUpdateTypeName:
+		var optimisticUpdate ethrpc.LightClientOptimisticUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, optimisticUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientOptimisticUpdateFromJSON(&optimisticUpdate)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown update type %q", typedUpdate.TypeName)
+	}
+	return update, nil
+}
 
 func getSubtreeIndex(index uint64) uint64 {
 	return index % (uint64(1) << helpers.FloorLog2(index-1))
