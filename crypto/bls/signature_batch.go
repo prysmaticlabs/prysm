@@ -45,8 +45,8 @@ func (s *SignatureBatch) Verify() (bool, error) {
 	return VerifyMultipleSignatures(s.Signatures, s.Messages, s.PublicKeys)
 }
 
-// Verify signatures as a whole at first, if fails, fallback to verify each
-// single signature to identify invalid ones.
+// VerifyVerbosely verifies signatures as a whole at first, if fails, fallback
+// to verify each single signature to identify invalid ones.
 func (s *SignatureBatch) VerifyVerbosely() (bool, error) {
 	valid, err := s.Verify()
 	if err != nil || valid {
@@ -97,9 +97,6 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	pubkeys := make([]PublicKey, len(s.PublicKeys))
 	messages := make([][32]byte, len(s.Messages))
 	var descriptions []string
-	if s.Descriptions != nil {
-		descriptions = make([]string, len(s.Descriptions))
-	}
 	for i := range s.Signatures {
 		sig := make([]byte, len(s.Signatures[i]))
 		copy(sig, s.Signatures[i])
@@ -111,8 +108,9 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	for i := range s.Messages {
 		copy(messages[i][:], s.Messages[i][:])
 	}
-	for i := range s.Descriptions {
-		descriptions[i] = s.Descriptions[i]
+	if s.Descriptions != nil {
+		descriptions = make([]string, len(s.Descriptions))
+		copy(descriptions, s.Descriptions)
 	}
 	return &SignatureBatch{
 		Signatures:   signatures,

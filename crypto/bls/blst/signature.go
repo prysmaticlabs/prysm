@@ -196,7 +196,7 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return &Signature{s: signature.ToAffine()}
 }
 
-// Verify a single signature using public key and message.
+// VerifySignature verifies a single signature using public key and message.
 func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
 	rSig, err := SignatureFromBytes(sig)
 	if err != nil {

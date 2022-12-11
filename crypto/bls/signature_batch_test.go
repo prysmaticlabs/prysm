@@ -75,7 +75,7 @@ func TestVerifyVerbosely_VerificationThrowsError(t *testing.T) {
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
 	assert.ErrorContains(t, "signature 'signature of hello0' is invalid", err)
-	assert.ErrorContains(t, "erroorr: could not unmarshal bytes into signature", err)
+	assert.ErrorContains(t, "error: could not unmarshal bytes into signature", err)
 }
 
 func TestVerifyVerbosely_SignatureInvalidHasNoDescription(t *testing.T) {
