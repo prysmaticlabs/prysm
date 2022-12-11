@@ -525,11 +525,7 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 		}
 	}
 
-	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, st, root); err != nil {
-		return err
-	}
-
-	return nil
+	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
 // This feeds in the attestations included in the block to fork choice store. It's allows fork choice store

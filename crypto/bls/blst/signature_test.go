@@ -36,6 +36,7 @@ func TestAggregateVerify(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := AggregateSignatures(sigs)
+	// skipcq: GO-W1009
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
@@ -56,6 +57,7 @@ func TestAggregateVerify_CompressedSignatures(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := AggregateSignatures(sigs)
+	// skipcq: GO-W1009
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 
 	aggSig2, err := AggregateCompressedSignatures(sigBytes)
