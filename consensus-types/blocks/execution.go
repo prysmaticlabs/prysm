@@ -161,7 +161,7 @@ func (e executionPayload) PbV1() (*enginev1.ExecutionPayload, error) {
 }
 
 // PbV2 --
-func (e executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -307,12 +307,12 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV2 --
-func (e executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbV1 --
-func (e executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -491,7 +491,7 @@ func (e executionPayloadCapella) PbV2() (*enginev1.ExecutionPayloadCapella, erro
 }
 
 // PbV1 --
-func (e executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -637,12 +637,12 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV2 --
-func (e executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbV1 --
-func (e executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
