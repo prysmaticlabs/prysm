@@ -18,6 +18,10 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	e2eMinimal(t, types.WithRemoteSigner()).run()
 }
 
+func TestEndToEnd_MinimalConfig_ValidatorRESTApi(t *testing.T) {
+	e2eMinimal(t, types.WithCheckpointSync(), types.WithValidatorRESTApi()).run()
+}
+
 func TestEndToEnd_ScenarioRun_EEOffline(t *testing.T) {
 	t.Skip("TODO(#10242) Prysm is current unable to handle an offline e2e")
 	runner := e2eMinimal(t)

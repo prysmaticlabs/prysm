@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -153,7 +152,6 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 }
 
 func BLSChangesSignatureBatch(
-	ctx context.Context,
 	st state.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
 ) (*bls.SignatureBatch, error) {
@@ -173,9 +171,6 @@ func BLSChangesSignatureBatch(
 		return nil, err
 	}
 	for i, change := range changes {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
 		batch.Signatures[i] = change.Signature
 		publicKey, err := bls.PublicKeyFromBytes(change.Message.FromBlsPubkey)
 		if err != nil {

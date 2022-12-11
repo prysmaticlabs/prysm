@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"context"
 	"math/rand"
 	"testing"
 
@@ -548,7 +547,7 @@ func TestProcessWithdrawals(t *testing.T) {
 	}
 
 	checkPostState := func(t *testing.T, expected control, st state.BeaconState) {
-		l, err := st.LastWithdrawalValidatorIndex()
+		l, err := st.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		require.Equal(t, expected.NextWithdrawalValidatorIndex, l)
 
@@ -746,7 +745,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 		}
 		signedChanges[i] = signed
 	}
-	batch, err := blocks.BLSChangesSignatureBatch(context.Background(), st, signedChanges)
+	batch, err := blocks.BLSChangesSignatureBatch(st, signedChanges)
 	require.NoError(t, err)
 	verify, err := batch.Verify()
 	require.NoError(t, err)
