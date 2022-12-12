@@ -97,6 +97,12 @@ func (b *BeaconBlockBody) SetRandaoReveal(r []byte) {
 	copy(b.randaoReveal[:], r)
 }
 
+// SetGraffiti sets the graffiti in the block.
+// This function is not thread safe, it is only used during block creation.
+func (b *BeaconBlockBody) SetGraffiti(g []byte) {
+	copy(b.graffiti[:], g)
+}
+
 // SetEth1Data sets the eth1 data in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetEth1Data(e *eth.Eth1Data) {
