@@ -28,4 +28,5 @@ message SSZContainer {
   Version version = 1;
   bool execution_optimistic = 2;
   bytes data = 3;
+  bool finalized = 4;
 }
