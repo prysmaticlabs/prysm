@@ -190,7 +190,7 @@ message BlockHeadersRequest {
 message BlockHeadersResponse {
     repeated BlockHeaderContainer data = 1;
     bool execution_optimistic = 2;
-    bool finalized = 4;
+    bool finalized = 3;
 }
 
 message BlockRequest {
@@ -202,7 +202,7 @@ message BlockRequest {
 message BlockHeaderResponse {
     BlockHeaderContainer data = 1;
     bool execution_optimistic = 2;
-    bool finalized = 4;
+    bool finalized = 3;
 }
 
 message BlockHeaderContainer {
