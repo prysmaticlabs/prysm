@@ -319,7 +319,7 @@ func TestSnapshotCases(t *testing.T) {
 		}, c.BlockHeight)
 		s, err := tree.getSnapshot()
 		assert.NoError(t, err)
-		assert.Equal(t, c.Snapshot, s)
+		assert.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
 	}
 }
 
