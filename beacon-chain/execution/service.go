@@ -319,6 +319,8 @@ func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 	latestBlockTime := uint64(0)
 	if s.latestEth1Data.BlockTime > followTime {
 		latestBlockTime = s.latestEth1Data.BlockTime - followTime
+		// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+		// we don't want to consider any block before the genesis block.
 		if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
 			latestBlockTime = s.latestEth1Data.BlockTime
 		}
@@ -705,6 +707,8 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		}
 		return earliestBlk, nil
 	}
+	// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+	// we don't want to consider any block before the genesis block.
 	if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
 		return 0, nil
 	}
