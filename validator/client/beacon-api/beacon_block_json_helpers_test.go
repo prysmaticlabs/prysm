@@ -31,6 +31,7 @@ func TestBeaconBlockJsonHelpers_JsonifyBlsToExecutionChanges(t *testing.T) {
 				FromBlsPubkey:      []byte{2},
 				ToExecutionAddress: []byte{3},
 			},
+			Signature: []byte{7},
 		},
 		{
 			Message: &ethpb.BLSToExecutionChange{
@@ -38,19 +39,26 @@ func TestBeaconBlockJsonHelpers_JsonifyBlsToExecutionChanges(t *testing.T) {
 				FromBlsPubkey:      []byte{5},
 				ToExecutionAddress: []byte{6},
 			},
+			Signature: []byte{8},
 		},
 	}
 
-	expectedResult := []*apimiddleware.BLSToExecutionChangeJson{
+	expectedResult := []*apimiddleware.SignedBLSToExecutionChangeJson{
 		{
-			ValidatorIndex:     "1",
-			FromBLSPubkey:      hexutil.Encode([]byte{2}),
-			ToExecutionAddress: hexutil.Encode([]byte{3}),
+			Message: &apimiddleware.BLSToExecutionChangeJson{
+				ValidatorIndex:     "1",
+				FromBLSPubkey:      hexutil.Encode([]byte{2}),
+				ToExecutionAddress: hexutil.Encode([]byte{3}),
+			},
+			Signature: hexutil.Encode([]byte{7}),
 		},
 		{
-			ValidatorIndex:     "4",
-			FromBLSPubkey:      hexutil.Encode([]byte{5}),
-			ToExecutionAddress: hexutil.Encode([]byte{6}),
+			Message: &apimiddleware.BLSToExecutionChangeJson{
+				ValidatorIndex:     "4",
+				FromBLSPubkey:      hexutil.Encode([]byte{5}),
+				ToExecutionAddress: hexutil.Encode([]byte{6}),
+			},
+			Signature: hexutil.Encode([]byte{8}),
 		},
 	}
 
