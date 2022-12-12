@@ -3,8 +3,15 @@ package blstoexec
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -36,48 +43,119 @@ func TestPendingBLSToExecChanges(t *testing.T) {
 }
 
 func TestBLSToExecChangesForInclusion(t *testing.T) {
+	spb := &eth.BeaconStateCapella{
+		Fork: &eth.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	numValidators := 2 * params.BeaconConfig().MaxBlsToExecutionChanges
+	validators := make([]*eth.Validator, numValidators)
+	blsChanges := make([]*eth.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &eth.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &eth.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     types.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*eth.SignedBLSToExecutionChange, numValidators)
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &eth.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+
 	t.Run("empty pool", func(t *testing.T) {
 		pool := NewPool()
-		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges-1; i++ {
-			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
-				Message: &eth.BLSToExecutionChange{
-					ValidatorIndex: types.ValidatorIndex(i),
-				},
-			})
-		}
-		changes, err := pool.BLSToExecChangesForInclusion()
+		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
-		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges-1), len(changes))
+		assert.Equal(t, 0, len(changes))
+	})
+	t.Run("Less than MaxBlsToExecutionChanges in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges-1; i++ {
+			pool.InsertBLSToExecChange(signedChanges[i])
+		}
+		changes, err := pool.BLSToExecChangesForInclusion(st)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
 	})
 	t.Run("MaxBlsToExecutionChanges in pool", func(t *testing.T) {
 		pool := NewPool()
 		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges; i++ {
-			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
-				Message: &eth.BLSToExecutionChange{
-					ValidatorIndex: types.ValidatorIndex(i),
-				},
-			})
+			pool.InsertBLSToExecChange(signedChanges[i])
 		}
-		changes, err := pool.BLSToExecChangesForInclusion()
+		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 	})
 	t.Run("more than MaxBlsToExecutionChanges in pool", func(t *testing.T) {
 		pool := NewPool()
-		for i := uint64(0); i < params.BeaconConfig().MaxBlsToExecutionChanges+1; i++ {
-			pool.InsertBLSToExecChange(&eth.SignedBLSToExecutionChange{
-				Message: &eth.BLSToExecutionChange{
-					ValidatorIndex: types.ValidatorIndex(i),
-				},
-			})
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertBLSToExecChange(signedChanges[i])
 		}
-		changes, err := pool.BLSToExecChangesForInclusion()
+		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		// We want FIFO semantics, which means validator with index 16 shouldn't be returned
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		for _, ch := range changes {
 			assert.NotEqual(t, types.ValidatorIndex(16), ch.Message.ValidatorIndex)
 		}
+	})
+	t.Run("One Bad change", func(t *testing.T) {
+		pool := NewPool()
+		saveByte := signedChanges[1].Message.FromBlsPubkey[5]
+		signedChanges[1].Message.FromBlsPubkey[5] = 0xff
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertBLSToExecChange(signedChanges[i])
+		}
+		changes, err := pool.BLSToExecChangesForInclusion(st)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
+		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
+	})
+	t.Run("One Bad Signature", func(t *testing.T) {
+		pool := NewPool()
+		copy(signedChanges[1].Signature, signedChanges[2].Signature)
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertBLSToExecChange(signedChanges[i])
+		}
+		changes, err := pool.BLSToExecChangesForInclusion(st)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
+		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
 	})
 }
 

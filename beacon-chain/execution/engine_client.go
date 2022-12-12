@@ -19,8 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -30,6 +32,8 @@ const (
 	NewPayloadMethod = "engine_newPayloadV1"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
+	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
@@ -66,7 +70,7 @@ type ExecutionPayloadReconstructor interface {
 type EngineCaller interface {
 	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
 	ForkchoiceUpdated(
-		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error)
 	ExchangeTransitionConfiguration(
@@ -114,7 +118,7 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 
 // ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
 func (s *Service) ForkchoiceUpdated(
-	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
+	ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 ) (*pb.PayloadIDBytes, []byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
 	defer span.End()
@@ -127,9 +131,31 @@ func (s *Service) ForkchoiceUpdated(
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &ForkchoiceUpdatedResponse{}
-	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
-	if err != nil {
-		return nil, nil, handleRPCError(err)
+
+	if attrs == nil {
+		return nil, nil, errors.New("nil payload attributer")
+	}
+	switch attrs.Version() {
+	case version.Bellatrix:
+		a, err := attrs.PbV1()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, a)
+		if err != nil {
+			return nil, nil, handleRPCError(err)
+		}
+	case version.Capella:
+		a, err := attrs.PbV2()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV2, state, a)
+		if err != nil {
+			return nil, nil, handleRPCError(err)
+		}
+	default:
+		return nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
 	}
 
 	if result.Status == nil {
