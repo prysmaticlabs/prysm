@@ -36,7 +36,7 @@ const (
 	NewPayloadMethodV2 = "engine_newPayloadV2"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
-	// ForkchoiceUpdatedMethod v2 request string for JSON-RPC.
+	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
@@ -147,7 +147,7 @@ func (s *Service) ForkchoiceUpdated(
 	result := &ForkchoiceUpdatedResponse{}
 
 	if attrs == nil {
-		return nil, nil, errors.New("nil payload attribute")
+		return nil, nil, errors.New("nil payload attributer")
 	}
 	switch attrs.Version() {
 	case version.Bellatrix:
@@ -168,6 +168,8 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
+	default:
+		return nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
 	}
 
 	if result.Status == nil {

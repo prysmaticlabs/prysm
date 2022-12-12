@@ -74,9 +74,19 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		attr, err := payloadattribute.New(&pb.PayloadAttributes{})
+		p, err := payloadattribute.New(&pb.PayloadAttributes{})
 		require.NoError(t, err)
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, attr)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, p)
+		require.NoError(t, err)
+		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
+		require.DeepEqual(t, want.PayloadId, payloadID)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2, func(t *testing.T) {
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		p, err := payloadattribute.New(&pb.PayloadAttributesV2{})
+		require.NoError(t, err)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, p)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -172,14 +182,38 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		srv := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(payloadAttributes)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.NoError(t, err)
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
+		require.DeepEqual(t, want.PayloadId, payloadID)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2+" VALID status", func(t *testing.T) {
+		forkChoiceState := &pb.ForkchoiceState{
+			HeadBlockHash:      []byte("head"),
+			SafeBlockHash:      []byte("safe"),
+			FinalizedBlockHash: []byte("finalized"),
+		}
+		payloadAttributes := &pb.PayloadAttributesV2{
+			Timestamp:             1,
+			PrevRandao:            []byte("random"),
+			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		srv := forkchoiceUpdateSetupV2(t, forkChoiceState, payloadAttributes, want)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -195,14 +229,38 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
+		require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
+		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
+		require.DeepEqual(t, []byte(nil), validHash)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2+" SYNCING status", func(t *testing.T) {
+		forkChoiceState := &pb.ForkchoiceState{
+			HeadBlockHash:      []byte("head"),
+			SafeBlockHash:      []byte("safe"),
+			FinalizedBlockHash: []byte("finalized"),
+		}
+		payloadAttributes := &pb.PayloadAttributesV2{
+			Timestamp:             1,
+			PrevRandao:            []byte("random"),
+			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+		}
+		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		srv := forkchoiceUpdateSetupV2(t, forkChoiceState, payloadAttributes, want)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
@@ -218,14 +276,14 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedInvalidResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
-		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrInvalidPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
@@ -241,14 +299,14 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedAcceptedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
-		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrUnknownPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
@@ -1381,6 +1439,18 @@ func (*testEngineService) ForkchoiceUpdatedV1(
 	return item
 }
 
+func (*testEngineService) ForkchoiceUpdatedV2(
+	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+) *ForkchoiceUpdatedResponse {
+	fix := fixtures()
+	item, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+	if !ok {
+		panic("not found")
+	}
+	item.Status.Status = pb.PayloadStatus_VALID
+	return item
+}
+
 func (*testEngineService) NewPayloadV1(
 	_ context.Context, _ *pb.ExecutionPayload,
 ) *pb.PayloadStatus {
@@ -1393,6 +1463,45 @@ func (*testEngineService) NewPayloadV1(
 }
 
 func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Service {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		forkChoiceStateReq, err := json.Marshal(fcs)
+		require.NoError(t, err)
+		payloadAttrsReq, err := json.Marshal(att)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(forkChoiceStateReq),
+		))
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(payloadAttrsReq),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  res,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
+}
+
+func forkchoiceUpdateSetupV2(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributesV2, res *ForkchoiceUpdatedResponse) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
