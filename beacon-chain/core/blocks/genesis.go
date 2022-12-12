@@ -40,7 +40,7 @@ var ErrUnrecognizedState = errors.New("uknonwn underlying type for state.BeaconS
 func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
 	ps := st.ToProto()
 	switch ps.(type) {
-	case *ethpb.BeaconState:
+	case *ethpb.BeaconState, *ethpb.BeaconStateAltair:
 		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				ParentRoot: params.BeaconConfig().ZeroHash[:],
