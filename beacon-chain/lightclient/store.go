@@ -42,19 +42,8 @@ type Store struct {
 	CurrentMaxActiveParticipants uint64 `json:"current_max_active_participants,omitempty"`
 }
 
-// Update is an interface that exposes the attributes common to all types of updates
-type Update interface {
-	GetAttestedHeader() *ethpbv1.BeaconBlockHeader
-	GetSyncAggregate() *ethpbv1.SyncAggregate
-	GetSignatureSlot() types.Slot
-}
-
-var _ Update = (*ethpbv2.LightClientUpdate)(nil)
-var _ Update = (*ethpbv2.LightClientFinalityUpdate)(nil)
-var _ Update = (*ethpbv2.LightClientOptimisticUpdate)(nil)
-
-func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (Update, error) {
-	var update Update
+func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
+	var update *ethpbv2.LightClientUpdate
 	switch typedUpdate.TypeName {
 	case ethrpc.LightClientUpdateTypeName:
 		var fullUpdate ethrpc.LightClientUpdateJson
@@ -72,7 +61,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (Up
 		if err != nil {
 			return nil, err
 		}
-		update, err = helpers.NewLightClientFinalityUpdateFromJSON(&finalityUpdate)
+		update, err = helpers.NewLightClientUpdateFromFinalityUpdateJSON(&finalityUpdate)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +71,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (Up
 		if err != nil {
 			return nil, err
 		}
-		update, err = helpers.NewLightClientOptimisticUpdateFromJSON(&optimisticUpdate)
+		update, err = helpers.NewLightClientUpdateFromOptimisticUpdateJSON(&optimisticUpdate)
 		if err != nil {
 			return nil, err
 		}
@@ -378,16 +367,4 @@ func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientOptimisticUpd
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(lightclient.NewLightClientUpdateFromOptimisticUpdate(update), currentSlot,
 		genesisValidatorsRoot)
-}
-
-func (s *Store) ProcessGenericUpdate(update Update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
-	switch update.(type) {
-	case *ethpbv2.LightClientUpdate:
-		return s.ProcessUpdate(update.(*ethpbv2.LightClientUpdate), currentSlot, genesisValidatorsRoot)
-	case *ethpbv2.LightClientFinalityUpdate:
-		return s.ProcessFinalityUpdate(update.(*ethpbv2.LightClientFinalityUpdate), currentSlot, genesisValidatorsRoot)
-	case *ethpbv2.LightClientOptimisticUpdate:
-		return s.ProcessOptimisticUpdate(update.(*ethpbv2.LightClientOptimisticUpdate), currentSlot, genesisValidatorsRoot)
-	}
-	return fmt.Errorf("unknown update type: %T", update)
 }

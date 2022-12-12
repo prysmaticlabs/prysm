@@ -12,8 +12,6 @@ type update struct {
 	*ethpbv2.LightClientUpdate
 }
 
-var _ Update = (*update)(nil)
-
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	if len(bb) == 0 {
 		return true
