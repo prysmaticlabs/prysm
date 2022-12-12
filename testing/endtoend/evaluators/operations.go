@@ -148,6 +148,7 @@ func verifyGraffitiInBlocks(_ e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		return errors.Wrap(err, "failed to get chain head")
 	}
 	begin := chainHead.HeadEpoch
+	// Prevent underflow when this runs at epoch 0.
 	if begin > 0 {
 		begin = begin.Sub(1)
 	}
@@ -390,6 +391,7 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 	}
 
 	begin := chainHead.HeadEpoch
+	// Prevent underflow when this runs at epoch 0.
 	if begin > 0 {
 		begin = begin.Sub(1)
 	}
