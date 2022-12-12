@@ -30,7 +30,9 @@ type MerkleTreeNode interface {
 	// PushLeaf adds a new leaf node at the next available Zero node.
 	PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
 
+	// Right represents the right child of a node.
 	Right() MerkleTreeNode
+	// Left represents the left child of a node.
 	Left() MerkleTreeNode
 }
 
