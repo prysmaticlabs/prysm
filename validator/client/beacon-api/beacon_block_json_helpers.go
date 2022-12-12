@@ -15,15 +15,19 @@ func jsonifyTransactions(transactions [][]byte) []string {
 	return jsonTransactions
 }
 
-func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExecutionChange) []*apimiddleware.BLSToExecutionChangeJson {
-	jsonBlsToExecutionChanges := make([]*apimiddleware.BLSToExecutionChangeJson, len(blsToExecutionChanges))
+func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExecutionChange) []*apimiddleware.SignedBLSToExecutionChangeJson {
+	jsonBlsToExecutionChanges := make([]*apimiddleware.SignedBLSToExecutionChangeJson, len(blsToExecutionChanges))
 	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
 		blsToExecutionChangeJson := &apimiddleware.BLSToExecutionChangeJson{
 			ValidatorIndex:     uint64ToString(signedBlsToExecutionChange.Message.ValidatorIndex),
 			FromBLSPubkey:      hexutil.Encode(signedBlsToExecutionChange.Message.FromBlsPubkey),
 			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
 		}
-		jsonBlsToExecutionChanges[index] = blsToExecutionChangeJson
+		signedJson := &apimiddleware.SignedBLSToExecutionChangeJson{
+			Message:   blsToExecutionChangeJson,
+			Signature: hexutil.Encode(signedBlsToExecutionChange.Signature),
+		}
+		jsonBlsToExecutionChanges[index] = signedJson
 	}
 	return jsonBlsToExecutionChanges
 }
