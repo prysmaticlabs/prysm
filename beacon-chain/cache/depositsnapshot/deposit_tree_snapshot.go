@@ -7,35 +7,37 @@ import (
 )
 
 type DepositTreeSnapshot struct {
-	finalized            [][32]byte
-	depositRoot          [32]byte
-	depositCount         uint64
-	executionBlockHash   [32]byte
-	executionBlockHeight uint64
+	Finalized            [][32]byte
+	DepositRoot          [32]byte
+	DepositCount         uint64
+	ExecutionBlockHash   [32]byte
+	ExecutionBlockHeight uint64
 }
 
 func (ds *DepositTreeSnapshot) CalculateRoot() [32]byte {
-	size := ds.depositCount
-	index := len(ds.finalized)
+	size := ds.DepositCount
+	index := len(ds.Finalized)
 	root := Zerohashes[0]
 	for i := 0; i < DepositContractDepth; i++ {
 		if (size & 1) == 1 {
 			index -= 1
-			root = sha256.Sum256(append(ds.finalized[index][:], root[:]...))
+			root = sha256.Sum256(append(ds.Finalized[index][:], root[:]...))
 		} else {
 			root = sha256.Sum256(append(root[:], Zerohashes[i][:]...))
 		}
 		size >>= 1
 	}
-	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...))
+	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(ds.DepositCount)...))
 }
 
 func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock ExecutionBlock) DepositTreeSnapshot {
-	return DepositTreeSnapshot{
-		finalized:            finalised,
-		depositRoot:          Zerohashes[0],
-		depositCount:         depositCount,
-		executionBlockHash:   executionBlock.Hash,
-		executionBlockHeight: executionBlock.Depth,
+	snapshot := DepositTreeSnapshot{
+		Finalized:            finalised,
+		DepositRoot:          Zerohashes[0],
+		DepositCount:         depositCount,
+		ExecutionBlockHash:   executionBlock.Hash,
+		ExecutionBlockHeight: executionBlock.Depth,
 	}
+	snapshot.DepositRoot = snapshot.CalculateRoot()
+	return snapshot
 }

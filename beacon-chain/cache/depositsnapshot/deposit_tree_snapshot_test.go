@@ -20,7 +20,7 @@ func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
 			want:         [32]byte{89, 154, 19, 135, 81, 239, 248, 61, 237, 225, 98, 110, 43, 130, 145, 21, 218, 236, 72, 223, 115, 71, 51, 92, 190, 80, 146, 24, 214, 95, 89, 175},
 		},
 		{
-			name:         "1 finalized",
+			name:         "1 Finalized",
 			finalized:    1,
 			depositCount: 2,
 			want:         [32]byte{27, 212, 239, 108, 14, 221, 178, 95, 149, 19, 106, 243, 39, 89, 184, 175, 189, 251, 230, 92, 200, 13, 19, 203, 102, 25, 58, 80, 160, 52, 48, 7},
@@ -39,8 +39,8 @@ func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
 				finalized = append(finalized, hexString(t, fmt.Sprintf("%064d", i)))
 			}
 			ds := &DepositTreeSnapshot{
-				finalized:    finalized,
-				depositCount: tt.depositCount,
+				Finalized:    finalized,
+				DepositCount: tt.depositCount,
 			}
 			if got := ds.CalculateRoot(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateRoot() = %v, want %v", got, tt.want)

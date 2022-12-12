@@ -117,11 +117,7 @@ func (ed *eth1Data) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type snapshot struct {
-	Finalized            [][32]byte `yaml:"finalized"`
-	DepositRoot          [32]byte   `yaml:"deposit_root"`
-	DepositCount         uint64     `yaml:"deposit_count"`
-	ExecutionBlockHash   [32]byte   `yaml:"execution_block_hash"`
-	ExecutionBlockHeight uint64     `yaml:"execution_block_height"`
+	DepositTreeSnapshot
 }
 
 func (sd *snapshot) UnmarshalYAML(value *yaml.Node) error {
@@ -229,7 +225,7 @@ func checkProof(t *testing.T, tree *DepositTree, index uint64) {
 	leaf, proof, err := tree.getProof(index)
 	assert.NoError(t, err)
 	calcRoot := merkleRootFromBranch(leaf, proof, index)
-	assert.Equal(t, calcRoot, tree.getRoot())
+	assert.Equal(t, tree.getRoot(), calcRoot)
 }
 
 func compareProof(t *testing.T, tree1, tree2 *DepositTree, index uint64) {
@@ -255,8 +251,8 @@ func TestDepositCases(t *testing.T) {
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
 		assert.NoError(t, err)
-		assert.Equal(t, c.Snapshot.DepositRoot, c.Eth1Data.DepositRoot)
-		assert.Equal(t, tree.getRoot(), c.Eth1Data.DepositRoot)
+		assert.Equal(t, c.Eth1Data.DepositRoot, c.Snapshot.DepositRoot)
+		assert.Equal(t, c.Eth1Data.DepositRoot, tree.getRoot())
 	}
 }
 
@@ -269,7 +265,7 @@ func TestFinalization(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	originalRoot := tree.getRoot()
-	assert.DeepEqual(t, originalRoot, testCases[127].Eth1Data.DepositRoot)
+	assert.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
 	tree.finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[100].Eth1Data.DepositCount,
@@ -279,7 +275,7 @@ func TestFinalization(t *testing.T) {
 	assert.Equal(t, tree.getRoot(), originalRoot)
 	snapshotData, err := tree.getSnapshot()
 	assert.NoError(t, err)
-	assert.Equal(t, snapshotData, testCases[100].Snapshot)
+	assert.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
 	// create a copy of the tree from a snapshot by replaying
 	// the deposits after the finalized deposit
 	cp := cloneFromSnapshot(t, snapshotData, testCases[101:128])
@@ -292,7 +288,7 @@ func TestFinalization(t *testing.T) {
 		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
 	}, testCases[105].BlockHeight)
 	//	root should still be the same
-	assert.Equal(t, tree.getRoot(), originalRoot)
+	assert.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
@@ -323,7 +319,7 @@ func TestSnapshotCases(t *testing.T) {
 		}, c.BlockHeight)
 		s, err := tree.getSnapshot()
 		assert.NoError(t, err)
-		assert.Equal(t, s, c.Snapshot)
+		assert.Equal(t, c.Snapshot, s)
 	}
 }
 
@@ -334,11 +330,11 @@ func TestEmptyTreeSnapshot(t *testing.T) {
 
 func TestInvalidSnapshot(t *testing.T) {
 	invalidSnapshot := DepositTreeSnapshot{
-		finalized:            nil,
-		depositRoot:          Zerohashes[0],
-		depositCount:         0,
-		executionBlockHash:   Zerohashes[0],
-		executionBlockHeight: 0,
+		Finalized:            nil,
+		DepositRoot:          Zerohashes[0],
+		DepositCount:         0,
+		ExecutionBlockHash:   Zerohashes[0],
+		ExecutionBlockHeight: 0,
 	}
 	_, err := fromSnapshot(invalidSnapshot)
 	assert.ErrorContains(t, "snapshot root is invalid", err)

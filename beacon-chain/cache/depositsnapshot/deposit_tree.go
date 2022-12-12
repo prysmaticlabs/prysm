@@ -42,23 +42,23 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}
 	var finalized [][32]byte
-	depositCount, _ := d.tree.GetFinalized(finalized)
+	depositCount, finalized := d.tree.GetFinalized(finalized)
 	return fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock), nil
 }
 
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
 func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
-	if snapshot.depositRoot != snapshot.CalculateRoot() {
+	if snapshot.DepositRoot != snapshot.CalculateRoot() {
 		return DepositTree{}, ErrInvalidSnapshotRoot
 	}
 	finalizedExecutionBlock := ExecutionBlock{
-		Hash:  snapshot.executionBlockHash,
-		Depth: snapshot.executionBlockHeight,
+		Hash:  snapshot.ExecutionBlockHash,
+		Depth: snapshot.ExecutionBlockHeight,
 	}
-	tree := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
+	tree := fromSnapshotParts(snapshot.Finalized, snapshot.DepositCount, DepositContractDepth)
 	return DepositTree{
 		tree:                    tree,
-		mixInLength:             snapshot.depositCount,
+		mixInLength:             snapshot.DepositCount,
 		finalizedExecutionBlock: finalizedExecutionBlock,
 	}, nil
 }
@@ -95,8 +95,5 @@ func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.mixInLength += 1
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

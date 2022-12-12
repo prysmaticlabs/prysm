@@ -162,7 +162,7 @@ func (l *LeafNode) Finalize(deposits uint64, depth uint64) MerkleTreeNode {
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
 func (l *LeafNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
-	return 0, nil
+	return 0, result
 }
 
 // PushLeaf adds a new leaf node at the next available zero node.
@@ -213,9 +213,9 @@ func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) MerkleTree
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
 func (n *InnerNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
-	leftDeposits, leftFinalized := n.left.GetFinalized(result)
-	rightDeposits, rightFinalized := n.right.GetFinalized(result)
-	return leftDeposits + rightDeposits, append(leftFinalized, rightFinalized...)
+	leftDeposits, result := n.left.GetFinalized(result)
+	rightDeposits, result := n.right.GetFinalized(result)
+	return leftDeposits + rightDeposits, result
 }
 
 // PushLeaf adds a new leaf node at the next available zero node.
@@ -273,7 +273,7 @@ func (z *ZeroNode) Finalize(deposits uint64, depth uint64) MerkleTreeNode {
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
 func (z *ZeroNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
-	return 0, nil
+	return 0, result
 }
 
 // PushLeaf adds a new leaf node at the next available zero node.

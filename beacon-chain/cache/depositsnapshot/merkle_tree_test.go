@@ -81,8 +81,8 @@ func Test_fromSnapshotParts(t *testing.T) {
 			},
 		},
 		//{
-		//	name:      "multiple deposits and 1 finalized",
-		//	finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
+		//	name:      "multiple deposits and 1 Finalized",
+		//	Finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
 		//	deposits:  2,
 		//	level:     4,
 		//	want: &InnerNode{
