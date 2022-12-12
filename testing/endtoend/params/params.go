@@ -204,18 +204,15 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
-	now := time.Now()
-	clGenTime := uint64(now.Unix()) + StartupBufferSecs
-
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:         logPath,
 		TestShardIndex:  testShardIndex,
 		BeaconNodeCount: beaconNodeCount,
 		Ports:           testPorts,
-		StartTime:       now,
-		CLGenesisTime:   clGenTime,
-		Eth1GenesisTime: clGenTime,
+		CLGenesisTime:   genTime,
+		Eth1GenesisTime: genTime,
 	}
 	return nil
 }
@@ -259,8 +256,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	now := time.Now()
-	clGenTime := uint64(now.Unix()) + StartupBufferSecs
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -268,9 +264,8 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		BeaconNodeCount:           beaconNodeCount,
 		LighthouseBeaconNodeCount: lighthouseNodeCount,
 		Ports:                     testPorts,
-		StartTime:                 now,
-		CLGenesisTime:             clGenTime,
-		Eth1GenesisTime:           clGenTime,
+		CLGenesisTime:             genTime,
+		Eth1GenesisTime:           genTime,
 	}
 	return nil
 }
