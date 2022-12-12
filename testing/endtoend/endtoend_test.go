@@ -84,8 +84,6 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 		if err := helpers.ComponentsStarted(r.comHandler.ctx, []e2etypes.ComponentRunner{miner}); err != nil {
 			return errors.Wrap(err, "eth1Miner component never started - cannot send deposits")
 		}
-		// refactored send and mine goes here
-		//minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 		keyPath, err := e2e.TestParams.Paths.MinerKeyPath()
 		if err != nil {
 			return errors.Wrap(err, "error getting miner key file from bazel static files")
