@@ -15,7 +15,8 @@ import (
 
 func TestUpgradeToCapella(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	preForkState := st.Copy()
+	preForkState, err := st.Copy()
+	require.NoError(t, err)
 	mSt, err := capella.UpgradeToCapella(st)
 	require.NoError(t, err)
 

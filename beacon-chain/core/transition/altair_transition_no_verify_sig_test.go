@@ -50,7 +50,9 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	c, err := beaconState.Copy()
+	require.NoError(t, err)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), c, beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -96,7 +98,8 @@ func TestExecuteAltairStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
-	c := beaconState.Copy()
+	c, err = beaconState.Copy()
+	require.NoError(t, err)
 	sig, err := util.BlockSignatureAltair(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
@@ -137,7 +140,9 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	c, err := beaconState.Copy()
+	require.NoError(t, err)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), c, beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -184,7 +189,8 @@ func TestExecuteAltairStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
-	c := beaconState.Copy()
+	c, err = beaconState.Copy()
+	require.NoError(t, err)
 	sig, err := util.BlockSignatureAltair(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
@@ -235,7 +241,8 @@ func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconState,
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	assert.NoError(t, err)
 	assert.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	tState := beaconState.Copy()
+	tState, err := beaconState.Copy()
+	assert.NoError(t, err)
 	blk, err := util.GenerateFullBlockAltair(tState, privKeys,
 		&util.BlockGenConfig{NumAttestations: 1, NumVoluntaryExits: 0, NumDeposits: 0}, 1)
 	require.NoError(t, err)

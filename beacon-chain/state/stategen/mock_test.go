@@ -140,7 +140,7 @@ func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.S
 
 func (m *mockHistory) StateOrError(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if s, ok := m.states[blockRoot]; ok {
-		return s.Copy(), nil
+		return s.Copy()
 	}
 	return nil, db.ErrNotFoundState
 }
@@ -213,9 +213,12 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 	// add genesis block as canonical
 	mh.addBlock(pr, gb, true)
 	// add genesis state, indexed by unapplied genesis block - genesis block is never really processed...
-	mh.addState(pr, gs.Copy())
+	s0, err := gs.Copy()
+	require.NoError(t, err)
+	mh.addState(pr, s0)
 
-	ps := gs.Copy()
+	ps, err := gs.Copy()
+	require.NoError(t, err)
 	for _, spec := range hist {
 		// call process_slots and process_block separately, because process_slots updates values used in randao mix
 		// which influences proposer_index.
@@ -259,7 +262,8 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 			mh.hideState(pr, s)
 		}
 		mh.addBlock(pr, b, spec.canonicalBlock)
-		ps = s.Copy()
+		ps, err = s.Copy()
+		require.NoError(t, err)
 	}
 
 	require.NoError(t, mh.validateRoots())

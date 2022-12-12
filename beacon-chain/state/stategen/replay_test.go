@@ -449,7 +449,9 @@ func tree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		copied, err := st.Copy()
+		require.NoError(t, err)
+		if err := beaconDB.SaveState(context.Background(), copied, bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -532,7 +534,9 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		copied, err := st.Copy()
+		require.NoError(t, err)
+		if err := beaconDB.SaveState(context.Background(), copied, bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -608,7 +612,9 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		copied, err := st.Copy()
+		require.NoError(t, err)
+		if err := beaconDB.SaveState(context.Background(), copied, bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)
@@ -678,7 +684,9 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		copied, err := st.Copy()
+		require.NoError(t, err)
+		if err := beaconDB.SaveState(context.Background(), copied, bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 		returnedBlocks = append(returnedBlocks, beaconBlock)

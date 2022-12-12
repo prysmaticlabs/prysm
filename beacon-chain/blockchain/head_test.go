@@ -91,7 +91,9 @@ func TestSaveHead_Different(t *testing.T) {
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	headStateProto, err := headState.ToProto()
 	require.NoError(t, err)
-	serviceHeadStateProto, err := service.headState(ctx).ToProto()
+	hs, err := service.headState(ctx)
+	require.NoError(t, err)
+	serviceHeadStateProto, err := hs.ToProto()
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headStateProto, serviceHeadStateProto, "Head did not change")
 }
@@ -153,7 +155,9 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	headStateProto, err := headState.ToProto()
 	require.NoError(t, err)
-	serviceHeadStateProto, err := service.headState(ctx).ToProto()
+	hs, err := service.headState(ctx)
+	require.NoError(t, err)
+	serviceHeadStateProto, err := hs.ToProto()
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headStateProto, serviceHeadStateProto, "Head did not change")
 	require.LogsContain(t, hook, "Chain reorg occurred")
@@ -509,7 +513,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
 	require.NoError(t, beaconDB.SaveState(ctx, bellatrixState, bellatrixBlkRoot))
-	service.cfg.StateGen.SaveFinalizedState(0, bellatrixBlkRoot, bellatrixState)
+	require.NoError(t, service.cfg.StateGen.SaveFinalizedState(0, bellatrixBlkRoot, bellatrixState))
 
 	headRoot := service.headRoot()
 	require.Equal(t, [32]byte{}, headRoot)

@@ -28,7 +28,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	c.Put(ctx, r, s)
+	require.NoError(t, c.Put(ctx, r, s))
 	c.MarkNotInProgress(r)
 
 	res, err := c.Get(ctx, r)

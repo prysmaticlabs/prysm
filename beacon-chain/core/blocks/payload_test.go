@@ -737,7 +737,8 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	emptySt := st.Copy()
+	emptySt, err := st.Copy()
+	require.NoError(t, err)
 	wrappedHeader, err := consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
 	require.NoError(t, err)
 	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))

@@ -32,7 +32,7 @@ func (_ *MockStateManager) Resume(_ context.Context, _ state.BeaconState) (state
 }
 
 // SaveFinalizedState --
-func (_ *MockStateManager) SaveFinalizedState(_ types.Slot, _ [32]byte, _ state.BeaconState) {
+func (_ *MockStateManager) SaveFinalizedState(_ types.Slot, _ [32]byte, _ state.BeaconState) error {
 	panic("implement me")
 }
 

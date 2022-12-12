@@ -201,11 +201,15 @@ func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, sta
 	if err != nil {
 		return err
 	}
+	copiedState, err := state.Copy()
+	if err != nil {
+		return err
+	}
 	s.head = &head{
 		slot:  block.Block().Slot(),
 		root:  root,
 		block: bCp,
-		state: state.Copy(),
+		state: copiedState,
 	}
 	return nil
 }
@@ -258,7 +262,7 @@ func (s *Service) headBlock() (interfaces.SignedBeaconBlock, error) {
 // This returns the head state.
 // It does a full copy on head state for immutability.
 // This is a lock free version.
-func (s *Service) headState(ctx context.Context) state.BeaconState {
+func (s *Service) headState(ctx context.Context) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 

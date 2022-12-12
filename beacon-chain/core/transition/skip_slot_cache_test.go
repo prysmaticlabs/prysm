@@ -78,7 +78,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	// Create two shallow but different forks
 	var s1, s0 state.BeaconState
 	{
-		blk, err := util.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		c0, err := originalState.Copy()
+		require.NoError(t, err)
+		blk, err := util.GenerateFullBlock(c0, privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 1")
 		signature, err := util.BlockSignature(originalState, blk.Block, privs)
@@ -86,12 +88,14 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		blk.Signature = signature.Marshal()
 		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		s1, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wsb)
+		s1, err = transition.ExecuteStateTransition(context.Background(), c0, wsb)
 		require.NoError(t, err, "Could not run state transition")
 	}
 
 	{
-		blk, err := util.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		c1, err := originalState.Copy()
+		require.NoError(t, err)
+		blk, err := util.GenerateFullBlock(c1, privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 2")
 		signature, err := util.BlockSignature(originalState, blk.Block, privs)
@@ -99,7 +103,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		blk.Signature = signature.Marshal()
 		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		s0, err = transition.ExecuteStateTransition(context.Background(), originalState.Copy(), wsb)
+		s0, err = transition.ExecuteStateTransition(context.Background(), c1, wsb)
 		require.NoError(t, err, "Could not run state transition")
 	}
 
@@ -124,28 +128,38 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 		} else {
 			st = s0
 		}
-		setups = append(setups, st.Copy())
+		c, err := st.Copy()
+		require.NoError(t, err)
+		setups = append(setups, c)
 	}
 
 	problemSlot := s1.Slot() + 2
-	expected1, err := transition.ProcessSlots(context.Background(), s1.Copy(), problemSlot)
+	s1Copied, err := s1.Copy()
+	require.NoError(t, err)
+	expected1, err := transition.ProcessSlots(context.Background(), s1Copied, problemSlot)
 	require.NoError(t, err)
 	expectedRoot1, err := expected1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 1 (even i) expected root %x at slot %d", expectedRoot1[:], problemSlot)
 
-	tmp1, err := transition.ProcessSlots(context.Background(), expected1.Copy(), problemSlot+1)
+	expectedS1Copied, err := expected1.Copy()
+	require.NoError(t, err)
+	tmp1, err := transition.ProcessSlots(context.Background(), expectedS1Copied, problemSlot+1)
 	require.NoError(t, err)
 	gotRoot := tmp1.StateRoots()[problemSlot]
 	require.DeepEqual(t, expectedRoot1[:], gotRoot, "State roots for chain 1 are bad, expected root doesn't match")
 
-	expected2, err := transition.ProcessSlots(context.Background(), s0.Copy(), problemSlot)
+	s0Copied, err := s0.Copy()
+	require.NoError(t, err)
+	expected2, err := transition.ProcessSlots(context.Background(), s0Copied, problemSlot)
 	require.NoError(t, err)
 	expectedRoot2, err := expected2.HashTreeRoot(context.Background())
 	require.NoError(t, err)
 	t.Logf("chain 2 (odd i) expected root %x at slot %d", expectedRoot2[:], problemSlot)
 
-	tmp2, err := transition.ProcessSlots(context.Background(), expected2.Copy(), problemSlot+1)
+	expectedS2Copied, err := expected2.Copy()
+	require.NoError(t, err)
+	tmp2, err := transition.ProcessSlots(context.Background(), expectedS2Copied, problemSlot+1)
 	require.NoError(t, err)
 	gotRoot = tmp2.StateRoots()[problemSlot]
 	require.DeepEqual(t, expectedRoot2[:], gotRoot, "State roots for chain 2 are bad, expected root doesn't match")

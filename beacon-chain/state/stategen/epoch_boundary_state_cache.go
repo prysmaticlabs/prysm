@@ -99,9 +99,13 @@ func (e *epochBoundaryState) getByBlockRootLockFree(r [32]byte) (*rootStateInfo,
 		return nil, false, errNotRootStateInfo
 	}
 
+	copiedState, err := s.state.Copy()
+	if err != nil {
+		return nil, false, err
+	}
 	return &rootStateInfo{
 		root:  r,
-		state: s.state.Copy(),
+		state: copiedState,
 	}, true, nil
 }
 
@@ -138,9 +142,13 @@ func (e *epochBoundaryState) put(blockRoot [32]byte, s state.BeaconState) error 
 	}); err != nil {
 		return err
 	}
+	copiedState, err := s.Copy()
+	if err != nil {
+		return err
+	}
 	if err := e.rootStateCache.AddIfNotPresent(&rootStateInfo{
 		root:  blockRoot,
-		state: s.Copy(),
+		state: copiedState,
 	}); err != nil {
 		return err
 	}

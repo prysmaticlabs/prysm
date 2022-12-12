@@ -26,7 +26,8 @@ func TestStateReferenceSharing_Finalizer_Phase0(t *testing.T) {
 
 	func() {
 		// Create object in a different scope for GC
-		b := a.Copy()
+		b, err := a.Copy()
+		require.NoError(t, err)
 		assert.Equal(t, uint(2), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
@@ -34,7 +35,8 @@ func TestStateReferenceSharing_Finalizer_Phase0(t *testing.T) {
 	runtime.GC() // Should run finalizer on object b
 	assert.Equal(t, uint(1), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
@@ -55,7 +57,8 @@ func TestStateReferenceSharing_Finalizer_Altair(t *testing.T) {
 
 	func() {
 		// Create object in a different scope for GC
-		b := a.Copy()
+		b, err := a.Copy()
+		require.NoError(t, err)
 		assert.Equal(t, uint(2), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
@@ -63,7 +66,8 @@ func TestStateReferenceSharing_Finalizer_Altair(t *testing.T) {
 	runtime.GC() // Should run finalizer on object b
 	assert.Equal(t, uint(1), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
@@ -84,7 +88,8 @@ func TestStateReferenceSharing_Finalizer_Bellatrix(t *testing.T) {
 
 	func() {
 		// Create object in a different scope for GC
-		b := a.Copy()
+		b, err := a.Copy()
+		require.NoError(t, err)
 		assert.Equal(t, uint(2), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
@@ -92,7 +97,8 @@ func TestStateReferenceSharing_Finalizer_Bellatrix(t *testing.T) {
 	runtime.GC() // Should run finalizer on object b
 	assert.Equal(t, uint(1), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
@@ -113,7 +119,8 @@ func TestStateReferenceSharing_Finalizer_Capella(t *testing.T) {
 
 	func() {
 		// Create object in a different scope for GC
-		b := a.Copy()
+		b, err := a.Copy()
+		require.NoError(t, err)
 		assert.Equal(t, uint(2), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
@@ -121,7 +128,8 @@ func TestStateReferenceSharing_Finalizer_Capella(t *testing.T) {
 	runtime.GC() // Should run finalizer on object b
 	assert.Equal(t, uint(1), a.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[nativetypes.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
@@ -149,7 +157,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation_Phase0(t *testing.T) {
 	assertRefCount(t, a, nativetypes.StateRoots, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.BlockRoots, 2)
@@ -208,7 +217,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation_Altair(t *testing.T) {
 	assertRefCount(t, a, nativetypes.StateRoots, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.BlockRoots, 2)
@@ -267,7 +277,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation_Bellatrix(t *testing.T) {
 	assertRefCount(t, a, nativetypes.StateRoots, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.BlockRoots, 2)
@@ -326,7 +337,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation_Capella(t *testing.T) {
 	assertRefCount(t, a, nativetypes.StateRoots, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.BlockRoots, 2)
@@ -381,7 +393,8 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Phase0(t *testing.T) {
 	assertRefCount(t, a, nativetypes.RandaoMixes, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.RandaoMixes, 2)
@@ -425,7 +438,8 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Altair(t *testing.T) {
 	assertRefCount(t, a, nativetypes.RandaoMixes, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.RandaoMixes, 2)
@@ -469,7 +483,8 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Bellatrix(t *testing.T) {
 	assertRefCount(t, a, nativetypes.RandaoMixes, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.RandaoMixes, 2)
@@ -513,7 +528,8 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Capella(t *testing.T) {
 	assertRefCount(t, a, nativetypes.RandaoMixes, 1)
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.RandaoMixes, 2)
@@ -585,7 +601,8 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assert.Equal(t, 1, len(preAtt), "Unexpected number of attestations")
 
 	// Copy, increases reference count.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assertRefCount(t, a, nativetypes.PreviousEpochAttestations, 2)
@@ -723,7 +740,8 @@ func TestValidatorReferences_RemainsConsistent_Phase0(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	// Create a second state.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 
@@ -758,7 +776,8 @@ func TestValidatorReferences_RemainsConsistent_Altair(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	// Create a second state.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 
@@ -793,7 +812,8 @@ func TestValidatorReferences_RemainsConsistent_Capella(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	// Create a second state.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 
@@ -828,7 +848,8 @@ func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
 	require.Equal(t, true, ok)
 
 	// Create a second state.
-	copied := a.Copy()
+	copied, err := a.Copy()
+	require.NoError(t, err)
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 

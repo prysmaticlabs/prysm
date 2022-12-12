@@ -66,7 +66,9 @@ func TestStore_OnBlock(t *testing.T) {
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	copiedSt, err := st.Copy()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copiedSt, validGenesisRoot))
 	roots, err := blockTree1(t, beaconDB, validGenesisRoot[:])
 	require.NoError(t, err)
 	random := util.NewBeaconBlock()
@@ -76,11 +78,23 @@ func TestStore_OnBlock(t *testing.T) {
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), randomParentRoot))
+	copiedSt1, err := st.Copy()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copiedSt1, randomParentRoot))
 	randomParentRoot2 := roots[1]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot2}))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)))
+	copiedSt2, err := st.Copy()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copiedSt2, bytesutil.ToBytes32(randomParentRoot2)))
 
+	c1, err := st.Copy()
+	require.NoError(t, err)
+	c2, err := st.Copy()
+	require.NoError(t, err)
+	c3, err := st.Copy()
+	require.NoError(t, err)
+	c4, err := st.Copy()
+	require.NoError(t, err)
 	tests := []struct {
 		name          string
 		blk           *ethpb.SignedBeaconBlock
@@ -91,7 +105,7 @@ func TestStore_OnBlock(t *testing.T) {
 		{
 			name:          "parent block root does not have a state",
 			blk:           util.NewBeaconBlock(),
-			s:             st.Copy(),
+			s:             c1,
 			wantErrString: "could not reconstruct parent state",
 		},
 		{
@@ -102,7 +116,7 @@ func TestStore_OnBlock(t *testing.T) {
 				b.Block.Slot = params.BeaconConfig().FarFutureSlot
 				return b
 			}(),
-			s:             st.Copy(),
+			s:             c2,
 			wantErrString: "is in the far distant future",
 		},
 		{
@@ -112,7 +126,7 @@ func TestStore_OnBlock(t *testing.T) {
 				b.Block.ParentRoot = randomParentRoot[:]
 				return b
 			}(),
-			s:             st.Copy(),
+			s:             c3,
 			wantErrString: "is not a descendant of the current finalized block",
 		},
 		{
@@ -123,7 +137,7 @@ func TestStore_OnBlock(t *testing.T) {
 				b.Block.ParentRoot = randomParentRoot2
 				return b
 			}(),
-			s:             st.Copy(),
+			s:             c4,
 			wantErrString: "block is equal or earlier than finalized block, slot 0 < slot 0",
 		},
 	}
@@ -157,7 +171,8 @@ func TestStore_OnBlockBatch(t *testing.T) {
 
 	st, keys := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
-	bState := st.Copy()
+	bState, err := st.Copy()
+	require.NoError(t, err)
 
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
@@ -200,7 +215,8 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, err)
 	st, keys := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
-	bState := st.Copy()
+	bState, err := st.Copy()
+	require.NoError(t, err)
 
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
@@ -370,7 +386,9 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	copied, err := st.Copy()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, validGenesisRoot))
 
 	// Define a tree branch, slot 63 <- 64 <- 65
 	b63 := util.NewBeaconBlock()
@@ -429,7 +447,9 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	copied, err := st.Copy()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, validGenesisRoot))
 	roots, err := blockTree1(t, beaconDB, validGenesisRoot[:])
 	require.NoError(t, err)
 
@@ -523,17 +543,25 @@ func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byt
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, err
 		}
-		if err := beaconDB.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
+		copied1, err := st.Copy()
+		require.NoError(t, err)
+		if err := beaconDB.SaveState(context.Background(), copied1, bytesutil.ToBytes32(beaconBlock.Block.ParentRoot)); err != nil {
 			return nil, errors.Wrap(err, "could not save state")
 		}
 	}
-	if err := beaconDB.SaveState(context.Background(), st.Copy(), r1); err != nil {
+	copied2, err := st.Copy()
+	require.NoError(t, err)
+	if err := beaconDB.SaveState(context.Background(), copied2, r1); err != nil {
 		return nil, err
 	}
-	if err := beaconDB.SaveState(context.Background(), st.Copy(), r7); err != nil {
+	copied3, err := st.Copy()
+	require.NoError(t, err)
+	if err := beaconDB.SaveState(context.Background(), copied3, r7); err != nil {
 		return nil, err
 	}
-	if err := beaconDB.SaveState(context.Background(), st.Copy(), r8); err != nil {
+	copied4, err := st.Copy()
+	require.NoError(t, err)
+	if err := beaconDB.SaveState(context.Background(), copied4, r8); err != nil {
 		return nil, err
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
@@ -824,7 +852,8 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: service.originBlockRoot}))
 
-	testState := gs.Copy()
+	testState, err := gs.Copy()
+	require.NoError(t, err)
 	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
@@ -873,7 +902,8 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
-	testState := gs.Copy()
+	testState, err := gs.Copy()
+	require.NoError(t, err)
 	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
@@ -975,7 +1005,8 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
-	testState := gs.Copy()
+	testState, err := gs.Copy()
+	require.NoError(t, err)
 	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
@@ -1000,7 +1031,8 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
-	gs = gs.Copy()
+	gs, err = gs.Copy()
+	require.NoError(t, err)
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
 	assert.NoError(t, gs.SetEth1DepositIndex(8))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
@@ -1034,11 +1066,13 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
-	gs = gs.Copy()
+	gs, err = gs.Copy()
+	require.NoError(t, err)
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 7}))
 	assert.NoError(t, gs.SetEth1DepositIndex(6))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
-	gs2 := gs.Copy()
+	gs2, err := gs.Copy()
+	require.NoError(t, err)
 	assert.NoError(t, gs2.SetEth1Data(&ethpb.Eth1Data{DepositCount: 15}))
 	assert.NoError(t, gs2.SetEth1DepositIndex(13))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}, gs2))

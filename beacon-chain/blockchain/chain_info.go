@@ -181,7 +181,7 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 	span.AddAttributes(trace.BoolAttribute("cache_hit", ok))
 
 	if ok {
-		return s.headState(ctx), nil
+		return s.headState(ctx)
 	}
 
 	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
@@ -195,7 +195,11 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 	if !s.hasHeadState() {
 		return []types.ValidatorIndex{}, nil
 	}
-	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
+	hs, err := s.headState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return helpers.ActiveValidatorIndices(ctx, hs, epoch)
 }
 
 // HeadGenesisValidatorsRoot returns genesis validators root of the head state.

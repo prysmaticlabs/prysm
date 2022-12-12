@@ -239,7 +239,10 @@ func (bs *Server) ListValidators(
 		return nil, err
 	}
 	if s > reqState.Slot() {
-		reqState = reqState.Copy()
+		reqState, err = reqState.Copy()
+		if err != nil {
+			return nil, err
+		}
 		reqState, err = transition.ProcessSlots(ctx, reqState, s)
 		if err != nil {
 			return nil, status.Errorf(

@@ -146,7 +146,8 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
-	copied := genesisState.Copy()
+	copied, err := genesisState.Copy()
+	require.NoError(t, err)
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
@@ -256,7 +257,11 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, returned.ToProtoUnsafe(), cached.ToProtoUnsafe())
+	s1, err := returned.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := cached.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2)
 }
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {

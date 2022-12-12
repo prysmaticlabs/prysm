@@ -431,7 +431,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 
 	s.originBlockRoot = genesisBlkRoot
-	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
+	if err := s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState); err != nil {
+		return err
+	}
 
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.WithError(err).Fatal("Could not process genesis block for fork choice")

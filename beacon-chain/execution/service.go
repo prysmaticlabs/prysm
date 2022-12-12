@@ -777,7 +777,11 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
+		st, err := s.preGenesisState.ToProtoUnsafe()
+		if err != nil {
+			return err
+		}
+		pbState, err := native.ProtobufBeaconStatePhase0(st)
 		if err != nil {
 			return err
 		}

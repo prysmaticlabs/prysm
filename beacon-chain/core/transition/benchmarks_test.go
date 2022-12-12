@@ -25,7 +25,8 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	defer undo()
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
-	cleanStates := clonedStates(beaconState)
+	cleanStates, err := clonedStates(beaconState)
+	require.NoError(b, err)
 	block, err := benchmark.PreGenFullBlock()
 	require.NoError(b, err)
 
@@ -45,7 +46,8 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
-	cleanStates := clonedStates(beaconState)
+	cleanStates, err := clonedStates(beaconState)
+	require.NoError(b, err)
 	block, err := benchmark.PreGenFullBlock()
 	require.NoError(b, err)
 
@@ -88,7 +90,9 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default
 		// at run time.
-		_, err := coreState.ProcessEpochPrecompute(context.Background(), beaconState.Copy())
+		copied, err := beaconState.Copy()
+		require.NoError(b, err)
+		_, err = coreState.ProcessEpochPrecompute(context.Background(), copied)
 		require.NoError(b, err)
 	}
 }
@@ -124,7 +128,9 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 func BenchmarkMarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
+	pb, err := beaconState.ToProtoUnsafe()
+	require.NoError(b, err)
+	natState, err := state_native.ProtobufBeaconStatePhase0(pb)
 	require.NoError(b, err)
 	b.Run("Proto_Marshal", func(b *testing.B) {
 		b.ResetTimer()
@@ -148,7 +154,9 @@ func BenchmarkMarshalState_FullState(b *testing.B) {
 func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
-	natState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
+	pb, err := beaconState.ToProtoUnsafe()
+	require.NoError(b, err)
+	natState, err := state_native.ProtobufBeaconStatePhase0(pb)
 	require.NoError(b, err)
 	protoObject, err := proto.Marshal(natState)
 	require.NoError(b, err)
@@ -173,10 +181,14 @@ func BenchmarkUnmarshalState_FullState(b *testing.B) {
 	})
 }
 
-func clonedStates(beaconState state.BeaconState) []state.BeaconState {
+func clonedStates(beaconState state.BeaconState) ([]state.BeaconState, error) {
 	clonedStates := make([]state.BeaconState, runAmount)
+	var err error
 	for i := 0; i < runAmount; i++ {
-		clonedStates[i] = beaconState.Copy()
+		clonedStates[i], err = beaconState.Copy()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return clonedStates
+	return clonedStates, nil
 }

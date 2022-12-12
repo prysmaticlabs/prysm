@@ -198,7 +198,11 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	c.head = &head{state: s}
 	headState, err := c.HeadState(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Incorrect head state received")
+	s1, err := headState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := s.ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepEqual(t, s1, s2, "Incorrect head state received")
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {

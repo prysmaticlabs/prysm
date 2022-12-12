@@ -30,7 +30,11 @@ func TestStateByRoot_GenesisState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	loadedState, err := service.StateByRoot(ctx, params.BeaconConfig().ZeroHash) // Zero hash is genesis state root.
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s1, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2)
 }
 
 func TestStateByRoot_ColdState(t *testing.T) {
@@ -53,7 +57,11 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	loadedState, err := service.StateByRoot(ctx, bRoot)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s1, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2)
 
 	bal, err := service.BalancesByRoot(ctx, bRoot)
 	require.NoError(t, err)
@@ -75,7 +83,11 @@ func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
 	service.hotStateCache.put(r, beaconState)
 
 	loadedState := service.StateByRootIfCachedNoCopy(r)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s1, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2)
 }
 
 func TestStateByRootIfCachedNoCopy_ColdState(t *testing.T) {
@@ -157,7 +169,11 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 	loadedState, err := service.StateByRoot(ctx, r)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s1, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2)
 }
 
 func TestDeleteStateFromCaches(t *testing.T) {
@@ -203,7 +219,11 @@ func TestStateByRoot_StateByRootInitialSync(t *testing.T) {
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	loadedState, err := service.StateByRootInitialSync(ctx, params.BeaconConfig().ZeroHash) // Zero hash is genesis state root.
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s0, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 }
 
 func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
@@ -237,7 +257,11 @@ func TestStateByRootInitialSync_UseCache(t *testing.T) {
 
 	loadedState, err := service.StateByRootInitialSync(ctx, r)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s0, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 	if service.hotStateCache.has(r) {
 		t.Error("Hot state cache was not invalidated")
 	}
@@ -279,7 +303,11 @@ func TestLoadeStateByRoot_Cached(t *testing.T) {
 	// This tests where hot state was already cached.
 	loadedState, err := service.loadStateByRoot(ctx, r)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s0, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 }
 
 func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
@@ -303,7 +331,11 @@ func TestLoadeStateByRoot_FinalizedState(t *testing.T) {
 	// This tests where hot state was already cached.
 	loadedState, err := service.loadStateByRoot(ctx, gRoot)
 	require.NoError(t, err)
-	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
+	s0, err := loadedState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 }
 
 func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {

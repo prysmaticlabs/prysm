@@ -366,7 +366,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
-			boundaries[blockRoots[i]] = preState.Copy()
+			st, err := preState.Copy()
+			if err != nil {
+				return err
+			}
+			boundaries[blockRoots[i]] = st
 		}
 		jCheckpoints[i] = preState.CurrentJustifiedCheckpoint()
 		fCheckpoints[i] = preState.FinalizedCheckpoint()
@@ -476,8 +480,11 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	defer span.End()
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
-		copied := postState.Copy()
-		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
+		copied, err := postState.Copy()
+		if err != nil {
+			return err
+		}
+		copied, err = transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
 			return err
 		}
@@ -718,8 +725,12 @@ func (s *Service) fillMissingBlockPayloadId(ctx context.Context, ti time.Time) e
 		if err != nil {
 			return err
 		} else {
+			hs, err := s.headState(ctx)
+			if err != nil {
+				return err
+			}
 			if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: s.headState(ctx),
+				headState: hs,
 				headRoot:  s.headRoot(),
 				headBlock: headBlock.Block(),
 			}); err != nil {

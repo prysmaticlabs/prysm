@@ -492,8 +492,9 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 		},
 	}
 
-	newBs := bs.Copy()
-	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	newBs, err := bs.Copy()
+	require.NoError(t, err)
+	newBs, err = transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
 	require.NoError(t, err)
 
 	for _, att := range []*ethpbv1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
@@ -659,8 +660,9 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 		},
 	}
 
-	newBs := bs.Copy()
-	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	newBs, err := bs.Copy()
+	require.NoError(t, err)
+	newBs, err = transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
 	require.NoError(t, err)
 
 	for _, h := range []*ethpbv1.SignedBeaconBlockHeader{slashing.SignedHeader_1, slashing.SignedHeader_2} {
@@ -787,8 +789,9 @@ func TestSubmitVoluntaryExit_AcrossFork(t *testing.T) {
 		Signature: make([]byte, 96),
 	}
 
-	newBs := bs.Copy()
-	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)+1))
+	newBs, err := bs.Copy()
+	require.NoError(t, err)
+	newBs, err = transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)+1))
 	require.NoError(t, err)
 
 	sb, err := signing.ComputeDomainAndSign(newBs, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])

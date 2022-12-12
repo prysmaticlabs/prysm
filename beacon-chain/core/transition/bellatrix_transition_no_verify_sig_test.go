@@ -52,7 +52,9 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	copied, err := beaconState.Copy()
+	require.NoError(t, err)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), copied, beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -98,7 +100,8 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
-	c := beaconState.Copy()
+	c, err := beaconState.Copy()
+	require.NoError(t, err)
 	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
@@ -139,7 +142,9 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 
-	nextSlotState, err := transition.ProcessSlots(context.Background(), beaconState.Copy(), beaconState.Slot()+1)
+	copied, err := beaconState.Copy()
+	require.NoError(t, err)
+	nextSlotState, err := transition.ProcessSlots(context.Background(), copied, beaconState.Slot()+1)
 	require.NoError(t, err)
 	parentRoot, err := nextSlotState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
@@ -186,7 +191,8 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	require.NoError(t, err)
 	block.Block.StateRoot = stateRoot[:]
 
-	c := beaconState.Copy()
+	c, err := beaconState.Copy()
+	require.NoError(t, err)
 	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()

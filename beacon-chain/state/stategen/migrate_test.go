@@ -53,7 +53,11 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 
 	gotState, err := service.beaconDB.State(ctx, fRoot)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, beaconState.ToProtoUnsafe(), gotState.ToProtoUnsafe(), "Did not save state")
+	s1, err := beaconState.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := gotState.ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, s1, s2, "Did not save state")
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, stateSlot/service.slotsPerArchivedPoint)
 	assert.Equal(t, fRoot, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
@@ -145,7 +149,8 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, pks := util.DeterministicGenesisState(t, 32)
-	genState := beaconState.Copy()
+	genState, err := beaconState.Copy()
+	require.NoError(t, err)
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])

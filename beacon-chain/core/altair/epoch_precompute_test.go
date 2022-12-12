@@ -307,7 +307,8 @@ func TestProcessRewardsAndPenaltiesPrecompute_InactivityLeak(t *testing.T) {
 	require.NoError(t, err)
 	validators, balance, err = ProcessEpochParticipation(context.Background(), s, balance, validators)
 	require.NoError(t, err)
-	sCopy := s.Copy()
+	sCopy, err := s.Copy()
+	require.NoError(t, err)
 	s, err = ProcessRewardsAndPenaltiesPrecompute(s, balance, validators)
 	require.NoError(t, err)
 

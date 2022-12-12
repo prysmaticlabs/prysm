@@ -1907,7 +1907,8 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
-	c := headState.Copy()
+	c, err := headState.Copy()
+	require.NoError(t, err)
 	vp, bp, err := precompute.New(ctx, c)
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)
@@ -1977,7 +1978,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
-	c := headState.Copy()
+	c, err := headState.Copy()
+	require.NoError(t, err)
 	vp, bp, err := precompute.New(ctx, c)
 	require.NoError(t, err)
 	vp, bp, err = precompute.ProcessAttestations(ctx, c, vp, bp)

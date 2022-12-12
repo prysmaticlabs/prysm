@@ -141,7 +141,8 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				key1 := keyCreator([]byte{'C'})
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
-				_ = b.Copy()
+				_, err := b.Copy()
+				require.NoError(t, err)
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key2[:]}))
 			},
@@ -155,7 +156,8 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				key2 := keyCreator([]byte{'D'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key2[:]}))
-				n := b.Copy()
+				n, err := b.Copy()
+				require.NoError(t, err)
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
 
@@ -168,7 +170,8 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 			modifyFunc: func(b state.BeaconState, key [fieldparams.BLSPubkeyLength]byte) {
 				key1 := keyCreator([]byte{'C'})
 				assert.NoError(t, b.AppendValidator(&ethpb.Validator{PublicKey: key1[:]}))
-				n := b.Copy()
+				n, err := b.Copy()
+				require.NoError(t, err)
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
 

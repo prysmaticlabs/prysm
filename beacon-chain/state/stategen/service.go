@@ -30,7 +30,7 @@ type StateManager interface {
 	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
-	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
+	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState) error
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
@@ -126,7 +126,11 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		}
 	}()
 
-	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+	copiedSt, err := fState.Copy()
+	if err != nil {
+		return nil, err
+	}
+	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: copiedSt}
 
 	return fState, nil
 }
@@ -134,12 +138,17 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.
 // This used for migration at the correct start slot and used for hot state play back to ensure
 // lower bound to start is always at the last finalized state.
-func (s *State) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState) {
+func (s *State) SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState) error {
 	s.finalizedInfo.lock.Lock()
 	defer s.finalizedInfo.lock.Unlock()
 	s.finalizedInfo.root = fRoot
-	s.finalizedInfo.state = fState.Copy()
+	copiedState, err := fState.Copy()
+	if err != nil {
+		return err
+	}
+	s.finalizedInfo.state = copiedState
 	s.finalizedInfo.slot = fSlot
+	return nil
 }
 
 // Returns true if input root equals to cached finalized root.
@@ -150,7 +159,7 @@ func (s *State) isFinalizedRoot(r [32]byte) bool {
 }
 
 // Returns the cached and copied finalized state.
-func (s *State) finalizedState() state.BeaconState {
+func (s *State) finalizedState() (state.BeaconState, error) {
 	s.finalizedInfo.lock.RLock()
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()

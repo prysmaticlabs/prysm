@@ -39,21 +39,28 @@ func newHotStateCache() *hotStateCache {
 
 // Get returns a cached response via input block root, if any.
 // The response is copied by default.
-func (c *hotStateCache) get(blockRoot [32]byte) state.BeaconState {
+func (c *hotStateCache) get(blockRoot [32]byte) (state.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	item, exists := c.cache.Get(blockRoot)
 
+	copiedState, err := item.(state.BeaconState).Copy()
+	if err != nil {
+		return nil, err
+	}
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
-		return item.(state.BeaconState).Copy()
+		return copiedState, nil
 	}
 	hotStateCacheMiss.Inc()
-	return nil
+	return nil, nil
 }
 
 func (c *hotStateCache) ByBlockRoot(r [32]byte) (state.BeaconState, error) {
-	st := c.get(r)
+	st, err := c.get(r)
+	if err != nil {
+		return nil, err
+	}
 	if st == nil {
 		return nil, ErrNotInCache
 	}

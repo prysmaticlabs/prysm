@@ -13,11 +13,12 @@ import (
 func TestHotStateCache_RoundTrip(t *testing.T) {
 	c := newHotStateCache()
 	root := [32]byte{'A'}
-	s := c.get(root)
+	s, err := c.get(root)
+	require.NoError(t, err)
 	assert.Equal(t, state.BeaconState(nil), s)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
-	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	s, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)
@@ -25,7 +26,8 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	c.put(root, s)
 	assert.Equal(t, true, c.has(root), "Empty cache does not have an object")
 
-	res := c.get(root)
+	res, err := c.get(root)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	resProto, err := res.ToProto()
 	require.NoError(t, err)

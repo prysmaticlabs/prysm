@@ -551,7 +551,11 @@ func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]by
 
 // savePowchainData saves all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := statenative.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
+	st, err := s.preGenesisState.ToProtoUnsafe()
+	if err != nil {
+		return err
+	}
+	pbState, err := statenative.ProtobufBeaconStatePhase0(st)
 	if err != nil {
 		return err
 	}

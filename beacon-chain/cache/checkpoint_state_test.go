@@ -33,9 +33,13 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := state_native.ProtobufBeaconStatePhase0(s.ToProtoUnsafe())
+	pbs1, err := s.ToProtoUnsafe()
 	require.NoError(t, err)
-	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
+	pbState1, err := state_native.ProtobufBeaconStatePhase0(pbs1)
+	require.NoError(t, err)
+	pbs2, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	pbstate, err := state_native.ProtobufBeaconStatePhase0(pbs2)
 	require.NoError(t, err)
 	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")

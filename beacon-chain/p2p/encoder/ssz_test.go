@@ -115,7 +115,9 @@ func TestSszNetworkEncoder_DecodeWithMultipleFrames(t *testing.T) {
 	maxChunkSize := uint64(1 << 22)
 	encoder.MaxChunkSize = maxChunkSize
 	params.OverrideBeaconNetworkConfig(c)
-	_, err := e.EncodeWithMaxLength(buf, st.ToProtoUnsafe().(*ethpb.BeaconState))
+	pb, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	_, err = e.EncodeWithMaxLength(buf, pb.(*ethpb.BeaconState))
 	require.NoError(t, err)
 	// Max snappy block size
 	if buf.Len() <= 76490 {

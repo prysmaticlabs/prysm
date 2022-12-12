@@ -115,7 +115,9 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		return err
 	}
 	if ok {
-		s.SaveFinalizedState(fSlot, fRoot, fInfo.state)
+		if err := s.SaveFinalizedState(fSlot, fRoot, fInfo.state); err != nil {
+			return err
+		}
 	}
 
 	return nil

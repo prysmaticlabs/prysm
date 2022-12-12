@@ -44,7 +44,11 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state and retrieved state are not matching")
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2, "saved state and retrieved state are not matching")
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
@@ -77,7 +81,11 @@ func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2, "saved state with validators and retrieved state are not matching")
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
@@ -129,7 +137,11 @@ func TestStateAltair_CanSaveRetrieveValidatorEntries(t *testing.T) {
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2, "saved state with validators and retrieved state are not matching")
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
@@ -239,7 +251,11 @@ func TestState_CanSaveRetrieveValidatorEntriesWithoutCache(t *testing.T) {
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s1, s2, "saved state with validators and retrieved state are not matching")
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
@@ -360,7 +376,11 @@ func TestGenesisState_CanSaveRetrieve(t *testing.T) {
 
 	savedGenesisS, err := db.GenesisState(context.Background())
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, st.ToProtoUnsafe(), savedGenesisS.ToProtoUnsafe(), "Did not retrieve saved state")
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s2, err := savedGenesisS.ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, s1, s2, "Did not retrieve saved state")
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), [32]byte{'C'}))
 }
 
@@ -481,7 +501,8 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1))
-	s0 := st.ToProtoUnsafe()
+	s0, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), st, r))
 
 	b.Block.Slot = 100
@@ -493,7 +514,8 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	st, err = util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
-	s1 := st.ToProtoUnsafe()
+	s1, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), st, r1))
 
 	b.Block.Slot = 1000
@@ -505,21 +527,27 @@ func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {
 	st, err = util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(1000))
-	s2 := st.ToProtoUnsafe()
-
+	s2, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
 	require.NoError(t, db.SaveState(context.Background(), st, r2))
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), s0)
+	want, err := highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, s0)
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 101)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), s1)
+	want, err = highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, s1)
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 1001)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), s2)
+	want, err = highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, s2)
 }
 
 func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
@@ -546,14 +574,24 @@ func TestStore_GenesisState_CanGetHighestBelow(t *testing.T) {
 
 	highest, err := db.HighestSlotStatesBelow(context.Background(), 2)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), st.ToProtoUnsafe())
+	want, err := highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	gotSt, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, gotSt)
 
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 1)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), genesisState.ToProtoUnsafe())
+	gs, err := genesisState.ToProtoUnsafe()
+	require.NoError(t, err)
+	want, err = highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, gs)
 	highest, err = db.HighestSlotStatesBelow(context.Background(), 0)
 	require.NoError(t, err)
-	assert.DeepSSZEqual(t, highest[0].ToProtoUnsafe(), genesisState.ToProtoUnsafe())
+	want, err = highest[0].ToProtoUnsafe()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, want, gs)
 }
 
 func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
@@ -680,7 +718,11 @@ func TestAltairState_CanSaveRetrieve(t *testing.T) {
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe())
+	s0, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
@@ -830,8 +872,11 @@ func TestStateBellatrix_CanSaveRetrieveValidatorEntries(t *testing.T) {
 
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
-
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+	s0, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1, "saved state with validators and retrieved state are not matching")
 
 	// check if the index of the second state is still present.
 	err = db.db.Update(func(tx *bolt.Tx) error {
@@ -873,8 +918,11 @@ func TestBellatrixState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
-
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe())
+	s0, err := st.ToProtoUnsafe()
+	require.NoError(t, err)
+	s1, err := savedS.ToProtoUnsafe()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, s0, s1)
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
