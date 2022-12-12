@@ -132,7 +132,7 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
 	}
-	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFee := bytesutil.LittleEndianBytesToBigInt(e.BaseFeePerGas)
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	pHash := common.BytesToHash(e.ParentHash)
 	sRoot := common.BytesToHash(e.StateRoot)
