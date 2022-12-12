@@ -67,19 +67,18 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 // processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
 func processPreGenesisDeposits(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState state.GenesisBeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconState, error) {
-	var err error
-	beaconState, err = altair.ProcessDeposits(ctx, beaconState, deposits)
+) (state.GenesisBeaconState, error) {
+	st, err := altair.ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	beaconState, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
+	st, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, nil
+	return st.ToGenesis()
 }
 
 func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
@@ -217,7 +216,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth
 	return state_native.InitializeFromProtoAltair(st)
 }
 
-func emptyGenesisState() (state.BeaconState, error) {
+func emptyGenesisState() (state.GenesisBeaconState, error) {
 	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
@@ -241,7 +240,11 @@ func emptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state_native.InitializeFromProtoAltair(st)
+	bs, err := state_native.InitializeFromProtoAltair(st)
+	if err != nil {
+		return nil, err
+	}
+	return bs.ToGenesis()
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.

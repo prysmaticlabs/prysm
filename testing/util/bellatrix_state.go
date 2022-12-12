@@ -57,7 +57,7 @@ func genesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 }
 
 // emptyGenesisStateBellatrix returns an empty genesis state in Bellatrix format.
-func emptyGenesisStateBellatrix() (state.BeaconState, error) {
+func emptyGenesisStateBellatrix() (state.GenesisBeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot: 0,
@@ -83,7 +83,11 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	}
-	return state_native.InitializeFromProtoBellatrix(st)
+	bs, err := state_native.InitializeFromProtoBellatrix(st)
+	if err != nil {
+		return nil, err
+	}
+	return bs.ToGenesis()
 }
 
 func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {

@@ -57,7 +57,7 @@ func genesisBeaconStateCapella(ctx context.Context, deposits []*ethpb.Deposit, g
 }
 
 // emptyGenesisStateCapella returns an empty genesis state in Capella format.
-func emptyGenesisStateCapella() (state.BeaconState, error) {
+func emptyGenesisStateCapella() (state.GenesisBeaconState, error) {
 	st := &ethpb.BeaconStateCapella{
 		// Misc fields.
 		Slot: 0,
@@ -83,7 +83,11 @@ func emptyGenesisStateCapella() (state.BeaconState, error) {
 
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{},
 	}
-	return state_native.InitializeFromProtoCapella(st)
+	bs, err := state_native.InitializeFromProtoCapella(st)
+	if err != nil {
+		return nil, err
+	}
+	return bs.ToGenesis()
 }
 
 func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {

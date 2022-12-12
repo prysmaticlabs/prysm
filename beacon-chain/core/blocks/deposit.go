@@ -18,21 +18,16 @@ import (
 )
 
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
-func ProcessPreGenesisDeposits(
-	ctx context.Context,
-	beaconState state.BeaconState,
-	deposits []*ethpb.Deposit,
-) (state.BeaconState, error) {
-	var err error
-	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
+func ProcessPreGenesisDeposits(ctx context.Context, beaconState state.GenesisBeaconState, deposits []*ethpb.Deposit) (state.GenesisBeaconState, error) {
+	st, err := ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	beaconState, err = ActivateValidatorWithEffectiveBalance(beaconState, deposits)
+	st, err = ActivateValidatorWithEffectiveBalance(st, deposits)
 	if err != nil {
 		return nil, err
 	}
-	return beaconState, nil
+	return st.ToGenesis()
 }
 
 // ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.

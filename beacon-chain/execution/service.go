@@ -69,7 +69,7 @@ var (
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() state.BeaconState
+	PreGenesisState() state.GenesisBeaconState
 	ClearPreGenesisData()
 }
 
@@ -153,7 +153,7 @@ type Service struct {
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         state.BeaconState
+	preGenesisState         state.GenesisBeaconState
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
@@ -260,7 +260,7 @@ func (s *Service) Stop() error {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &native.BeaconState{}
+	s.preGenesisState = native.NewGenesis()
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -270,7 +270,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() state.BeaconState {
+func (s *Service) PreGenesisState() state.GenesisBeaconState {
 	return s.preGenesisState
 }
 
@@ -724,10 +724,15 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
+		st, err := native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
+		genesisSt, err := st.ToGenesis()
+		if err != nil {
+			return err
+		}
+		s.preGenesisState = genesisSt
 	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
 	numOfItems := s.depositTrie.NumOfItems()

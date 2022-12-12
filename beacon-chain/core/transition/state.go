@@ -55,7 +55,7 @@ import (
 //	  return state
 //
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.GenesisBeaconState, error) {
 	st, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState state.GenesisBeaconState, eth1Data *ethpb.Eth1Data) (state.GenesisBeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -178,11 +178,15 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return state_native.InitializeFromProtoPhase0(st)
+	bs, err := state_native.InitializeFromProtoPhase0(st)
+	if err != nil {
+		return nil, err
+	}
+	return bs.ToGenesis()
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() (state.BeaconState, error) {
+func EmptyGenesisState() (state.GenesisBeaconState, error) {
 	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -205,7 +209,11 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state_native.InitializeFromProtoPhase0(st)
+	bs, err := state_native.InitializeFromProtoPhase0(st)
+	if err != nil {
+		return nil, err
+	}
+	return bs.ToGenesis()
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

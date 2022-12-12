@@ -14,6 +14,18 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
+type GenesisBeaconState interface {
+	SpecParametersProvider
+	ReadOnlyBeaconState
+	ReadOnlyWithdrawals
+	WriteOnlyBeaconState
+	Copy() BeaconState
+	HashTreeRoot(ctx context.Context) ([32]byte, error)
+	FutureForkStub
+	StateProver
+	Stub()
+}
+
 // BeaconState has read and write access to beacon state methods.
 type BeaconState interface {
 	SpecParametersProvider
@@ -88,6 +100,7 @@ type WriteOnlyBeaconState interface {
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetNextWithdrawalIndex(i uint64) error
 	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
+	ToGenesis() (GenesisBeaconState, error)
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.

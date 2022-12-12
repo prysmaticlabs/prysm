@@ -124,12 +124,16 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (_ *Service) PreGenesisState() state.BeaconState {
+func (_ *Service) PreGenesisState() state.GenesisBeaconState {
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	if err != nil {
 		panic("could not initialize state")
 	}
-	return s
+	gs, err := s.ToGenesis()
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return gs
 }
 
 // ClearPreGenesisData --

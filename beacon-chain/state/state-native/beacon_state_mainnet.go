@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
@@ -58,4 +59,12 @@ type BeaconState struct {
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[nativetypes.FieldIndex]*stateutil.Reference
+}
+
+type genesisBeaconState struct {
+	*BeaconState
+}
+
+func NewGenesis() state.GenesisBeaconState {
+	return &genesisBeaconState{}
 }

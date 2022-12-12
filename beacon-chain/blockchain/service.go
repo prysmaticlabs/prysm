@@ -382,7 +382,7 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState state.BeaconState,
+	preGenesisState state.GenesisBeaconState,
 	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
