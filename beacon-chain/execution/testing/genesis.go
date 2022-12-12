@@ -13,13 +13,16 @@ import (
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
-const DefaultTestChainId int64 = 1337
-const DefaultCoinbase = "0x0000000000000000000000000000000000000000"
-const DefaultDifficulty = "0x20000"
-const DefaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-const DefaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+// DefaultMinerAddress is used to send deposits and test transactions in the e2e test.
+// This account is given a large initial balance in the genesis block in test setups.
 const DefaultMinerAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
-const DefaultMinerBalance = "100000000000000000000000000000"
+
+const defaultTestChainId int64 = 1337
+const defaultCoinbase = "0x0000000000000000000000000000000000000000"
+const defaultDifficulty = "0x20000"
+const defaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const defaultMinerBalance = "100000000000000000000000000000"
 
 // DepositContractCode is the compiled deposit contract code, via https://github.com/protolambda/merge-genesis-tools
 // This is embedded into genesis so that we can start the chain at a merge block.
@@ -79,7 +82,7 @@ const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000
 // customized as desired.
 func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *core.Genesis {
 	cc := &params.ChainConfig{
-		ChainID:                       big.NewInt(DefaultTestChainId),
+		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
 		DAOForkBlock:                  bigz,
 		EIP150Block:                   bigz,
@@ -98,32 +101,32 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		TerminalTotalDifficulty:       bigz,
 		TerminalTotalDifficultyPassed: false,
 	}
-	da := DefaultDepositContractAllocation(cfg.DepositContractAddress)
-	ma := MinerAllocation()
+	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
+	ma := minerAllocation()
 	return &core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
 		ExtraData:  []byte(DefaultCliqueSigner),
 		GasLimit:   math.MaxUint64 >> 1, // shift 1 back from the max, just in case
-		Difficulty: common.HexToHash(DefaultDifficulty).Big(),
-		Mixhash:    common.HexToHash(DefaultMixhash),
-		Coinbase:   common.HexToAddress(DefaultCoinbase),
+		Difficulty: common.HexToHash(defaultDifficulty).Big(),
+		Mixhash:    common.HexToHash(defaultMixhash),
+		Coinbase:   common.HexToAddress(defaultCoinbase),
 		Alloc: core.GenesisAlloc{
 			da.Address: da.Account,
 			ma.Address: ma.Account,
 		},
-		ParentHash: common.HexToHash(DefaultParenthash),
+		ParentHash: common.HexToHash(defaultParenthash),
 	}
 }
 
-type DepositAllocation struct {
+type depositAllocation struct {
 	Address common.Address
 	Account core.GenesisAccount
 }
 
-func MinerAllocation() DepositAllocation {
-	return DepositAllocation{
+func minerAllocation() depositAllocation {
+	return depositAllocation{
 		Address: common.HexToAddress(DefaultMinerAddress),
 		Account: core.GenesisAccount{
 			Balance: minerBalance,
@@ -131,7 +134,7 @@ func MinerAllocation() DepositAllocation {
 	}
 }
 
-func DefaultDepositContractAllocation(contractAddress string) DepositAllocation {
+func defaultDepositContractAllocation(contractAddress string) depositAllocation {
 	s := make(map[common.Hash]common.Hash)
 	for k, v := range DefaultDepositContractStorage {
 		s[common.HexToHash(k)] = common.HexToHash(v)
@@ -140,7 +143,7 @@ func DefaultDepositContractAllocation(contractAddress string) DepositAllocation 
 	if err != nil {
 		panic(err)
 	}
-	return DepositAllocation{
+	return depositAllocation{
 		Address: common.HexToAddress(contractAddress),
 		Account: core.GenesisAccount{
 			Code:    codeBytes,
@@ -195,7 +198,7 @@ func TerribleMarshalHack(g *core.Genesis, addresses ...string) ([]byte, error) {
 }
 
 func init() {
-	err := minerBalance.UnmarshalText([]byte(DefaultMinerBalance))
+	err := minerBalance.UnmarshalText([]byte(defaultMinerBalance))
 	if err != nil {
 		panic(err)
 	}
