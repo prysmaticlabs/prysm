@@ -255,7 +255,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		return nil, err
 	}
 	if bs.NumValidators() != len(is) {
-		panic("inactivity score mismatch with num vals")
+		return nil, errors.New("inactivity score mismatch with num vals")
 	}
 	return bs, nil
 }
