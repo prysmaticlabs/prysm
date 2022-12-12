@@ -290,3 +290,7 @@ func (node *BeaconNode) Resume() error {
 func (node *BeaconNode) Stop() error {
 	return node.cmd.Process.Kill()
 }
+
+func (node *BeaconNode) UnderlyingProcess() *os.Process {
+	return node.cmd.Process
+}

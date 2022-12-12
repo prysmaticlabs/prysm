@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -67,12 +66,29 @@ func ProcessBLSToExecutionChanges(
 //	    + address_change.to_execution_address
 //	)
 func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
+	// Checks that the message passes the validation conditions.
+	val, err := ValidateBLSToExecutionChange(st, signed)
+	if err != nil {
+		return nil, err
+	}
+
+	message := signed.Message
+	newCredentials := make([]byte, executionToBLSPadding)
+	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
+	err = st.UpdateValidatorAtIndex(message.ValidatorIndex, val)
+	return st, err
+}
+
+// ValidateBLSToExecutionChange validates the execution change message against the state and returns the
+// validator referenced by the message.
+func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
 	if signed == nil {
-		return st, errNilSignedWithdrawalMessage
+		return nil, errNilSignedWithdrawalMessage
 	}
 	message := signed.Message
 	if message == nil {
-		return st, errNilWithdrawalMessage
+		return nil, errNilWithdrawalMessage
 	}
 
 	val, err := st.ValidatorAtIndex(message.ValidatorIndex)
@@ -91,12 +107,7 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 	if !bytes.Equal(digest[1:], cred[1:]) {
 		return nil, errInvalidWithdrawalCredentials
 	}
-
-	newCredentials := make([]byte, executionToBLSPadding)
-	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
-	err = st.UpdateValidatorAtIndex(message.ValidatorIndex, val)
-	return st, err
+	return val, nil
 }
 
 func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
@@ -141,7 +152,6 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 }
 
 func BLSChangesSignatureBatch(
-	ctx context.Context,
 	st state.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
 ) (*bls.SignatureBatch, error) {
@@ -160,9 +170,6 @@ func BLSChangesSignatureBatch(
 		return nil, err
 	}
 	for i, change := range changes {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
 		batch.Signatures[i] = change.Signature
 		publicKey, err := bls.PublicKeyFromBytes(change.Message.FromBlsPubkey)
 		if err != nil {

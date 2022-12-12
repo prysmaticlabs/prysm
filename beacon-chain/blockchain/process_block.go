@@ -146,6 +146,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.handleBlockAttestations(ctx, signed.Block(), postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
 	}
+	if err := s.handleBlockBLSToExecChanges(signed.Block()); err != nil {
+		return errors.Wrap(err, "could not handle block's BLSToExecutionChanges")
+	}
+
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -550,6 +554,22 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Be
 			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.Data.Target.Epoch)
 		} else if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
+	if blk.Version() < version.Capella {
+		return nil
+	}
+	changes, err := blk.Body().BLSToExecutionChanges()
+	if err != nil {
+		return errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
+			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
 		}
 	}
 	return nil

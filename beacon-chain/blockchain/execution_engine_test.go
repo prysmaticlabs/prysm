@@ -15,6 +15,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	bstate "github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -29,6 +30,69 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
+	altairBlkRoot, err := altairBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
+	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	fcs := doublylinkedtree.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, fcs)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisState(t, 10)
+	service.head = &head{
+		state: st,
+	}
+
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, altairBlkRoot, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, bellatrixBlkRoot, altairBlkRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+
+	b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+		Body: &ethpb.BeaconBlockBodyBellatrix{
+			ExecutionPayload: &v1.ExecutionPayload{},
+		},
+	})
+	require.NoError(t, err)
+
+	pid := &v1.PayloadIDBytes{1}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{PayloadIDBytes: pid}
+	st, _ = util.DeterministicGenesisState(t, 1)
+	require.NoError(t, beaconDB.SaveState(ctx, st, bellatrixBlkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
+
+	// Intentionally generate a bad state such that `hash_tree_root` fails during `process_slot`
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	require.NoError(t, err)
+	arg := &notifyForkchoiceUpdateArg{
+		headState: s,
+		headRoot:  [32]byte{},
+		headBlock: b,
+	}
+
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 0, [8]byte{}, [32]byte{})
+	got, err := service.notifyForkchoiceUpdate(ctx, arg)
+	require.NoError(t, err)
+	require.DeepEqual(t, got, pid) // We still get a payload ID even though the state is bad. This means it returns until the end.
+}
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	ctx := context.Background()
@@ -47,11 +111,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 10)
 	service.head = &head{
 		state: st,
 	}
-	require.NoError(t, err)
+
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
@@ -727,8 +792,8 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache miss
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	hasPayload, _, vId, err := service.getPayloadAttribute(ctx, nil, 0)
-	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
 	require.Equal(t, false, hasPayload)
 	require.Equal(t, types.ValidatorIndex(0), vId)
 
@@ -736,24 +801,65 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	suggestedVid := types.ValidatorIndex(1)
 	slot := types.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	st, _ := util.DeterministicGenesisState(t, 1)
 	hook := logTest.NewGlobal()
-	hasPayload, attr, vId, err := service.getPayloadAttribute(ctx, st, slot)
-	require.NoError(t, err)
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient).String())
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
 	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId, err = service.getPayloadAttribute(ctx, st, slot)
-	require.NoError(t, err)
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
-	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient))
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+}
+
+func Test_GetPayloadAttributeV2(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB, doublylinkedtree.New())),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+
+	// Cache miss
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateCapella(t, 1)
+	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
+	require.Equal(t, false, hasPayload)
+	require.Equal(t, types.ValidatorIndex(0), vId)
+
+	// Cache hit, advance state, no fee recipient
+	suggestedVid := types.ValidatorIndex(1)
+	slot := types.Slot(1)
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hook := logTest.NewGlobal()
+	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
+	a, err := attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
+
+	// Cache hit, advance state, has fee recipient
+	suggestedAddr := common.HexToAddress("123")
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
+	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
+	require.Equal(t, true, hasPayload)
+	require.Equal(t, suggestedVid, vId)
+	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
+	a, err = attr.Withdrawals()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(a))
 }
 
 func Test_UpdateLastValidatedCheckpoint(t *testing.T) {

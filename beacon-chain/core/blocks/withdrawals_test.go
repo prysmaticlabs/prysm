@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"context"
 	"math/rand"
 	"testing"
 
@@ -69,6 +68,47 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		require.NoError(t, err)
 
 		require.DeepEqual(t, message.ToExecutionAddress, val.WithdrawalCredentials[12:])
+	})
+	t.Run("happy case only validation", func(t *testing.T) {
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpb.BLSToExecutionChange{
+			ToExecutionAddress: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13},
+			ValidatorIndex:     0,
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+
+		registry := []*ethpb.Validator{
+			{
+				WithdrawalCredentials: digest[:],
+			},
+		}
+		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+			Validators: registry,
+			Fork: &ethpb.Fork{
+				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			},
+			Slot: params.BeaconConfig().SlotsPerEpoch * 5,
+		})
+		require.NoError(t, err)
+
+		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, priv)
+		require.NoError(t, err)
+
+		signed := &ethpb.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		val, err := blocks.ValidateBLSToExecutionChange(st, signed)
+		require.NoError(t, err)
+		require.DeepEqual(t, digest[:], val.WithdrawalCredentials)
 	})
 
 	t.Run("non-existent validator", func(t *testing.T) {
@@ -507,7 +547,7 @@ func TestProcessWithdrawals(t *testing.T) {
 	}
 
 	checkPostState := func(t *testing.T, expected control, st state.BeaconState) {
-		l, err := st.LastWithdrawalValidatorIndex()
+		l, err := st.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		require.Equal(t, expected.NextWithdrawalValidatorIndex, l)
 
@@ -705,7 +745,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 		}
 		signedChanges[i] = signed
 	}
-	batch, err := blocks.BLSChangesSignatureBatch(context.Background(), st, signedChanges)
+	batch, err := blocks.BLSChangesSignatureBatch(st, signedChanges)
 	require.NoError(t, err)
 	verify, err := batch.Verify()
 	require.NoError(t, err)

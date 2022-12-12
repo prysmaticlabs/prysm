@@ -138,7 +138,7 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 	}
 	thisNode := &v1.ForkChoiceNode{
 		Slot:                     n.slot,
-		Root:                     n.root[:],
+		BlockRoot:                n.root[:],
 		ParentRoot:               parentRoot[:],
 		JustifiedEpoch:           n.justifiedEpoch,
 		FinalizedEpoch:           n.finalizedEpoch,
@@ -147,8 +147,13 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		Balance:                  n.balance,
 		Weight:                   n.weight,
 		ExecutionOptimistic:      n.optimistic,
-		ExecutionPayload:         n.payloadHash[:],
+		ExecutionBlockHash:       n.payloadHash[:],
 		Timestamp:                n.timestamp,
+	}
+	if n.optimistic {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_OPTIMISTIC
+	} else {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_VALID
 	}
 
 	nodes = append(nodes, thisNode)
