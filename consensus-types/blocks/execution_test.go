@@ -198,39 +198,39 @@ func TestWrapExecutionPayloadHeaderCapella_SSZ(t *testing.T) {
 
 func Test_executionPayload_Pb(t *testing.T) {
 	payload := createWrappedPayload(t)
-	pb, err := payload.PbV1()
+	pb, err := payload.PbBellatrix()
 	require.NoError(t, err)
 	assert.DeepEqual(t, payload.Proto(), pb)
 
-	_, err = payload.PbV2()
+	_, err = payload.PbCapella()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadHeader_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeader(t)
-	_, err := payload.PbV1()
+	_, err := payload.PbBellatrix()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 
-	_, err = payload.PbV2()
+	_, err = payload.PbCapella()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadCapella_Pb(t *testing.T) {
 	payload := createWrappedPayloadCapella(t)
-	pb, err := payload.PbV2()
+	pb, err := payload.PbCapella()
 	require.NoError(t, err)
 	assert.DeepEqual(t, payload.Proto(), pb)
 
-	_, err = payload.PbV1()
+	_, err = payload.PbBellatrix()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
 func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	payload := createWrappedPayloadHeaderCapella(t)
-	_, err := payload.PbV1()
+	_, err := payload.PbBellatrix()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 
-	_, err = payload.PbV2()
+	_, err = payload.PbCapella()
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 

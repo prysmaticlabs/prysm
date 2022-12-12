@@ -156,12 +156,12 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV1 --
-func (e executionPayload) PbV1() (*enginev1.ExecutionPayload, error) {
+func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return e.p, nil
 }
 
 // PbV2 --
-func (executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -307,12 +307,12 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV2 --
-func (executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbV1 --
-func (executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -486,12 +486,12 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV2 --
-func (e executionPayloadCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return e.p, nil
 }
 
 // PbV1 --
-func (executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -637,12 +637,12 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 }
 
 // PbV2 --
-func (executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbV1 --
-func (executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
