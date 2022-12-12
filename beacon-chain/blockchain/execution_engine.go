@@ -40,7 +40,6 @@ type notifyForkchoiceUpdateArg struct {
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
-	log.Debugf("notifyForkchoiceUpdate, fork version=%#x, headRoot=%#x, headState.latest_block_header=%#x", arg.headState.Fork().CurrentVersion, arg.headRoot, arg.headState.LatestBlockHeader().BodyRoot)
 
 	headBlk := arg.headBlock
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
