@@ -753,10 +753,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
-	switch data.Proto().(type) {
-	case *enginev1.ExecutionPayloadCapella:
-		return false, nil
-	case *enginev1.ExecutionPayloadHeaderCapella:
+	if _, ok := data.Proto().(*enginev1.ExecutionPayloadCapella); ok {
 		return false, nil
 	}
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
@@ -816,10 +813,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 // IsEmptyExecutionDataHeader checks if an execution data header is empty underneath. If a single
 // field has a non-zero value, this function will return false.
 func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, error) {
-	switch data.Proto().(type) {
-	case *enginev1.ExecutionPayloadCapella:
-		return false, nil
-	case *enginev1.ExecutionPayloadHeaderCapella:
+	if _, ok := data.Proto().(*enginev1.ExecutionPayloadHeaderCapella); ok {
 		return false, nil
 	}
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
@@ -847,18 +841,6 @@ func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, erro
 		return false, nil
 	}
 
-	// Do not compare against the computed TransactionsRoot if we're dealing with a full payload
-	switch data.(type) {
-	case *executionPayloadHeader, *executionPayloadHeaderCapella:
-		txRoot, err := data.TransactionsRoot()
-		if err != nil {
-			return false, err
-		}
-		if !bytes.Equal(txRoot, make([]byte, fieldparams.RootLength)) {
-			return false, nil
-		}
-	}
-
 	if len(data.ExtraData()) != 0 {
 		return false, nil
 	}
@@ -872,6 +854,13 @@ func IsEmptyExecutionDataHeader(data interfaces.ExecutionDataHeader) (bool, erro
 		return false, nil
 	}
 	if data.Timestamp() != 0 {
+		return false, nil
+	}
+	txRoot, err := data.TransactionsRoot()
+	if err != nil {
+		return false, err
+	}
+	if !bytes.Equal(txRoot, make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
 
