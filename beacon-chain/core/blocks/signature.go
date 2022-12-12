@@ -42,7 +42,7 @@ func signatureBatch(signedData, pub, signature, domain []byte, desc string) (*bl
 
 // verifies the signature from the raw data, public key and domain provided.
 func verifySignature(signedData, pub, signature, domain []byte) error {
-	set, err := signatureBatch(signedData, pub, signature, domain, "")
+	set, err := signatureBatch(signedData, pub, signature, domain, signing.UnknownSignature)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func RandaoSignatureBatch(
 	if err != nil {
 		return nil, err
 	}
-	set, err := signatureBatch(buf, proposerPub, reveal, domain, "randao signature")
+	set, err := signatureBatch(buf, proposerPub, reveal, domain, signing.RandaoSignature)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func createAttestationSignatureBatch(
 		}
 		msgs[i] = root
 
-		descs[i] = "attestation signature"
+		descs[i] = signing.AttestationSignature
 	}
 	return &bls.SignatureBatch{
 		Signatures:   sigs,

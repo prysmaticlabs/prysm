@@ -150,11 +150,12 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
+	desc := BlockSignature
 	return &bls.SignatureBatch{
 		Signatures:   [][]byte{signature},
 		PublicKeys:   []bls.PublicKey{publicKey},
 		Messages:     [][32]byte{root},
-		Descriptions: []string{"block signature"},
+		Descriptions: []string{desc},
 	}, nil
 }
 

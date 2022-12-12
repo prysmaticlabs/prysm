@@ -182,7 +182,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
 		batch.Messages[i] = htr
-		batch.Descriptions[i] = "blschange signature"
+		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
 }
