@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
 var (
@@ -36,6 +36,7 @@ func New() *DepositTree {
 	}
 }
 
+// getSnapshot returns a deposit tree snapshot.
 func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	if d.finalizedExecutionBlock == (ExecutionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
@@ -45,6 +46,7 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	return fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock), nil
 }
 
+// fromSnapshot returns a deposit tree from a deposit tree snapshot.
 func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 	if snapshot.depositRoot != snapshot.CalculateRoot() {
 		return DepositTree{}, ErrInvalidSnapshotRoot
@@ -69,19 +71,20 @@ func (d *DepositTree) finalize(eth1data eth.Eth1Data, executionBlockHeight uint6
 	d.tree.Finalize(eth1data.DepositCount, DepositContractDepth)
 }
 
-func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte) {
+func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.mixInLength <= 0 {
-
+		return [32]byte{}, nil, nil
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
 	if index <= (finalizedDeposits - 1) {
-
+		return [32]byte{}, nil, nil
 	}
 	leaf, proof := generateProof(d.tree, index, DepositContractDepth)
-	proof = append(proof, bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...)
-	return leaf, proof
+	proof = append(proof, bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength))
+	return leaf, proof, nil
 }
 
+// getRoot returns the root of the deposit tree.
 func (d *DepositTree) getRoot() [32]byte {
 	root := d.tree.GetRoot()
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...))
@@ -89,7 +92,7 @@ func (d *DepositTree) getRoot() [32]byte {
 
 // pushLeaf adds a new deposit to the tree.
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
-	var  err error
+	var err error
 	d.mixInLength += 1
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {
