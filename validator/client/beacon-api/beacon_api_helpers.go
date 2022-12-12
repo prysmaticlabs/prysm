@@ -4,6 +4,9 @@ import (
 	"fmt"
 	neturl "net/url"
 	"regexp"
+	"strconv"
+
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 func validRoot(root string) bool {
@@ -12,6 +15,10 @@ func validRoot(root string) bool {
 		return false
 	}
 	return matchesRegex
+}
+
+func uint64ToString[T uint64 | types.Slot | types.ValidatorIndex | types.CommitteeIndex | types.Epoch](val T) string {
+	return strconv.FormatUint(uint64(val), 10)
 }
 
 func buildURL(path string, queryParams ...neturl.Values) string {
