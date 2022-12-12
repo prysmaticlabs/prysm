@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -128,7 +127,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bid.Message.Value))
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
 	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
