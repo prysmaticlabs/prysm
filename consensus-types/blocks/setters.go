@@ -23,7 +23,6 @@ func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
 	b.block.slot = copied.Slot()
 	b.block.parentRoot = copied.ParentRoot()
 	b.block.stateRoot = copied.StateRoot()
-	b.block.stateRoot = copied.StateRoot()
 	b.block.proposerIndex = copied.ProposerIndex()
 	b.block.body.randaoReveal = copied.Body().RandaoReveal()
 	b.block.body.eth1Data = copied.Body().Eth1Data()
