@@ -1,6 +1,7 @@
 package depositsnapshot
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"os"
 	"strconv"
@@ -211,6 +212,42 @@ func stringToUint64(s string) (uint64, error) {
 	return value, nil
 }
 
+func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]byte {
+	root := leaf
+	for i, leaf := range branch {
+		ithBit := (index >> i) & 0x1
+		if ithBit == 1 {
+			root = sha256.Sum256(append(leaf[:], root[:]...))
+		} else {
+			root = sha256.Sum256(append(root[:], leaf[:]...))
+		}
+	}
+	return root
+}
+
+func checkProof(t *testing.T, tree *DepositTree, index uint64) {
+	leaf, proof, err := tree.getProof(index)
+	assert.NoError(t, err)
+	calcRoot := merkleRootFromBranch(leaf, proof, index)
+	assert.Equal(t, calcRoot, tree.getRoot())
+}
+
+func compareProof(t *testing.T, tree1, tree2 *DepositTree, index uint64) {
+	assert.Equal(t, tree1.getRoot(), tree2.getRoot())
+	checkProof(t, tree1, index)
+	checkProof(t, tree2, index)
+}
+
+func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *DepositTree {
+	cp, err := fromSnapshot(snapshot)
+	assert.NoError(t, err)
+	for _, c := range testCases {
+		err = cp.pushLeaf(c.DepositDataRoot)
+		assert.NoError(t, err)
+	}
+	return &cp
+}
+
 func TestDepositCases(t *testing.T) {
 	tree := New()
 	testCases, err := readTestCases("test_cases.yaml")
@@ -238,10 +275,36 @@ func TestFinalization(t *testing.T) {
 		DepositCount: testCases[100].Eth1Data.DepositCount,
 		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
 	}, testCases[100].BlockHeight)
+	// ensure finalization doesn't change root
 	assert.Equal(t, tree.getRoot(), originalRoot)
-	s, err := tree.getSnapshot()
+	snapshotData, err := tree.getSnapshot()
 	assert.NoError(t, err)
-	assert.Equal(t, s, testCases[100].Snapshot)
+	assert.Equal(t, snapshotData, testCases[100].Snapshot)
+	// create a copy of the tree from a snapshot by replaying
+	// the deposits after the finalized deposit
+	cp := cloneFromSnapshot(t, snapshotData, testCases[101:128])
+	// ensure original and copy have the same root
+	assert.Equal(t, tree.getRoot(), cp.getRoot())
+	//	finalize original again to check double finalization
+	tree.finalize(&eth.Eth1Data{
+		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
+		DepositCount: testCases[105].Eth1Data.DepositCount,
+		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
+	}, testCases[105].BlockHeight)
+	//	root should still be the same
+	assert.Equal(t, tree.getRoot(), originalRoot)
+	// create a copy of the tree by taking a snapshot again
+	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
+	// create a copy of the tree by replaying ALL deposits from nothing
+	fullTreeCopy := New()
+	for _, c := range testCases {
+		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
+		assert.NoError(t, err)
+	}
+	for i := 106; i < 128; i++ {
+		compareProof(t, tree, cp, uint64(i))
+		compareProof(t, tree, fullTreeCopy, uint64(i))
+	}
 }
 
 func TestSnapshotCases(t *testing.T) {
