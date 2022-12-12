@@ -7,7 +7,21 @@ import (
 	"strconv"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
+
+var beaconAPITogRPCValidatorStatus = map[string]ethpb.ValidatorStatus{
+	"pending_initialized": ethpb.ValidatorStatus_DEPOSITED,
+	"pending_queued":      ethpb.ValidatorStatus_PENDING,
+	"active_ongoing":      ethpb.ValidatorStatus_ACTIVE,
+	"active_exiting":      ethpb.ValidatorStatus_EXITING,
+	"active_slashed":      ethpb.ValidatorStatus_SLASHING,
+	"exited_unslashed":    ethpb.ValidatorStatus_EXITED,
+	"exited_slashed":      ethpb.ValidatorStatus_EXITED,
+	"withdrawal_possible": ethpb.ValidatorStatus_EXITED,
+	"withdrawal_done":     ethpb.ValidatorStatus_EXITED,
+}
 
 func validRoot(root string) bool {
 	matchesRegex, err := regexp.MatchString("^0x[a-fA-F0-9]{64}$", root)
