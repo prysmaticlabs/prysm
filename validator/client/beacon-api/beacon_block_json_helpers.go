@@ -24,8 +24,8 @@ func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExec
 			ToExecutionAddress: hexutil.Encode(signedBlsToExecutionChange.Message.ToExecutionAddress),
 		}
 		signedJson := &apimiddleware.SignedBLSToExecutionChangeJson{
-			BLSToExecutionChange: blsToExecutionChangeJson,
-			Signature:            hexutil.Encode(signedBlsToExecutionChange.Signature),
+			Message:   blsToExecutionChangeJson,
+			Signature: hexutil.Encode(signedBlsToExecutionChange.Signature),
 		}
 		jsonBlsToExecutionChanges[index] = signedJson
 	}
