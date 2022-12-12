@@ -113,7 +113,6 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		"--vmdebug",
 		"--syncmode=full",
 		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}
