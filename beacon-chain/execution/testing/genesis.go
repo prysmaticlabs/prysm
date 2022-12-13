@@ -11,10 +11,9 @@ import (
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
-// DefaultMinerAddress is used to send deposits and test transactions in the e2e test.
+// defaultMinerAddress is used to send deposits and test transactions in the e2e test.
 // This account is given a large initial balance in the genesis block in test setups.
-const DefaultMinerAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
-
+const defaultMinerAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
 const defaultTestChainId int64 = 1337
 const defaultCoinbase = "0x0000000000000000000000000000000000000000"
 const defaultDifficulty = "0x20000"
@@ -125,7 +124,7 @@ type depositAllocation struct {
 
 func minerAllocation() depositAllocation {
 	return depositAllocation{
-		Address: common.HexToAddress(DefaultMinerAddress),
+		Address: common.HexToAddress(defaultMinerAddress),
 		Account: core.GenesisAccount{
 			Balance: minerBalance,
 		},
