@@ -32,9 +32,14 @@ var requestBlocksFlags = struct {
 }{}
 
 var requestBlocksCmd = &cli.Command{
-	Name:   "beacon-blocks-by-range",
-	Usage:  "Request a range of blocks from a beacon node via a p2p connection",
-	Action: cliActionRequestBlocks,
+	Name:  "beacon-blocks-by-range",
+	Usage: "Request a range of blocks from a beacon node via a p2p connection",
+	Action: func(cliCtx *cli.Context) error {
+		if err := cliActionRequestBlocks(cliCtx); err != nil {
+			log.WithError(err).Fatal("Could not request blocks by range")
+		}
+		return nil
+	},
 	Flags: []cli.Flag{
 		cmd.ChainConfigFileFlag,
 		&cli.StringFlag{
