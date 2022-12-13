@@ -39,12 +39,14 @@ message BlockResponseV2 {
   v2.Version version = 1;
   SignedBeaconBlockContainer data = 2;
   bool execution_optimistic = 3;
+  bool finalized = 4;
 }
 
 message BlindedBlockResponse {
   v2.Version version = 1;
   SignedBlindedBeaconBlockContainer data = 2;
   bool execution_optimistic = 3;
+  bool finalized = 4;
 }
 
 message BeaconBlockContainerV2 {

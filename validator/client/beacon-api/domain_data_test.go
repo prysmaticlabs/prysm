@@ -1,6 +1,3 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
@@ -66,11 +63,12 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("")).Times(1)
+	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("foo error")).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
 	_, err := validatorClient.getDomainData(epoch, domainType)
 	assert.ErrorContains(t, "failed to get genesis info", err)
+	assert.ErrorContains(t, "foo error", err)
 }
 
 func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {

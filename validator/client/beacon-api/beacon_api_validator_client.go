@@ -1,6 +1,3 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
@@ -146,13 +143,8 @@ func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *e
 	panic("beaconApiValidatorClient.ProposeAttestation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ProposeBeaconBlock(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeBeaconBlock is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ProposeBeaconBlock(_ context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	return c.proposeBeaconBlock(in)
 }
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
@@ -250,12 +242,7 @@ func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethp
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.WaitForActivation(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.WaitForActivation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.waitForActivation(ctx, in)
 }
 
 // Deprecated: Do not use.

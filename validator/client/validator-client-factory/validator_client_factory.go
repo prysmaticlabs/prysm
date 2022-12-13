@@ -1,9 +1,7 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package validator_client_factory
 
 import (
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	beaconApi "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api"
 	grpcApi "github.com/prysmaticlabs/prysm/v3/validator/client/grpc-api"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
@@ -11,6 +9,12 @@ import (
 )
 
 func NewValidatorClient(validatorConn validatorHelpers.NodeConnection) iface.ValidatorClient {
-	fallbackClient := grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
-	return beaconApi.NewBeaconApiValidatorClientWithFallback(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout(), fallbackClient)
+	grpcClient := grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
+	featureFlags := features.Get()
+
+	if featureFlags.EnableBeaconRESTApi {
+		return beaconApi.NewBeaconApiValidatorClientWithFallback(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout(), grpcClient)
+	} else {
+		return grpcClient
+	}
 }
