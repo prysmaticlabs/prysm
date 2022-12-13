@@ -290,6 +290,8 @@ func TestFinalization(t *testing.T) {
 	//	root should still be the same
 	assert.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
+	snapshotData, err = tree.getSnapshot()
+	assert.NoError(t, err)
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
 	fullTreeCopy := New()
