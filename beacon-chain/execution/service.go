@@ -718,7 +718,6 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
 	}
 	earliestValidTime := votingTime - followBackDist
-	log.WithField("distance", params.BeaconConfig().Eth1FollowDistance).WithField("earliestValidTime", earliestValidTime).WithField("BlockTime", s.latestEth1Data.BlockTime).WithField("BlockHeight", s.latestEth1Data.BlockHeight).WithField("followBlock", followBlock).Info("determineEarliestVotingBlock")
 	hdr, err := s.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {
 		return 0, err
