@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -191,6 +192,7 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", kPath),
 		fmt.Sprintf("--testnet-dir=%s", testNetDir),
 		fmt.Sprintf("--beacon-nodes=http://localhost:%d", httpPort+index),
+		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
@@ -246,6 +248,8 @@ func (v *LighthouseValidatorNode) Resume() error {
 func (v *LighthouseValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
 }
+
+var _ types.ComponentRunner = &KeystoreGenerator{}
 
 type KeystoreGenerator struct {
 	started chan struct{}
@@ -360,4 +364,8 @@ func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {
 		}
 	}
 	return testNetDir, nil
+}
+
+func (k *KeystoreGenerator) UnderlyingProcess() *os.Process {
+	return nil // No subprocess for this component.
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -85,13 +86,14 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 
 // getBlkParentHashAndTD retrieves the parent hash and total difficulty of the given block.
 func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]byte, *uint256.Int, error) {
-	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHashBellatrix(ctx, common.BytesToHash(blkHash), false /* no txs */)
+	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(blkHash), false /* no txs */)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get pow block")
 	}
 	if blk == nil {
 		return nil, nil, errors.New("pow block is nil")
 	}
+	blk.Version = version.Bellatrix
 	blkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not decode merge block total difficulty")

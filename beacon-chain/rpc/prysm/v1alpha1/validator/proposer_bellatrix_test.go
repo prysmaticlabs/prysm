@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -915,7 +914,6 @@ func TestServer_validatorRegistered(t *testing.T) {
 }
 
 func TestServer_validateBuilderSignature(t *testing.T) {
-	s := &Server{}
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
 	bid := &ethpb.BuilderBid{
@@ -943,10 +941,10 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 		Message:   bid,
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
-	require.NoError(t, s.validateBuilderSignature(sBid))
+	require.NoError(t, validateBuilderSignature(sBid))
 
 	sBid.Message.Value = make([]byte, 32)
-	require.ErrorIs(t, s.validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
+	require.ErrorIs(t, validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
 }
 
 func TestServer_circuitBreakBuilder(t *testing.T) {
@@ -1010,7 +1008,7 @@ func createState(
 		BlockRoots:                 make([][]byte, 1),
 		CurrentJustifiedCheckpoint: justified,
 		FinalizedCheckpoint:        finalized,
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+		LatestExecutionPayloadHeader: &v1.ExecutionPayloadHeader{
 			BlockHash: payloadHash[:],
 		},
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{

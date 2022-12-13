@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
@@ -22,7 +24,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
-	ExecutionBlock              *pb.ExecutionBlockBellatrix
+	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
 	ErrExecBlockByHash          error
@@ -30,7 +32,7 @@ type EngineClient struct {
 	ErrNewPayload               error
 	ErrGetPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
-	BlockByHashMap              map[[32]byte]*pb.ExecutionBlockBellatrix
+	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
@@ -53,8 +55,12 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, slot types.Slot) (interfaces.ExecutionData, error) {
+	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return p, e.ErrGetPayload
 }
 
 // GetPayloadV2 --
@@ -68,12 +74,12 @@ func (e *EngineClient) ExchangeTransitionConfiguration(_ context.Context, _ *pb.
 }
 
 // LatestExecutionBlock --
-func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlockBellatrix, error) {
+func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlock, error) {
 	return e.ExecutionBlock, e.ErrLatestExecBlock
 }
 
-// ExecutionBlockByHashBellatrix --
-func (e *EngineClient) ExecutionBlockByHashBellatrix(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlockBellatrix, error) {
+// ExecutionBlockByHash --
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, _ int, h common.Hash, _ bool) (interface{}, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -143,12 +149,16 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := e.ExecutionBlockByHashBellatrix(ctx, parentHash, false /* with txs */)
+		parentBlk, err := e.ExecutionBlockByHash(ctx, 0, parentHash, false /* with txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
+		parentBlkBellatrix, ok := parentBlk.(*pb.ExecutionBlock)
+		if !ok {
+			return nil, false, fmt.Errorf("wrong execution block type %T", parentBlk)
+		}
 		if blockReachedTTD {
-			b, err := hexutil.DecodeBig(parentBlk.TotalDifficulty)
+			b, err := hexutil.DecodeBig(parentBlkBellatrix.TotalDifficulty)
 			if err != nil {
 				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 			}
@@ -163,6 +173,6 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime 
 		} else {
 			return nil, false, nil
 		}
-		blk = parentBlk
+		blk = parentBlkBellatrix
 	}
 }
