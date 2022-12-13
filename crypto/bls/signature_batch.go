@@ -1,8 +1,8 @@
 package bls
 
 import (
+	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -51,8 +51,7 @@ func (s *SignatureBatch) VerifyVerbosely() (bool, error) {
 
 	// if signature batch is invalid, we then verify signatures one by one.
 
-	var sb strings.Builder
-
+	errmsg := "some signatures are invalid. details:"
 	for i := 0; i < len(s.Signatures); i++ {
 		sig := s.Signatures[i]
 		msg := s.Messages[i]
@@ -61,24 +60,21 @@ func (s *SignatureBatch) VerifyVerbosely() (bool, error) {
 		valid, err := VerifySignature(sig, msg, pubKey)
 		if !valid {
 			desc := s.Descriptions[i]
-
 			if err != nil {
-				_, e := fmt.Fprintf(&sb, "signature '%s' is invalid."+
-					" signature: %v, public key: %v, message: %v, error: %v\n", desc, sig, pubKey, msg, err)
-				if e != nil {
-					// ignore
-				}
+				errmsg += fmt.Sprintf("\nsignature '%s' is invalid."+
+					" signature: 0x%s, public key: 0x%s, message: 0x%v, error: %v",
+					desc, hex.EncodeToString(sig), hex.EncodeToString(pubKey.Marshal()),
+					hex.EncodeToString(msg[:]), err)
 			} else {
-				_, e := fmt.Fprintf(&sb, "signature '%s' is invalid."+
-					" signature: %v, public key: %v, message: %v\n", desc, sig, pubKey, msg)
-				if e != nil {
-					// ignore
-				}
+				errmsg += fmt.Sprintf("\nsignature '%s' is invalid."+
+					" signature: 0x%s, public key: 0x%s, message: 0x%v",
+					desc, hex.EncodeToString(sig), hex.EncodeToString(pubKey.Marshal()),
+					hex.EncodeToString(msg[:]))
 			}
 		}
 	}
 
-	return false, errors.Errorf(sb.String())
+	return false, errors.Errorf(errmsg)
 }
 
 // Copy the attached signature batch and return it

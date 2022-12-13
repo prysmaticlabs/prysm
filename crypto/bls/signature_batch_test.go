@@ -54,31 +54,35 @@ func TestCopySignatureSet(t *testing.T) {
 }
 
 func TestVerifyVerbosely_AllSignaturesValid(t *testing.T) {
-	set := NewValidSignatureSet(3)
+	set := NewValidSignatureSet("good", 3)
 	valid, err := set.VerifyVerbosely()
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid, "SignatureSet is expected to be valid")
 }
 
 func TestVerifyVerbosely_SomeSignaturesInvalid(t *testing.T) {
-	goodSet := NewValidSignatureSet(3)
-	badSet := NewInvalidSignatureSet(3, false)
+	goodSet := NewValidSignatureSet("good", 3)
+	badSet := NewInvalidSignatureSet("bad", 3, false)
 	set := NewSet().Join(goodSet).Join(badSet)
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
-	assert.ErrorContains(t, "signature 'signature of hello0' is invalid", err)
-	assert.ErrorContains(t, "signature 'signature of hello1' is invalid", err)
-	assert.ErrorContains(t, "signature 'signature of hello2' is invalid", err)
+	assert.StringContains(t, "signature 'signature of bad0' is invalid", err.Error())
+	assert.StringContains(t, "signature 'signature of bad1' is invalid", err.Error())
+	assert.StringContains(t, "signature 'signature of bad2' is invalid", err.Error())
+	assert.StringNotContains(t, "signature 'signature of bad0' is invalid", err.Error())
+	assert.StringNotContains(t, "signature 'signature of good1' is invalid", err.Error())
+	assert.StringNotContains(t, "signature 'signature of good2' is invalid", err.Error())
 }
 
 func TestVerifyVerbosely_VerificationThrowsError(t *testing.T) {
-	goodSet := NewValidSignatureSet(1)
-	badSet := NewInvalidSignatureSet(1, true)
+	goodSet := NewValidSignatureSet("good", 1)
+	badSet := NewInvalidSignatureSet("bad", 1, true)
 	set := NewSet().Join(goodSet).Join(badSet)
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
-	assert.ErrorContains(t, "signature 'signature of hello0' is invalid", err)
-	assert.ErrorContains(t, "error: could not unmarshal bytes into signature", err)
+	assert.StringContains(t, "signature 'signature of bad0' is invalid", err.Error())
+	assert.StringContains(t, "error: could not unmarshal bytes into signature", err.Error())
+	assert.StringNotContains(t, "signature 'signature of good0' is invalid", err.Error())
 }
 
 func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
@@ -610,7 +614,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 	}
 }
 
-func NewValidSignatureSet(num int) *SignatureBatch {
+func NewValidSignatureSet(msgBody string, num int) *SignatureBatch {
 	set := &SignatureBatch{
 		Signatures:   make([][]byte, num),
 		PublicKeys:   make([]common.PublicKey, num),
@@ -621,9 +625,9 @@ func NewValidSignatureSet(num int) *SignatureBatch {
 	for i := 0; i < num; i++ {
 		priv, _ := RandKey()
 		pubkey := priv.PublicKey()
-		msg := messageBytes(fmt.Sprintf("hello%d", i))
+		msg := messageBytes(fmt.Sprintf("%s%d", msgBody, i))
 		sig := priv.Sign(msg[:]).Marshal()
-		desc := fmt.Sprintf("signature of hello%d", i)
+		desc := fmt.Sprintf("signature of %s%d", msgBody, i)
 
 		set.Signatures[i] = sig
 		set.PublicKeys[i] = pubkey
@@ -634,7 +638,7 @@ func NewValidSignatureSet(num int) *SignatureBatch {
 	return set
 }
 
-func NewInvalidSignatureSet(num int, throwErr bool) *SignatureBatch {
+func NewInvalidSignatureSet(msgBody string, num int, throwErr bool) *SignatureBatch {
 	set := &SignatureBatch{
 		Signatures:   make([][]byte, num),
 		PublicKeys:   make([]common.PublicKey, num),
@@ -645,15 +649,15 @@ func NewInvalidSignatureSet(num int, throwErr bool) *SignatureBatch {
 	for i := 0; i < num; i++ {
 		priv, _ := RandKey()
 		pubkey := priv.PublicKey()
-		msg := messageBytes(fmt.Sprintf("hello%d", i))
+		msg := messageBytes(fmt.Sprintf("%s%d", msgBody, i))
 		var sig []byte
 		if throwErr {
 			sig = make([]byte, 96)
 		} else {
-			badMsg := messageBytes(fmt.Sprintf("badmsg%d", i))
+			badMsg := messageBytes("badmsg")
 			sig = priv.Sign(badMsg[:]).Marshal()
 		}
-		desc := fmt.Sprintf("signature of hello%d", i)
+		desc := fmt.Sprintf("signature of %s%d", msgBody, i)
 
 		set.Signatures[i] = sig
 		set.PublicKeys[i] = pubkey
