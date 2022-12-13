@@ -2,7 +2,9 @@ package bytesutil_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -651,4 +653,12 @@ func TestToBytes20(t *testing.T) {
 		b := bytesutil.ToBytes20(tt.a)
 		assert.DeepEqual(t, tt.b, b)
 	}
+}
+
+func TestLittleEndianBytesToBigInt(t *testing.T) {
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, 1234567890)
+	converted := bytesutil.LittleEndianBytesToBigInt(bytes)
+	expected := new(big.Int).SetInt64(1234567890)
+	assert.DeepEqual(t, expected, converted)
 }

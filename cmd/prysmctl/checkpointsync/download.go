@@ -19,7 +19,12 @@ var downloadCmd = &cli.Command{
 	Name:    "download",
 	Aliases: []string{"dl"},
 	Usage:   "Download the latest finalized state and the most recent block it integrates. To be used for checkpoint sync.",
-	Action:  cliActionDownload,
+	Action: func(cliCtx *cli.Context) error {
+		if err := cliActionDownload(cliCtx); err != nil {
+			log.WithError(err).Fatal("Could not download checkpoint-sync data")
+		}
+		return nil
+	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "beacon-node-host",
