@@ -32,11 +32,7 @@ func (s *SignatureBatch) Join(set *SignatureBatch) *SignatureBatch {
 	s.Signatures = append(s.Signatures, set.Signatures...)
 	s.PublicKeys = append(s.PublicKeys, set.PublicKeys...)
 	s.Messages = append(s.Messages, set.Messages...)
-	if s.Descriptions != nil && set.Descriptions != nil {
-		s.Descriptions = append(s.Descriptions, set.Descriptions...)
-	} else {
-		s.Descriptions = nil
-	}
+	s.Descriptions = append(s.Descriptions, set.Descriptions...)
 	return s
 }
 
@@ -64,12 +60,7 @@ func (s *SignatureBatch) VerifyVerbosely() (bool, error) {
 
 		valid, err := VerifySignature(sig, msg, pubKey)
 		if !valid {
-			var desc string
-			if len(s.Descriptions) != len(s.Signatures) {
-				desc = "non-specific signature"
-			} else {
-				desc = s.Descriptions[i]
-			}
+			desc := s.Descriptions[i]
 
 			if err != nil {
 				_, e := fmt.Fprintf(&sb, "signature '%s' is invalid."+
@@ -96,7 +87,7 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	signatures := make([][]byte, len(s.Signatures))
 	pubkeys := make([]PublicKey, len(s.PublicKeys))
 	messages := make([][32]byte, len(s.Messages))
-	var descriptions []string
+	descriptions := make([]string, len(s.Descriptions))
 	for i := range s.Signatures {
 		sig := make([]byte, len(s.Signatures[i]))
 		copy(sig, s.Signatures[i])
@@ -108,10 +99,7 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	for i := range s.Messages {
 		copy(messages[i][:], s.Messages[i][:])
 	}
-	if s.Descriptions != nil {
-		descriptions = make([]string, len(s.Descriptions))
-		copy(descriptions, s.Descriptions)
-	}
+	copy(descriptions, s.Descriptions)
 	return &SignatureBatch{
 		Signatures:   signatures,
 		PublicKeys:   pubkeys,
@@ -145,10 +133,7 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 	sigs := s.Signatures[:0]
 	pubs := s.PublicKeys[:0]
 	msgs := s.Messages[:0]
-	var descs []string
-	if s.Descriptions != nil {
-		descs = s.Descriptions[:0]
-	}
+	descs := s.Descriptions[:0]
 
 	for i := 0; i < len(s.Signatures); i++ {
 		if duplicateSet[i] {
@@ -157,9 +142,7 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 		sigs = append(sigs, s.Signatures[i])
 		pubs = append(pubs, s.PublicKeys[i])
 		msgs = append(msgs, s.Messages[i])
-		if descs != nil {
-			descs = append(descs, s.Descriptions[i])
-		}
+		descs = append(descs, s.Descriptions[i])
 	}
 
 	s.Signatures = sigs
@@ -190,12 +173,14 @@ func (s *SignatureBatch) AggregateBatch() (*SignatureBatch, error) {
 			currBatch.Signatures = append(currBatch.Signatures, s.Signatures[i])
 			currBatch.Messages = append(currBatch.Messages, s.Messages[i])
 			currBatch.PublicKeys = append(currBatch.PublicKeys, s.PublicKeys[i])
+			currBatch.Descriptions = append(currBatch.Descriptions, s.Descriptions[i])
 			continue
 		}
 		currBatch = &SignatureBatch{
-			Signatures: [][]byte{s.Signatures[i]},
-			Messages:   [][32]byte{s.Messages[i]},
-			PublicKeys: []PublicKey{s.PublicKeys[i]},
+			Signatures:   [][]byte{s.Signatures[i]},
+			Messages:     [][32]byte{s.Messages[i]},
+			PublicKeys:   []PublicKey{s.PublicKeys[i]},
+			Descriptions: []string{s.Descriptions[i]},
 		}
 		msgMap[currMsg] = currBatch
 	}
@@ -211,6 +196,7 @@ func (s *SignatureBatch) AggregateBatch() (*SignatureBatch, error) {
 			b.PublicKeys = []PublicKey{aggPub}
 			b.Signatures = [][]byte{aggSig.Marshal()}
 			b.Messages = [][32]byte{copiedRt}
+			b.Descriptions = []string{AggregatedSignature}
 		}
 		newObj := *b
 		newSt = newSt.Join(&newObj)

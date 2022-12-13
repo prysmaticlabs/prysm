@@ -246,6 +246,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 			Messages:   [][32]byte{sigRoot},
 			PublicKeys: []bls.PublicKey{pKey},
 			Signatures: [][]byte{m.Signature},
+			Descriptions: []string{bls.SyncCommitteeSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync committee message", set)
 	}

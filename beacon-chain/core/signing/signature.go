@@ -8,14 +8,6 @@ import (
 
 var ErrNilRegistration = errors.New("nil signed registration")
 
-const (
-	UnknownSignature     string = "unknown signature"
-	BlockSignature              = "block signature"
-	RandaoSignature             = "randao signature"
-	AttestationSignature        = "attestation signature"
-	BlsChangeSignature          = "blschange signature"
-)
-
 // VerifyRegistrationSignature verifies the signature of a validator's registration.
 func VerifyRegistrationSignature(
 	sr *ethpb.SignedValidatorRegistrationV1,
