@@ -23,6 +23,8 @@ import (
 var placeholderFields = []string{"UPDATE_TIMEOUT", "EIP4844_FORK_EPOCH", "EIP4844_FORK_VERSION"}
 
 func TestLoadConfigFile(t *testing.T) {
+	// TODO(11750)
+	t.Skip("needs https://github.com/prysmaticlabs/prysm/issues/11750")
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
 	assertVals := func(name string, fields []string, expected, actual *params.BeaconChainConfig) {
 		//  Misc params.
