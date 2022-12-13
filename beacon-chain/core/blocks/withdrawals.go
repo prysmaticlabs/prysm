@@ -165,7 +165,17 @@ func BLSChangesSignatureBatch(
 		Messages:   make([][32]byte, len(changes)),
 	}
 	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		}
+	} else {
+		fork = st.Fork()
+	}
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
