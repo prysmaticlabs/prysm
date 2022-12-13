@@ -222,11 +222,6 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			}
 			// Close before disconnecting, and wait for the other end to ack our response.
 			closeStreamAndWait(stream, log)
-			forkDigest, err := s.currentForkDigest()
-			if err != nil {
-				log.WithError(err).Error("failed to compute fork digest")
-			}
-			log.Errorf("fork digest mismatch, expected=%#x, saw=%#x", forkDigest, m.ForkDigest)
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeWrongNetwork, remotePeer); err != nil {
 				return err
 			}
