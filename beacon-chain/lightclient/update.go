@@ -7,6 +7,11 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
+type update struct {
+	config *Config
+	*ethpbv2.LightClientUpdate
+}
+
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	if len(bb) == 0 {
 		return true
@@ -23,31 +28,30 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
-type Update struct {
-	config                     *Config
-	*ethpbv2.LightClientUpdate `json:"update"`
-}
-
-func (u *Update) isSyncCommiteeUpdate() bool {
+func (u *update) isSyncCommiteeUpdate() bool {
 	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
 }
 
-func (u *Update) isFinalityUpdate() bool {
+func (u *update) isFinalityUpdate() bool {
 	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.FinalizedRootIndex)
 }
 
-func (u *Update) hasRelevantSyncCommittee() bool {
+func (u *update) hasRelevantSyncCommittee() bool {
 	return u.isSyncCommiteeUpdate() &&
 		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
 			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
 }
 
-func (u *Update) hasSyncCommitteeFinality() bool {
+func (u *update) hasSyncCommitteeFinality() bool {
 	return computeSyncCommitteePeriodAtSlot(u.config, u.GetFinalizedHeader().Slot) ==
 		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot)
 }
 
-func (u *Update) isBetterUpdate(newUpdate *Update) bool {
+func (u *update) isBetterUpdate(newUpdatePb *ethpbv2.LightClientUpdate) bool {
+	newUpdate := &update{
+		config:            u.config,
+		LightClientUpdate: newUpdatePb,
+	}
 	// Compare supermajority (> 2/3) sync committee participation
 	maxActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()

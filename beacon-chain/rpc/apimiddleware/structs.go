@@ -104,11 +104,11 @@ type LightClientBootstrapJson struct {
 }
 
 type LightClientUpdateResponseJson struct {
-	Version string                     `json:"version" enum:"true"`
-	Data    *LightClientUpdateDataJson `json:"data"`
+	Version string                 `json:"version" enum:"true"`
+	Data    *LightClientUpdateJson `json:"data"`
 }
 
-type LightClientUpdateDataJson struct {
+type LightClientUpdateJson struct {
 	AttestedHeader          *BeaconBlockHeaderJson `json:"attested_header"`
 	NextSyncCommittee       *SyncCommitteeJson     `json:"next_sync_committee,omitempty"`
 	NextSyncCommitteeBranch []string               `json:"next_sync_committee_branch,omitempty" hex:"true"`
@@ -116,6 +116,30 @@ type LightClientUpdateDataJson struct {
 	FinalityBranch          []string               `json:"finality_branch,omitempty" hex:"true"`
 	SyncAggregate           *SyncAggregateJson     `json:"sync_aggregate"`
 	SignatureSlot           string                 `json:"signature_slot"`
+}
+
+type LightClientFinalityUpdateResponseJson struct {
+	Version string                         `json:"version" enum:"true"`
+	Data    *LightClientFinalityUpdateJson `json:"data"`
+}
+
+type LightClientFinalityUpdateJson struct {
+	AttestedHeader  *BeaconBlockHeaderJson `json:"attested_header"`
+	FinalizedHeader *BeaconBlockHeaderJson `json:"finalized_header"`
+	FinalityBranch  []string               `json:"finality_branch" hex:"true"`
+	SyncAggregate   *SyncAggregateJson     `json:"sync_aggregate"`
+	SignatureSlot   string                 `json:"signature_slot"`
+}
+
+type LightClientOptimisticUpdateResponseJson struct {
+	Version string                           `json:"version" enum:"true"`
+	Data    *LightClientOptimisticUpdateJson `json:"data"`
+}
+
+type LightClientOptimisticUpdateJson struct {
+	AttestedHeader *BeaconBlockHeaderJson `json:"attested_header"`
+	SyncAggregate  *SyncAggregateJson     `json:"sync_aggregate"`
+	SignatureSlot  string                 `json:"signature_slot"`
 }
 
 type BlockHeadersResponseJson struct {

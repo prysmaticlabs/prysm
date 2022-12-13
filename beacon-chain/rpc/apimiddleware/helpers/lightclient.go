@@ -159,7 +159,7 @@ func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson)
 	}, nil
 }
 
-func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateDataJson) (*ethpbv2.LightClientUpdate, error) {
+func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
 	attestedHeader, err := headerFromJSON(update.AttestedHeader)
 	if err != nil {
 		return nil, err
@@ -184,5 +184,102 @@ func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateDataJson) (*et
 		FinalityBranch:          branchFromJSON(update.FinalityBranch),
 		SyncAggregate:           syncAggregate,
 		SignatureSlot:           types.Slot(signatureSlot),
+	}, nil
+}
+
+func NewLightClientUpdateFromFinalityUpdateJSON(update *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
+	LightClientUpdate, error) {
+	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
+	if err != nil {
+		return nil, err
+	}
+	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv2.LightClientUpdate{
+		AttestedHeader:  attestedHeader,
+		FinalizedHeader: finalizedHeader,
+		FinalityBranch:  branchFromJSON(update.FinalityBranch),
+		SyncAggregate:   syncAggregate,
+		SignatureSlot:   types.Slot(signatureSlot),
+	}, nil
+}
+
+func NewLightClientUpdateFromOptimisticUpdateJSON(update *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.
+	LightClientUpdate,
+	error) {
+	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv2.LightClientUpdate{
+		AttestedHeader: attestedHeader,
+		SyncAggregate:  syncAggregate,
+		SignatureSlot:  types.Slot(signatureSlot),
+	}, nil
+}
+
+func NewLightClientFinalityUpdateFromJSON(update *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.LightClientFinalityUpdate,
+	error) {
+	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
+	if err != nil {
+		return nil, err
+	}
+	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv2.LightClientFinalityUpdate{
+		AttestedHeader:  attestedHeader,
+		FinalizedHeader: finalizedHeader,
+		FinalityBranch:  branchFromJSON(update.FinalityBranch),
+		SyncAggregate:   syncAggregate,
+		SignatureSlot:   types.Slot(signatureSlot),
+	}, nil
+}
+
+func NewLightClientOptimisticUpdateFromJSON(update *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.LightClientOptimisticUpdate,
+	error) {
+	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
+	if err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpbv2.LightClientOptimisticUpdate{
+		AttestedHeader: attestedHeader,
+		SyncAggregate:  syncAggregate,
+		SignatureSlot:  types.Slot(signatureSlot),
 	}, nil
 }

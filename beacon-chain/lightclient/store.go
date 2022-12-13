@@ -4,9 +4,13 @@
 package lightclient
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 
+	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers/lightclient"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -27,7 +31,7 @@ type Store struct {
 	// NextSyncCommittee is the next sync committees corresponding to the finalized header
 	NextSyncCommittee *ethpbv2.SyncCommittee `json:"next_sync_committee,omitempty"`
 	// BestValidUpdate is the best available header to switch finalized head to if we see nothing else
-	BestValidUpdate *Update `json:"best_valid_update,omitempty"`
+	BestValidUpdate *ethpbv2.LightClientUpdate `json:"best_valid_update,omitempty"`
 	// OptimisticHeader is the most recent available reasonably-safe header
 	OptimisticHeader *ethpbv1.BeaconBlockHeader `json:"optimistic_header,omitempty"`
 	// PreviousMaxActiveParticipants is the previous max number of active participants in a sync committee (used to
@@ -36,6 +40,45 @@ type Store struct {
 	// CurrentMaxActiveParticipants is the max number of active participants in a sync committee (used to calculate
 	// safety threshold)
 	CurrentMaxActiveParticipants uint64 `json:"current_max_active_participants,omitempty"`
+}
+
+func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
+	var update *ethpbv2.LightClientUpdate
+	switch typedUpdate.TypeName {
+	case ethrpc.LightClientUpdateTypeName:
+		var fullUpdate ethrpc.LightClientUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, &fullUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientUpdateFromJSON(&fullUpdate)
+		if err != nil {
+			return nil, err
+		}
+	case ethrpc.LightClientFinalityUpdateTypeName:
+		var finalityUpdate ethrpc.LightClientFinalityUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, &finalityUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientUpdateFromFinalityUpdateJSON(&finalityUpdate)
+		if err != nil {
+			return nil, err
+		}
+	case ethrpc.LightClientOptimisticUpdateTypeName:
+		var optimisticUpdate ethrpc.LightClientOptimisticUpdateJson
+		err := json.Unmarshal(typedUpdate.Data, &optimisticUpdate)
+		if err != nil {
+			return nil, err
+		}
+		update, err = helpers.NewLightClientUpdateFromOptimisticUpdateJSON(&optimisticUpdate)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown update type %q", typedUpdate.TypeName)
+	}
+	return update, nil
 }
 
 func getSubtreeIndex(index uint64) uint64 {
@@ -101,6 +144,9 @@ func (s *Store) getSafetyThreshold() uint64 {
 }
 
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
+	if epoch >= s.Config.CapellaForkEpoch {
+		return s.Config.CapellaForkVersion
+	}
 	if epoch >= s.Config.BellatrixForkEpoch {
 		return s.Config.BellatrixForkVersion
 	}
@@ -110,9 +156,7 @@ func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 	return s.Config.GenesisForkVersion
 }
 
-func (s *Store) validateUpdate(update *Update,
-	currentSlot types.Slot,
-	genesisValidatorsRoot []byte) error {
+func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.GetSyncAggregate()
 	if syncAggregate.SyncCommitteeBits.Count() < s.Config.MinSyncCommitteeParticipants {
@@ -268,7 +312,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
 			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.GetAttestedHeader()
 		}
-		if err := s.applyUpdate(s.BestValidUpdate.LightClientUpdate); err != nil {
+		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
 			return err
 		}
 		s.BestValidUpdate = nil
@@ -278,7 +322,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 
 func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
-	update := &Update{
+	update := &update{
 		LightClientUpdate: lightClientUpdate,
 		config:            s.Config,
 	}
@@ -289,7 +333,7 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 
 	// Update the best update in case we have to force-update to it if the timeout elapses
 	if s.BestValidUpdate == nil || update.isBetterUpdate(s.BestValidUpdate) {
-		s.BestValidUpdate = update
+		s.BestValidUpdate = update.LightClientUpdate
 	}
 
 	// Track the maximum number of active participants in the committee signature
@@ -316,34 +360,14 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	return nil
 }
 
-func validateFinalityUpdate(update *ethpbv2.LightClientUpdate) error {
-	if update.NextSyncCommittee != nil || update.NextSyncCommitteeBranch != nil {
-		return errors.New("update should not have next sync committee")
-	}
-	return nil
-}
-
-func validateOptimisticUpdate(update *ethpbv2.LightClientUpdate) error {
-	if update.FinalizedHeader != nil || update.FinalityBranch != nil {
-		return errors.New("update should not have finalized header")
-	}
-	return validateFinalityUpdate(update)
-}
-
-func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientUpdate,
-	currentSlot types.Slot,
+func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientFinalityUpdate, currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	if err := validateFinalityUpdate(update); err != nil {
-		return err
-	}
-	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(lightclient.NewLightClientUpdateFromFinalityUpdate(update), currentSlot,
+		genesisValidatorsRoot)
 }
 
-func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientUpdate,
-	currentSlot types.Slot,
+func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientOptimisticUpdate, currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
-	if err := validateOptimisticUpdate(update); err != nil {
-		return err
-	}
-	return s.ProcessUpdate(update, currentSlot, genesisValidatorsRoot)
+	return s.ProcessUpdate(lightclient.NewLightClientUpdateFromOptimisticUpdate(update), currentSlot,
+		genesisValidatorsRoot)
 }

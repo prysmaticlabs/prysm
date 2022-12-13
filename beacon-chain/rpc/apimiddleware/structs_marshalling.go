@@ -2,9 +2,16 @@ package apimiddleware
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"strconv"
 
 	"github.com/pkg/errors"
+)
+
+const (
+	LightClientUpdateTypeName           = "light_client_update"
+	LightClientFinalityUpdateTypeName   = "light_client_finality_update"
+	LightClientOptimisticUpdateTypeName = "light_client_optimistic_update"
 )
 
 // EpochParticipation represents participation of validators in their duties.
@@ -29,4 +36,46 @@ func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
 		(*p)[i] = strconv.FormatUint(uint64(participation), 10)
 	}
 	return nil
+}
+
+type TypedLightClientUpdateJson struct {
+	TypeName string `json:"type_name"`
+	Data     []byte `json:"data"`
+}
+
+func NewTypedLightClientUpdateJsonFromUpdate(update *LightClientUpdateJson) (*TypedLightClientUpdateJson, error) {
+	bytes, err := json.Marshal(update)
+	if err != nil {
+		return nil, err
+	}
+	return &TypedLightClientUpdateJson{
+		TypeName: LightClientUpdateTypeName,
+		Data:     bytes,
+	}, nil
+}
+
+func NewTypedLightClientUpdateJsonFromFinalityUpdate(update *LightClientFinalityUpdateJson) (
+	*TypedLightClientUpdateJson,
+	error) {
+	bytes, err := json.Marshal(update)
+	if err != nil {
+		return nil, err
+	}
+	return &TypedLightClientUpdateJson{
+		TypeName: LightClientFinalityUpdateTypeName,
+		Data:     bytes,
+	}, nil
+}
+
+func NewTypedLightClientUpdateJsonFromOptimisticUpdate(update *LightClientOptimisticUpdateJson) (
+	*TypedLightClientUpdateJson,
+	error) {
+	bytes, err := json.Marshal(update)
+	if err != nil {
+		return nil, err
+	}
+	return &TypedLightClientUpdateJson{
+		TypeName: LightClientOptimisticUpdateTypeName,
+		Data:     bytes,
+	}, nil
 }

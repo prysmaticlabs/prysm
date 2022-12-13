@@ -6,6 +6,8 @@ import (
 )
 
 type Config struct {
+	CapellaForkEpoch             types.Epoch `json:"capella_fork_epoch"`
+	CapellaForkVersion           []byte      `json:"capella_fork_version"`
 	BellatrixForkEpoch           types.Epoch `json:"bellatrix_fork_epoch"`
 	BellatrixForkVersion         []byte      `json:"bellatrix_fork_version"`
 	AltairForkEpoch              types.Epoch `json:"altair_fork_epoch"`

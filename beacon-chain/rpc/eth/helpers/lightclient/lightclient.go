@@ -371,3 +371,57 @@ func NewLightClientUpdateFromBeaconState(
 	result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
 	return result, nil
 }
+
+// NewLightClientFinalityUpdateFromUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
+// def create_light_client_finality_update(update: LightClientUpdate) -> LightClientFinalityUpdate:
+//
+//	return LightClientFinalityUpdate(
+//	    attested_header=update.attested_header,
+//	    finalized_header=update.finalized_header,
+//	    finality_branch=update.finality_branch,
+//	    sync_aggregate=update.sync_aggregate,
+//	    signature_slot=update.signature_slot,
+//	)
+func NewLightClientFinalityUpdateFromUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
+	return &ethpbv2.LightClientFinalityUpdate{
+		AttestedHeader:  update.AttestedHeader,
+		FinalizedHeader: update.FinalizedHeader,
+		FinalityBranch:  update.FinalityBranch,
+		SyncAggregate:   update.SyncAggregate,
+		SignatureSlot:   update.SignatureSlot,
+	}
+}
+
+// NewLightClientOptimisticUpdateFromUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_optimistic_update
+// def create_light_client_optimistic_update(update: LightClientUpdate) -> LightClientOptimisticUpdate:
+//
+//	return LightClientOptimisticUpdate(
+//	    attested_header=update.attested_header,
+//	    sync_aggregate=update.sync_aggregate,
+//	    signature_slot=update.signature_slot,
+//	)
+func NewLightClientOptimisticUpdateFromUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
+	return &ethpbv2.LightClientOptimisticUpdate{
+		AttestedHeader: update.AttestedHeader,
+		SyncAggregate:  update.SyncAggregate,
+		SignatureSlot:  update.SignatureSlot,
+	}
+}
+
+func NewLightClientUpdateFromFinalityUpdate(update *ethpbv2.LightClientFinalityUpdate) *ethpbv2.LightClientUpdate {
+	return &ethpbv2.LightClientUpdate{
+		AttestedHeader:  update.AttestedHeader,
+		FinalizedHeader: update.FinalizedHeader,
+		FinalityBranch:  update.FinalityBranch,
+		SyncAggregate:   update.SyncAggregate,
+		SignatureSlot:   update.SignatureSlot,
+	}
+}
+
+func NewLightClientUpdateFromOptimisticUpdate(update *ethpbv2.LightClientOptimisticUpdate) *ethpbv2.LightClientUpdate {
+	return &ethpbv2.LightClientUpdate{
+		AttestedHeader: update.AttestedHeader,
+		SyncAggregate:  update.SyncAggregate,
+		SignatureSlot:  update.SignatureSlot,
+	}
+}
