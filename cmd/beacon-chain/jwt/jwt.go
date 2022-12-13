@@ -23,7 +23,12 @@ var Commands = &cli.Command{
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.JwtOutputFileFlag,
 	}),
-	Action: generateAuthSecretInFile,
+	Action: func(cliCtx *cli.Context) error {
+		if err := generateAuthSecretInFile(cliCtx); err != nil {
+			logrus.WithError(err).Fatal("Could not generate jwt")
+		}
+		return nil
+	},
 }
 
 func generateAuthSecretInFile(c *cli.Context) error {
