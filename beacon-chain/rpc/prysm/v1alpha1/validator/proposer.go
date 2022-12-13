@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	blocks2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -152,13 +154,38 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			}
 		}
 		if fallBackToLocal {
-			executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get execution payload: %v", err)
+			switch {
+			case slots.ToEpoch(req.Slot) < params.BeaconConfig().EIP4844ForkEpoch:
+				executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				if err := blk.Body().SetExecution(executionData); err != nil {
+					return nil, errors.Wrap(err, "could not set execution payload")
+				}
+			default:
+				executionData, bundle, err := vs.getExecutionPayloadV2AndBlobsBundleV1(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				if err := blk.Body().SetExecution(executionData); err != nil {
+					return nil, errors.Wrap(err, "could not set execution payload")
+				}
+				if err := blk.Body().SetBlobKzgCommitments(bundle.KzgCommitments); err != nil {
+					return nil, errors.Wrap(err, "could not set blob kzg commitments")
+				}
+				aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(bundle.Blobs))
+				if err != nil {
+					return nil, fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
+				}
+				vs.BlobsCache.Put(&ethpb.BlobsSidecar{
+					BeaconBlockRoot: bundle.BlockHash,
+					BeaconBlockSlot: req.Slot,
+					Blobs:           bundle.Blobs,
+					AggregatedProof: aggregatedProof[:],
+				})
 			}
-			if err := blk.Body().SetExecution(executionData); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not set execution payload: %v", err)
-			}
+
 		}
 	}
 
@@ -187,7 +214,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_EIP4844{EIP4844: pb.(*ethpb.BeaconBlock4844)}}, nil
+	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
 	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil

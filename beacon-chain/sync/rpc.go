@@ -86,6 +86,7 @@ func (s *Service) registerRPCHandlersAltair() {
 		p2p.RPCBlocksByRangeTopicV2,
 		s.beaconBlocksByRangeRPCHandler,
 	)
+	// TODO(4844): Unregister this post 4844 fork epoch.
 	s.registerRPC(
 		p2p.RPCBlocksByRootTopicV2,
 		s.beaconBlocksRootRPCHandler,

@@ -131,6 +131,7 @@ func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
 		)
 	}
 
+	// New Gossip Topic in 4844
 	if epoch >= params.BeaconConfig().EIP4844ForkEpoch {
 		s.subscribe(
 			p2p.BlockAndBlobsSubnetTopicFormat,

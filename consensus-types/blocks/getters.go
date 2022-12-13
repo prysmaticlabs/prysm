@@ -1007,6 +1007,13 @@ func (b *BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
 		}
 		cp := eth.CopyBeaconBlockCapella(pb.(*eth.BeaconBlockCapella))
 		return initBlockFromProtoCapella(cp)
+	case version.EIP4844:
+		if b.IsBlinded() {
+			cp := eth.CopyBlindedBeaconBlock4844(pb.(*eth.BlindedBeaconBlock4844))
+			return initBlindedBlockFromProto4844(cp)
+		}
+		cp := eth.CopyBeaconBlock4844(pb.(*eth.BeaconBlock4844))
+		return initBlockFromProto4844(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}

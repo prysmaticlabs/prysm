@@ -53,6 +53,7 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}},
 			)
 		},
+		// TODO(4844): Is this right?
 		bytesutil.ToBytes4(params.BeaconConfig().EIP4844ForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
 				&ethpb.SignedBeaconBlock4844{Block: &ethpb.BeaconBlock4844{Body: &ethpb.BeaconBlockBody4844{}}},
