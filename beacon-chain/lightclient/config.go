@@ -27,19 +27,19 @@ type ConfigJSON struct {
 }
 
 type Config struct {
-	CapellaForkEpoch             types.Epoch `json:"capella_fork_epoch"`
-	CapellaForkVersion           []byte      `json:"capella_fork_version"`
-	BellatrixForkEpoch           types.Epoch `json:"bellatrix_fork_epoch"`
-	BellatrixForkVersion         []byte      `json:"bellatrix_fork_version"`
-	AltairForkEpoch              types.Epoch `json:"altair_fork_epoch"`
-	AltairForkVersion            []byte      `json:"altair_fork_version"`
-	GenesisForkVersion           []byte      `json:"genesis_fork_version"`
-	MinSyncCommitteeParticipants uint64      `json:"min_sync_committee_participants"`
-	GenesisSlot                  types.Slot  `json:"genesis_slot"`
-	DomainSyncCommittee          [4]byte     `json:"domain_sync_committee"`
-	SlotsPerEpoch                types.Slot  `json:"slots_per_epoch"`
-	EpochsPerSyncCommitteePeriod types.Epoch `json:"epochs_per_sync_committee_period"`
-	SecondsPerSlot               uint64      `json:"seconds_per_slot"`
+	CapellaForkEpoch             types.Epoch
+	CapellaForkVersion           []byte
+	BellatrixForkEpoch           types.Epoch
+	BellatrixForkVersion         []byte
+	AltairForkEpoch              types.Epoch
+	AltairForkVersion            []byte
+	GenesisForkVersion           []byte
+	MinSyncCommitteeParticipants uint64
+	GenesisSlot                  types.Slot
+	DomainSyncCommittee          [4]byte
+	SlotsPerEpoch                types.Slot
+	EpochsPerSyncCommitteePeriod types.Epoch
+	SecondsPerSlot               uint64
 }
 
 func NewConfig(chainConfig *params.BeaconChainConfig) *Config {
