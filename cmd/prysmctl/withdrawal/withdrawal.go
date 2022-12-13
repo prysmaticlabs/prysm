@@ -2,6 +2,7 @@ package withdrawal
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +36,6 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.blsToExecutionAddress")
 	defer span.End()
 	f := withdrawalFlags
-
 	u, err := url.ParseRequestURI(f.BeaconNodeHost)
 	if err != nil {
 		return errors.Wrap(err, "invalid format, unable to parse url")
@@ -43,7 +43,6 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	if u.Scheme == "" || u.Host == "" {
 		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", f.BeaconNodeHost)
 	}
-
 	foundFilePaths, err := findWithdrawalFiles(f.File)
 	if err != nil {
 		return err
@@ -58,50 +57,74 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to open file")
 		}
-
-		var to *apimiddleware.SignedBLSToExecutionChangeJson
-		if err := json.Unmarshal(b, &to); err != nil {
-			return errors.Wrap(err, "failed to unmarshal file")
+		switch string(b)[0:1] {
+		case "[":
+			var to []*apimiddleware.SignedBLSToExecutionChangeJson
+			if err := json.Unmarshal(b, &to); err != nil {
+				return errors.Wrap(err, "failed to unmarshal file")
+			}
+			if to == nil || len(to) == 0 {
+				return errors.New("the list of signed requests is empty")
+			}
+			for _, jsonOb := range to {
+				if err := callWithdrawalEndpoint(ctx, f.BeaconNodeHost, r, jsonOb); err != nil {
+					return err
+				}
+			}
+		case "{":
+			var to *apimiddleware.SignedBLSToExecutionChangeJson
+			if err := json.Unmarshal(b, &to); err != nil {
+				return errors.Wrap(err, "failed to unmarshal file")
+			}
+			if to == nil || to.Message == nil {
+				return errors.New("the object or object's message field in file is empty")
+			}
+			return callWithdrawalEndpoint(ctx, f.BeaconNodeHost, r, to)
+		default:
+			return errors.New("the provided file is not a json object or list of jason objects")
 		}
-		if to.BLSToExecutionChange == nil {
-			log.Warn(to)
-			return errors.New("the message field in file is empty")
-		}
-
-		withdrawalConfirmation := to.BLSToExecutionChange.ToExecutionAddress
-		fmt.Println(au.Red("===================================="))
-		fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + au.Red(to.BLSToExecutionChange.FromBLSPubkey).String() + ") ADDRESS " +
-			"TO AN ETHEREUM ADDRESS(" + au.Red(to.BLSToExecutionChange.ToExecutionAddress).String() + ") FOR VALIDATOR INDEX(" + au.Red(to.BLSToExecutionChange.ValidatorIndex).String() + "). ")
-
-		_, err = withdrawalPrompt(withdrawalConfirmation, r)
-		if err != nil {
-			return err
-		}
-
-		body, err := json.Marshal(to)
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal json")
-		}
-
-		fullpath := f.BeaconNodeHost + basePath + apiPath
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
-		if err != nil {
-			return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("API request to %s , responded with a status other than OK, status: %v", fullpath, resp.Status)
-		}
-		log.Info("Successfully published message to update withdrawal address.")
 	}
+	return nil
+}
 
+func callWithdrawalEndpoint(ctx context.Context, host string, r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
+	au := aurora.NewAurora(true)
+	withdrawalConfirmation := request.Message.ToExecutionAddress
+	fmt.Println(au.Red("===================================="))
+	fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + au.Red(request.Message.FromBLSPubkey).String() + ") ADDRESS " +
+		"TO AN ETHEREUM ADDRESS(" + au.Red(request.Message.ToExecutionAddress).String() + ") FOR VALIDATOR INDEX(" + au.Red(request.Message.ValidatorIndex).String() + "). ")
+	fmt.Println(au.Red("Please read the following carefully"))
+	fmt.Println("This action will allow you to partially withdraw any amount over the 32 staked eth in your validator balance. " +
+		"You will also be entitled to the full withdrawal if your validator has exited. " +
+		"Please navigate to the following website and make sure you understand the current implications " +
+		"of changing your bls withdrawal address to an ethereum address. " +
+		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
+		"You will NOT be able to change the address again once changed. ")
+	_, err := withdrawalPrompt(withdrawalConfirmation, r)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal json")
+	}
+	fullpath := host + basePath + apiPath
+
+	fmt.Printf("path: %s , request: %s\n", fullpath, string(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
+	if err != nil {
+		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request to %s , responded with a status other than OK, status: %v body: %v", fullpath, resp.Status, resp.Body)
+	}
+	log.Info("Successfully published message to update withdrawal address.")
 	return nil
 }
 
@@ -129,18 +152,8 @@ func findWithdrawalFiles(path string) ([]string, error) {
 }
 
 func withdrawalPrompt(confirmationMessage string, r io.Reader) (string, error) {
-	au := aurora.NewAurora(true)
-	promptHeader := au.Red("Please read the following carefully")
-	promptDescription := "This action will allow you to partially withdraw any amount over the 32 staked eth in your validator balance. " +
-		"You will also be entitled to the full withdrawal if your validator has exited. " +
-		"Please navigate to the following website and make sure you understand the current implications " +
-		"of changing your bls withdrawal address to an ethereum address. " +
-		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
-		"You will NOT be able to change the address again once changed. "
-	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please reenter the address you'd like to withdraw to. "
-	promptText := fmt.Sprintf("%s\n%s\n%s", promptHeader, promptDescription, promptQuestion)
-	return prompt.ValidatePrompt(r, promptText, func(input string) error {
+	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please reenter the address you'd like to withdraw to"
+	return prompt.ValidatePrompt(r, aurora.NewAurora(true).Red(promptQuestion).String(), func(input string) error {
 		return prompt.ValidatePhrase(input, confirmationMessage)
 	})
-
 }
