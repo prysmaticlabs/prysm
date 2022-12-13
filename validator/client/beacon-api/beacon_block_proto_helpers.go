@@ -159,9 +159,15 @@ func convertAttestationsToProto(jsonAttestations []*apimiddleware.AttestationJso
 			return nil, errors.Wrapf(err, "failed to get attestation data")
 		}
 
+		signature, err := hexutil.Decode(jsonAttestation.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get attestation signature")
+		}
+
 		attestations[index] = &ethpb.Attestation{
 			AggregationBits: aggregationBits,
 			Data:            attestationData,
+			Signature:       signature,
 		}
 	}
 

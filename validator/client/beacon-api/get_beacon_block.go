@@ -1,10 +1,13 @@
 package beacon_api
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	neturl "net/url"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -14,6 +17,11 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
+
+type abstractProduceBlockResponseJson struct {
+	Version string          `json:"version"`
+	Data    json.RawMessage `json:"data"`
+}
 
 func (c beaconApiValidatorClient) getBeaconBlock(slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
 	queryParams := neturl.Values{}
@@ -25,42 +33,62 @@ func (c beaconApiValidatorClient) getBeaconBlock(slot types.Slot, randaoReveal [
 
 	queryUrl := buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
 
-	responseJson := apimiddleware.ProduceBlockResponseV2Json{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(queryUrl, &responseJson); err != nil {
+	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
+	// and a blob of data
+	produceBlockResponseJson := abstractProduceBlockResponseJson{}
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(queryUrl, &produceBlockResponseJson); err != nil {
 		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	}
 
-	if responseJson.Data == nil {
-		return nil, errors.Errorf("produce block data is nil")
-	}
+	// Once we know what the consensus version is, we can go ahead and unmarshal into the specific structs unique to each version
+	decoder := json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
+	decoder.DisallowUnknownFields()
 
 	response := &ethpb.GenericBeaconBlock{}
-	switch responseJson.Version {
+
+	// At the moment, the prysm beacon node returns PHASE0, ALTAIR and BELLATRIX instead of the lowercase version as
+	// outlined in the spec, so handle both lowercase and uppercase to be compatible with all beacon nodes implementations
+	// TODO: remove the ToLower check once the Prysm beacon node returns lowercase versions
+	switch strings.ToLower(produceBlockResponseJson.Version) {
 	case "phase0":
-		phase0Block, err := convertRESTPhase0BlockToProto(responseJson.Data.Phase0Block)
+		jsonPhase0Block := apimiddleware.BeaconBlockJson{}
+		if err := decoder.Decode(&jsonPhase0Block); err != nil {
+			return nil, errors.Wrap(err, "failed to decode phase0 block response json")
+		}
+
+		phase0Block, err := convertRESTPhase0BlockToProto(&jsonPhase0Block)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get phase0 block")
 		}
 		response.Block = phase0Block
 
 	case "altair":
-		altairBlock, err := convertRESTAltairBlockToProto(responseJson.Data.AltairBlock)
+		jsonAltairBlock := apimiddleware.BeaconBlockAltairJson{}
+		if err := decoder.Decode(&jsonAltairBlock); err != nil {
+			return nil, errors.Wrap(err, "failed to decode altair block response json")
+		}
+
+		altairBlock, err := convertRESTAltairBlockToProto(&jsonAltairBlock)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get altair block")
 		}
 		response.Block = altairBlock
 
 	case "bellatrix":
-		bellatrixBlock, err := convertRESTBellatrixBlockToProto(responseJson.Data.BellatrixBlock)
+		jsonBellatrixBlock := apimiddleware.BeaconBlockBellatrixJson{}
+		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
+			return nil, errors.Wrap(err, "failed to decode bellatrix block response json")
+		}
+
+		bellatrixBlock, err := convertRESTBellatrixBlockToProto(&jsonBellatrixBlock)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get bellatrix block")
 		}
 		response.Block = bellatrixBlock
 
 	default:
-		return nil, errors.Errorf("unsupported block version `%s`", responseJson.Version)
+		return nil, errors.Errorf("unsupported consensus version `%s`", produceBlockResponseJson.Version)
 	}
-
 	return response, nil
 }
 
@@ -351,7 +379,7 @@ func convertRESTBellatrixBlockToProto(block *apimiddleware.BeaconBlockBellatrixJ
 					GasUsed:       gasUsed,
 					Timestamp:     timestamp,
 					ExtraData:     extraData,
-					BaseFeePerGas: bytesutil.BigIntToLittleEndianBytes(baseFeePerGas),
+					BaseFeePerGas: bytesutil.PadTo(bytesutil.BigIntToLittleEndianBytes(baseFeePerGas), 32),
 					BlockHash:     blockHash,
 					Transactions:  transactions,
 				},
