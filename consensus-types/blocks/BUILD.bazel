@@ -7,6 +7,7 @@ go_library(
         "factory.go",
         "getters.go",
         "proto.go",
+        "setters.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks",
