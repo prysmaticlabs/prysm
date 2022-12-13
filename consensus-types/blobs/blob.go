@@ -29,7 +29,7 @@ func (b BlobImpl) At(i int) [32]byte {
 }
 
 func (b BlobImpl) Len() int {
-	return len(b)
+	return len(b) / 32
 }
 
 type BlobsSequenceImpl []*v1.Blob

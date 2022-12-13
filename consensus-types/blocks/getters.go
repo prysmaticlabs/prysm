@@ -79,6 +79,13 @@ func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
 		}
 		b.block.body.blsToExecutionChanges = changes
 	}
+	if b.version >= version.EIP4844 {
+		kzgCommitments, err := blk.Body().BlobKzgCommitments()
+		if err != nil {
+			return err
+		}
+		b.block.body.blobKzgCommitments = kzgCommitments
+	}
 	return nil
 }
 
