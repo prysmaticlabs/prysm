@@ -103,10 +103,6 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return err
 	}
-	domainSyncCommittee, err := strconv.ParseUint(config.DomainSyncCommittee, 10, 32)
-	if err != nil {
-		return err
-	}
 	slotsPerEpoch, err := strconv.ParseUint(config.SlotsPerEpoch, 10, 64)
 	if err != nil {
 		return err
@@ -126,7 +122,7 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 		GenesisForkVersion:           hexutil.MustDecode(config.GenesisForkVersion),
 		MinSyncCommitteeParticipants: minSyncCommitteeParticipants,
 		GenesisSlot:                  types.Slot(genesisSlot),
-		DomainSyncCommittee:          bytesutil.Uint32ToBytes4(uint32(domainSyncCommittee)),
+		DomainSyncCommittee:          bytesutil.ToBytes4(hexutil.MustDecode(config.DomainSyncCommittee)),
 		SlotsPerEpoch:                types.Slot(slotsPerEpoch),
 		EpochsPerSyncCommitteePeriod: types.Epoch(epochsPerSyncCommitteePeriod),
 		SecondsPerSlot:               secondsPerSlot,
