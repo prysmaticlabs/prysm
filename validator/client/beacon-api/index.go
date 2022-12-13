@@ -14,7 +14,7 @@ func (c beaconApiValidatorClient) validatorIndex(in *ethpb.ValidatorIndexRequest
 
 	stateValidator, err := c.getStateValidators([]string{stringPubKey}, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get validator state")
+		return nil, errors.Wrap(err, "failed to get state validator")
 	}
 
 	if len(stateValidator.Data) == 0 {

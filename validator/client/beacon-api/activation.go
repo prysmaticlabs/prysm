@@ -71,7 +71,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 
 		stateValidators, err := c.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys, nil)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get validators state")
+			return nil, errors.Wrap(err, "failed to get state validators")
 		}
 
 		for _, data := range stateValidators.Data {

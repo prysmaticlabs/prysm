@@ -20,7 +20,7 @@ func (c *beaconApiValidatorClient) validatorStatus(in *ethpb.ValidatorStatusRequ
 
 	stateValidator, err := c.getStateValidators([]string{stringPubKey}, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get validator state")
+		return nil, errors.Wrap(err, "failed to get state validator")
 	}
 
 	// If no data, the validator is in unknown status
@@ -56,7 +56,7 @@ func (c *beaconApiValidatorClient) validatorStatus(in *ethpb.ValidatorStatusRequ
 
 		activeStateValidators, err := c.getStateValidators(nil, []string{"active"})
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get validators state")
+			return nil, errors.Wrap(err, "failed to get state validators")
 		}
 
 		data := activeStateValidators.Data
