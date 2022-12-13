@@ -4,6 +4,7 @@ package bytesutil
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"math/bits"
 	"regexp"
 
@@ -437,4 +438,10 @@ func IsRoot(root []byte) bool {
 // IsValidRoot checks whether the byte array is a valid root.
 func IsValidRoot(root []byte) bool {
 	return IsRoot(root) && !ZeroRoot(root)
+}
+
+// LittleEndianBytesToBigInt takes bytes of a number stored as little-endian and returns a big integer
+func LittleEndianBytesToBigInt(bytes []byte) *big.Int {
+	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
+	return new(big.Int).SetBytes(ReverseByteOrder(bytes))
 }

@@ -57,7 +57,7 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 		return pubsub.ValidationReject, err
 	}
 	// Validate the signature of the message using our batch gossip verifier.
-	sigBatch, err := blocks.BLSChangesSignatureBatch(ctx, st, []*ethpb.SignedBLSToExecutionChange{blsChange})
+	sigBatch, err := blocks.BLSChangesSignatureBatch(st, []*ethpb.SignedBLSToExecutionChange{blsChange})
 	if err != nil {
 		return pubsub.ValidationReject, err
 	}

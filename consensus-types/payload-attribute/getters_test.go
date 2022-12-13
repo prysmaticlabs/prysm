@@ -67,7 +67,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV1 (bad version)",
+			name: "Get PbBellatrix (bad version)",
 			tc: func(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributes{})
 				require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV2 (bad version)",
+			name: "Get PbCapella (bad version)",
 			tc: func(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributesV2{})
 				require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV1 (nil)",
+			name: "Get PbBellatrix (nil)",
 			tc: func(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributes{})
 				require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV2 (nil)",
+			name: "Get PbCapella (nil)",
 			tc: func(t *testing.T) {
 				a, err := New(&enginev1.PayloadAttributesV2{})
 				require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV1",
+			name: "Get PbBellatrix",
 			tc: func(t *testing.T) {
 				p := &enginev1.PayloadAttributes{
 					Timestamp:             1,
@@ -120,7 +120,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 			},
 		},
 		{
-			name: "Get PbV2",
+			name: "Get PbCapella",
 			tc: func(t *testing.T) {
 				p := &enginev1.PayloadAttributesV2{
 					Timestamp:             1,

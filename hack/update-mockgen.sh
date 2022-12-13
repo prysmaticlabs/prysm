@@ -80,7 +80,7 @@ for ((i = 0; i < ${#beacon_api_mocks[@]}; i++)); do
     file=${beacon_api_mocks[i]% *};
     source=${beacon_api_mocks[i]#* };
     echo "generating $file for file: $source";
-    GO11MODULE=on mockgen -package=mock --build_flags="--tags=use_beacon_api" -source="validator/client/beacon-api/$source" -destination="$file"
+    GO11MODULE=on mockgen -package=mock -source="validator/client/beacon-api/$source" -destination="$file"
 done
 
 goimports -w "$beacon_api_mock_path/."

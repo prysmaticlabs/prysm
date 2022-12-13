@@ -220,6 +220,7 @@ message RandaoRequest {
 message RandaoResponse {
   Randao data = 1;
   bool execution_optimistic = 2;
+  bool finalized = 3;
 
   message Randao {
     bytes randao = 1 [(ethereum.eth.ext.ssz_size) = "32"];

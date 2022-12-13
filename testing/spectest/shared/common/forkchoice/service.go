@@ -2,7 +2,6 @@ package forkchoice
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -83,10 +83,7 @@ func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload,
 func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil
 }
-func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
-	return nil, m.latestValidHash, m.payloadStatus
-}
-func (m *engineMock) ForkchoiceUpdatedV2(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributesV2) (*pb.PayloadIDBytes, []byte, error) {
+func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
 func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
@@ -107,7 +104,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 		return nil, nil
 	}
 
-	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
+	td := bytesutil.LittleEndianBytesToBigInt(b.TotalDifficulty)
 	tdHex := hexutil.EncodeBig(td)
 	return &pb.ExecutionBlock{
 		Header: gethtypes.Header{
