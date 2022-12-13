@@ -218,10 +218,6 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	sr, err := genesis.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
 	lbhr, err := genesis.LatestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
@@ -230,7 +226,7 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	genb, err := blocks.NewGenesisBlockForState(sr, si)
+	genb, err := blocks.NewGenesisBlockForState(ctx, si)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +236,7 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	}
 	log.WithField("el_block_time", gb.Time()).
 		WithField("cl_genesis_time", genesis.GenesisTime).
-		WithField("state_root", fmt.Sprintf("%#x", sr)).
+		WithField("state_root", fmt.Sprintf("%#x", genb.Block().StateRoot())).
 		WithField("latest_block_header_root", fmt.Sprintf("%#x", lbhr)).
 		WithField("latest_block_header_state_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.StateRoot)).
 		WithField("latest_block_header_parent_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.ParentRoot)).

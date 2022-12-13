@@ -3,6 +3,8 @@
 package blocks
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -37,7 +39,11 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 
 var ErrUnrecognizedState = errors.New("uknonwn underlying type for state.BeaconState value")
 
-func NewGenesisBlockForState(root [32]byte, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
+func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
+	root, err := st.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
 	ps := st.ToProto()
 	switch ps.(type) {
 	case *ethpb.BeaconState, *ethpb.BeaconStateAltair:

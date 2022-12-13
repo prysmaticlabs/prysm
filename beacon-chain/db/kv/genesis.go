@@ -13,11 +13,7 @@ import (
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
-	stateRoot, err := genesisState.HashTreeRoot(ctx)
-	if err != nil {
-		return err
-	}
-	wsb, err := blocks.NewGenesisBlockForState(stateRoot, genesisState)
+	wsb, err := blocks.NewGenesisBlockForState(ctx, genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
