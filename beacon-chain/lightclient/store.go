@@ -47,7 +47,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*e
 	switch typedUpdate.TypeName {
 	case ethrpc.LightClientUpdateTypeName:
 		var fullUpdate ethrpc.LightClientUpdateJson
-		err := json.Unmarshal(typedUpdate.Data, &fullUpdate)
+		err := json.Unmarshal([]byte(typedUpdate.Data), &fullUpdate)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*e
 		}
 	case ethrpc.LightClientFinalityUpdateTypeName:
 		var finalityUpdate ethrpc.LightClientFinalityUpdateJson
-		err := json.Unmarshal(typedUpdate.Data, &finalityUpdate)
+		err := json.Unmarshal([]byte(typedUpdate.Data), &finalityUpdate)
 		if err != nil {
 			return nil, err
 		}
@@ -67,7 +67,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*e
 		}
 	case ethrpc.LightClientOptimisticUpdateTypeName:
 		var optimisticUpdate ethrpc.LightClientOptimisticUpdateJson
-		err := json.Unmarshal(typedUpdate.Data, &optimisticUpdate)
+		err := json.Unmarshal([]byte(typedUpdate.Data), &optimisticUpdate)
 		if err != nil {
 			return nil, err
 		}

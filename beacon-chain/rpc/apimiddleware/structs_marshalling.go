@@ -40,7 +40,7 @@ func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
 
 type TypedLightClientUpdateJson struct {
 	TypeName string `json:"type_name"`
-	Data     []byte `json:"data"`
+	Data     string `json:"data"`
 }
 
 func NewTypedLightClientUpdateJsonFromUpdate(update *LightClientUpdateJson) (*TypedLightClientUpdateJson, error) {
@@ -50,7 +50,7 @@ func NewTypedLightClientUpdateJsonFromUpdate(update *LightClientUpdateJson) (*Ty
 	}
 	return &TypedLightClientUpdateJson{
 		TypeName: LightClientUpdateTypeName,
-		Data:     bytes,
+		Data:     string(bytes),
 	}, nil
 }
 
@@ -63,7 +63,7 @@ func NewTypedLightClientUpdateJsonFromFinalityUpdate(update *LightClientFinality
 	}
 	return &TypedLightClientUpdateJson{
 		TypeName: LightClientFinalityUpdateTypeName,
-		Data:     bytes,
+		Data:     string(bytes),
 	}, nil
 }
 
@@ -76,6 +76,6 @@ func NewTypedLightClientUpdateJsonFromOptimisticUpdate(update *LightClientOptimi
 	}
 	return &TypedLightClientUpdateJson{
 		TypeName: LightClientOptimisticUpdateTypeName,
-		Data:     bytes,
+		Data:     string(bytes),
 	}, nil
 }
