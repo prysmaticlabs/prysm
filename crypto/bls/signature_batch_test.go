@@ -69,7 +69,7 @@ func TestVerifyVerbosely_SomeSignaturesInvalid(t *testing.T) {
 	assert.StringContains(t, "signature 'signature of bad0' is invalid", err.Error())
 	assert.StringContains(t, "signature 'signature of bad1' is invalid", err.Error())
 	assert.StringContains(t, "signature 'signature of bad2' is invalid", err.Error())
-	assert.StringNotContains(t, "signature 'signature of bad0' is invalid", err.Error())
+	assert.StringNotContains(t, "signature 'signature of good0' is invalid", err.Error())
 	assert.StringNotContains(t, "signature 'signature of good1' is invalid", err.Error())
 	assert.StringNotContains(t, "signature 'signature of good2' is invalid", err.Error())
 }

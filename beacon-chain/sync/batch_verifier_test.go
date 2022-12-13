@@ -16,15 +16,15 @@ func TestValidateWithBatchVerifier(t *testing.T) {
 	sig := keys[0].Sign(make([]byte, 32))
 	badSig := keys[1].Sign(make([]byte, 32))
 	validSet := &bls.SignatureBatch{
-		Messages:   [][32]byte{{}},
-		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
-		Signatures: [][]byte{sig.Marshal()},
+		Messages:     [][32]byte{{}},
+		PublicKeys:   []bls.PublicKey{keys[0].PublicKey()},
+		Signatures:   [][]byte{sig.Marshal()},
 		Descriptions: []string{bls.UnknownSignature},
 	}
 	invalidSet := &bls.SignatureBatch{
-		Messages:   [][32]byte{{}},
-		PublicKeys: []bls.PublicKey{keys[0].PublicKey()},
-		Signatures: [][]byte{badSig.Marshal()},
+		Messages:     [][32]byte{{}},
+		PublicKeys:   []bls.PublicKey{keys[0].PublicKey()},
+		Signatures:   [][]byte{badSig.Marshal()},
 		Descriptions: []string{bls.UnknownSignature},
 	}
 	tests := []struct {

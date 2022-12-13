@@ -293,9 +293,9 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 			return pubsub.ValidationIgnore, err
 		}
 		set := &bls.SignatureBatch{
-			Messages:   [][32]byte{sigRoot},
-			PublicKeys: []bls.PublicKey{aggKey},
-			Signatures: [][]byte{m.Message.Contribution.Signature},
+			Messages:     [][32]byte{sigRoot},
+			PublicKeys:   []bls.PublicKey{aggKey},
+			Signatures:   [][]byte{m.Message.Contribution.Signature},
 			Descriptions: []string{bls.SyncAggregateSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
@@ -405,9 +405,9 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		return err
 	}
 	set := &bls.SignatureBatch{
-		Messages:   [][32]byte{root},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Signatures: [][]byte{m.SelectionProof},
+		Messages:     [][32]byte{root},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Signatures:   [][]byte{m.SelectionProof},
 		Descriptions: []string{bls.SyncSelectionProof},
 	}
 	valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
