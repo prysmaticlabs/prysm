@@ -1106,6 +1106,8 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 func TestProposer_Eth1Data_MajorityVote_SpansGenesis(t *testing.T) {
 	ctx := context.Background()
 	// Voting period will span genesis, causing the special case for pre-mined genesis to kick in.
+	// In other words some part of the valid time range is before genesis, so querying the block cache would fail
+	// without the special case added to allow this for testnets.
 	slot := types.Slot(0)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
 

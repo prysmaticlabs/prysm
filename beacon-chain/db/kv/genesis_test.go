@@ -106,8 +106,8 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 
 	// Loading a genesis with the wrong fork version as beacon config should throw an error.
 	db := setupDB(t)
-	assert.ErrorContains(t, "not found in any fork choice schedule", db.LoadGenesis(context.Background(), sb))
-	TestProposer_Eth1Data_MajorityVote}
+	assert.ErrorContains(t, "not found in any known fork choice schedule", db.LoadGenesis(context.Background(), sb))
+}
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
