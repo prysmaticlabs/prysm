@@ -79,6 +79,7 @@ go_library(
     deps = [
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//runtime/version:go_default_library",
@@ -121,6 +122,7 @@ go_test(
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",

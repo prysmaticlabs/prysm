@@ -27,6 +27,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -73,9 +74,19 @@ func TestClient_IPC(t *testing.T) {
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		attr, err := payloadattribute.New(&pb.PayloadAttributes{})
+		p, err := payloadattribute.New(&pb.PayloadAttributes{})
 		require.NoError(t, err)
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, attr)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, p)
+		require.NoError(t, err)
+		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
+		require.DeepEqual(t, want.PayloadId, payloadID)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2, func(t *testing.T) {
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		p, err := payloadattribute.New(&pb.PayloadAttributesV2{})
+		require.NoError(t, err)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, p)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -98,17 +109,17 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		resp, err := srv.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := srv.ExecutionBlockByHash(ctx, arg, true /* with txs */)
+		resp, err := srv.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -171,14 +182,38 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		srv := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(payloadAttributes)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.NoError(t, err)
-		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
+		require.DeepEqual(t, want.PayloadId, payloadID)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2+" VALID status", func(t *testing.T) {
+		forkChoiceState := &pb.ForkchoiceState{
+			HeadBlockHash:      []byte("head"),
+			SafeBlockHash:      []byte("safe"),
+			FinalizedBlockHash: []byte("finalized"),
+		}
+		payloadAttributes := &pb.PayloadAttributesV2{
+			Timestamp:             1,
+			PrevRandao:            []byte("random"),
+			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
+		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		srv := forkchoiceUpdateSetupV2(t, forkChoiceState, payloadAttributes, want)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -194,14 +229,38 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
+		require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
+		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
+		require.DeepEqual(t, []byte(nil), validHash)
+	})
+	t.Run(ForkchoiceUpdatedMethodV2+" SYNCING status", func(t *testing.T) {
+		forkChoiceState := &pb.ForkchoiceState{
+			HeadBlockHash:      []byte("head"),
+			SafeBlockHash:      []byte("safe"),
+			FinalizedBlockHash: []byte("finalized"),
+		}
+		payloadAttributes := &pb.PayloadAttributesV2{
+			Timestamp:             1,
+			PrevRandao:            []byte("random"),
+			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+		}
+		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		want, ok := fix["ForkchoiceUpdatedSyncingResponse"].(*ForkchoiceUpdatedResponse)
+		require.Equal(t, true, ok)
+		srv := forkchoiceUpdateSetupV2(t, forkChoiceState, payloadAttributes, want)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
@@ -217,14 +276,14 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedInvalidResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
-		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrInvalidPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
@@ -240,14 +299,14 @@ func TestClient_HTTP(t *testing.T) {
 			PrevRandao:            []byte("random"),
 			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
 		}
+		p, err := payloadattribute.New(payloadAttributes)
+		require.NoError(t, err)
 		want, ok := fix["ForkchoiceUpdatedAcceptedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
 		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		attr, err := payloadattribute.New(&payloadAttributes)
-		require.NoError(t, err)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, attr)
+		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, p)
 		require.ErrorIs(t, err, ErrUnknownPayloadStatus)
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
@@ -323,7 +382,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -392,7 +451,7 @@ func TestClient_HTTP(t *testing.T) {
 	})
 	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
-		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -424,7 +483,7 @@ func TestClient_HTTP(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := service.ExecutionBlockByHash(ctx, arg, true /* with txs */)
+		resp, err := service.ExecutionBlockByHash(ctx, version.Bellatrix, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -688,8 +747,8 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 	tests := []struct {
 		name                  string
 		paramsTd              string
-		currentPowBlock       *pb.ExecutionBlockBellatrix
-		parentPowBlock        *pb.ExecutionBlockBellatrix
+		currentPowBlock       *pb.ExecutionBlock
+		parentPowBlock        *pb.ExecutionBlock
 		errLatestExecutionBlk error
 		wantTerminalBlockHash []byte
 		wantExists            bool
@@ -714,7 +773,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "current execution block invalid TD",
 			paramsTd: "1",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash:            common.BytesToHash([]byte("a")),
 				TotalDifficulty: "1115792089237316195423570985008687907853269984665640564039457584007913129638912",
 			},
@@ -723,7 +782,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "current execution block has zero hash parent",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash(params.BeaconConfig().ZeroHash[:]),
@@ -734,7 +793,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "could not get parent block",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -746,14 +805,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "parent execution block invalid TD",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -765,14 +824,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "happy case",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -785,7 +844,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "happy case, but invalid timestamp",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -793,7 +852,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -804,14 +863,14 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 		{
 			name:     "ttd not reached",
 			paramsTd: "3",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x2",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -825,9 +884,9 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			params.OverrideBeaconConfig(cfg)
-			var m map[[32]byte]*pb.ExecutionBlockBellatrix
+			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
-				m = map[[32]byte]*pb.ExecutionBlockBellatrix{
+				m = map[[32]byte]*pb.ExecutionBlock{
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
@@ -1090,7 +1149,7 @@ func fixtures() map[string]interface{} {
 	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	executionBlock := &pb.ExecutionBlockBellatrix{
+	executionBlock := &pb.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash:  common.BytesToHash(parent),
 			UncleHash:   common.BytesToHash(sha3Uncles),
@@ -1193,13 +1252,13 @@ func fixtures() map[string]interface{} {
 func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	type args struct {
 		header *pb.ExecutionPayloadHeader
-		block  *pb.ExecutionBlockBellatrix
+		block  *pb.ExecutionBlock
 	}
 	wantedHash := common.BytesToHash([]byte("foo"))
 	tests := []struct {
 		name string
 		args args
-		want *pb.ExecutionPayload
+		want func() interfaces.ExecutionData
 		err  string
 	}{
 		{
@@ -1208,7 +1267,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 				header: &pb.ExecutionPayloadHeader{
 					BlockHash: []byte("foo"),
 				},
-				block: &pb.ExecutionBlockBellatrix{
+				block: &pb.ExecutionBlock{
 					Hash: common.BytesToHash([]byte("bar")),
 				},
 			},
@@ -1220,23 +1279,30 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 				header: &pb.ExecutionPayloadHeader{
 					BlockHash: wantedHash[:],
 				},
-				block: &pb.ExecutionBlockBellatrix{
+				block: &pb.ExecutionBlock{
 					Hash: wantedHash,
 				},
 			},
-			want: &pb.ExecutionPayload{
-				BlockHash: wantedHash[:],
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				})
+				require.NoError(t, err)
+				return p
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
+			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
-			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
-				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
 			}
-			require.DeepEqual(t, tt.want, got)
 		})
 	}
 }
@@ -1319,9 +1385,9 @@ func (*testEngineService) NoArgsRets() {}
 
 func (*testEngineService) GetBlockByHash(
 	_ context.Context, _ common.Hash, _ bool,
-) *pb.ExecutionBlockBellatrix {
+) *pb.ExecutionBlock {
 	fix := fixtures()
-	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 	if !ok {
 		panic("not found")
 	}
@@ -1330,9 +1396,9 @@ func (*testEngineService) GetBlockByHash(
 
 func (*testEngineService) GetBlockByNumber(
 	_ context.Context, _ string, _ bool,
-) *pb.ExecutionBlockBellatrix {
+) *pb.ExecutionBlock {
 	fix := fixtures()
-	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlockBellatrix)
+	item, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 	if !ok {
 		panic("not found")
 	}
@@ -1373,6 +1439,18 @@ func (*testEngineService) ForkchoiceUpdatedV1(
 	return item
 }
 
+func (*testEngineService) ForkchoiceUpdatedV2(
+	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+) *ForkchoiceUpdatedResponse {
+	fix := fixtures()
+	item, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
+	if !ok {
+		panic("not found")
+	}
+	item.Status.Status = pb.PayloadStatus_VALID
+	return item
+}
+
 func (*testEngineService) NewPayloadV1(
 	_ context.Context, _ *pb.ExecutionPayload,
 ) *pb.PayloadStatus {
@@ -1385,6 +1463,45 @@ func (*testEngineService) NewPayloadV1(
 }
 
 func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Service {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		forkChoiceStateReq, err := json.Marshal(fcs)
+		require.NoError(t, err)
+		payloadAttrsReq, err := json.Marshal(att)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(forkChoiceStateReq),
+		))
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(payloadAttrsReq),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  res,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
+}
+
+func forkchoiceUpdateSetupV2(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributesV2, res *ForkchoiceUpdatedResponse) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {

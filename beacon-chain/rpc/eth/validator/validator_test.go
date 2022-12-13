@@ -943,7 +943,7 @@ func TestProduceBlockV2(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlockBellatrix{
+				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
 			},
@@ -1438,7 +1438,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlockBellatrix{
+				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
 			},
@@ -2460,7 +2460,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
-				ExecutionBlock: &enginev1.ExecutionBlockBellatrix{
+				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
 			},

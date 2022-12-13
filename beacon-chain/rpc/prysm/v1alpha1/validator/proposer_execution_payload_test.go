@@ -231,8 +231,8 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 		name                  string
 		paramsTerminalHash    []byte
 		paramsTd              string
-		currentPowBlock       *pb.ExecutionBlockBellatrix
-		parentPowBlock        *pb.ExecutionBlockBellatrix
+		currentPowBlock       *pb.ExecutionBlock
+		parentPowBlock        *pb.ExecutionBlock
 		wantTerminalBlockHash []byte
 		wantExists            bool
 		errString             string
@@ -253,14 +253,14 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 		{
 			name:     "use terminal total difficulty",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -273,7 +273,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 		{
 			name:     "use terminal total difficulty but fails timestamp",
 			paramsTd: "2",
-			currentPowBlock: &pb.ExecutionBlockBellatrix{
+			currentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("a")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -281,7 +281,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 				},
 				TotalDifficulty: "0x3",
 			},
-			parentPowBlock: &pb.ExecutionBlockBellatrix{
+			parentPowBlock: &pb.ExecutionBlock{
 				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
@@ -296,9 +296,9 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			cfg.TerminalBlockHash = common.BytesToHash(tt.paramsTerminalHash)
 			params.OverrideBeaconConfig(cfg)
-			var m map[[32]byte]*pb.ExecutionBlockBellatrix
+			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
-				m = map[[32]byte]*pb.ExecutionBlockBellatrix{
+				m = map[[32]byte]*pb.ExecutionBlock{
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}

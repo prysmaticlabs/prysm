@@ -41,28 +41,32 @@ func (b *SignedBeaconBlock) Block() interfaces.BeaconBlock {
 
 // SetBlock sets the underlying beacon block object.
 func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
-	b.block.slot = blk.Slot()
-	b.block.parentRoot = blk.ParentRoot()
-	b.block.stateRoot = blk.StateRoot()
-	b.block.stateRoot = blk.StateRoot()
-	b.block.proposerIndex = blk.ProposerIndex()
-	b.block.body.randaoReveal = blk.Body().RandaoReveal()
-	b.block.body.eth1Data = blk.Body().Eth1Data()
-	b.block.body.graffiti = blk.Body().Graffiti()
-	b.block.body.proposerSlashings = blk.Body().ProposerSlashings()
-	b.block.body.attesterSlashings = blk.Body().AttesterSlashings()
-	b.block.body.attestations = blk.Body().Attestations()
-	b.block.body.deposits = blk.Body().Deposits()
-	b.block.body.voluntaryExits = blk.Body().VoluntaryExits()
+	copied, err := blk.Copy()
+	if err != nil {
+		return err
+	}
+	b.block.slot = copied.Slot()
+	b.block.parentRoot = copied.ParentRoot()
+	b.block.stateRoot = copied.StateRoot()
+	b.block.stateRoot = copied.StateRoot()
+	b.block.proposerIndex = copied.ProposerIndex()
+	b.block.body.randaoReveal = copied.Body().RandaoReveal()
+	b.block.body.eth1Data = copied.Body().Eth1Data()
+	b.block.body.graffiti = copied.Body().Graffiti()
+	b.block.body.proposerSlashings = copied.Body().ProposerSlashings()
+	b.block.body.attesterSlashings = copied.Body().AttesterSlashings()
+	b.block.body.attestations = copied.Body().Attestations()
+	b.block.body.deposits = copied.Body().Deposits()
+	b.block.body.voluntaryExits = copied.Body().VoluntaryExits()
 	if b.version >= version.Altair {
-		syncAggregate, err := blk.Body().SyncAggregate()
+		syncAggregate, err := copied.Body().SyncAggregate()
 		if err != nil {
 			return err
 		}
 		b.block.body.syncAggregate = syncAggregate
 	}
 	if b.version >= version.Bellatrix {
-		executionData, err := blk.Body().Execution()
+		executionData, err := copied.Body().Execution()
 		if err != nil {
 			return err
 		}
@@ -73,11 +77,18 @@ func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
 		}
 	}
 	if b.version >= version.Capella {
-		changes, err := blk.Body().BLSToExecutionChanges()
+		changes, err := copied.Body().BLSToExecutionChanges()
 		if err != nil {
 			return err
 		}
 		b.block.body.blsToExecutionChanges = changes
+	}
+	if b.version >= version.EIP4844 {
+		kzgs, err := copied.Body().BlobKzgCommitments()
+		if err != nil {
+			return err
+		}
+		b.block.body.blobKzgCommitments = kzgs
 	}
 	return nil
 }
@@ -961,6 +972,41 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 			return &validatorpb.SignRequest_BlindedBlockEip4844{BlindedBlockEip4844: pb.(*eth.BlindedBeaconBlock4844)}, nil
 		}
 		return &validatorpb.SignRequest_BlockEip4844{BlockEip4844: pb.(*eth.BeaconBlock4844)}, nil
+	default:
+		return nil, errIncorrectBlockVersion
+	}
+}
+
+func (b *BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
+	if b == nil {
+		return nil, nil
+	}
+
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	switch b.version {
+	case version.Phase0:
+		cp := eth.CopyBeaconBlock(pb.(*eth.BeaconBlock))
+		return initBlockFromProtoPhase0(cp)
+	case version.Altair:
+		cp := eth.CopyBeaconBlockAltair(pb.(*eth.BeaconBlockAltair))
+		return initBlockFromProtoAltair(cp)
+	case version.Bellatrix:
+		if b.IsBlinded() {
+			cp := eth.CopyBlindedBeaconBlockBellatrix(pb.(*eth.BlindedBeaconBlockBellatrix))
+			return initBlindedBlockFromProtoBellatrix(cp)
+		}
+		cp := eth.CopyBeaconBlockBellatrix(pb.(*eth.BeaconBlockBellatrix))
+		return initBlockFromProtoBellatrix(cp)
+	case version.Capella:
+		if b.IsBlinded() {
+			cp := eth.CopyBlindedBeaconBlockCapella(pb.(*eth.BlindedBeaconBlockCapella))
+			return initBlindedBlockFromProtoCapella(cp)
+		}
+		cp := eth.CopyBeaconBlockCapella(pb.(*eth.BeaconBlockCapella))
+		return initBlockFromProtoCapella(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}

@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"testing"
 
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
@@ -50,6 +51,17 @@ func TestBeaconApiHelpers(t *testing.T) {
 			assert.Equal(t, tt.valid, validRoot(tt.input))
 		})
 	}
+}
+
+func TestBeaconApiHelpers_TestUint64ToString(t *testing.T) {
+	const expectedResult = "1234"
+	const val = uint64(1234)
+
+	assert.Equal(t, expectedResult, uint64ToString(val))
+	assert.Equal(t, expectedResult, uint64ToString(types.Slot(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.ValidatorIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.CommitteeIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.Epoch(val)))
 }
 
 func TestBuildURL_NoParams(t *testing.T) {
