@@ -70,7 +70,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	}
 	f := filler.NewFiller(rnd)
 	// Broadcast Transactions every 3 blocks
-	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	txPeriod := 3 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	gasPrice := big.NewInt(1e11)
 	for {
@@ -78,7 +78,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 200, false)
+			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, false)
 			if err != nil {
 				return err
 			}
