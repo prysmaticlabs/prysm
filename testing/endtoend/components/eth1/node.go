@@ -2,6 +2,7 @@ package eth1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -61,7 +62,7 @@ func (node *Node) Start(ctx context.Context) error {
 	gethJsonPath := path.Join(eth1Path, "genesis.json")
 
 	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
-	b, err := testing.TerribleMarshalHack(gen, params.BeaconConfig().DepositContractAddress, testing.DefaultMinerAddress)
+	b, err := json.Marshal(gen)
 	if err != nil {
 		return err
 	}

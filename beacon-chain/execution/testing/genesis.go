@@ -1,7 +1,6 @@
 package testing
 
 import (
-	"encoding/json"
 	"math"
 	"math/big"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/pkg/errors"
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
@@ -80,7 +78,7 @@ const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000
 // DefaultTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
-func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *core.Genesis {
+func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) core.Genesis {
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -103,7 +101,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
-	return &core.Genesis{
+	return core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
@@ -156,45 +154,6 @@ func defaultDepositContractAllocation(contractAddress string) depositAllocation 
 
 func deterministicNonce(i uint64) uint64 {
 	return math.MaxUint64/2 + i
-}
-
-var ErrMalformedGenesisJson = errors.New("encoded genesis.json doesn't have expected layout")
-
-// TerribleMarshalHack calls json.Marshal and also replaces the contract address string with a '0x' prefixed version,
-// because for some reason geth broke their json marshaling.
-func TerribleMarshalHack(g *core.Genesis, addresses ...string) ([]byte, error) {
-	b, err := json.Marshal(g)
-	if err != nil {
-		return nil, err
-	}
-	or := make(map[string]json.RawMessage)
-	err = json.Unmarshal(b, &or)
-	if err != nil {
-		return nil, err
-	}
-	alloc, ok := or["alloc"]
-	if !ok {
-		return nil, errors.Wrap(ErrMalformedGenesisJson, "no key in outer struct named 'alloc'")
-	}
-	ir := make(map[string]json.RawMessage)
-	err = json.Unmarshal(alloc, &ir)
-	if err != nil {
-		return nil, err
-	}
-	for _, addr := range addresses {
-		contract, ok := ir[addr[2:]]
-		if !ok {
-			return nil, errors.Wrapf(ErrMalformedGenesisJson, "no address matching %s", addr)
-		}
-		delete(ir, addr[2:])
-		ir[addr] = contract
-	}
-	irb, err := json.Marshal(ir)
-	if err != nil {
-		return nil, err
-	}
-	or["alloc"] = irb
-	return json.Marshal(or)
 }
 
 func init() {
