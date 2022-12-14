@@ -173,6 +173,25 @@ func CurrentSlot(genesisTimeSec uint64) types.Slot {
 	return types.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 }
 
+// WithinDataAvailabilityBound returns true if the given slot is within the data availability bound.
+func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch types.Epoch) bool {
+	if params.BeaconConfig().EIP4844ForkEpoch > epoch {
+		return false
+	}
+
+	now := uint64(prysmTime.Now().Unix())
+	if now < genesisTimeSec {
+		return false
+	}
+	currentSlot := types.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
+	currentEpoch := ToEpoch(currentSlot)
+
+	if currentEpoch-params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= epoch {
+		return true
+	}
+	return false
+}
+
 // ValidateClock validates a provided slot against the local
 // clock to ensure slots that are unreasonable are returned with
 // an error.

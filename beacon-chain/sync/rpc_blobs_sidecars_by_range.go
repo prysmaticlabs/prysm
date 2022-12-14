@@ -2,20 +2,14 @@ package sync
 
 import (
 	"context"
-	"io"
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -97,76 +91,6 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 
 	closeStream(stream, log)
 	return nil
-}
-
-// sendRecentBlobsSidecarsRequest retrieves sidecars and inserts them to the pending queue
-func (s *Service) sendRecentBlobSidecarsRequest(ctx context.Context, req *pb.BlobsSidecarsByRangeRequest, pid peer.ID) error {
-	ctx, cancel := context.WithTimeout(ctx, respTimeout)
-	defer cancel()
-
-	_, err := SendBlobsSidecarsByRangeRequest(ctx, s.cfg.chain, s.cfg.p2p, pid, req, func(sc *pb.BlobsSidecar) error {
-		s.pendingQueueLock.Lock()
-		// TODO(EIP4844): What happens if there's no block?
-		err := s.cfg.beaconDB.SaveBlobsSidecar(ctx, sc)
-		if err != nil {
-			return err
-		}
-		s.pendingQueueLock.Unlock()
-		return nil
-	})
-	return err
-}
-
-func SendBlobsSidecarsByRangeRequest(
-	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
-	req *pb.BlobsSidecarsByRangeRequest, sidecarProcessor BlobsSidecarProcessor) ([]*pb.BlobsSidecar, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BlobsSidecarsByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
-	if err != nil {
-		return nil, err
-	}
-	stream, err := p2pProvider.Send(ctx, req, topic, pid)
-	if err != nil {
-		return nil, err
-	}
-	defer closeStream(stream, log)
-
-	var sidecars []*pb.BlobsSidecar
-	process := func(sidecar *pb.BlobsSidecar) error {
-		sidecars = append(sidecars, sidecar)
-		if sidecarProcessor != nil {
-			return sidecarProcessor(sidecar)
-		}
-		return nil
-	}
-
-	var prevSlot types.Slot
-	for i := uint64(0); ; i++ {
-		isFirstChunk := len(sidecars) == 0
-		sidecar, err := ReadChunkedBlobsSidecar(stream, chain, p2pProvider, isFirstChunk)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
-			return nil, ErrInvalidFetchedData
-		}
-		if sidecar.BeaconBlockSlot < req.StartSlot || sidecar.BeaconBlockSlot >= req.StartSlot.Add(req.Count) {
-			return nil, ErrInvalidFetchedData
-		}
-		// assert slots aren't out of order and always increasing
-		if prevSlot >= sidecar.BeaconBlockSlot {
-			return nil, ErrInvalidFetchedData
-		}
-		prevSlot = sidecar.BeaconBlockSlot
-
-		if err := process(sidecar); err != nil {
-			return nil, err
-		}
-	}
-	return sidecars, nil
 }
 
 func estimateBlobsSidecarCost(sidecar *pb.BlobsSidecar) int {

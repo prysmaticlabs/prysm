@@ -29,6 +29,7 @@ go_library(
         "//beacon-chain/sync:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/blobs:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//container/leaky-bucket:go_default_library",

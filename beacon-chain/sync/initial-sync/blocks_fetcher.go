@@ -19,6 +19,7 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -107,6 +108,7 @@ type fetchRequestResponse struct {
 	start  types.Slot
 	count  uint64
 	blocks []interfaces.SignedBeaconBlock
+	blobs  []*p2ppb.BlobsSidecar
 	err    error
 }
 
@@ -248,6 +250,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 		start:  start,
 		count:  count,
 		blocks: []interfaces.SignedBeaconBlock{},
+		blobs:  []*p2ppb.BlobsSidecar{},
 		err:    nil,
 	}
 
@@ -273,6 +276,9 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 	}
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
+	if slots.WithinDataAvailabilityBound(uint64(f.chain.GenesisTime().Unix()), slots.ToEpoch(start)) {
+		response.blobs, response.pid, response.err = f.fetchBlobsFromPeer(ctx, start, count, peers)
+	}
 	return response
 }
 
@@ -298,6 +304,32 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 			return blocks, peers[i], err
 		} else {
 			log.WithError(err).Debug("Could not request blocks by range")
+		}
+	}
+	return nil, "", errNoPeersAvailable
+}
+
+// fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
+func (f *blocksFetcher) fetchBlobsFromPeer(
+	ctx context.Context,
+	start types.Slot, count uint64,
+	peers []peer.ID,
+) ([]*p2ppb.BlobsSidecar, peer.ID, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
+	defer span.End()
+
+	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+	req := &p2ppb.BlobsSidecarsByRangeRequest{
+		StartSlot: start,
+		Count:     count,
+	}
+	for i := 0; i < len(peers); i++ {
+		blobs, err := f.requestBlobs(ctx, req, peers[i])
+		if err == nil {
+			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+			return blobs, peers[i], err
+		} else {
+			log.WithError(err).Debug("Could not request blobs by range")
 		}
 	}
 	return nil, "", errNoPeersAvailable
@@ -331,6 +363,30 @@ func (f *blocksFetcher) requestBlocks(
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
+}
+
+func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobsSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.BlobsSidecar, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	l := f.peerLock(pid)
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"start":    req.StartSlot,
+		"count":    req.Count,
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting blobs")
+	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
+			return nil, err
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(req.Count))
+	l.Unlock()
+	return prysmsync.SendBlobsSidecarsByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
 // requestBlocksByRoot is a wrapper for handling BeaconBlockByRootsReq requests/streams.

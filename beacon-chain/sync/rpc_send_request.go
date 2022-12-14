@@ -174,3 +174,55 @@ func SendBlocksAndSidecarsByRootRequest(
 	}
 	return blkAndSidecars, nil
 }
+
+func SendBlobsSidecarsByRangeRequest(
+	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	req *pb.BlobsSidecarsByRangeRequest, sidecarProcessor BlobsSidecarProcessor) ([]*pb.BlobsSidecar, error) {
+	topic, err := p2p.TopicFromMessage(p2p.BlobsSidecarsByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
+	if err != nil {
+		return nil, err
+	}
+	stream, err := p2pProvider.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeStream(stream, log)
+
+	var sidecars []*pb.BlobsSidecar
+	process := func(sidecar *pb.BlobsSidecar) error {
+		sidecars = append(sidecars, sidecar)
+		if sidecarProcessor != nil {
+			return sidecarProcessor(sidecar)
+		}
+		return nil
+	}
+
+	var prevSlot types.Slot
+	for i := uint64(0); ; i++ {
+		isFirstChunk := len(sidecars) == 0
+		sidecar, err := ReadChunkedBlobsSidecar(stream, chain, p2pProvider, isFirstChunk)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
+			return nil, ErrInvalidFetchedData
+		}
+		if sidecar.BeaconBlockSlot < req.StartSlot || sidecar.BeaconBlockSlot >= req.StartSlot.Add(req.Count) {
+			return nil, ErrInvalidFetchedData
+		}
+		// assert slots aren't out of order and always increasing
+		if prevSlot >= sidecar.BeaconBlockSlot {
+			return nil, ErrInvalidFetchedData
+		}
+		prevSlot = sidecar.BeaconBlockSlot
+
+		if err := process(sidecar); err != nil {
+			return nil, err
+		}
+	}
+	return sidecars, nil
+}

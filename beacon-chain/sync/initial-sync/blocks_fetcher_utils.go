@@ -24,6 +24,7 @@ import (
 type forkData struct {
 	peer   peer.ID
 	blocks []interfaces.SignedBeaconBlock
+	blobs  []*p2ppb.BlobsSidecar
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
