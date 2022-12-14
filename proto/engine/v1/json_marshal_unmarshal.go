@@ -160,9 +160,9 @@ func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
 }
 
 func (w *Withdrawal) MarshalJSON() ([]byte, error) {
-	index := hexutil.Uint64(w.WithdrawalIndex)
+	index := hexutil.Uint64(w.Index)
 	validatorIndex := hexutil.Uint64(w.ValidatorIndex)
-	address := common.BytesToAddress(w.ExecutionAddress)
+	address := common.BytesToAddress(w.Address)
 	wei := new(big.Int).SetUint64(1000000000)
 	amountWei := new(big.Int).Mul(new(big.Int).SetUint64(w.Amount), wei)
 	return json.Marshal(withdrawalJSON{
@@ -188,9 +188,9 @@ func (w *Withdrawal) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing execution address")
 	}
 	*w = Withdrawal{}
-	w.WithdrawalIndex = uint64(*dec.Index)
+	w.Index = uint64(*dec.Index)
 	w.ValidatorIndex = types.ValidatorIndex(*dec.Validator)
-	w.ExecutionAddress = dec.Address.Bytes()
+	w.Address = dec.Address.Bytes()
 	wei := new(big.Int).SetUint64(1000000000)
 	amountWei, err := hexutil.DecodeBig(dec.Amount)
 	if err != nil {
