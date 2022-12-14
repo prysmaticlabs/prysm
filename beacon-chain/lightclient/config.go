@@ -87,7 +87,7 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return err
 	}
-	bellatrixForkEpoch, err := strconv.ParseUint(config.CapellaForkEpoch, 10, 64)
+	bellatrixForkEpoch, err := strconv.ParseUint(config.BellatrixForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
