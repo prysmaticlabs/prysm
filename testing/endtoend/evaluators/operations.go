@@ -34,7 +34,7 @@ var churnLimit = 4
 var depositValCount = e2e.DepositCount
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
-var depositsInBlockStart = types.Epoch(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
+var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
 
 // deposits included + finalization + MaxSeedLookahead for activation.
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
@@ -120,15 +120,7 @@ func processesDepositsInBlocks(ec e2etypes.EvaluationContext, conns ...*grpc.Cli
 			return errors.Wrap(err, "failed to convert api response type to SignedBeaconBlock interface")
 		}
 		b := sb.Block()
-		slot := b.Slot()
-		eth1Data := b.Body().Eth1Data()
 		deposits := b.Body().Deposits()
-		fmt.Printf(
-			"Slot: %d with %d deposits, Eth1 block %#x with %d deposits\n",
-			slot,
-			len(deposits),
-			eth1Data.BlockHash, eth1Data.DepositCount,
-		)
 		for _, d := range deposits {
 			k := bytesutil.ToBytes48(d.Data.PublicKey)
 			v := observed[k]
@@ -155,7 +147,12 @@ func verifyGraffitiInBlocks(_ e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
-	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch.Sub(1)}}
+	begin := chainHead.HeadEpoch
+	// Prevent underflow when this runs at epoch 0.
+	if begin > 0 {
+		begin = begin.Sub(1)
+	}
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: begin}}
 	blks, err := client.ListBeaconBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
@@ -393,12 +390,18 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 		return errors.Wrap(err, "failed to get chain head")
 	}
 
-	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: chainHead.HeadEpoch.Sub(1)}}
+	begin := chainHead.HeadEpoch
+	// Prevent underflow when this runs at epoch 0.
+	if begin > 0 {
+		begin = begin.Sub(1)
+	}
+	req := &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: begin}}
 	blks, err := client.ListBeaconBlocks(context.Background(), req)
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
 
+	slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 	for _, blk := range blks.BlockContainers {
 		var slot types.Slot
 		var vote []byte
@@ -422,7 +425,6 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}
-		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently

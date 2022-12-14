@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -61,13 +60,13 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	startSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
 	}
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
@@ -144,13 +143,13 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	startSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
 	}
-	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
+	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
 	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
@@ -179,7 +178,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := vs.proposalDependentRoot(ctx, s, req.Epoch)
+	root, err := proposalDependentRoot(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -1059,7 +1058,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState, epoch types.Epoch) ([]byte, error) {
+func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -1070,47 +1069,11 @@ func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState
 		}
 		dependentRootSlot = epochStartSlot.Sub(1)
 	}
-	var root []byte
-	var err error
-	// Per spec, if the dependent root epoch is greater than current epoch, use the head root.
-	if dependentRootSlot >= s.Slot() {
-		root, err = vs.HeadFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		root, err = helpers.BlockRootAtSlot(s, dependentRootSlot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get block root")
-		}
-	}
-
-	return root, nil
-}
-
-// advanceState advances state with empty transitions up to the requested epoch start slot.
-// In case 1 epoch ahead was requested, we take the start slot of the current epoch.
-// Taking the start slot of the next epoch would result in an error inside transition.ProcessSlots.
-func advanceState(ctx context.Context, s state.BeaconState, requestedEpoch, currentEpoch types.Epoch) (state.BeaconState, error) {
-	var epochStartSlot types.Slot
-	var err error
-	if requestedEpoch == currentEpoch+1 {
-		epochStartSlot, err = slots.EpochStart(requestedEpoch.Sub(1))
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
-		}
-	} else {
-		epochStartSlot, err = slots.EpochStart(requestedEpoch)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not obtain epoch's start slot")
-		}
-	}
-	s, err = transition.ProcessSlotsIfPossible(ctx, s, epochStartSlot)
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not process slots up to %d", epochStartSlot)
+		return nil, errors.Wrap(err, "could not get block root")
 	}
-
-	return s, nil
+	return root, nil
 }
 
 // Logic based on https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ

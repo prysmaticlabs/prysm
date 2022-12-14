@@ -20,6 +20,8 @@ func testnetConfigFilePath(t *testing.T, network string) string {
 }
 
 func TestE2EConfigParity(t *testing.T) {
+	// TODO(11750)
+	t.Skip("needs https://github.com/prysmaticlabs/prysm/issues/11750")
 	params.SetupTestConfigCleanup(t)
 	testDir := bazel.TestTmpDir()
 	yamlDir := filepath.Join(testDir, "config.yaml")
