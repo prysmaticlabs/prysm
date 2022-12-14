@@ -849,11 +849,11 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	e.KzgCommitments = kzgs
 	blobs := make([]*Blob, len(dec.Blobs))
 	for i, blob := range dec.Blobs {
-		b := make([]byte, 0, params.FieldElementsPerBlob)
+		b := make([]byte, 0, params.FieldElementsPerBlob*32)
 		for _, fe := range blob {
 			b = append(b, fe[:]...)
 		}
-		blobs[i].Data = bytesutil.SafeCopyBytes(b)
+		blobs[i] = &Blob{Data: bytesutil.SafeCopyBytes(b)}
 	}
 	e.Blobs = blobs
 	return nil
