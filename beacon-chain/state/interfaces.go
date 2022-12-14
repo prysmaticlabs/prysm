@@ -87,7 +87,7 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetNextWithdrawalIndex(i uint64) error
-	SetLastWithdrawalValidatorIndex(i types.ValidatorIndex) error
+	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -170,7 +170,7 @@ type ReadOnlyAttestations interface {
 // ReadOnlyWithdrawals defines a struct which only has read access to withdrawal methods.
 type ReadOnlyWithdrawals interface {
 	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
-	LastWithdrawalValidatorIndex() (types.ValidatorIndex, error)
+	NextWithdrawalValidatorIndex() (types.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 }
 

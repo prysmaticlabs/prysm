@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -97,14 +96,6 @@ type Chain interface {
 	POWBlockFetcher
 }
 
-// RPCDataFetcher defines a subset of methods conformed to by ETH1.0 RPC clients for
-// fetching eth1 data from the clients.
-type RPCDataFetcher interface {
-	Close()
-	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
-	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
-}
-
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	Close()
@@ -154,7 +145,6 @@ type Service struct {
 	cancel                  context.CancelFunc
 	eth1HeadTicker          *time.Ticker
 	httpLogger              bind.ContractFilterer
-	eth1DataFetcher         RPCDataFetcher
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
@@ -264,9 +254,6 @@ func (s *Service) Stop() error {
 	if s.rpcClient != nil {
 		s.rpcClient.Close()
 	}
-	if s.eth1DataFetcher != nil {
-		s.eth1DataFetcher.Close()
-	}
 	return nil
 }
 
@@ -332,10 +319,15 @@ func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 	latestBlockTime := uint64(0)
 	if s.latestEth1Data.BlockTime > followTime {
 		latestBlockTime = s.latestEth1Data.BlockTime - followTime
+		// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+		// we don't want to consider any block before the genesis block.
+		if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+			latestBlockTime = s.latestEth1Data.BlockTime
+		}
 	}
 	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "BlockByTimestamp=%d", latestBlockTime)
 	}
 	return blk.Number.Uint64(), nil
 }
@@ -398,36 +390,35 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 
 // processBlockHeader adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
-func (s *Service) processBlockHeader(header *gethTypes.Header) {
+func (s *Service) processBlockHeader(header *types.HeaderInfo) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
 	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
-	s.latestEth1Data.BlockHash = header.Hash().Bytes()
+	s.latestEth1Data.BlockHash = header.Hash.Bytes()
 	s.latestEth1Data.BlockTime = header.Time
 	s.latestEth1DataLock.Unlock()
 	log.WithFields(logrus.Fields{
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
-		"difficulty":  header.Difficulty.String(),
 	}).Debug("Latest eth1 chain event")
 }
 
 // batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
 // each block in one call, it batches all requests into a single rpc call.
-func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*gethTypes.Header, error) {
+func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.HeaderInfo, error) {
 	if startBlock > endBlock {
 		return nil, fmt.Errorf("start block height %d cannot be > end block height %d", startBlock, endBlock)
 	}
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
-	headers := make([]*gethTypes.Header, 0, requestRange)
+	headers := make([]*types.HeaderInfo, 0, requestRange)
 	errs := make([]error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
 	for i := startBlock; i <= endBlock; i++ {
-		header := &gethTypes.Header{}
+		header := &types.HeaderInfo{}
 		err := error(nil)
 		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
@@ -481,11 +472,12 @@ func (s *Service) handleETH1FollowDistance() {
 	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.processChainStartFromBlockNum(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
-			s.runError = err
+			s.runError = errors.Wrap(err, "processChainStartFromBlockNum")
 			log.Error(err)
 			return
 		}
 	}
+
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
 	// logs for the powchain service to process. Also it is a potential
@@ -495,7 +487,7 @@ func (s *Service) handleETH1FollowDistance() {
 		return
 	}
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
-		s.runError = err
+		s.runError = errors.Wrap(err, "requestBatchedHeadersAndLogs")
 		log.Error(err)
 		return
 	}
@@ -523,8 +515,9 @@ func (s *Service) initPOWService() {
 			return
 		default:
 			ctx := s.ctx
-			header, err := s.eth1DataFetcher.HeaderByNumber(ctx, nil)
+			header, err := s.HeaderByNumber(ctx, nil)
 			if err != nil {
+				err = errors.Wrap(err, "HeaderByNumber")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(err, "Unable to retrieve latest execution client header")
 				continue
@@ -532,11 +525,12 @@ func (s *Service) initPOWService() {
 
 			s.latestEth1DataLock.Lock()
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
-			s.latestEth1Data.BlockHash = header.Hash().Bytes()
+			s.latestEth1Data.BlockHash = header.Hash.Bytes()
 			s.latestEth1Data.BlockTime = header.Time
 			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
+				err = errors.Wrap(err, "processPastLogs")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(
 					err,
@@ -546,6 +540,7 @@ func (s *Service) initPOWService() {
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				err = errors.Wrap(err, "cacheHeadersForEth1DataVote")
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
 					log.WithError(err).Debug("Unable to cache headers for execution client votes")
@@ -562,8 +557,9 @@ func (s *Service) initPOWService() {
 				// In the event our provided chainstart data references a non-existent block hash,
 				// we assume the genesis block to be 0.
 				if genHash != [32]byte{} {
-					genHeader, err := s.eth1DataFetcher.HeaderByHash(ctx, genHash)
+					genHeader, err := s.HeaderByHash(ctx, genHash)
 					if err != nil {
+						err = errors.Wrapf(err, "HeaderByHash, hash=%#x", genHash)
 						s.retryExecutionClientConnection(ctx, err)
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
 						continue
@@ -572,6 +568,7 @@ func (s *Service) initPOWService() {
 				}
 				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
+					err = errors.Wrap(err, "savePowchainData")
 					s.retryExecutionClientConnection(ctx, err)
 					errorLogger(err, "Unable to save execution client data")
 					continue
@@ -601,7 +598,7 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.eth1HeadTicker.C:
-			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
+			head, err := s.HeaderByNumber(s.ctx, nil)
 			if err != nil {
 				s.pollConnectionStatus(s.ctx)
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
@@ -655,11 +652,11 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	// Find the end block to request from.
 	end, err := s.followedBlockHeight(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "followedBlockHeight")
 	}
 	start, err := s.determineEarliestVotingBlock(ctx, end)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "determineEarliestVotingBlock=%d", end)
 	}
 	return s.cacheBlockHeaders(start, end)
 }
@@ -691,7 +688,7 @@ func (s *Service) cacheBlockHeaders(start, end uint64) error {
 				}
 				continue
 			}
-			return err
+			return errors.Wrapf(err, "cacheBlockHeaders, start=%d, end=%d", startReq, endReq)
 		}
 	}
 	return nil
@@ -709,6 +706,11 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
 		}
 		return earliestBlk, nil
+	}
+	// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+	// we don't want to consider any block before the genesis block.
+	if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+		return 0, nil
 	}
 	votingTime := slots.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance

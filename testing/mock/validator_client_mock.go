@@ -412,10 +412,10 @@ func (mr *MockValidatorClientMockRecorder) WaitForActivation(arg0, arg1 interfac
 }
 
 // WaitForChainStart mocks base method.
-func (m *MockValidatorClient) WaitForChainStart(arg0 context.Context, arg1 *emptypb.Empty) (eth.BeaconNodeValidator_WaitForChainStartClient, error) {
+func (m *MockValidatorClient) WaitForChainStart(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ChainStartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForChainStart", arg0, arg1)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_WaitForChainStartClient)
+	ret0, _ := ret[0].(*eth.ChainStartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

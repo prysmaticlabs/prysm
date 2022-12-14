@@ -69,8 +69,8 @@ func (f FieldIndex) String(_ int) string {
 		return "LatestExecutionPayloadHeaderCapella"
 	case NextWithdrawalIndex:
 		return "NextWithdrawalIndex"
-	case LastWithdrawalValidatorIndex:
-		return "LastWithdrawalValidatorIndex"
+	case NextWithdrawalValidatorIndex:
+		return "NextWithdrawalValidatorIndex"
 	default:
 		return ""
 	}
@@ -132,7 +132,7 @@ func (f FieldIndex) RealPosition() int {
 		return 24
 	case NextWithdrawalIndex:
 		return 25
-	case LastWithdrawalValidatorIndex:
+	case NextWithdrawalValidatorIndex:
 		return 26
 	default:
 		return -1
@@ -190,5 +190,5 @@ const (
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
 	NextWithdrawalIndex
-	LastWithdrawalValidatorIndex
+	NextWithdrawalValidatorIndex
 )

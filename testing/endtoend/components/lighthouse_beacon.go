@@ -184,7 +184,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
 		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
-		fmt.Sprintf("--execution-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1ProxyPort+prysmNodeCount+index),
+		fmt.Sprintf("--execution-endpoint=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1ProxyPort+prysmNodeCount+index),
 		fmt.Sprintf("--jwt-secrets=%s", jwtPath),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeMetricsPort+index),
@@ -194,6 +194,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		"--enable-private-discovery",
 		"--debug-level=debug",
 		"--merge",
+		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 	if node.config.UseFixedPeerIDs {
 		flagVal := strings.Join(node.config.PeerIDs, ",")
@@ -261,7 +262,7 @@ func (node *LighthouseBeaconNode) createTestnetDir(index int) (string, error) {
 	configPath := filepath.Join(testNetDir, "config.yaml")
 	rawYaml := params.E2EMainnetConfigYaml()
 	// Add in deposit contract in yaml
-	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %#x", e2e.TestParams.ContractAddress)
+	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {

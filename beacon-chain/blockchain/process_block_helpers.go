@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -185,15 +184,16 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
-//   def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
-//    block = store.blocks[root]
-//    if block.slot > slot:
-//        return get_ancestor(store, block.parent_root, slot)
-//    elif block.slot == slot:
-//        return root
-//    else:
-//        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
-//        return root
+//
+//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
+//	 block = store.blocks[root]
+//	 if block.slot > slot:
+//	     return get_ancestor(store, block.parent_root, slot)
+//	 elif block.slot == slot:
+//	     return root
+//	 else:
+//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//	     return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
@@ -313,23 +313,6 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
-	return nil
-}
-
-// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
-func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
-				return err
-			}
-		} else {
-			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }
 

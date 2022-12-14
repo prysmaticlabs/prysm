@@ -19,23 +19,24 @@ import (
 // The delay is handled by the caller in `processAttestations`.
 //
 // Spec pseudocode definition:
-//   def on_attestation(store: Store, attestation: Attestation) -> None:
-//    """
-//    Run ``on_attestation`` upon receiving a new ``attestation`` from either within a block or directly on the wire.
 //
-//    An ``attestation`` that is asserted as invalid may be valid at a later time,
-//    consider scheduling it for later processing in such case.
-//    """
-//    validate_on_attestation(store, attestation)
-//    store_target_checkpoint_state(store, attestation.data.target)
+//	def on_attestation(store: Store, attestation: Attestation) -> None:
+//	 """
+//	 Run ``on_attestation`` upon receiving a new ``attestation`` from either within a block or directly on the wire.
 //
-//    # Get state at the `target` to fully validate attestation
-//    target_state = store.checkpoint_states[attestation.data.target]
-//    indexed_attestation = get_indexed_attestation(target_state, attestation)
-//    assert is_valid_indexed_attestation(target_state, indexed_attestation)
+//	 An ``attestation`` that is asserted as invalid may be valid at a later time,
+//	 consider scheduling it for later processing in such case.
+//	 """
+//	 validate_on_attestation(store, attestation)
+//	 store_target_checkpoint_state(store, attestation.data.target)
 //
-//    # Update latest messages for attesting indices
-//    update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
+//	 # Get state at the `target` to fully validate attestation
+//	 target_state = store.checkpoint_states[attestation.data.target]
+//	 indexed_attestation = get_indexed_attestation(target_state, attestation)
+//	 assert is_valid_indexed_attestation(target_state, indexed_attestation)
+//
+//	 # Update latest messages for attesting indices
+//	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
 func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
