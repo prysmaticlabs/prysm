@@ -174,5 +174,5 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		},
 	)
 
-	assert.ErrorContains(t, "failed to get validator state", err)
+	assert.ErrorContains(t, "failed to get state validator", err)
 }
