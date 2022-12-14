@@ -1,6 +1,7 @@
 package forks
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 
@@ -28,7 +29,12 @@ func (o OrderedSchedule) Len() int { return len(o) }
 func (o OrderedSchedule) Swap(i, j int) { o[i], o[j] = o[j], o[i] }
 
 // Less implements the Less method of sort.Interface
-func (o OrderedSchedule) Less(i, j int) bool { return o[i].Epoch < o[j].Epoch }
+func (o OrderedSchedule) Less(i, j int) bool {
+	if o[i].Epoch == o[j].Epoch {
+		return bytes.Compare(o[i].Version[:], o[j].Version[:]) < 0
+	}
+	return o[i].Epoch < o[j].Epoch
+}
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
 func (o OrderedSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.VersionLength]byte, error) {

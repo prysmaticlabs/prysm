@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -314,23 +313,6 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
-	return nil
-}
-
-// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
-func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
-				return err
-			}
-		} else {
-			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }
 

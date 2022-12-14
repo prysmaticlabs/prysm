@@ -121,7 +121,12 @@ func main() {
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
 	app.Version = version.Version()
-	app.Action = startNode
+	app.Action = func(ctx *cli.Context) error {
+		if err := startNode(ctx); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		return nil
+	}
 	app.Commands = []*cli.Command{
 		walletcommands.Commands,
 		accountcommands.Commands,

@@ -2,6 +2,7 @@ package eth1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,13 +11,15 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // Node represents an ETH1 node.
@@ -53,12 +56,26 @@ func (node *Node) Start(ctx context.Context) error {
 		}
 	}
 
-	initCmd := exec.CommandContext(
-		ctx,
-		binaryPath,
-		"init",
-		fmt.Sprintf("--datadir=%s", eth1Path),
-		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json") // #nosec G204 -- Safe
+	if err := file.MkdirAll(eth1Path); err != nil {
+		return err
+	}
+	gethJsonPath := path.Join(eth1Path, "genesis.json")
+
+	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	b, err := json.Marshal(gen)
+	if err != nil {
+		return err
+	}
+
+	if err := file.WriteFile(gethJsonPath, b); err != nil {
+		return err
+	}
+	copyPath := path.Join(e2e.TestParams.LogPath, "eth1-genesis.json")
+	if err := file.WriteFile(copyPath, b); err != nil {
+		return err
+	}
+
+	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", eth1Path), gethJsonPath) // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
