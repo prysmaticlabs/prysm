@@ -99,8 +99,9 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
-	if !ok {
+
+	switch payload.Proto().(type) {
+	case *pb.ExecutionPayload:
 		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
 		if !ok {
 			return nil, errors.New("execution data must be a Bellatrix or Capella execution payload")
@@ -109,11 +110,17 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-	} else {
+	case *pb.ExecutionPayloadCapella:
+		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
+		if !ok {
+			return nil, errors.New("execution data must be a Capella execution payload")
+		}
 		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, payloadPb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
+	default:
+		return nil, errors.New("unknown execution data type")
 	}
 
 	switch result.Status {
