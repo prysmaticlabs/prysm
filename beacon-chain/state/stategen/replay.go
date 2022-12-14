@@ -36,11 +36,12 @@ func (_ *State) replayBlocks(
 	var err error
 
 	start := time.Now()
-	log.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"startSlot": state.Slot(),
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
-	}).Debug("Replaying state")
+	})
+	log.Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
