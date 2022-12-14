@@ -378,7 +378,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.Equal(t, 1, len(payloadPb.Transactions))
 		require.DeepEqual(t, txs[0].Hash(), payloadPb.Transactions[0].Hash())
 	})
-	t.Run("execution block Capella", func(t *testing.T) {
+	t.Run("execution block with withdrawals", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(1770307273)
 		want := &gethtypes.Header{
 			Number:      big.NewInt(1),
@@ -432,7 +432,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		encodedPayloadItems, err := json.Marshal(payloadItems)
 		require.NoError(t, err)
 
-		payloadPb := &enginev1.ExecutionBlockCapella{}
+		payloadPb := &enginev1.ExecutionBlock{}
 		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
 
 		require.DeepEqual(t, blockHash, payloadPb.Hash)
@@ -454,13 +454,13 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, want.MixDigest, payloadPb.MixDigest)
 		require.DeepEqual(t, want.Nonce, payloadPb.Nonce)
 		require.Equal(t, 2, len(payloadPb.Withdrawals))
-		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].Index)
+		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].WithdrawalIndex)
 		require.Equal(t, types.ValidatorIndex(1), payloadPb.Withdrawals[0].ValidatorIndex)
-		require.DeepEqual(t, bytesutil.PadTo([]byte("address1"), 20), payloadPb.Withdrawals[0].Address)
+		require.DeepEqual(t, bytesutil.PadTo([]byte("address1"), 20), payloadPb.Withdrawals[0].ExecutionAddress)
 		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].Amount)
-		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].Index)
+		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].WithdrawalIndex)
 		require.Equal(t, types.ValidatorIndex(2), payloadPb.Withdrawals[1].ValidatorIndex)
-		require.DeepEqual(t, bytesutil.PadTo([]byte("address2"), 20), payloadPb.Withdrawals[1].Address)
+		require.DeepEqual(t, bytesutil.PadTo([]byte("address2"), 20), payloadPb.Withdrawals[1].ExecutionAddress)
 		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].Amount)
 	})
 }

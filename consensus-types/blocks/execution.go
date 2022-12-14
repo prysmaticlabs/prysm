@@ -155,13 +155,13 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV1 --
-func (e executionPayload) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return e.p, nil
 }
 
-// PbV2 --
-func (e executionPayload) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -306,13 +306,13 @@ func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV2 --
-func (e executionPayloadHeader) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV1 --
-func (e executionPayloadHeader) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -485,13 +485,13 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV2 --
-func (e executionPayloadCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return e.p, nil
 }
 
-// PbV1 --
-func (e executionPayloadCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -631,18 +631,18 @@ func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, er
 	return nil, ErrUnsupportedGetter
 }
 
-// WitdrawalsRoot --
+// WithdrawalsRoot --
 func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-// PbV2 --
-func (e executionPayloadHeaderCapella) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV1 --
-func (e executionPayloadHeaderCapella) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 

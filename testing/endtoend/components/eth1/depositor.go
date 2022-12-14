@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
@@ -20,6 +21,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	log "github.com/sirupsen/logrus"
 )
 
 var gweiPerEth = big.NewInt(int64(params.BeaconConfig().GweiPerEth))
@@ -143,6 +145,11 @@ type SentDeposit struct {
 // (using 2 transactions for partial deposits) and then uses WaitForBlocks (which spams the miner node with transactions
 // to and from its own address) to advance the chain until it has moved forward ETH1_FOLLOW_DISTANCE blocks.
 func (d *Depositor) SendAndMine(ctx context.Context, offset, nvals int, batch types.DepositBatch, partial bool) error {
+	balance, err := d.Client.BalanceAt(ctx, d.Key.Address, nil)
+	if err != nil {
+		return err
+	}
+	log.WithField("balance", balance.String()).WithField("account", d.Key.Address.Hex()).Info("SendAndMine balance check")
 	// This is the "Send" part of the function. Compute deposits for `nvals` validators,
 	// with half of those deposits being split over 2 transactions if the `partial` flag is true,
 	// and throwing away any validators before `offset`.
@@ -211,7 +218,8 @@ func (d *Depositor) txops(ctx context.Context) (*bind.TransactOpts, error) {
 // DepositContract is a special-purpose client for calling the deposit contract.
 func (d *Depositor) contractDepositor() (*contracts.DepositContract, error) {
 	if d.cd == nil {
-		contract, err := contracts.NewDepositContract(e2e.TestParams.ContractAddress, d.Client)
+		addr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
+		contract, err := contracts.NewDepositContract(addr, d.Client)
 		if err != nil {
 			return nil, err
 		}

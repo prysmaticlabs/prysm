@@ -6,7 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	ptypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -15,11 +17,19 @@ import (
 )
 
 var streamDeadline = 1 * time.Minute
+var startingFork = version.Bellatrix
 
 // AltairForkTransition ensures that the Altair hard fork has occurred successfully.
 var AltairForkTransition = types.Evaluator{
-	Name:       "altair_fork_transition_%d",
-	Policy:     policies.OnEpoch(helpers.AltairE2EForkEpoch),
+	Name: "altair_fork_transition_%d",
+	Policy: func(e ptypes.Epoch) bool {
+		altair := policies.OnEpoch(helpers.AltairE2EForkEpoch)
+		// TODO (11750): modify policies to take an end to end config
+		if startingFork == version.Phase0 {
+			return altair(e)
+		}
+		return false
+	},
 	Evaluation: altairForkOccurs,
 }
 

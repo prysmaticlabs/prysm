@@ -115,6 +115,6 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
-	PbV2() (*enginev1.ExecutionPayloadCapella, error)
-	PbV1() (*enginev1.ExecutionPayload, error)
+	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
+	PbBellatrix() (*enginev1.ExecutionPayload, error)
 }
