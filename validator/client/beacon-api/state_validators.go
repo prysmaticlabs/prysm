@@ -7,11 +7,18 @@ import (
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
-func (c *beaconApiValidatorClient) getStateValidators(stringPubkeys []string) (*rpcmiddleware.StateValidatorsResponseJson, error) {
+func (c *beaconApiValidatorClient) getStateValidators(
+	stringPubkeys []string,
+	statuses []string,
+) (*rpcmiddleware.StateValidatorsResponseJson, error) {
 	params := neturl.Values{}
 
 	for _, stringPubkey := range stringPubkeys {
 		params.Add("id", stringPubkey)
+	}
+
+	for _, status := range statuses {
+		params.Add("status", status)
 	}
 
 	url := buildURL(
