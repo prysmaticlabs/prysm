@@ -50,14 +50,7 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	decoded["totalDifficulty"] = e.TotalDifficulty
 
 	if e.Version == version.Capella {
-		ws := make([]*withdrawalJSON, len(e.Withdrawals))
-		for i, w := range e.Withdrawals {
-			ws[i], err = w.toWithdrawalJSON()
-			if err != nil {
-				return nil, err
-			}
-		}
-		decoded["withdrawals"] = ws
+		decoded["withdrawals"] = e.Withdrawals
 	}
 
 	return json.Marshal(decoded)
@@ -164,18 +157,6 @@ func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
 		return nil, err
 	}
 	return w, nil
-}
-
-func (w *Withdrawal) toWithdrawalJSON() (*withdrawalJSON, error) {
-	b, err := w.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	j := &withdrawalJSON{}
-	if err = json.Unmarshal(b, j); err != nil {
-		return nil, err
-	}
-	return j, nil
 }
 
 func (w *Withdrawal) MarshalJSON() ([]byte, error) {
