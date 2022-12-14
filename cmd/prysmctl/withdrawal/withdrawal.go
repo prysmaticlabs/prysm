@@ -60,7 +60,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
 		"You will NOT be able to change the address again once changed. ")
 	for _, foundFilePath := range foundFilePaths {
-		b, err := os.ReadFile(foundFilePath)
+		b, err := os.ReadFile(filepath.Clean(foundFilePath))
 		if err != nil {
 			return errors.Wrap(err, "failed to open file")
 		}
