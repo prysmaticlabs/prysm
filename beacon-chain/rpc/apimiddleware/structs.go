@@ -498,7 +498,7 @@ type BlindedBeaconBlockBodyCapellaJson struct {
 	VoluntaryExits         []*SignedVoluntaryExitJson         `json:"voluntary_exits"`
 	SyncAggregate          *SyncAggregateJson                 `json:"sync_aggregate"`
 	ExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"execution_payload_header"`
-	BLSToExecutionChanges  []*BLSToExecutionChangeJson        `json:"bls_to_execution_changes"`
+	BLSToExecutionChanges  []*SignedBLSToExecutionChangeJson  `json:"bls_to_execution_changes"`
 }
 
 type ExecutionPayloadJson struct {
@@ -621,6 +621,11 @@ type AttestationDataJson struct {
 	BeaconBlockRoot string          `json:"beacon_block_root" hex:"true"`
 	Source          *CheckpointJson `json:"source"`
 	Target          *CheckpointJson `json:"target"`
+}
+
+type SignedBLSToExecutionChangeJson struct {
+	Message   *BLSToExecutionChangeJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
 }
 
 type BLSToExecutionChangeJson struct {
