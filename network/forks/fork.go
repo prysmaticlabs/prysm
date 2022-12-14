@@ -2,6 +2,7 @@
 package forks
 
 import (
+	"bytes"
 	"math"
 	"sort"
 	"time"
@@ -165,7 +166,19 @@ func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
 		i++
 	}
 	sort.Slice(sortedVersions, func(a, b int) bool {
-		return forkSchedule[sortedVersions[a]] < forkSchedule[sortedVersions[b]]
+		// va == "version" a, ie the [4]byte version id
+		va, vb := sortedVersions[a], sortedVersions[b]
+		// ea == "epoch" a, ie the types.Epoch corresponding to va
+		ea, eb := forkSchedule[va], forkSchedule[vb]
+		// Try to sort by epochs first, which works fine when epochs are all distinct.
+		// in the case of testnets starting from a given fork, all epochs leading to the fork will be zero.
+		if ea != eb {
+			return ea < eb
+		}
+		// If the epochs are equal, break the tie with a lexicographic comparison of the fork version bytes.
+		// eg 2 versions both with a fork epoch of 0, 0x00000000 would come before 0x01000000.
+		// sort.Slice takes a 'less' func, ie `return a < b`, and when va < vb, bytes.Compare will return -1
+		return bytes.Compare(va[:], vb[:]) < 0
 	})
 	return sortedVersions
 }
