@@ -182,6 +182,8 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			return err
 		}
 		copy(blks[blindedIndex:], reconstructedBlks)
+
+		// TODO(4844): Handle blind construction for 4844
 	}
 
 	for _, b := range blks {

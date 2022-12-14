@@ -671,15 +671,15 @@ type AttestationDataJson struct {
 	Target          *CheckpointJson `json:"target"`
 }
 
+type SignedBLSToExecutionChangeJson struct {
+	Message   *BLSToExecutionChangeJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
+}
+
 type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
-}
-
-type SignedBLSToExecutionChangeJson struct {
-	BLSToExecutionChange *BLSToExecutionChangeJson `json:"message"`
-	Signature            string                    `json:"signature" hex:"true"`
 }
 
 type DepositJson struct {

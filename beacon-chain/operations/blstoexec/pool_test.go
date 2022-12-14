@@ -135,6 +135,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 	})
 	t.Run("One Bad change", func(t *testing.T) {
 		pool := NewPool()
+		saveByte := signedChanges[1].Message.FromBlsPubkey[5]
 		signedChanges[1].Message.FromBlsPubkey[5] = 0xff
 		for i := uint64(0); i < numValidators; i++ {
 			pool.InsertBLSToExecChange(signedChanges[i])
@@ -143,6 +144,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
 	})
 	t.Run("One Bad Signature", func(t *testing.T) {
 		pool := NewPool()

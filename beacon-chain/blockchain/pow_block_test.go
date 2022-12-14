@@ -118,18 +118,18 @@ func Test_validateMergeBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlockBellatrix{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	a := [32]byte{'a'}
 	b := [32]byte{'b'}
 	mergeBlockParentHash := [32]byte{'3'}
-	engine.BlockByHashMap[a] = &enginev1.ExecutionBlockBellatrix{
+	engine.BlockByHashMap[a] = &enginev1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: b,
 		},
 		TotalDifficulty: "0x2",
 	}
-	engine.BlockByHashMap[b] = &enginev1.ExecutionBlockBellatrix{
+	engine.BlockByHashMap[b] = &enginev1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: mergeBlockParentHash,
 		},
@@ -168,12 +168,12 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlockBellatrix{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	h := [32]byte{'a'}
 	p := [32]byte{'b'}
 	td := "0x1"
-	engine.BlockByHashMap[h] = &enginev1.ExecutionBlockBellatrix{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: p,
 		},
@@ -191,7 +191,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "pow block is nil", err)
 
-	engine.BlockByHashMap[h] = &enginev1.ExecutionBlockBellatrix{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: p,
 		},
@@ -200,7 +200,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
 
-	engine.BlockByHashMap[h] = &enginev1.ExecutionBlockBellatrix{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: p,
 		},

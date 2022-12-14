@@ -44,7 +44,6 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 	var numBlobs uint64
 	maxRequestBlobsSidecars := params.BeaconNetworkConfig().MaxRequestBlobsSidecars
 	for slot := startSlot; slot < endSlot && numBlobs < maxRequestBlobsSidecars; slot = slot.Add(1) {
-		// TODO(XXX): With danksharding, there could be multiple sidecars per slot. As such, the cost requirement will be dynamic
 		if err := s.rateLimiter.validateRequest(stream, uint64(avgSidecarBlobsTransferBytes)); err != nil {
 			return err
 		}

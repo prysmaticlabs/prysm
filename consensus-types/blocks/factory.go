@@ -23,7 +23,8 @@ var (
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
-	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	ErrNilSignedBeaconBlock        = errors.New("signed beacon block can't be nil")
+	errNonBlindedSignedBeaconBlock = errors.New("can only build signed beacon block from blinded format")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -211,7 +212,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, err
 	}
 	if !blk.IsBlinded() {
-		return nil, errors.New("can only build signed beacon block from blinded format")
+		return nil, errNonBlindedSignedBeaconBlock
 	}
 	b := blk.Block()
 	payloadHeader, err := b.Body().Execution()

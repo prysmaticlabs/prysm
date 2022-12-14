@@ -26,7 +26,7 @@ func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
 }
 
 // NextWithdrawalValidatorIndex returns the index of the validator which is
-// next in line for a partial withdrawal.
+// next in line for a withdrawal.
 func (b *BeaconState) NextWithdrawalValidatorIndex() (types.ValidatorIndex, error) {
 	if b.version < version.Capella {
 		return 0, errNotSupported("NextWithdrawalValidatorIndex", b.version)

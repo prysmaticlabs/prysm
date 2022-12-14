@@ -107,6 +107,23 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 	return err
 }
 
+func WriteBlockAndBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, b *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	valRoot := chain.GenesisValidatorsRoot()
+	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, valRoot[:])
+	if err != nil {
+		return err
+	}
+
+	if err := writeContextToStream(ctxBytes[:], stream, chain); err != nil {
+		return err
+	}
+	_, err = encoding.EncodeWithMaxLength(stream, b)
+	return err
+}
+
 func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.SignedBeaconBlockAndBlobsSidecar, error) {
 	var (
 		code   uint8

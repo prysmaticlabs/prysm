@@ -60,6 +60,9 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 		if nextEpoch == params.BeaconConfig().AltairForkEpoch {
 			s.registerRPCHandlersAltair()
 		}
+		if nextEpoch == params.BeaconConfig().EIP4844ForkEpoch {
+			s.registerRPCHandlers4844()
+		}
 	}
 	return nil
 }
