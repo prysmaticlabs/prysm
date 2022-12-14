@@ -84,8 +84,6 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 		if err := helpers.ComponentsStarted(r.comHandler.ctx, []e2etypes.ComponentRunner{miner}); err != nil {
 			return errors.Wrap(err, "eth1Miner component never started - cannot send deposits")
 		}
-		// refactored send and mine goes here
-		minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 		keyPath, err := e2e.TestParams.Paths.MinerKeyPath()
 		if err != nil {
 			return errors.Wrap(err, "error getting miner key file from bazel static files")
@@ -99,9 +97,6 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 			return errors.Wrap(err, "failed to initialize a client to connect to the miner EL node")
 		}
 		r.depositor = &eth1.Depositor{Key: key, Client: client, NetworkId: big.NewInt(eth1.NetworkId)}
-		if err := r.depositor.SendAndMine(r.comHandler.ctx, 0, minGenesisActiveCount, e2etypes.GenesisDepositBatch, true); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
 		if err := r.depositor.Start(r.comHandler.ctx); err != nil {
 			return errors.Wrap(err, "depositor.Start failed")
 		}

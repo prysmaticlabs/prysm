@@ -69,9 +69,9 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := c.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys)
+		stateValidators, err := c.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys, nil)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get validators state")
+			return nil, errors.Wrap(err, "failed to get state validators")
 		}
 
 		for _, data := range stateValidators.Data {
@@ -119,16 +119,4 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 	case <-c.ctx.Done():
 		return nil, errors.New("context canceled")
 	}
-}
-
-var beaconAPITogRPCValidatorStatus = map[string]ethpb.ValidatorStatus{
-	"pending_initialized": ethpb.ValidatorStatus_DEPOSITED,
-	"pending_queued":      ethpb.ValidatorStatus_PENDING,
-	"active_ongoing":      ethpb.ValidatorStatus_ACTIVE,
-	"active_exiting":      ethpb.ValidatorStatus_EXITING,
-	"active_slashed":      ethpb.ValidatorStatus_SLASHING,
-	"exited_unslashed":    ethpb.ValidatorStatus_EXITED,
-	"exited_slashed":      ethpb.ValidatorStatus_EXITED,
-	"withdrawal_possible": ethpb.ValidatorStatus_EXITED,
-	"withdrawal_done":     ethpb.ValidatorStatus_EXITED,
 }
