@@ -276,6 +276,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	if !signature.FastAggregateVerify(participantPubkeys, signingRoot) {
 		return errors.New("sync committee signature is invalid")
 	}
+
 	return nil
 }
 

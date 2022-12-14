@@ -87,7 +87,7 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 	if err != nil {
 		return err
 	}
-	bellatrixForkEpoch, err := strconv.ParseUint(config.CapellaForkEpoch, 10, 64)
+	bellatrixForkEpoch, err := strconv.ParseUint(config.BellatrixForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	secondsPerSlot, err := strconv.ParseUint(config.SecondsPerSlot, 10, 64)
-	c = &Config{
+	*c = Config{
 		CapellaForkEpoch:             types.Epoch(capellaForkEpoch),
 		CapellaForkVersion:           hexutil.MustDecode(config.CapellaForkVersion),
 		BellatrixForkEpoch:           types.Epoch(bellatrixForkEpoch),
@@ -128,55 +128,4 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 		SecondsPerSlot:               secondsPerSlot,
 	}
 	return nil
-}
-
-func NewConfigFromJSON(config *ConfigJSON) (*Config, error) {
-	capellaForkEpoch, err := strconv.ParseUint(config.CapellaForkEpoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	bellatrixForkEpoch, err := strconv.ParseUint(config.CapellaForkEpoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	altairForkEpoch, err := strconv.ParseUint(config.AltairForkEpoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	minSyncCommitteeParticipants, err := strconv.ParseUint(config.MinSyncCommitteeParticipants, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	genesisSlot, err := strconv.ParseUint(config.GenesisSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	domainSyncCommittee, err := strconv.ParseUint(config.DomainSyncCommittee, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	slotsPerEpoch, err := strconv.ParseUint(config.SlotsPerEpoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	epochsPerSyncCommitteePeriod, err := strconv.ParseUint(config.EpochsPerSyncCommitteePeriod, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	secondsPerSlot, err := strconv.ParseUint(config.SecondsPerSlot, 10, 64)
-	return &Config{
-		CapellaForkEpoch:             types.Epoch(capellaForkEpoch),
-		CapellaForkVersion:           hexutil.MustDecode(config.CapellaForkVersion),
-		BellatrixForkEpoch:           types.Epoch(bellatrixForkEpoch),
-		BellatrixForkVersion:         hexutil.MustDecode(config.BellatrixForkVersion),
-		AltairForkEpoch:              types.Epoch(altairForkEpoch),
-		AltairForkVersion:            hexutil.MustDecode(config.AltairForkVersion),
-		GenesisForkVersion:           hexutil.MustDecode(config.GenesisForkVersion),
-		MinSyncCommitteeParticipants: minSyncCommitteeParticipants,
-		GenesisSlot:                  types.Slot(genesisSlot),
-		DomainSyncCommittee:          bytesutil.Uint32ToBytes4(uint32(domainSyncCommittee)),
-		SlotsPerEpoch:                types.Slot(slotsPerEpoch),
-		EpochsPerSyncCommitteePeriod: types.Epoch(epochsPerSyncCommitteePeriod),
-		SecondsPerSlot:               secondsPerSlot,
-	}, nil
 }
