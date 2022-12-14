@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 type ConfigJSON struct {
@@ -79,53 +78,48 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 }
 
 func (c *Config) UnmarshalJSON(input []byte) error {
-	var config ConfigJSON
-	if err := json.Unmarshal(input, &config); err != nil {
+	var configJSON ConfigJSON
+	if err := json.Unmarshal(input, &configJSON); err != nil {
 		return err
 	}
-	capellaForkEpoch, err := strconv.ParseUint(config.CapellaForkEpoch, 10, 64)
+	config := Config{}
+	capellaForkEpoch, err := strconv.ParseUint(configJSON.CapellaForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
-	bellatrixForkEpoch, err := strconv.ParseUint(config.BellatrixForkEpoch, 10, 64)
+	config.CapellaForkEpoch = types.Epoch(capellaForkEpoch)
+	bellatrixForkEpoch, err := strconv.ParseUint(configJSON.BellatrixForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
-	altairForkEpoch, err := strconv.ParseUint(config.AltairForkEpoch, 10, 64)
+	config.BellatrixForkEpoch = types.Epoch(bellatrixForkEpoch)
+	altairForkEpoch, err := strconv.ParseUint(configJSON.AltairForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
-	minSyncCommitteeParticipants, err := strconv.ParseUint(config.MinSyncCommitteeParticipants, 10, 64)
+	config.AltairForkEpoch = types.Epoch(altairForkEpoch)
+	if config.MinSyncCommitteeParticipants, err = strconv.ParseUint(configJSON.MinSyncCommitteeParticipants, 10,
+		64); err != nil {
+		return err
+	}
+	genesisSlot, err := strconv.ParseUint(configJSON.GenesisSlot, 10, 64)
 	if err != nil {
 		return err
 	}
-	genesisSlot, err := strconv.ParseUint(config.GenesisSlot, 10, 64)
+	config.GenesisSlot = types.Slot(genesisSlot)
+	slotsPerEpoch, err := strconv.ParseUint(configJSON.SlotsPerEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
-	slotsPerEpoch, err := strconv.ParseUint(config.SlotsPerEpoch, 10, 64)
+	config.SlotsPerEpoch = types.Slot(slotsPerEpoch)
+	epochsPerSyncCommitteePeriod, err := strconv.ParseUint(configJSON.EpochsPerSyncCommitteePeriod, 10, 64)
 	if err != nil {
 		return err
 	}
-	epochsPerSyncCommitteePeriod, err := strconv.ParseUint(config.EpochsPerSyncCommitteePeriod, 10, 64)
-	if err != nil {
+	config.EpochsPerSyncCommitteePeriod = types.Epoch(epochsPerSyncCommitteePeriod)
+	if config.SecondsPerSlot, err = strconv.ParseUint(configJSON.SecondsPerSlot, 10, 64); err != nil {
 		return err
 	}
-	secondsPerSlot, err := strconv.ParseUint(config.SecondsPerSlot, 10, 64)
-	*c = Config{
-		CapellaForkEpoch:             types.Epoch(capellaForkEpoch),
-		CapellaForkVersion:           hexutil.MustDecode(config.CapellaForkVersion),
-		BellatrixForkEpoch:           types.Epoch(bellatrixForkEpoch),
-		BellatrixForkVersion:         hexutil.MustDecode(config.BellatrixForkVersion),
-		AltairForkEpoch:              types.Epoch(altairForkEpoch),
-		AltairForkVersion:            hexutil.MustDecode(config.AltairForkVersion),
-		GenesisForkVersion:           hexutil.MustDecode(config.GenesisForkVersion),
-		MinSyncCommitteeParticipants: minSyncCommitteeParticipants,
-		GenesisSlot:                  types.Slot(genesisSlot),
-		DomainSyncCommittee:          bytesutil.ToBytes4(hexutil.MustDecode(config.DomainSyncCommittee)),
-		SlotsPerEpoch:                types.Slot(slotsPerEpoch),
-		EpochsPerSyncCommitteePeriod: types.Epoch(epochsPerSyncCommitteePeriod),
-		SecondsPerSlot:               secondsPerSlot,
-	}
+	*c = config
 	return nil
 }

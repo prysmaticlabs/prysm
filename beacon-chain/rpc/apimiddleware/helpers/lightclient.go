@@ -30,55 +30,69 @@ func bytesFromBigInt(numStr string) ([]byte, error) {
 	return big.NewInt(0).SetUint64(num).Bytes(), nil
 }
 
-func NewExecutionPayloadHeaderFromJSON(header *ethrpc.ExecutionPayloadHeaderJson) (*v11.ExecutionPayloadHeader,
+func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeaderJson) (*v11.ExecutionPayloadHeader,
 	error) {
-	blockNumber, err := strconv.ParseUint(header.BlockNumber, 10, 64)
-	if err != nil {
+	header := &v11.ExecutionPayloadHeader{}
+	var err error
+	if header.ParentHash, err = hexutil.Decode(headerJSON.ParentHash); err != nil {
 		return nil, err
 	}
-	gasLimit, err := strconv.ParseUint(header.GasLimit, 10, 64)
-	if err != nil {
+	if header.FeeRecipient, err = hexutil.Decode(headerJSON.FeeRecipient); err != nil {
 		return nil, err
 	}
-	gasUsed, err := strconv.ParseUint(header.GasUsed, 10, 64)
-	if err != nil {
+	if header.StateRoot, err = hexutil.Decode(headerJSON.StateRoot); err != nil {
 		return nil, err
 	}
-	timestamp, err := strconv.ParseUint(header.TimeStamp, 10, 64)
-	if err != nil {
+	if header.ReceiptsRoot, err = hexutil.Decode(headerJSON.ReceiptsRoot); err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := bytesFromBigInt(header.BaseFeePerGas)
-	if err != nil {
+	if header.LogsBloom, err = hexutil.Decode(headerJSON.LogsBloom); err != nil {
 		return nil, err
 	}
-	return &v11.ExecutionPayloadHeader{
-		ParentHash:       hexutil.MustDecode(header.ParentHash),
-		FeeRecipient:     hexutil.MustDecode(header.FeeRecipient),
-		StateRoot:        hexutil.MustDecode(header.StateRoot),
-		ReceiptsRoot:     hexutil.MustDecode(header.ReceiptsRoot),
-		LogsBloom:        hexutil.MustDecode(header.LogsBloom),
-		PrevRandao:       hexutil.MustDecode(header.PrevRandao),
-		BlockNumber:      blockNumber,
-		GasLimit:         gasLimit,
-		GasUsed:          gasUsed,
-		Timestamp:        timestamp,
-		ExtraData:        hexutil.MustDecode(header.ExtraData),
-		BaseFeePerGas:    baseFeePerGas,
-		BlockHash:        hexutil.MustDecode(header.BlockHash),
-		TransactionsRoot: hexutil.MustDecode(header.TransactionsRoot),
-	}, nil
+	if header.PrevRandao, err = hexutil.Decode(headerJSON.PrevRandao); err != nil {
+		return nil, err
+	}
+	if header.BlockNumber, err = strconv.ParseUint(headerJSON.BlockNumber, 10, 64); err != nil {
+		return nil, err
+	}
+	if header.GasLimit, err = strconv.ParseUint(headerJSON.GasLimit, 10, 64); err != nil {
+		return nil, err
+	}
+	if header.GasUsed, err = strconv.ParseUint(headerJSON.GasUsed, 10, 64); err != nil {
+		return nil, err
+	}
+	if header.Timestamp, err = strconv.ParseUint(headerJSON.TimeStamp, 10, 64); err != nil {
+		return nil, err
+	}
+	if header.ExtraData, err = hexutil.Decode(headerJSON.ExtraData); err != nil {
+		return nil, err
+	}
+	if header.BaseFeePerGas, err = bytesFromBigInt(headerJSON.BaseFeePerGas); err != nil {
+		return nil, err
+	}
+	if header.BlockHash, err = hexutil.Decode(headerJSON.BlockHash); err != nil {
+		return nil, err
+	}
+	if header.TransactionsRoot, err = hexutil.Decode(headerJSON.TransactionsRoot); err != nil {
+		return nil, err
+	}
+	return header, nil
 }
 
 func FloorLog2(x uint64) int {
 	return bits.Len64(uint64(x - 1))
 }
 
-func NewSyncAggregateFromJSON(syncAggregate *ethrpc.SyncAggregateJson) (*ethpbv1.SyncAggregate, error) {
-	return &ethpbv1.SyncAggregate{
-		SyncCommitteeBits:      hexutil.MustDecode(syncAggregate.SyncCommitteeBits),
-		SyncCommitteeSignature: hexutil.MustDecode(syncAggregate.SyncCommitteeSignature),
-	}, nil
+func NewSyncAggregateFromJSON(syncAggregateJSON *ethrpc.SyncAggregateJson) (*ethpbv1.SyncAggregate, error) {
+	syncAggregate := &ethpbv1.SyncAggregate{}
+	var err error
+	if syncAggregate.SyncCommitteeBits, err = hexutil.Decode(syncAggregateJSON.SyncCommitteeBits); err != nil {
+		return nil, err
+	}
+	if syncAggregate.SyncCommitteeSignature, err = hexutil.Decode(syncAggregateJSON.SyncCommitteeSignature); err != nil {
+		return nil, err
+	}
+	return syncAggregate, nil
 }
 
 func timeFromJSON(timestamp string) (*time.Time, error) {
@@ -90,196 +104,193 @@ func timeFromJSON(timestamp string) (*time.Time, error) {
 	return &t, nil
 }
 
-func NewGenesisResponse_GenesisFromJSON(genesis *ethrpc.GenesisResponse_GenesisJson) (
+func NewGenesisResponse_GenesisFromJSON(genesisJSON *ethrpc.GenesisResponse_GenesisJson) (
 	*ethpbv1.GenesisResponse_Genesis, error) {
-	genesisTime, err := timeFromJSON(genesis.GenesisTime)
+	genesis := &ethpbv1.GenesisResponse_Genesis{}
+	genesisTime, err := timeFromJSON(genesisJSON.GenesisTime)
 	if err != nil {
 		return nil, err
 	}
-	return &ethpbv1.GenesisResponse_Genesis{
-		GenesisTime:           timestamppb.New(*genesisTime),
-		GenesisValidatorsRoot: hexutil.MustDecode(genesis.GenesisValidatorsRoot),
-		GenesisForkVersion:    hexutil.MustDecode(genesis.GenesisForkVersion),
-	}, nil
+	genesis.GenesisTime = timestamppb.New(*genesisTime)
+	if genesis.GenesisValidatorsRoot, err = hexutil.Decode(genesisJSON.GenesisValidatorsRoot); err != nil {
+		return nil, err
+	}
+	if genesis.GenesisForkVersion, err = hexutil.Decode(genesisJSON.GenesisForkVersion); err != nil {
+		return nil, err
+	}
+	return genesis, nil
 }
 
-func headerFromJSON(header *ethrpc.BeaconBlockHeaderJson) (*ethpbv1.BeaconBlockHeader, error) {
-	if header == nil {
+func headerFromJSON(headerJSON *ethrpc.BeaconBlockHeaderJson) (*ethpbv1.BeaconBlockHeader, error) {
+	if headerJSON == nil {
 		return nil, nil
 	}
-	slot, err := strconv.ParseUint(header.Slot, 10, 64)
+	header := &ethpbv1.BeaconBlockHeader{}
+	var err error
+	slot, err := strconv.ParseUint(headerJSON.Slot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	proposerIndex, err := strconv.ParseUint(header.ProposerIndex, 10, 64)
+	header.Slot = types.Slot(slot)
+	proposerIndex, err := strconv.ParseUint(headerJSON.ProposerIndex, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	return &ethpbv1.BeaconBlockHeader{
-		Slot:          types.Slot(slot),
-		ProposerIndex: types.ValidatorIndex(proposerIndex),
-		ParentRoot:    hexutil.MustDecode(header.ParentRoot),
-		StateRoot:     hexutil.MustDecode(header.StateRoot),
-		BodyRoot:      hexutil.MustDecode(header.BodyRoot),
-	}, nil
+	header.ProposerIndex = types.ValidatorIndex(proposerIndex)
+	if header.ParentRoot, err = hexutil.Decode(headerJSON.ParentRoot); err != nil {
+		return nil, err
+	}
+	if header.StateRoot, err = hexutil.Decode(headerJSON.StateRoot); err != nil {
+		return nil, err
+	}
+	if header.BodyRoot, err = hexutil.Decode(headerJSON.BodyRoot); err != nil {
+		return nil, err
+	}
+	return header, nil
 }
 
-func syncCommitteeFromJSON(syncCommittee *ethrpc.SyncCommitteeJson) *ethpbv2.SyncCommittee {
-	if syncCommittee == nil {
-		return nil
+func syncCommitteeFromJSON(syncCommitteeJSON *ethrpc.SyncCommitteeJson) (*ethpbv2.SyncCommittee, error) {
+	if syncCommitteeJSON == nil {
+		return nil, nil
 	}
-	pubKeys := make([][]byte, len(syncCommittee.Pubkeys))
-	for i, pubKey := range syncCommittee.Pubkeys {
-		pubKeys[i] = hexutil.MustDecode(pubKey)
+	syncCommittee := &ethpbv2.SyncCommittee{
+		Pubkeys: make([][]byte, len(syncCommitteeJSON.Pubkeys)),
 	}
-	return &ethpbv2.SyncCommittee{
-		Pubkeys:         pubKeys,
-		AggregatePubkey: hexutil.MustDecode(syncCommittee.AggregatePubkey),
+	for i, pubKey := range syncCommitteeJSON.Pubkeys {
+		var err error
+		if syncCommittee.Pubkeys[i], err = hexutil.Decode(pubKey); err != nil {
+			return nil, err
+		}
 	}
+	var err error
+	if syncCommittee.AggregatePubkey, err = hexutil.Decode(syncCommitteeJSON.AggregatePubkey); err != nil {
+		return nil, err
+	}
+	return syncCommittee, nil
 }
 
-func branchFromJSON(branch []string) [][]byte {
+func branchFromJSON(branch []string) ([][]byte, error) {
 	branchBytes := [][]byte{}
 	for _, root := range branch {
-		branchBytes = append(branchBytes, hexutil.MustDecode(root))
+		branch, err := hexutil.Decode(root)
+		if err != nil {
+			return nil, err
+		}
+		branchBytes = append(branchBytes, branch)
 	}
-	return branchBytes
+	return branchBytes, nil
 }
 
-func NewLightClientBootstrapFromJSON(bootstrap *ethrpc.LightClientBootstrapJson) (*ethpbv2.LightClientBootstrap,
+func NewLightClientBootstrapFromJSON(bootstrapJSON *ethrpc.LightClientBootstrapJson) (*ethpbv2.LightClientBootstrap,
 	error) {
-	header, err := headerFromJSON(bootstrap.Header)
-	if err != nil {
+	bootstrap := &ethpbv2.LightClientBootstrap{}
+	var err error
+	if bootstrap.Header, err = headerFromJSON(bootstrapJSON.Header); err != nil {
 		return nil, err
 	}
-	return &ethpbv2.LightClientBootstrap{
-		Header:                     header,
-		CurrentSyncCommittee:       syncCommitteeFromJSON(bootstrap.CurrentSyncCommittee),
-		CurrentSyncCommitteeBranch: branchFromJSON(bootstrap.CurrentSyncCommitteeBranch),
-	}, nil
+	if bootstrap.CurrentSyncCommittee, err = syncCommitteeFromJSON(bootstrapJSON.CurrentSyncCommittee); err != nil {
+		return nil, err
+	}
+	if bootstrap.CurrentSyncCommitteeBranch, err = branchFromJSON(bootstrapJSON.CurrentSyncCommitteeBranch); err != nil {
+		return nil, err
+	}
+	return bootstrap, nil
 }
 
-func NewLightClientUpdateFromJSON(update *ethrpc.LightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
-	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+func NewLightClientUpdateFromJSON(updateJSON *ethrpc.LightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
+	update := &ethpbv2.LightClientUpdate{}
+	var err error
+	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(updateJSON.SignatureSlot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
-	if err != nil {
-		return nil, err
-	}
-	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
-	if err != nil {
-		return nil, err
-	}
-	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv2.LightClientUpdate{
-		AttestedHeader:          attestedHeader,
-		NextSyncCommittee:       syncCommitteeFromJSON(update.NextSyncCommittee),
-		NextSyncCommitteeBranch: branchFromJSON(update.NextSyncCommitteeBranch),
-		FinalizedHeader:         finalizedHeader,
-		FinalityBranch:          branchFromJSON(update.FinalityBranch),
-		SyncAggregate:           syncAggregate,
-		SignatureSlot:           types.Slot(signatureSlot),
-	}, nil
+	update.SignatureSlot = types.Slot(signatureSlot)
+	return update, nil
 }
 
-func NewLightClientUpdateFromFinalityUpdateJSON(update *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
+func NewLightClientUpdateFromFinalityUpdateJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
 	LightClientUpdate, error) {
-	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	update := &ethpbv2.LightClientUpdate{}
+	var err error
+	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(updateJSON.SignatureSlot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
-	if err != nil {
-		return nil, err
-	}
-	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
-	if err != nil {
-		return nil, err
-	}
-	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv2.LightClientUpdate{
-		AttestedHeader:  attestedHeader,
-		FinalizedHeader: finalizedHeader,
-		FinalityBranch:  branchFromJSON(update.FinalityBranch),
-		SyncAggregate:   syncAggregate,
-		SignatureSlot:   types.Slot(signatureSlot),
-	}, nil
+	update.SignatureSlot = types.Slot(signatureSlot)
+	return update, nil
 }
 
-func NewLightClientUpdateFromOptimisticUpdateJSON(update *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.
-	LightClientUpdate,
-	error) {
-	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+func NewLightClientUpdateFromOptimisticUpdateJSON(updateJSON *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.
+	LightClientUpdate, error) {
+	update := &ethpbv2.LightClientUpdate{}
+	var err error
+	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
+		return nil, err
+	}
+	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(updateJSON.SignatureSlot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
-	if err != nil {
-		return nil, err
-	}
-	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv2.LightClientUpdate{
-		AttestedHeader: attestedHeader,
-		SyncAggregate:  syncAggregate,
-		SignatureSlot:  types.Slot(signatureSlot),
-	}, nil
+	update.SignatureSlot = types.Slot(signatureSlot)
+	return update, nil
 }
 
-func NewLightClientFinalityUpdateFromJSON(update *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.LightClientFinalityUpdate,
-	error) {
-	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+func NewLightClientFinalityUpdateFromJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
+	LightClientFinalityUpdate, error) {
+	update := &ethpbv2.LightClientFinalityUpdate{}
+	var err error
+	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(updateJSON.SignatureSlot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	finalizedHeader, err := headerFromJSON(update.FinalizedHeader)
-	if err != nil {
-		return nil, err
-	}
-	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
-	if err != nil {
-		return nil, err
-	}
-	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv2.LightClientFinalityUpdate{
-		AttestedHeader:  attestedHeader,
-		FinalizedHeader: finalizedHeader,
-		FinalityBranch:  branchFromJSON(update.FinalityBranch),
-		SyncAggregate:   syncAggregate,
-		SignatureSlot:   types.Slot(signatureSlot),
-	}, nil
+	update.SignatureSlot = types.Slot(signatureSlot)
+	return update, nil
 }
 
-func NewLightClientOptimisticUpdateFromJSON(update *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.LightClientOptimisticUpdate,
+func NewLightClientOptimisticUpdateFromJSON(updateJSON *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.LightClientOptimisticUpdate,
 	error) {
-	attestedHeader, err := headerFromJSON(update.AttestedHeader)
+	update := &ethpbv2.LightClientOptimisticUpdate{}
+	var err error
+	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
+		return nil, err
+	}
+	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
+		return nil, err
+	}
+	signatureSlot, err := strconv.ParseUint(updateJSON.SignatureSlot, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	syncAggregate, err := NewSyncAggregateFromJSON(update.SyncAggregate)
-	if err != nil {
-		return nil, err
-	}
-	signatureSlot, err := strconv.ParseUint(update.SignatureSlot, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &ethpbv2.LightClientOptimisticUpdate{
-		AttestedHeader: attestedHeader,
-		SyncAggregate:  syncAggregate,
-		SignatureSlot:  types.Slot(signatureSlot),
-	}, nil
+	update.SignatureSlot = types.Slot(signatureSlot)
+	return update, nil
 }
