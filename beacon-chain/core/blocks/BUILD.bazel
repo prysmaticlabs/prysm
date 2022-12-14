@@ -19,12 +19,7 @@ go_library(
         "withdrawals.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks",
-    visibility = [
-        "//beacon-chain:__subpackages__",
-        "//testing/spectest:__subpackages__",
-        "//testing/util:__pkg__",
-        "//validator:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",

@@ -1103,8 +1103,46 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 	}
 }
 
+func TestProposer_Eth1Data_MajorityVote_SpansGenesis(t *testing.T) {
+	ctx := context.Background()
+	// Voting period will span genesis, causing the special case for pre-mined genesis to kick in.
+	// In other words some part of the valid time range is before genesis, so querying the block cache would fail
+	// without the special case added to allow this for testnets.
+	slot := types.Slot(0)
+	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
+
+	p := mockExecution.New().
+		InsertBlock(50, earliestValidTime, []byte("earliest")).
+		InsertBlock(100, latestValidTime, []byte("latest"))
+
+	headBlockHash := []byte("headb")
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	ps := &Server{
+		ChainStartFetcher: p,
+		Eth1InfoFetcher:   p,
+		Eth1BlockFetcher:  p,
+		BlockFetcher:      p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mock.ChainService{ETH1Data: &ethpb.Eth1Data{BlockHash: headBlockHash, DepositCount: 0}},
+	}
+
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Slot: slot,
+		Eth1DataVotes: []*ethpb.Eth1Data{
+			{BlockHash: []byte("earliest"), DepositCount: 1},
+		},
+	})
+	require.NoError(t, err)
+	majorityVoteEth1Data, err := ps.eth1DataMajorityVote(ctx, beaconState)
+	require.NoError(t, err)
+	assert.DeepEqual(t, headBlockHash, majorityVoteEth1Data.BlockHash)
+}
+
 func TestProposer_Eth1Data_MajorityVote(t *testing.T) {
-	slot := types.Slot(64)
+	followDistanceSecs := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	followSlots := followDistanceSecs / params.BeaconConfig().SecondsPerSlot
+	slot := types.Slot(64 + followSlots)
 	earliestValidTime, latestValidTime := majorityVoteBoundaryTime(slot)
 
 	dc := ethpb.DepositContainer{

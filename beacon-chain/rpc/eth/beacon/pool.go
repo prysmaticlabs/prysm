@@ -16,6 +16,7 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -324,9 +325,10 @@ func (bs *Server) SubmitSignedBLSToExecutionChange(ctx context.Context, req *eth
 		return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
 	}
 	bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
-	if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
+	if st.Version() >= version.Capella {
+		if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
+		}
 	}
-
 	return &emptypb.Empty{}, nil
 }

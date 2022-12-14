@@ -21,9 +21,14 @@ var queryFlags = struct {
 }{}
 
 var queryCmd = &cli.Command{
-	Name:   "query",
-	Usage:  "database query tool",
-	Action: queryAction,
+	Name:  "query",
+	Usage: "database query tool",
+	Action: func(cliCtx *cli.Context) error {
+		if err := queryAction(cliCtx); err != nil {
+			log.WithError(err).Fatal("Could not query db")
+		}
+		return nil
+	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "bucket",
