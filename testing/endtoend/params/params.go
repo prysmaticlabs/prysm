@@ -14,8 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
@@ -26,9 +27,12 @@ type params struct {
 	TestShardIndex            int
 	BeaconNodeCount           int
 	LighthouseBeaconNodeCount int
-	ContractAddress           common.Address
 	Ports                     *ports
 	Paths                     *paths
+	Eth1GenesisBlock          *types.Block
+	StartTime                 time.Time
+	CLGenesisTime             uint64
+	Eth1GenesisTime           uint64
 }
 
 type ports struct {
@@ -149,6 +153,8 @@ const (
 	ValidatorMetricsPort = ValidatorGatewayPort + portSpan
 
 	JaegerTracingPort = 9150
+
+	StartupBufferSecs = 5
 )
 
 func logDir() string {
@@ -198,12 +204,15 @@ func Init(t *testing.T, beaconNodeCount int) error {
 		return err
 	}
 
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
 		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:         logPath,
 		TestShardIndex:  testShardIndex,
 		BeaconNodeCount: beaconNodeCount,
 		Ports:           testPorts,
+		CLGenesisTime:   genTime,
+		Eth1GenesisTime: genTime,
 	}
 	return nil
 }
@@ -247,6 +256,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,
@@ -254,6 +264,8 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		BeaconNodeCount:           beaconNodeCount,
 		LighthouseBeaconNodeCount: lighthouseNodeCount,
 		Ports:                     testPorts,
+		CLGenesisTime:             genTime,
+		Eth1GenesisTime:           genTime,
 	}
 	return nil
 }
