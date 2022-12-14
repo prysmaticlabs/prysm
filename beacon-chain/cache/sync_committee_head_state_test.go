@@ -32,6 +32,12 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
+	capellaState, err := state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	})
 	require.NoError(t, err)
 	type put struct {
 		slot  types.Slot
@@ -105,6 +111,15 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 				state: bellatrixState,
 			},
 			want: bellatrixState,
+		},
+		{
+			name: "found with key (capella state)",
+			key:  types.Slot(200),
+			put: &put{
+				slot:  types.Slot(200),
+				state: capellaState,
+			},
+			want: capellaState,
 		},
 	}
 	for _, tt := range tests {
