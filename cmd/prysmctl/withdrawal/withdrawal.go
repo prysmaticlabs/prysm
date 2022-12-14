@@ -52,6 +52,13 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	}
 	au := aurora.NewAurora(true)
 	fmt.Println(au.Red("===============IMPORTANT==============="))
+	fmt.Println(au.Red("Please read the following carefully"))
+	fmt.Println("This action will allow you to partially withdraw any amount over the 32 staked eth in your validator balance. " +
+		"You will also be entitled to the full withdrawal if your validator has exited. " +
+		"Please navigate to the following website and make sure you understand the current implications " +
+		"of changing your bls withdrawal address to an ethereum address. " +
+		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
+		"You will NOT be able to change the address again once changed. ")
 	for _, foundFilePath := range foundFilePaths {
 		b, err := os.ReadFile(foundFilePath)
 		if err != nil {
@@ -93,13 +100,6 @@ func callWithdrawalEndpoint(ctx context.Context, host string, r io.Reader, reque
 	fmt.Println(au.Red("===================================="))
 	fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + au.Red(request.Message.FromBLSPubkey).String() + ") ADDRESS " +
 		"TO AN ETHEREUM ADDRESS(" + au.Red(request.Message.ToExecutionAddress).String() + ") FOR VALIDATOR INDEX(" + au.Red(request.Message.ValidatorIndex).String() + "). ")
-	fmt.Println(au.Red("Please read the following carefully"))
-	fmt.Println("This action will allow you to partially withdraw any amount over the 32 staked eth in your validator balance. " +
-		"You will also be entitled to the full withdrawal if your validator has exited. " +
-		"Please navigate to the following website and make sure you understand the current implications " +
-		"of changing your bls withdrawal address to an ethereum address. " +
-		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
-		"You will NOT be able to change the address again once changed. ")
 	_, err := withdrawalPrompt(withdrawalConfirmation, r)
 	if err != nil {
 		return err
@@ -109,8 +109,6 @@ func callWithdrawalEndpoint(ctx context.Context, host string, r io.Reader, reque
 		return errors.Wrap(err, "failed to marshal json")
 	}
 	fullpath := host + basePath + apiPath
-
-	fmt.Printf("path: %s , request: %s\n", fullpath, string(body))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
 	if err != nil {
 		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
@@ -153,7 +151,7 @@ func findWithdrawalFiles(path string) ([]string, error) {
 
 func withdrawalPrompt(confirmationMessage string, r io.Reader) (string, error) {
 	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please reenter the address you'd like to withdraw to"
-	return prompt.ValidatePrompt(r, aurora.NewAurora(true).Red(promptQuestion).String(), func(input string) error {
-		return prompt.ValidatePhrase(input, confirmationMessage)
+	return prompt.ValidatePrompt(r, promptQuestion, func(input string) error {
+		return prompt.ValidatePhrase(strings.ToLower(input), strings.ToLower(confirmationMessage))
 	})
 }
