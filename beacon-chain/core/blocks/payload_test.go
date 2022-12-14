@@ -253,7 +253,7 @@ func Test_IsExecutionBlockCapella(t *testing.T) {
 	require.NoError(t, err)
 	got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 	require.NoError(t, err)
-	require.Equal(t, true, got)
+	require.Equal(t, false, got)
 }
 
 func Test_IsExecutionEnabled(t *testing.T) {
@@ -348,15 +348,6 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			}
 		})
 	}
-}
-func Test_IsExecutionEnabledCapella(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateCapella(t, 1)
-	blk := util.NewBeaconBlockCapella()
-	body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
-	require.NoError(t, err)
-	got, err := blocks.IsExecutionEnabled(st, body)
-	require.NoError(t, err)
-	require.Equal(t, true, got)
 }
 
 func Test_IsExecutionEnabledUsingHeader(t *testing.T) {

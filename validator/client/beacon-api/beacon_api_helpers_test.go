@@ -1,11 +1,10 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
+	"net/url"
 	"testing"
 
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
@@ -52,4 +51,32 @@ func TestBeaconApiHelpers(t *testing.T) {
 			assert.Equal(t, tt.valid, validRoot(tt.input))
 		})
 	}
+}
+
+func TestBeaconApiHelpers_TestUint64ToString(t *testing.T) {
+	const expectedResult = "1234"
+	const val = uint64(1234)
+
+	assert.Equal(t, expectedResult, uint64ToString(val))
+	assert.Equal(t, expectedResult, uint64ToString(types.Slot(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.ValidatorIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.CommitteeIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(types.Epoch(val)))
+}
+
+func TestBuildURL_NoParams(t *testing.T) {
+	wanted := "/aaa/bbb/ccc"
+	actual := buildURL("/aaa/bbb/ccc")
+	assert.Equal(t, wanted, actual)
+}
+
+func TestBuildURL_WithParams(t *testing.T) {
+	params := url.Values{}
+	params.Add("xxxx", "1")
+	params.Add("yyyy", "2")
+	params.Add("zzzz", "3")
+
+	wanted := "/aaa/bbb/ccc?xxxx=1&yyyy=2&zzzz=3"
+	actual := buildURL("/aaa/bbb/ccc", params)
+	assert.Equal(t, wanted, actual)
 }

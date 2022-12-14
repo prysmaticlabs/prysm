@@ -49,6 +49,7 @@ func startNode(ctx *cli.Context) error {
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.BeaconRPCGatewayProviderFlag,
+	flags.BeaconRESTApiProviderFlag,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.DisablePenaltyRewardLogFlag,
@@ -112,11 +113,6 @@ var appFlags = []cli.Flag{
 }
 
 func init() {
-	// Append the Beacon REST API flags
-	if flags.BuiltWithBeaconApi {
-		appFlags = append(appFlags, flags.BeaconRESTApiProviderFlag)
-	}
-
 	appFlags = cmd.WrapFlags(append(appFlags, features.ValidatorFlags...))
 }
 
@@ -125,7 +121,12 @@ func main() {
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more`
 	app.Version = version.Version()
-	app.Action = startNode
+	app.Action = func(ctx *cli.Context) error {
+		if err := startNode(ctx); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		return nil
+	}
 	app.Commands = []*cli.Command{
 		walletcommands.Commands,
 		accountcommands.Commands,

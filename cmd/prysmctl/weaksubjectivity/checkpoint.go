@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,7 +19,12 @@ var checkpointCmd = &cli.Command{
 	Name:    "checkpoint",
 	Aliases: []string{"cpt"},
 	Usage:   "Compute the latest weak subjectivity checkpoint (block_root:epoch) using trusted server data.",
-	Action:  cliActionCheckpoint,
+	Action: func(cliCtx *cli.Context) error {
+		if err := cliActionCheckpoint(cliCtx); err != nil {
+			log.WithError(err).Fatal("Could not perform checkpoint-sync")
+		}
+		return nil
+	},
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:        "beacon-node-host",

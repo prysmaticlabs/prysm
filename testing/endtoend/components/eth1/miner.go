@@ -2,23 +2,24 @@ package eth1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
-	io "github.com/prysmaticlabs/prysm/v3/io/file"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -86,21 +87,24 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 		return nil, errors.New("go-ethereum binary not found")
 	}
 
-	staticGenesis, err := e2e.TestParams.Paths.Eth1Runfile("genesis.json")
+	gethJsonPath := path.Join(path.Dir(binaryPath), "genesis.json")
+	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	log.Infof("eth1 miner genesis timestamp=%d", e2e.TestParams.Eth1GenesisTime)
+	b, err := json.Marshal(gen)
 	if err != nil {
 		return nil, err
 	}
-	genesisPath := path.Join(path.Dir(binaryPath), "genesis.json")
-	if err := io.CopyFile(staticGenesis, genesisPath); err != nil {
-		return nil, errors.Wrapf(err, "error copying %s to %s", staticGenesis, genesisPath)
+	if err := file.WriteFile(gethJsonPath, b); err != nil {
+		return nil, err
 	}
 
-	initCmd := exec.CommandContext(
-		ctx,
-		binaryPath,
-		"init",
-		fmt.Sprintf("--datadir=%s", m.DataDir()),
-		genesisPath) // #nosec G204 -- Safe
+	// write the same thing to the logs dir for inspection
+	gethJsonLogPath := e2e.TestParams.Logfile("genesis.json")
+	if err := file.WriteFile(gethJsonLogPath, b); err != nil {
+		return nil, err
+	}
+
+	initCmd := exec.CommandContext(ctx, binaryPath, "init", fmt.Sprintf("--datadir=%s", m.DataDir()), gethJsonPath) // #nosec G204 -- Safe
 
 	// redirect stderr to a log file
 	initFile, err := helpers.DeleteAndCreatePath(e2e.TestParams.Logfile("eth1-init_miner.log"))
@@ -151,10 +155,10 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	if err != nil {
 		return nil, err
 	}
-	if err = io.CopyFile(keystorePath, m.DataDir("keystore", minerFile)); err != nil {
+	if err = file.CopyFile(keystorePath, m.DataDir("keystore", minerFile)); err != nil {
 		return nil, errors.Wrapf(err, "error copying %s to %s", keystorePath, m.DataDir("keystore", minerFile))
 	}
-	err = io.WriteFile(pwFile, []byte(KeystorePassword))
+	err = file.WriteFile(pwFile, []byte(KeystorePassword))
 	if err != nil {
 		return nil, err
 	}
@@ -169,14 +173,6 @@ func (m *Miner) initAttempt(ctx context.Context, attempt int) (*os.File, error) 
 	log.Infof("Starting eth1 miner, attempt %d, with flags: %s", attempt, strings.Join(args[2:], " "))
 	if err = runCmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start eth1 chain: %w", err)
-	}
-	// check logs for common issues that prevent the EL miner from starting up.
-	if err = helpers.WaitForTextInFile(minerLog, "Commit new sealing work"); err != nil {
-		kerr := runCmd.Process.Kill()
-		if kerr != nil {
-			log.WithError(kerr).Error("error sending kill to failed miner command process")
-		}
-		return nil, fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
 	}
 	if err = helpers.WaitForTextInFile(minerLog, "Started P2P networking"); err != nil {
 		kerr := runCmd.Process.Kill()
@@ -220,54 +216,33 @@ func (m *Miner) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to connect to ipc: %w", err)
 	}
 	web3 := ethclient.NewClient(client)
-	keystorePath, err := e2e.TestParams.Paths.MinerKeyPath()
+	block, err := web3.BlockByNumber(ctx, nil)
 	if err != nil {
 		return err
 	}
-	// this is the key for the miner account. miner account balance is pre-mined in genesis.json.
-	key, err := helpers.KeyFromPath(keystorePath, KeystorePassword)
+	log.Infof("genesis block timestamp=%d", block.Time())
+	eth1BlockHash := block.Hash()
+	e2e.TestParams.Eth1GenesisBlock = block
+	log.Infof("miner says genesis block root=%#x", eth1BlockHash)
+	cAddr := common.HexToAddress(params.BeaconConfig().DepositContractAddress)
+	code, err := web3.CodeAt(ctx, cAddr, nil)
 	if err != nil {
 		return err
 	}
-	// Waiting for the blocks to advance by eth1follow to prevent issues reading the chain.
-	// Note that WaitForBlocks spams transfer transactions (to and from the miner's address) in order to advance.
-	if err = WaitForBlocks(web3, key, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		return fmt.Errorf("unable to advance chain: %w", err)
-	}
-
-	// Time to deploy the contract using the miner's key.
-	txOpts, err := bind.NewKeyedTransactorWithChainID(key.PrivateKey, big.NewInt(NetworkId))
+	log.Infof("contract code size = %d", len(code))
+	depositContractCaller, err := contracts.NewDepositContractCaller(cAddr, web3)
 	if err != nil {
 		return err
 	}
-	nonce, err := web3.PendingNonceAt(ctx, key.Address)
+	dCount, err := depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
+		log.Error("failed to call get_deposit_count method of deposit contract")
 		return err
 	}
-	txOpts.Nonce = big.NewInt(0).SetUint64(nonce)
-	txOpts.Context = ctx
-	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3)
-	if err != nil {
-		return fmt.Errorf("failed to deploy deposit contract: %w", err)
-	}
-	e2e.TestParams.ContractAddress = contractAddr
-
-	// Wait for contract to mine.
-	for pending := true; pending; _, pending, err = web3.TransactionByHash(ctx, tx.Hash()) {
-		if err != nil {
-			return err
-		}
-		time.Sleep(timeGapPerTX)
-	}
-
-	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
-	if err = WaitForBlocks(web3, key, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		return fmt.Errorf("unable to advance chain: %w", err)
-	}
+	log.Infof("deposit contract count=%d", dCount)
 
 	// Mark node as ready.
 	close(m.started)
-
 	return m.cmd.Wait()
 }
 
