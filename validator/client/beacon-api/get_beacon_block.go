@@ -113,9 +113,17 @@ func convertRESTPhase0BlockToProto(block *apimiddleware.BeaconBlockJson) (*ethpb
 		return nil, errors.Wrapf(err, "failed to decode state root `%s`", block.StateRoot)
 	}
 
+	if block.Body == nil {
+		return nil, errors.New("block body is nil")
+	}
+
 	randaoReveal, err := hexutil.Decode(block.Body.RandaoReveal)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode randao reveal `%s`", block.Body.RandaoReveal)
+	}
+
+	if block.Body.Eth1Data == nil {
+		return nil, errors.New("eth1 data is nil")
 	}
 
 	depositRoot, err := hexutil.Decode(block.Body.Eth1Data.DepositRoot)
@@ -188,6 +196,10 @@ func convertRESTPhase0BlockToProto(block *apimiddleware.BeaconBlockJson) (*ethpb
 }
 
 func convertRESTAltairBlockToProto(block *apimiddleware.BeaconBlockAltairJson) (*ethpb.GenericBeaconBlock_Altair, error) {
+	if block.Body == nil {
+		return nil, errors.New("block body is nil")
+	}
+
 	// Call convertRESTPhase0BlockToProto to set the phase0 fields because all the error handling and the heavy lifting
 	// has already been done
 	phase0Block, err := convertRESTPhase0BlockToProto(&apimiddleware.BeaconBlockJson{
@@ -210,6 +222,10 @@ func convertRESTAltairBlockToProto(block *apimiddleware.BeaconBlockAltairJson) (
 		return nil, errors.Wrap(err, "failed to get the phase0 fields of the altair block")
 	}
 
+	if block.Body.SyncAggregate == nil {
+		return nil, errors.New("sync aggregate is nil")
+	}
+
 	syncCommitteeBits, err := hexutil.Decode(block.Body.SyncAggregate.SyncCommitteeBits)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode sync committee bits `%s`", block.Body.SyncAggregate.SyncCommitteeBits)
@@ -217,7 +233,7 @@ func convertRESTAltairBlockToProto(block *apimiddleware.BeaconBlockAltairJson) (
 
 	syncCommitteeSignature, err := hexutil.Decode(block.Body.SyncAggregate.SyncCommitteeSignature)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode sync commitee signature `%s`", block.Body.SyncAggregate.SyncCommitteeSignature)
+		return nil, errors.Wrapf(err, "failed to decode sync committee signature `%s`", block.Body.SyncAggregate.SyncCommitteeSignature)
 	}
 
 	return &ethpb.GenericBeaconBlock_Altair{
@@ -245,9 +261,13 @@ func convertRESTAltairBlockToProto(block *apimiddleware.BeaconBlockAltairJson) (
 }
 
 func convertRESTBellatrixBlockToProto(block *apimiddleware.BeaconBlockBellatrixJson) (*ethpb.GenericBeaconBlock_Bellatrix, error) {
+	if block.Body == nil {
+		return nil, errors.New("block body is nil")
+	}
+
 	// Call convertRESTAltairBlockToProto to set the altair fields because all the error handling and the heavy lifting
 	// has already been done
-	phase0Block, err := convertRESTAltairBlockToProto(&apimiddleware.BeaconBlockAltairJson{
+	altairBlock, err := convertRESTAltairBlockToProto(&apimiddleware.BeaconBlockAltairJson{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    block.ParentRoot,
@@ -265,17 +285,11 @@ func convertRESTBellatrixBlockToProto(block *apimiddleware.BeaconBlockBellatrixJ
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get the phase0 fields of the bellatrix block")
+		return nil, errors.Wrap(err, "failed to get the altair fields of the bellatrix block")
 	}
 
-	syncCommitteeBits, err := hexutil.Decode(block.Body.SyncAggregate.SyncCommitteeBits)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode sync committee bits `%s`", block.Body.SyncAggregate.SyncCommitteeBits)
-	}
-
-	syncCommitteeSignature, err := hexutil.Decode(block.Body.SyncAggregate.SyncCommitteeSignature)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to decode sync commitee signature `%s`", block.Body.SyncAggregate.SyncCommitteeSignature)
+	if block.Body.ExecutionPayload == nil {
+		return nil, errors.New("execution payload is nil")
 	}
 
 	parentHash, err := hexutil.Decode(block.Body.ExecutionPayload.ParentHash)
@@ -350,23 +364,20 @@ func convertRESTBellatrixBlockToProto(block *apimiddleware.BeaconBlockBellatrixJ
 
 	return &ethpb.GenericBeaconBlock_Bellatrix{
 		Bellatrix: &ethpb.BeaconBlockBellatrix{
-			Slot:          phase0Block.Altair.Slot,
-			ProposerIndex: phase0Block.Altair.ProposerIndex,
-			ParentRoot:    phase0Block.Altair.ParentRoot,
-			StateRoot:     phase0Block.Altair.StateRoot,
+			Slot:          altairBlock.Altair.Slot,
+			ProposerIndex: altairBlock.Altair.ProposerIndex,
+			ParentRoot:    altairBlock.Altair.ParentRoot,
+			StateRoot:     altairBlock.Altair.StateRoot,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      phase0Block.Altair.Body.RandaoReveal,
-				Eth1Data:          phase0Block.Altair.Body.Eth1Data,
-				Graffiti:          phase0Block.Altair.Body.Graffiti,
-				ProposerSlashings: phase0Block.Altair.Body.ProposerSlashings,
-				AttesterSlashings: phase0Block.Altair.Body.AttesterSlashings,
-				Attestations:      phase0Block.Altair.Body.Attestations,
-				Deposits:          phase0Block.Altair.Body.Deposits,
-				VoluntaryExits:    phase0Block.Altair.Body.VoluntaryExits,
-				SyncAggregate: &ethpb.SyncAggregate{
-					SyncCommitteeBits:      syncCommitteeBits,
-					SyncCommitteeSignature: syncCommitteeSignature,
-				},
+				RandaoReveal:      altairBlock.Altair.Body.RandaoReveal,
+				Eth1Data:          altairBlock.Altair.Body.Eth1Data,
+				Graffiti:          altairBlock.Altair.Body.Graffiti,
+				ProposerSlashings: altairBlock.Altair.Body.ProposerSlashings,
+				AttesterSlashings: altairBlock.Altair.Body.AttesterSlashings,
+				Attestations:      altairBlock.Altair.Body.Attestations,
+				Deposits:          altairBlock.Altair.Body.Deposits,
+				VoluntaryExits:    altairBlock.Altair.Body.VoluntaryExits,
+				SyncAggregate:     altairBlock.Altair.Body.SyncAggregate,
 				ExecutionPayload: &enginev1.ExecutionPayload{
 					ParentHash:    parentHash,
 					FeeRecipient:  feeRecipient,
