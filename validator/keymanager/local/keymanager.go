@@ -200,9 +200,6 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 
 // Sign signs a message using a validator key.
 func (_ *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
-	defer span.End()
-
 	publicKey := req.PublicKey
 	if publicKey == nil {
 		return nil, errors.New("nil public key in request")
