@@ -319,10 +319,15 @@ func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
 	latestBlockTime := uint64(0)
 	if s.latestEth1Data.BlockTime > followTime {
 		latestBlockTime = s.latestEth1Data.BlockTime - followTime
+		// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+		// we don't want to consider any block before the genesis block.
+		if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+			latestBlockTime = s.latestEth1Data.BlockTime
+		}
 	}
 	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrapf(err, "BlockByTimestamp=%d", latestBlockTime)
 	}
 	return blk.Number.Uint64(), nil
 }
@@ -467,11 +472,12 @@ func (s *Service) handleETH1FollowDistance() {
 	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.processChainStartFromBlockNum(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
-			s.runError = err
+			s.runError = errors.Wrap(err, "processChainStartFromBlockNum")
 			log.Error(err)
 			return
 		}
 	}
+
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
 	// logs for the powchain service to process. Also it is a potential
@@ -481,7 +487,7 @@ func (s *Service) handleETH1FollowDistance() {
 		return
 	}
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {
-		s.runError = err
+		s.runError = errors.Wrap(err, "requestBatchedHeadersAndLogs")
 		log.Error(err)
 		return
 	}
@@ -511,6 +517,7 @@ func (s *Service) initPOWService() {
 			ctx := s.ctx
 			header, err := s.HeaderByNumber(ctx, nil)
 			if err != nil {
+				err = errors.Wrap(err, "HeaderByNumber")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(err, "Unable to retrieve latest execution client header")
 				continue
@@ -523,6 +530,7 @@ func (s *Service) initPOWService() {
 			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
+				err = errors.Wrap(err, "processPastLogs")
 				s.retryExecutionClientConnection(ctx, err)
 				errorLogger(
 					err,
@@ -532,6 +540,7 @@ func (s *Service) initPOWService() {
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
+				err = errors.Wrap(err, "cacheHeadersForEth1DataVote")
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
 					log.WithError(err).Debug("Unable to cache headers for execution client votes")
@@ -550,6 +559,7 @@ func (s *Service) initPOWService() {
 				if genHash != [32]byte{} {
 					genHeader, err := s.HeaderByHash(ctx, genHash)
 					if err != nil {
+						err = errors.Wrapf(err, "HeaderByHash, hash=%#x", genHash)
 						s.retryExecutionClientConnection(ctx, err)
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
 						continue
@@ -558,6 +568,7 @@ func (s *Service) initPOWService() {
 				}
 				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
+					err = errors.Wrap(err, "savePowchainData")
 					s.retryExecutionClientConnection(ctx, err)
 					errorLogger(err, "Unable to save execution client data")
 					continue
@@ -641,11 +652,11 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	// Find the end block to request from.
 	end, err := s.followedBlockHeight(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "followedBlockHeight")
 	}
 	start, err := s.determineEarliestVotingBlock(ctx, end)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "determineEarliestVotingBlock=%d", end)
 	}
 	return s.cacheBlockHeaders(start, end)
 }
@@ -677,7 +688,7 @@ func (s *Service) cacheBlockHeaders(start, end uint64) error {
 				}
 				continue
 			}
-			return err
+			return errors.Wrapf(err, "cacheBlockHeaders, start=%d, end=%d", startReq, endReq)
 		}
 	}
 	return nil
@@ -695,6 +706,11 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 			earliestBlk = followBlock - params.BeaconConfig().Eth1FollowDistance
 		}
 		return earliestBlk, nil
+	}
+	// This should only come into play in testnets - when the chain hasn't advanced past the follow distance,
+	// we don't want to consider any block before the genesis block.
+	if s.latestEth1Data.BlockHeight < params.BeaconConfig().Eth1FollowDistance {
+		return 0, nil
 	}
 	votingTime := slots.VotingPeriodStartTime(genesisTime, currSlot)
 	followBackDist := 2 * params.BeaconConfig().SecondsPerETH1Block * params.BeaconConfig().Eth1FollowDistance

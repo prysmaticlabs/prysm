@@ -145,11 +145,6 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
-	// Delete the processed block attestations from attestation pool.
-	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
-		return err
-	}
-
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
