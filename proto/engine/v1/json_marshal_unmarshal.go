@@ -11,7 +11,9 @@ import (
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // PayloadIDBytes defines a custom type for Payload IDs used by the engine API
@@ -26,10 +28,12 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 // ExecutionBlock is the response kind received by the eth_getBlockByHash and
 // eth_getBlockByNumber endpoints via JSON-RPC.
 type ExecutionBlock struct {
+	Version int
 	gethtypes.Header
 	Hash            common.Hash              `json:"hash"`
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
+	Withdrawals     []*Withdrawal            `json:"withdrawals"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -44,13 +48,22 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	decoded["hash"] = e.Hash.String()
 	decoded["transactions"] = e.Transactions
 	decoded["totalDifficulty"] = e.TotalDifficulty
+
+	if e.Version == version.Capella {
+		decoded["withdrawals"] = e.Withdrawals
+	}
+
 	return json.Marshal(decoded)
 }
 
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
-	type transactionJson struct {
+	type transactionsJson struct {
 		Transactions []*gethtypes.Transaction `json:"transactions"`
 	}
+	type withdrawalsJson struct {
+		Withdrawals []*withdrawalJSON `json:"withdrawals"`
+	}
+
 	if err := e.Header.UnmarshalJSON(enc); err != nil {
 		return err
 	}
@@ -71,6 +84,26 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if !ok {
 		return errors.New("expected `totalDifficulty` field in JSON response")
 	}
+
+	rawWithdrawals, ok := decoded["withdrawals"]
+	if !ok || rawWithdrawals == nil {
+		e.Version = version.Bellatrix
+	} else {
+		e.Version = version.Capella
+		j := &withdrawalsJson{}
+		if err := json.Unmarshal(enc, j); err != nil {
+			return err
+		}
+		ws := make([]*Withdrawal, len(j.Withdrawals))
+		for i, wj := range j.Withdrawals {
+			ws[i], err = wj.ToWithdrawal()
+			if err != nil {
+				return err
+			}
+		}
+		e.Withdrawals = ws
+	}
+
 	rawTxList, ok := decoded["transactions"]
 	if !ok || rawTxList == nil {
 		// Exit early if there are no transactions stored in the json payload.
@@ -80,8 +113,6 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if !ok {
 		return errors.Errorf("expected transaction list to be of a slice interface type.")
 	}
-
-	//
 	for _, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.
@@ -91,7 +122,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	}
 	// If the block contains a list of transactions, we JSON unmarshal
 	// them into a list of geth transaction objects.
-	txJson := &transactionJson{}
+	txJson := &transactionsJson{}
 	if err := json.Unmarshal(enc, txJson); err != nil {
 		return err
 	}
@@ -106,6 +137,70 @@ func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*b = res
+	return nil
+}
+
+type withdrawalJSON struct {
+	Index     *hexutil.Uint64 `json:"index"`
+	Validator *hexutil.Uint64 `json:"validatorIndex"`
+	Address   *common.Address `json:"address"`
+	Amount    string          `json:"amount"`
+}
+
+func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
+	w := &Withdrawal{}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return nil, err
+	}
+	if err := w.UnmarshalJSON(b); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
+func (w *Withdrawal) MarshalJSON() ([]byte, error) {
+	index := hexutil.Uint64(w.WithdrawalIndex)
+	validatorIndex := hexutil.Uint64(w.ValidatorIndex)
+	address := common.BytesToAddress(w.ExecutionAddress)
+	wei := new(big.Int).SetUint64(1000000000)
+	amountWei := new(big.Int).Mul(new(big.Int).SetUint64(w.Amount), wei)
+	return json.Marshal(withdrawalJSON{
+		Index:     &index,
+		Validator: &validatorIndex,
+		Address:   &address,
+		Amount:    hexutil.EncodeBig(amountWei),
+	})
+}
+
+func (w *Withdrawal) UnmarshalJSON(enc []byte) error {
+	dec := withdrawalJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	if dec.Index == nil {
+		return errors.New("missing withdrawal index")
+	}
+	if dec.Validator == nil {
+		return errors.New("missing validator index")
+	}
+	if dec.Address == nil {
+		return errors.New("missing execution address")
+	}
+	*w = Withdrawal{}
+	w.WithdrawalIndex = uint64(*dec.Index)
+	w.ValidatorIndex = types.ValidatorIndex(*dec.Validator)
+	w.ExecutionAddress = dec.Address.Bytes()
+	wei := new(big.Int).SetUint64(1000000000)
+	amountWei, err := hexutil.DecodeBig(dec.Amount)
+	if err != nil {
+		return err
+	}
+	amount := new(big.Int).Div(amountWei, wei)
+	if !amount.IsUint64() {
+		return errors.New("withdrawal amount overflow")
+	}
+	w.Amount = amount.Uint64()
 	return nil
 }
 
