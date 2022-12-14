@@ -70,7 +70,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 			if err := json.Unmarshal(b, &to); err != nil {
 				return errors.Wrap(err, "failed to unmarshal file")
 			}
-			if to == nil || len(to) == 0 {
+			if len(to) == 0 {
 				return errors.New("the list of signed requests is empty")
 			}
 			for _, jsonOb := range to {
