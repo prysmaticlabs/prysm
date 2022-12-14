@@ -283,5 +283,5 @@ func TestActivation_JsonResponseError(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = waitForActivation.Recv()
-	assert.ErrorContains(t, "failed to get validators state", err)
+	assert.ErrorContains(t, "failed to get state validators", err)
 }

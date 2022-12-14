@@ -27,6 +27,7 @@ import (
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -493,7 +494,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 	t.Run("nil block", func(t *testing.T) {
 		service := &Service{}
 
-		_, err := service.ReconstructFullBellatrixBlock(ctx, nil)
+		_, err := service.ReconstructFullBlock(ctx, nil)
 		require.ErrorContains(t, "nil data", err)
 	})
 	t.Run("only blinded block", func(t *testing.T) {
@@ -502,7 +503,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		bellatrixBlock := util.NewBeaconBlockBellatrix()
 		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
 		require.NoError(t, err)
-		_, err = service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		_, err = service.ReconstructFullBlock(ctx, wrapped)
 		require.ErrorContains(t, want, err)
 	})
 	t.Run("pre-merge execution payload", func(t *testing.T) {
@@ -517,7 +518,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		require.NoError(t, err)
 		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
 		require.NoError(t, err)
-		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		reconstructed, err := service.ReconstructFullBlock(ctx, wrapped)
 		require.NoError(t, err)
 		require.DeepEqual(t, wantedWrapped, reconstructed)
 	})
@@ -590,7 +591,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		blindedBlock.Block.Body.ExecutionPayloadHeader = header
 		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
 		require.NoError(t, err)
-		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		reconstructed, err := service.ReconstructFullBlock(ctx, wrapped)
 		require.NoError(t, err)
 
 		got, err := reconstructed.Block().Body().Execution()
@@ -1149,6 +1150,7 @@ func fixtures() map[string]interface{} {
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	executionBlock := &pb.ExecutionBlock{
+		Version: version.Bellatrix,
 		Header: gethtypes.Header{
 			ParentHash:  common.BytesToHash(parent),
 			UncleHash:   common.BytesToHash(sha3Uncles),
@@ -1257,7 +1259,7 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *pb.ExecutionPayload
+		want func() interfaces.ExecutionData
 		err  string
 	}{
 		{
@@ -1267,7 +1269,8 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: []byte("foo"),
 				},
 				block: &pb.ExecutionBlock{
-					Hash: common.BytesToHash([]byte("bar")),
+					Version: version.Bellatrix,
+					Hash:    common.BytesToHash([]byte("bar")),
 				},
 			},
 			err: "does not match execution block hash",
@@ -1279,22 +1282,30 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 					BlockHash: wantedHash[:],
 				},
 				block: &pb.ExecutionBlock{
-					Hash: wantedHash,
+					Version: version.Bellatrix,
+					Hash:    wantedHash,
 				},
 			},
-			want: &pb.ExecutionPayload{
-				BlockHash: wantedHash[:],
+			want: func() interfaces.ExecutionData {
+				p, err := blocks.WrappedExecutionPayload(&pb.ExecutionPayload{
+					BlockHash:    wantedHash[:],
+					Transactions: [][]byte{},
+				})
+				require.NoError(t, err)
+				return p
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrapped, err := blocks.WrappedExecutionPayloadHeader(tt.args.header)
+			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
-			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
-				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			if err != nil {
+				assert.ErrorContains(t, tt.err, err)
+			} else {
+				assert.DeepEqual(t, tt.want(), got)
 			}
-			require.DeepEqual(t, tt.want, got)
 		})
 	}
 }
