@@ -57,8 +57,9 @@ func (m *SparseMerkleTrie) validate() error {
 	if m.depth >= uint(len(m.branches)) {
 		return errors.New("depth is greater than or equal to number of branches")
 	}
-	if m.depth >= 64 {
-		return errors.New("depth exceeds 64") // PowerOf2 would overflow.
+	if m.depth >= 63 {
+		return errors.New("supported merkle trie depth exceeded (max uint64 depth is 63, " +
+			"theoretical max sparse merkle trie depth is 64)") // PowerOf2 would overflow.
 	}
 
 	return nil
@@ -68,6 +69,10 @@ func (m *SparseMerkleTrie) validate() error {
 func GenerateTrieFromItems(items [][]byte, depth uint64) (*SparseMerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
+	}
+	if depth >= 63 {
+		return nil, errors.New("supported merkle trie depth exceeded (max uint64 depth is 63, " +
+			"theoretical max sparse merkle trie depth is 64)") // PowerOf2 would overflow
 	}
 	leaves := items
 	layers := make([][][]byte, depth+1)
