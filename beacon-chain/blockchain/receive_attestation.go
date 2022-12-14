@@ -205,6 +205,11 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
+
+	if err := s.pruneCanonicalAttsFromPool(ctx, newHeadRoot, newHeadBlock); err != nil {
+		return err
+	}
+
 	return nil
 }
 

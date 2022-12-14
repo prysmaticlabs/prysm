@@ -202,10 +202,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
-		return err
-	}
-
 	// Send notification of the processed block to the state feed.
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,

@@ -20,27 +20,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestDeleteAttsInPool(t *testing.T) {
-	r := &Service{
-		cfg: &config{attPool: attestations.NewPool()},
-	}
-
-	att1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
-	att3 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
-	att4 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att1))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att2))
-	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att3))
-	require.NoError(t, r.cfg.attPool.SaveUnaggregatedAttestation(att4))
-
-	// Seen 1, 3 and 4 in block.
-	require.NoError(t, r.deleteAttsInPool([]*ethpb.Attestation{att1, att3, att4}))
-
-	// Only 2 should remain.
-	assert.DeepEqual(t, []*ethpb.Attestation{att2}, r.cfg.attPool.AggregatedAttestations(), "Did not get wanted attestations")
-}
-
 func TestService_beaconBlockSubscriber(t *testing.T) {
 	pooledAttestations := []*ethpb.Attestation{
 		// Aggregated.

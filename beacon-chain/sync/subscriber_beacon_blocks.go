@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,22 +44,4 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return err
 	}
 	return err
-}
-
-// The input attestations are seen by the network, this deletes them from pool
-// so proposers don't include them in a block for the future.
-func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := s.cfg.attPool.DeleteAggregatedAttestation(att); err != nil {
-				return err
-			}
-		} else {
-			// Ideally there's shouldn't be any unaggregated attestation in the block.
-			if err := s.cfg.attPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
