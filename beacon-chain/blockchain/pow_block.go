@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -92,6 +93,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 	if blk == nil {
 		return nil, nil, errors.New("pow block is nil")
 	}
+	blk.Version = version.Bellatrix
 	blkTDBig, err := hexutil.DecodeBig(blk.TotalDifficulty)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not decode merge block total difficulty")
