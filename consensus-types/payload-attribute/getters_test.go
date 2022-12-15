@@ -58,7 +58,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 		{
 			name: "Get withdrawals (capella)",
 			tc: func(t *testing.T) {
-				wd := []*enginev1.Withdrawal{{WithdrawalIndex: 1}, {WithdrawalIndex: 2}, {WithdrawalIndex: 3}}
+				wd := []*enginev1.Withdrawal{{Index: 1}, {Index: 2}, {Index: 3}}
 				a, err := New(&enginev1.PayloadAttributesV2{Withdrawals: wd})
 				require.NoError(t, err)
 				got, err := a.Withdrawals()
@@ -126,7 +126,7 @@ func TestPayloadAttributeGetters(t *testing.T) {
 					Timestamp:             1,
 					PrevRandao:            []byte{1, 2, 3},
 					SuggestedFeeRecipient: []byte{4, 5, 6},
-					Withdrawals:           []*enginev1.Withdrawal{{WithdrawalIndex: 1}, {WithdrawalIndex: 2}, {WithdrawalIndex: 3}},
+					Withdrawals:           []*enginev1.Withdrawal{{Index: 1}, {Index: 2}, {Index: 3}},
 				}
 				a, err := New(p)
 				require.NoError(t, err)

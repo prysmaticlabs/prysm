@@ -23,7 +23,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -234,6 +233,13 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+	capellaBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
+	if ok {
+		if err := bs.submitCapellaBlock(ctx, capellaBlkContainer.CapellaBlock, req.Signature); err != nil {
+			return nil, err
+		}
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -269,97 +275,6 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
 	}
-	root, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
-	}
-	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
-}
-
-// SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-// to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-// successful. The beacon node is expected to integrate the new block into its state, and
-// therefore validate the block internally, however blocks which fail the validation are still
-// broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBlindedBeaconBlockContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
-	defer span.End()
-
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
-	if ok {
-		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-
-	// At the end we check forks that don't have blinded blocks.
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block)
-	if ok {
-		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock)
-	if ok {
-		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
-			return nil, err
-		}
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// SubmitBlindedBlockSSZ instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-// to be included in the beacon chain. The beacon node is not required to validate the signed
-// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-// successful. The beacon node is expected to integrate the new block into its state, and
-// therefore validate the block internally, however blocks which fail the validation are still
-// broadcast but a different status code is returned (202).
-//
-// The provided block must be SSZ-serialized.
-func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlockSSZ")
-	defer span.End()
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
-	}
-	ver := md.Get(versionHeader)
-	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read"+versionHeader+" header")
-	}
-	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
-	forkVer, err := schedule.VersionForName(ver[0])
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not determine fork version: %v", err)
-	}
-	unmarshaler, err := detect.FromForkVersion(forkVer)
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
-	}
-	block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
-	if err != nil {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
-	}
-
-	if block.IsBlinded() {
-		b, err := block.PbBlindedBellatrixBlock()
-		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
-		}
-		bb, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.Block)
-		if err != nil {
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not migrate block: %v", err)
-		}
-		return &emptypb.Empty{}, bs.submitBlindedBellatrixBlock(ctx, bb, b.Signature)
-	}
-
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
@@ -423,128 +338,38 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, err
 	}
 
-	phase0Blk, err := blk.PbPhase0Block()
-	if err == nil {
-		if phase0Blk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v1Blk, err := migration.SignedBeaconBlock(blk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		return &ethpbv2.BlockResponseV2{
-			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.SignedBeaconBlockContainer{
-				Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Blk.Block},
-				Signature: v1Blk.Signature,
-			},
-			ExecutionOptimistic: false,
-		}, nil
+	result, err := getBlockPhase0(blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err == nil {
-		if altairBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		sig := blk.Signature()
-		return &ethpbv2.BlockResponseV2{
-			Version: ethpbv2.Version_ALTAIR,
-			Data: &ethpbv2.SignedBeaconBlockContainer{
-				Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Blk},
-				Signature: sig[:],
-			},
-			ExecutionOptimistic: false,
-		}, nil
+	result, err = getBlockAltair(blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	bellatrixBlk, err := blk.PbBellatrixBlock()
-	if err == nil {
-		if bellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		return &ethpbv2.BlockResponseV2{
-			Version: ethpbv2.Version_BELLATRIX,
-			Data: &ethpbv2.SignedBeaconBlockContainer{
-				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
-				Signature: sig[:],
-			},
-			ExecutionOptimistic: isOptimistic,
-		}, nil
+	result, err = bs.getBlockBellatrix(ctx, blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
-		if blindedBellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not reconstruct full execution payload to create signed beacon block: %v",
-				err,
-			)
-		}
-		bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		return &ethpbv2.BlockResponseV2{
-			Version: ethpbv2.Version_BELLATRIX,
-			Data: &ethpbv2.SignedBeaconBlockContainer{
-				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
-				Signature: sig[:],
-			},
-			ExecutionOptimistic: isOptimistic,
-		}, nil
+	result, err = bs.getBlockCapella(ctx, blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
@@ -559,262 +384,33 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		return nil, err
 	}
 
-	phase0Blk, err := blk.PbPhase0Block()
-	if err == nil {
-		if phase0Blk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		sszBlock, err := signedBeaconBlock.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, ExecutionOptimistic: false, Data: sszBlock}, nil
+	result, err := getSSZBlockPhase0(blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err == nil {
-		if altairBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBeaconBlockAltair{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, ExecutionOptimistic: false, Data: sszData}, nil
+	result, err = getSSZBlockAltair(blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	bellatrixBlk, err := blk.PbBellatrixBlock()
-	if err == nil {
-		if bellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBeaconBlockBellatrix{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+	result, err = bs.getSSZBlockBellatrix(ctx, blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-
-	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
-		if blindedBellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not reconstruct full execution payload to create signed beacon block: %v",
-				err,
-			)
-		}
-		bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBeaconBlockBellatrix{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{
-			Version:             ethpbv2.Version_BELLATRIX,
-			ExecutionOptimistic: isOptimistic,
-			Data:                sszData,
-		}, nil
-	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-
-	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
-}
-
-// GetBlindedBlockSSZ returns the SSZ-serialized version of the blinded beacon block for given block id.
-func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv2.SSZContainer, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlindedBlockSSZ")
-	defer span.End()
-
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
-	err = handleGetBlockError(blk, err)
-	if err != nil {
-		return nil, err
-	}
-
-	phase0Blk, err := blk.PbPhase0Block()
-	if err == nil {
-		if phase0Blk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		sszBlock, err := signedBeaconBlock.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, ExecutionOptimistic: false, Data: sszBlock}, nil
-	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-
-	altairBlk, err := blk.PbAltairBlock()
-	if err == nil {
-		if altairBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBeaconBlockAltair{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, ExecutionOptimistic: false, Data: sszData}, nil
-	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-
-	bellatrixBlk, err := blk.PbBellatrixBlock()
-	if err == nil {
-		if bellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		blindedBlkInterface, err := blk.ToBlinded()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not convert block to blinded block: %v", err)
-		}
-		blindedBellatrixBlock, err := blindedBlkInterface.PbBlindedBellatrixBlock()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlock.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBlindedBeaconBlockBellatrix{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
-	}
-	// ErrUnsupportedGetter means that we have another block type
-	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-
-	if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
-		if blindedBellatrixBlk == nil {
-			return nil, status.Error(codes.Internal, "Nil block")
-		}
-		v2Blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(blindedBellatrixBlk.Block)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-		}
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
-		}
-		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-		}
-		sig := blk.Signature()
-		data := &ethpbv2.SignedBlindedBeaconBlockBellatrix{
-			Message:   v2Blk,
-			Signature: sig[:],
-		}
-		sszData, err := data.MarshalSSZ()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-		}
-		return &ethpbv2.SSZContainer{
-			Version:             ethpbv2.Version_BELLATRIX,
-			ExecutionOptimistic: isOptimistic,
-			Data:                sszData,
-		}, nil
+	result, err = bs.getSSZBlockCapella(ctx, blk)
+	if result != nil {
+		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
@@ -1013,6 +609,386 @@ func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
 	return nil
 }
 
+func getBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+	phase0Blk, err := blk.PbPhase0Block()
+	if err != nil {
+		return nil, err
+	}
+	if phase0Blk == nil {
+		return nil, errNilBlock
+	}
+	v1Blk, err := migration.SignedBeaconBlock(blk)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_PHASE0,
+		Data: &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Blk.Block},
+			Signature: v1Blk.Signature,
+		},
+		ExecutionOptimistic: false,
+	}, nil
+}
+
+func getBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+	altairBlk, err := blk.PbAltairBlock()
+	if err != nil {
+		return nil, err
+	}
+	if altairBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	sig := blk.Signature()
+	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_ALTAIR,
+		Data: &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Blk},
+			Signature: sig[:],
+		},
+		ExecutionOptimistic: false,
+	}, nil
+}
+
+func (bs *Server) getBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+	bellatrixBlk, err := blk.PbBellatrixBlock()
+	if err != nil {
+		// ErrUnsupportedGetter means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
+				if blindedBellatrixBlk == nil {
+					return nil, errNilBlock
+				}
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
+				}
+				bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
+				}
+				v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not convert beacon block")
+				}
+				root, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get block root")
+				}
+				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
+				}
+				sig := blk.Signature()
+				return &ethpbv2.BlockResponseV2{
+					Version: ethpbv2.Version_BELLATRIX,
+					Data: &ethpbv2.SignedBeaconBlockContainer{
+						Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
+						Signature: sig[:],
+					},
+					ExecutionOptimistic: isOptimistic,
+				}, nil
+			}
+			return nil, err
+		}
+		return nil, err
+	}
+
+	if bellatrixBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not convert beacon block")
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
+	}
+	sig := blk.Signature()
+	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_BELLATRIX,
+		Data: &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
+			Signature: sig[:],
+		},
+		ExecutionOptimistic: isOptimistic,
+	}, nil
+}
+
+func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+	capellaBlk, err := blk.PbCapellaBlock()
+	if err != nil {
+		// ErrUnsupportedGetter means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
+				if blindedCapellaBlk == nil {
+					return nil, errNilBlock
+				}
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
+				}
+				capellaBlk, err = signedFullBlock.PbCapellaBlock()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
+				}
+				v2Blk, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlk.Block)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not convert beacon block")
+				}
+				root, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get block root")
+				}
+				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
+				}
+				sig := blk.Signature()
+				return &ethpbv2.BlockResponseV2{
+					Version: ethpbv2.Version_CAPELLA,
+					Data: &ethpbv2.SignedBeaconBlockContainer{
+						Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: v2Blk},
+						Signature: sig[:],
+					},
+					ExecutionOptimistic: isOptimistic,
+				}, nil
+			}
+			return nil, err
+		}
+		return nil, err
+	}
+
+	if capellaBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not convert beacon block")
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
+	}
+	sig := blk.Signature()
+	return &ethpbv2.BlockResponseV2{
+		Version: ethpbv2.Version_CAPELLA,
+		Data: &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: v2Blk},
+			Signature: sig[:],
+		},
+		ExecutionOptimistic: isOptimistic,
+	}, nil
+}
+
+func getSSZBlockPhase0(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	phase0Blk, err := blk.PbPhase0Block()
+	if err != nil {
+		return nil, err
+	}
+	if phase0Blk == nil {
+		return nil, errNilBlock
+	}
+	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	sszBlock, err := signedBeaconBlock.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+	}
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, ExecutionOptimistic: false, Data: sszBlock}, nil
+}
+
+func getSSZBlockAltair(blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	altairBlk, err := blk.PbAltairBlock()
+	if err != nil {
+		return nil, err
+	}
+	if altairBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get signed beacon block")
+	}
+	sig := blk.Signature()
+	data := &ethpbv2.SignedBeaconBlockAltair{
+		Message:   v2Blk,
+		Signature: sig[:],
+	}
+	sszData, err := data.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+	}
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, ExecutionOptimistic: false, Data: sszData}, nil
+}
+
+func (bs *Server) getSSZBlockBellatrix(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	bellatrixBlk, err := blk.PbBellatrixBlock()
+	if err != nil {
+		// ErrUnsupportedGetter means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock(); err == nil {
+				if blindedBellatrixBlk == nil {
+					return nil, errNilBlock
+				}
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
+				}
+				bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
+				}
+				v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not convert signed beacon block")
+				}
+				root, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get block root")
+				}
+				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
+				}
+				sig := blk.Signature()
+				data := &ethpbv2.SignedBeaconBlockBellatrix{
+					Message:   v2Blk,
+					Signature: sig[:],
+				}
+				sszData, err := data.MarshalSSZ()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+				}
+				return &ethpbv2.SSZContainer{
+					Version:             ethpbv2.Version_BELLATRIX,
+					ExecutionOptimistic: isOptimistic,
+					Data:                sszData,
+				}, nil
+			}
+			return nil, err
+		}
+		return nil, err
+	}
+
+	if bellatrixBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not convert signed beacon block")
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
+	}
+	sig := blk.Signature()
+	data := &ethpbv2.SignedBeaconBlockBellatrix{
+		Message:   v2Blk,
+		Signature: sig[:],
+	}
+	sszData, err := data.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+	}
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+}
+
+func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	capellaBlk, err := blk.PbCapellaBlock()
+	if err != nil {
+		// ErrUnsupportedGetter means that we have another block type
+		if errors.Is(err, blocks.ErrUnsupportedGetter) {
+			if blindedCapellaBlk, err := blk.PbBlindedCapellaBlock(); err == nil {
+				if blindedCapellaBlk == nil {
+					return nil, errNilBlock
+				}
+				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
+				}
+				capellaBlk, err = signedFullBlock.PbCapellaBlock()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get signed beacon block")
+				}
+				v2Blk, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlk.Block)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not convert signed beacon block")
+				}
+				root, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not get block root")
+				}
+				isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not check if block is optimistic")
+				}
+				sig := blk.Signature()
+				data := &ethpbv2.SignedBeaconBlockCapella{
+					Message:   v2Blk,
+					Signature: sig[:],
+				}
+				sszData, err := data.MarshalSSZ()
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+				}
+				return &ethpbv2.SSZContainer{
+					Version:             ethpbv2.Version_CAPELLA,
+					ExecutionOptimistic: isOptimistic,
+					Data:                sszData,
+				}, nil
+			}
+			return nil, err
+		}
+		return nil, err
+	}
+
+	if capellaBlk == nil {
+		return nil, errNilBlock
+	}
+	v2Blk, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlk.Block)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not convert signed beacon block")
+	}
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if block is optimistic")
+	}
+	sig := blk.Signature()
+	data := &ethpbv2.SignedBeaconBlockCapella{
+		Message:   v2Blk,
+		Signature: sig[:],
+	}
+	sszData, err := data.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
+	}
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_CAPELLA, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+}
+
 func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.BeaconBlock, sig []byte) error {
 	v1alpha1Blk, err := migration.V1ToV1Alpha1SignedBlock(&ethpbv1.SignedBeaconBlock{Block: phase0Blk, Signature: sig})
 	if err != nil {
@@ -1066,23 +1042,22 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	return bs.submitBlock(ctx, root, wrappedBellatrixBlk)
 }
 
-func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
-	b, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
-		Message:   blindedBellatrixBlk,
-		Signature: sig,
-	})
+func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.BeaconBlockCapella, sig []byte) error {
+	v1alpha1Blk, err := migration.CapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockCapella{Message: capellaBlk, Signature: sig})
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
+		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
-			BlindedBellatrix: b,
-		},
-	})
+	wrappedCapellaBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
+		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
-	return nil
+
+	root, err := capellaBlk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
+	}
+
+	return bs.submitBlock(ctx, root, wrappedCapellaBlk)
 }
 
 func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {

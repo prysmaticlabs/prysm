@@ -672,10 +672,10 @@ func CopyWithdrawal(withdrawal *enginev1.Withdrawal) *enginev1.Withdrawal {
 	}
 
 	return &enginev1.Withdrawal{
-		WithdrawalIndex:  withdrawal.WithdrawalIndex,
-		ValidatorIndex:   withdrawal.ValidatorIndex,
-		ExecutionAddress: bytesutil.SafeCopyBytes(withdrawal.ExecutionAddress),
-		Amount:           withdrawal.Amount,
+		Index:          withdrawal.Index,
+		ValidatorIndex: withdrawal.ValidatorIndex,
+		Address:        bytesutil.SafeCopyBytes(withdrawal.Address),
+		Amount:         withdrawal.Amount,
 	}
 }
 
