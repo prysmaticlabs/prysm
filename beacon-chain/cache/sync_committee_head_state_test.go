@@ -32,6 +32,7 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
+	require.NoError(t, err)
 	capellaState, err := state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
