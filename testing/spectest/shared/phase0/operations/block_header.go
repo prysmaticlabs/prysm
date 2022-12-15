@@ -20,10 +20,6 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-func init() {
-
-}
-
 // RunBlockHeaderTest executes "operations/block_header" tests.
 func RunBlockHeaderTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
