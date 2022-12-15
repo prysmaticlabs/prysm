@@ -239,12 +239,12 @@ type ProduceBlockResponseJson struct {
 }
 
 type ProduceBlockResponseV2Json struct {
-	Version string                      `json:"version"`
+	Version string                      `json:"version" enum:"true"`
 	Data    *BeaconBlockContainerV2Json `json:"data"`
 }
 
 type ProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
@@ -731,7 +731,7 @@ type PeerJson struct {
 }
 
 type VersionJson struct {
-	Version string `json:"version"`
+	Version string `json:"version" enum:"true"`
 }
 
 type WithdrawalJson struct {
@@ -1053,7 +1053,7 @@ func (*SszResponseJson) SSZOptimistic() bool {
 }
 
 type VersionedSSZResponseJson struct {
-	Version             string `json:"version"`
+	Version             string `json:"version" enum:"true"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 	Data                string `json:"data"`
 }

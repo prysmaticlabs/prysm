@@ -451,19 +451,19 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 }
 
 type phase0BlockResponseJson struct {
-	Version             string                          `json:"version"`
+	Version             string                          `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                            `json:"execution_optimistic"`
 }
 
 type altairBlockResponseJson struct {
-	Version             string                                `json:"version"`
+	Version             string                                `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockAltairContainerJson `json:"data"`
 	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
 }
 
 type bellatrixBlockResponseJson struct {
-	Version             string                                   `json:"version"`
+	Version             string                                   `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
@@ -475,13 +475,13 @@ type capellaBlockResponseJson struct {
 }
 
 type bellatrixBlindedBlockResponseJson struct {
-	Version             string                                          `json:"version"`
+	Version             string                                          `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
 }
 
 type capellaBlindedBlockResponseJson struct {
-	Version             string                                        `json:"version"`
+	Version             string                                        `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
 }
@@ -597,22 +597,22 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 }
 
 type phase0StateResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconStateJson `json:"data"`
 }
 
 type altairStateResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconStateAltairJson `json:"data"`
 }
 
 type bellatrixStateResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconStateBellatrixJson `json:"data"`
 }
 
 type capellaStateResponseJson struct {
-	Version string                  `json:"version"`
+	Version string                  `json:"version" enum:"true"`
 	Data    *BeaconStateCapellaJson `json:"data"`
 }
 
@@ -656,22 +656,22 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 }
 
 type phase0ProduceBlockResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconBlockJson `json:"data"`
 }
 
 type altairProduceBlockResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconBlockAltairJson `json:"data"`
 }
 
 type bellatrixProduceBlockResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconBlockBellatrixJson `json:"data"`
 }
 
 type bellatrixProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
 }
 
