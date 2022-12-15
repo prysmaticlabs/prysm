@@ -203,7 +203,16 @@ func NewLightClientUpdateFromJSON(updateJSON *ethrpc.LightClientUpdateJson) (*et
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
 		return nil, err
 	}
+	if update.NextSyncCommittee, err = syncCommitteeFromJSON(updateJSON.NextSyncCommittee); err != nil {
+		return nil, err
+	}
+	if update.NextSyncCommitteeBranch, err = branchFromJSON(updateJSON.NextSyncCommitteeBranch); err != nil {
+		return nil, err
+	}
 	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalityBranch, err = branchFromJSON(updateJSON.FinalityBranch); err != nil {
 		return nil, err
 	}
 	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
@@ -225,6 +234,9 @@ func NewLightClientUpdateFromFinalityUpdateJSON(updateJSON *ethrpc.LightClientFi
 		return nil, err
 	}
 	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalityBranch, err = branchFromJSON(updateJSON.FinalityBranch); err != nil {
 		return nil, err
 	}
 	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
@@ -264,6 +276,9 @@ func NewLightClientFinalityUpdateFromJSON(updateJSON *ethrpc.LightClientFinality
 		return nil, err
 	}
 	if update.FinalizedHeader, err = headerFromJSON(updateJSON.FinalizedHeader); err != nil {
+		return nil, err
+	}
+	if update.FinalityBranch, err = branchFromJSON(updateJSON.FinalityBranch); err != nil {
 		return nil, err
 	}
 	if update.SyncAggregate, err = NewSyncAggregateFromJSON(updateJSON.SyncAggregate); err != nil {
