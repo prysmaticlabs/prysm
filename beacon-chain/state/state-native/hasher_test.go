@@ -464,11 +464,3 @@ func executionPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
 		WithdrawalsRoot:  wr[:],
 	}
 }
-
-func withdrawal() *enginev1.Withdrawal {
-	return &enginev1.Withdrawal{
-		WithdrawalIndex:  123,
-		ExecutionAddress: bytesutil.PadTo([]byte("address"), 20),
-		Amount:           123,
-	}
-}
