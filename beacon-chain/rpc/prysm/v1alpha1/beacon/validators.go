@@ -518,8 +518,8 @@ func (bs *Server) GetValidatorParticipation(
 	}
 	var v []*precompute.Validator
 	var b *precompute.Balance
-	switch beaconState.Version() {
-	case version.Phase0:
+
+	if beaconState.Version() == version.Phase0 {
 		v, b, err = precompute.New(ctx, beaconState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
@@ -528,7 +528,7 @@ func (bs *Server) GetValidatorParticipation(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	case version.Altair, version.Bellatrix:
+	} else if beaconState.Version() >= version.Altair {
 		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
@@ -537,9 +537,10 @@ func (bs *Server) GetValidatorParticipation(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	default:
+	} else {
 		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", beaconState.Version())
 	}
+
 	cp := bs.FinalizationFetcher.FinalizedCheckpt()
 	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,
@@ -678,8 +679,7 @@ func (bs *Server) GetValidatorPerformance(
 		}
 	}
 	var validatorSummary []*precompute.Validator
-	switch headState.Version() {
-	case version.Phase0:
+	if headState.Version() == version.Phase0 {
 		vp, bp, err := precompute.New(ctx, headState)
 		if err != nil {
 			return nil, err
@@ -693,7 +693,7 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, err
 		}
 		validatorSummary = vp
-	case version.Altair, version.Bellatrix:
+	} else if headState.Version() >= version.Altair {
 		vp, bp, err := altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return nil, err
@@ -711,6 +711,8 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, err
 		}
 		validatorSummary = vp
+	} else {
+		return nil, status.Errorf(codes.Internal, "Head state version %d not supported", headState.Version())
 	}
 
 	responseCap := len(req.Indices) + len(req.PublicKeys)
@@ -855,8 +857,7 @@ func (bs *Server) GetIndividualVotes(
 
 	var v []*precompute.Validator
 	var bal *precompute.Balance
-	switch st.Version() {
-	case version.Phase0:
+	if st.Version() == version.Phase0 {
 		v, bal, err = precompute.New(ctx, st)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up pre compute instance: %v", err)
@@ -865,7 +866,7 @@ func (bs *Server) GetIndividualVotes(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	case version.Altair, version.Bellatrix:
+	} else if st.Version() >= version.Altair {
 		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not set up altair pre compute instance: %v", err)
@@ -874,7 +875,7 @@ func (bs *Server) GetIndividualVotes(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not pre compute attestations: %v", err)
 		}
-	default:
+	} else {
 		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", st.Version())
 	}
 

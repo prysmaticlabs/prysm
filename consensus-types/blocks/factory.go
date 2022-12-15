@@ -23,7 +23,8 @@ var (
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
 	ErrNilObject = errors.New("received nil object")
 	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
-	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	ErrNilSignedBeaconBlock        = errors.New("signed beacon block can't be nil")
+	errNonBlindedSignedBeaconBlock = errors.New("can only build signed beacon block from blinded format")
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
@@ -177,14 +178,13 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
+	if !blk.IsBlinded() {
+		return nil, errNonBlindedSignedBeaconBlock
+	}
 	b := blk.Block()
 	payloadHeader, err := b.Body().Execution()
-	switch {
-	case errors.Is(err, ErrUnsupportedGetter):
-		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
-	case err != nil:
+	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload header")
-	default:
 	}
 
 	var wrappedPayload interfaces.ExecutionData
