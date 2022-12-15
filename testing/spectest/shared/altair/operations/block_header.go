@@ -58,7 +58,6 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
 			bodyRoot, err := block.Body.HashTreeRoot()
 			require.NoError(t, err)
-			t.Log("WTF", block.Slot, block.ProposerIndex, block.ParentRoot)
 			beaconState, err := blocks.ProcessBlockHeaderNoVerify(context.Background(), preBeaconState, block.Slot, block.ProposerIndex, block.ParentRoot, bodyRoot[:])
 			if postSSZExists {
 				require.NoError(t, err)
