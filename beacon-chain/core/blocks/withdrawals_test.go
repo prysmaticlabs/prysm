@@ -275,18 +275,18 @@ func TestProcessWithdrawals(t *testing.T) {
 	}
 	fullWithdrawal := func(i types.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
-			WithdrawalIndex:  idx,
-			ValidatorIndex:   i,
-			ExecutionAddress: executionAddress(i),
-			Amount:           withdrawalAmount(i),
+			Index:          idx,
+			ValidatorIndex: i,
+			Address:        executionAddress(i),
+			Amount:         withdrawalAmount(i),
 		}
 	}
 	partialWithdrawal := func(i types.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
-			WithdrawalIndex:  idx,
-			ValidatorIndex:   i,
-			ExecutionAddress: executionAddress(i),
-			Amount:           withdrawalAmount(i) - maxEffectiveBalance,
+			Index:          idx,
+			ValidatorIndex: i,
+			Address:        executionAddress(i),
+			Amount:         withdrawalAmount(i) - maxEffectiveBalance,
 		}
 	}
 	tests := []Test{

@@ -153,10 +153,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(expected))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   3,
-			ExecutionAddress: s.validators[3].WithdrawalCredentials[12:],
-			Amount:           s.balances[3],
+			Index:          0,
+			ValidatorIndex: 3,
+			Address:        s.validators[3].WithdrawalCredentials[12:],
+			Amount:         s.balances[3],
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
@@ -181,10 +181,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(expected))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   3,
-			ExecutionAddress: s.validators[3].WithdrawalCredentials[12:],
-			Amount:           params.BeaconConfig().MinDepositAmount,
+			Index:          0,
+			ValidatorIndex: 3,
+			Address:        s.validators[3].WithdrawalCredentials[12:],
+			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
@@ -212,16 +212,16 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, 2, len(expected))
 
 		withdrawalFull := &enginev1.Withdrawal{
-			WithdrawalIndex:  1,
-			ValidatorIndex:   7,
-			ExecutionAddress: s.validators[7].WithdrawalCredentials[12:],
-			Amount:           s.balances[7],
+			Index:          1,
+			ValidatorIndex: 7,
+			Address:        s.validators[7].WithdrawalCredentials[12:],
+			Amount:         s.balances[7],
 		}
 		withdrawalPartial := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   3,
-			ExecutionAddress: s.validators[3].WithdrawalCredentials[12:],
-			Amount:           params.BeaconConfig().MinDepositAmount,
+			Index:          0,
+			ValidatorIndex: 3,
+			Address:        s.validators[3].WithdrawalCredentials[12:],
+			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawalPartial, expected[0])
 		require.DeepEqual(t, withdrawalFull, expected[1])
@@ -246,10 +246,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   0,
-			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
-			Amount:           1,
+			Index:          0,
+			ValidatorIndex: 0,
+			Address:        s.validators[0].WithdrawalCredentials[12:],
+			Amount:         1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
@@ -273,10 +273,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   0,
-			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
-			Amount:           params.BeaconConfig().MaxEffectiveBalance,
+			Index:          0,
+			ValidatorIndex: 0,
+			Address:        s.validators[0].WithdrawalCredentials[12:],
+			Amount:         params.BeaconConfig().MaxEffectiveBalance,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
@@ -300,10 +300,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxWithdrawalsPerPayload, uint64(len(expected)))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   0,
-			ExecutionAddress: s.validators[0].WithdrawalCredentials[12:],
-			Amount:           params.BeaconConfig().MaxEffectiveBalance + 1,
+			Index:          0,
+			ValidatorIndex: 0,
+			Address:        s.validators[0].WithdrawalCredentials[12:],
+			Amount:         params.BeaconConfig().MaxEffectiveBalance + 1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 	})

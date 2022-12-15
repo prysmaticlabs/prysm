@@ -1243,9 +1243,9 @@ func getFields() fields {
 		},
 		Withdrawals: []*enginev1.Withdrawal{
 			{
-				WithdrawalIndex:  128,
-				ExecutionAddress: b20,
-				Amount:           128,
+				Index:   128,
+				Address: b20,
+				Amount:  128,
 			},
 		},
 	}
