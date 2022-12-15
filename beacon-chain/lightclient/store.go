@@ -105,7 +105,7 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	if err != nil {
 		panic(err)
 	}
-	if trustedBlockRoot == bootstrapRoot {
+	if trustedBlockRoot != bootstrapRoot {
 		return nil, errors.New("trusted block root does not match bootstrap header")
 	}
 	root, err := hashTreeRoot(bootstrap.CurrentSyncCommittee)
