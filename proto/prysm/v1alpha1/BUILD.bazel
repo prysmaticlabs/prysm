@@ -84,6 +84,7 @@ ssz_gen_marshal(
         "ContributionAndProof",
         "SignedContributionAndProof",
         "BeaconBlocksByRangeRequest",
+        "BlobsSidecarsByRangeRequest",
         "ENRForkID",
         "MetaDataV0",
         "MetaDataV1",

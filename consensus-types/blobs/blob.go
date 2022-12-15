@@ -1,11 +1,14 @@
 package blobs
 
 import (
+	"fmt"
+
 	"github.com/protolambda/go-kzg/eth"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 )
 
 type commitmentSequenceImpl [][]byte
@@ -50,5 +53,14 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 		Blobs:              BlobsSequenceImpl(sidecar.Blobs),
 		KZGAggregatedProof: eth.KZGProof(bytesutil.ToBytes48(sidecar.AggregatedProof)),
 	}
+	log.WithFields(log.Fields{
+		"slot":            slot,
+		"root":            fmt.Sprintf("%#x", root),
+		"commitments":     len(commitments),
+		"sidecarSlot":     sidecar.BeaconBlockSlot,
+		"sidecarRoot":     fmt.Sprintf("%#x", sidecar.BeaconBlockRoot),
+		"sidecarBlobs":    len(sidecar.Blobs),
+		"aggregatedProof": fmt.Sprintf("%#x", sidecar.AggregatedProof),
+	}).Infof("Validating blobs sidecar for slot %d", slot)
 	return eth.ValidateBlobsSidecar(eth.Slot(slot), root, commitmentSequenceImpl(commitments), kzgSidecar)
 }

@@ -318,7 +318,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blockRoots[i] = blkRoot
 		blkSlot := b.Block().Slot()
-		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), types.Epoch(blkSlot)) {
+		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
 			blob, ok := blobs[b.Block().Slot()]
 			if !ok {
 				return fmt.Errorf("missing sidecar blob for slot %d", b.Block().Slot())

@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -135,6 +136,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// Set execution data. New in Bellatrix
+	var bundle *enginev1.BlobsBundle
+	var executionData interfaces.ExecutionData
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		fallBackToLocal := true
 		canUseBuilder, err := vs.canUseBuilder(ctx, req.Slot, idx)
@@ -164,7 +167,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 					return nil, errors.Wrap(err, "could not set execution payload")
 				}
 			default:
-				executionData, bundle, err := vs.getExecutionPayloadV2AndBlobsBundleV1(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+				executionData, bundle, err = vs.getExecutionPayloadV2AndBlobsBundleV1(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get execution payload")
 				}
@@ -174,16 +177,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 				if err := blk.Body().SetBlobKzgCommitments(bundle.KzgCommitments); err != nil {
 					return nil, errors.Wrap(err, "could not set blob kzg commitments")
 				}
-				aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(bundle.Blobs))
-				if err != nil {
-					return nil, fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
-				}
-				vs.BlobsCache.Put(&ethpb.BlobsSidecar{
-					BeaconBlockRoot: bundle.BlockHash,
-					BeaconBlockSlot: req.Slot,
-					Blobs:           bundle.Blobs,
-					AggregatedProof: aggregatedProof[:],
-				})
 			}
 
 		}
@@ -209,6 +202,23 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.SetStateRoot(sr)
+
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs.BlobsSequenceImpl(bundle.Blobs))
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
+		}
+		r, err := blk.HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not tree hash final block: %v", err)
+		}
+		vs.BlobsCache.Put(&ethpb.BlobsSidecar{
+			BeaconBlockRoot: r[:],
+			BeaconBlockSlot: req.Slot,
+			Blobs:           bundle.Blobs,
+			AggregatedProof: aggregatedProof[:],
+		})
+	}
 
 	pb, err := blk.Proto()
 	if err != nil {

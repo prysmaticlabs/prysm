@@ -20,7 +20,7 @@ const defaultBurstLimit = 5
 const leakyBucketPeriod = 1 * time.Second
 
 // Only allow in 2 batches per minute.
-const blockBucketPeriod = 30 * time.Second
+const blockBucketPeriod = 5 * time.Second
 
 // Dummy topic to validate all incoming rpc requests.
 const rpcLimiterTopic = "rpc-limiter-topic"
