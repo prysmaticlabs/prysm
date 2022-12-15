@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -345,7 +344,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 	}{}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
@@ -366,7 +365,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	} else {
 		endpoint.PostRequest = &SignedBlindedBeaconBlockCapellaContainerJson{}
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
 }
 
