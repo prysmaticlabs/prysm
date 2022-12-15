@@ -506,7 +506,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if blindedBellatrixBlk == nil {
 			return nil, status.Error(codes.Internal, "Nil block")
 		}
-		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -641,7 +641,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if blindedBellatrixBlk == nil {
 			return nil, status.Error(codes.Internal, "Nil block")
 		}
-		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
