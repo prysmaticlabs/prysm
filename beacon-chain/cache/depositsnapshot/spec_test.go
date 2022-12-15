@@ -210,12 +210,12 @@ func stringToUint64(s string) (uint64, error) {
 
 func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]byte {
 	root := leaf
-	for i, leaf := range branch {
+	for i, l := range branch {
 		ithBit := (index >> i) & 0x1
 		if ithBit == 1 {
-			root = sha256.Sum256(append(leaf[:], root[:]...))
+			root = sha256.Sum256(append(l[:], root[:]...))
 		} else {
-			root = sha256.Sum256(append(root[:], leaf[:]...))
+			root = sha256.Sum256(append(root[:], l[:]...))
 		}
 	}
 	return root
@@ -295,7 +295,7 @@ func TestFinalization(t *testing.T) {
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
 	fullTreeCopy := New()
-	for _, c := range testCases {
+	for _, c := range testCases[:128] {
 		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
 		assert.NoError(t, err)
 	}
