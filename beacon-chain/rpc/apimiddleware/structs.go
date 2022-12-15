@@ -95,11 +95,13 @@ type RandaoResponseJson struct {
 type BlockHeadersResponseJson struct {
 	Data                []*BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
 }
 
 type BlockHeaderResponseJson struct {
 	Data                *BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
+	Finalized           bool                      `json:"finalized"`
 }
 
 type BlockResponseJson struct {
@@ -121,11 +123,13 @@ type BlindedBlockResponseJson struct {
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type BlockAttestationsResponseJson struct {
 	Data                []*AttestationJson `json:"data"`
 	ExecutionOptimistic bool               `json:"execution_optimistic"`
+	Finalized           bool               `json:"finalized"`
 }
 
 type AttestationsPoolResponseJson struct {
