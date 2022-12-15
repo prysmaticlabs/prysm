@@ -7,7 +7,6 @@ import (
 	"math/big"
 	neturl "net/url"
 	"strconv"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -19,7 +18,7 @@ import (
 )
 
 type abstractProduceBlockResponseJson struct {
-	Version string          `json:"version"`
+	Version string          `json:"version" enum:"true"`
 	Data    json.RawMessage `json:"data"`
 }
 
@@ -46,10 +45,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(slot types.Slot, randaoReveal [
 
 	response := &ethpb.GenericBeaconBlock{}
 
-	// At the moment, the prysm beacon node returns PHASE0, ALTAIR and BELLATRIX instead of the lowercase version as
-	// outlined in the spec, so handle both lowercase and uppercase to be compatible with all beacon nodes implementations
-	// TODO: remove the ToLower check once the Prysm beacon node returns lowercase versions
-	switch strings.ToLower(produceBlockResponseJson.Version) {
+	switch produceBlockResponseJson.Version {
 	case "phase0":
 		jsonPhase0Block := apimiddleware.BeaconBlockJson{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {

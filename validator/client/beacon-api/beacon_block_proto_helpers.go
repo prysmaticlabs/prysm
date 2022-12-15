@@ -189,7 +189,7 @@ func convertAttestationsToProto(jsonAttestations []*apimiddleware.AttestationJso
 
 		signature, err := hexutil.Decode(jsonAttestation.Signature)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get attestation signature `%s`", jsonAttestation.Signature)
+			return nil, errors.Wrapf(err, "failed to decode attestation signature `%s`", jsonAttestation.Signature)
 		}
 
 		attestations[index] = &ethpb.Attestation{

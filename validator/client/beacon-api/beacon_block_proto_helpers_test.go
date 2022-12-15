@@ -515,7 +515,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 		},
 		{
 			name:                 "bad signature",
-			expectedErrorMessage: "failed to get attestation signature `bar`",
+			expectedErrorMessage: "failed to decode attestation signature `bar`",
 			generateInput: func() []*apimiddleware.AttestationJson {
 				input := generateAttestations()
 				input[0].Signature = "bar"
