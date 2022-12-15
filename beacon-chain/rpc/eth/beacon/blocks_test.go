@@ -2121,12 +2121,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
@@ -2227,12 +2229,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               blk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
@@ -2334,12 +2338,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               blk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
@@ -2442,12 +2448,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
