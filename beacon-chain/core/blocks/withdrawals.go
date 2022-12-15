@@ -148,7 +148,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}
 		nextValidatorIndex += types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
-		nextValidatorIndex = types.ValidatorIndex(nextValidatorIndex % types.ValidatorIndex(st.NumValidators()))
+		nextValidatorIndex = nextValidatorIndex % types.ValidatorIndex(st.NumValidators())
 	} else {
 		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
 		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
