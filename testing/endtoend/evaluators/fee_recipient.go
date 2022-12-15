@@ -70,7 +70,10 @@ func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn)
 	for _, ctr := range blks.BlockContainers {
 		if fr := ctr.GetBellatrixBlock(); fr != nil {
 			var account common.Address
-
+			// Ignore genesis block here.
+			if fr.Block.Slot == 0 {
+				continue
+			}
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
 			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
 				account = common.BytesToAddress(fr)

@@ -1,8 +1,9 @@
 package params
 
 const (
-	altairE2EForkEpoch    = 0
-	bellatrixE2EForkEpoch = 0
+	AltairE2EForkEpoch    = 0
+	BellatrixE2EForkEpoch = 0
+	CapellaE2EForkEpoch   = 2
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -32,8 +33,9 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "0"
@@ -71,8 +73,9 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "0"

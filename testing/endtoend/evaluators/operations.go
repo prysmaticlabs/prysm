@@ -422,6 +422,14 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 			b := blk.GetBlindedBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_CapellaBlock:
+			b := blk.GetCapellaBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_BlindedCapellaBlock:
+			b := blk.GetBlindedCapellaBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}
