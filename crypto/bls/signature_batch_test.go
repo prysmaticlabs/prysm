@@ -677,7 +677,7 @@ func messageBytes(message string) [32]byte {
 func createDescriptions(length int) []string {
 	desc := make([]string, length)
 	for i := 0; i < length; i++ {
-		desc = append(desc, UnknownSignature)
+		desc = append(desc, "test signature")
 	}
 	return desc
 }

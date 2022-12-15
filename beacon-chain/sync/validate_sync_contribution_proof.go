@@ -239,7 +239,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 			Messages:     [][32]byte{root},
 			PublicKeys:   []bls.PublicKey{publicKey},
 			Signatures:   [][]byte{m.Signature},
-			Descriptions: []string{bls.ContributionSignature},
+			Descriptions: []string{signing.ContributionSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 	}
@@ -296,7 +296,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 			Messages:     [][32]byte{sigRoot},
 			PublicKeys:   []bls.PublicKey{aggKey},
 			Signatures:   [][]byte{m.Message.Contribution.Signature},
-			Descriptions: []string{bls.SyncAggregateSignature},
+			Descriptions: []string{signing.SyncAggregateSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 	}
@@ -408,7 +408,7 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 		Messages:     [][32]byte{root},
 		PublicKeys:   []bls.PublicKey{publicKey},
 		Signatures:   [][]byte{m.SelectionProof},
-		Descriptions: []string{bls.SyncSelectionProof},
+		Descriptions: []string{signing.SyncSelectionProof},
 	}
 	valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
 	if err != nil {

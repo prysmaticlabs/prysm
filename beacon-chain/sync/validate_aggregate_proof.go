@@ -302,7 +302,7 @@ func validateSelectionIndex(
 		Signatures:   [][]byte{proof},
 		PublicKeys:   []bls.PublicKey{publicKey},
 		Messages:     [][32]byte{root},
-		Descriptions: []string{bls.SelectionProof},
+		Descriptions: []string{signing.SelectionProof},
 	}, nil
 }
 
@@ -330,6 +330,6 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		Signatures:   [][]byte{a.Signature},
 		PublicKeys:   []bls.PublicKey{publicKey},
 		Messages:     [][32]byte{root},
-		Descriptions: []string{bls.AggregatorSignature},
+		Descriptions: []string{signing.AggregatorSignature},
 	}, nil
 }

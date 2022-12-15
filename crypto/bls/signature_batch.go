@@ -7,6 +7,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AggregatedSignature represents aggregated signature produced by AggregateBatch()
+const AggregatedSignature = "bls aggregated signature"
+
 // SignatureBatch refers to the defined set of
 // signatures and its respective public keys and
 // messages required to verify it.
