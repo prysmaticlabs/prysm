@@ -100,6 +100,15 @@ func ToBytes4(x []byte) [4]byte {
 	return y
 }
 
+// ToBytes20 is a convenience method for converting a byte slice to a fix
+// sized 20 byte array. This method will truncate the input if it is larger
+// than 20 bytes.
+func ToBytes20(x []byte) [20]byte {
+	var y [20]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBytes32 is a convenience method for converting a byte slice to a fix
 // sized 32 byte array. This method will truncate the input if it is larger
 // than 32 bytes.
