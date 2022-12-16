@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 type ConfigJSON struct {
@@ -88,16 +89,28 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	config.CapellaForkEpoch = types.Epoch(capellaForkEpoch)
+	if config.CapellaForkVersion, err = hexutil.Decode(configJSON.CapellaForkVersion); err != nil {
+		return err
+	}
 	bellatrixForkEpoch, err := strconv.ParseUint(configJSON.BellatrixForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
 	config.BellatrixForkEpoch = types.Epoch(bellatrixForkEpoch)
+	if config.BellatrixForkVersion, err = hexutil.Decode(configJSON.BellatrixForkVersion); err != nil {
+		return err
+	}
 	altairForkEpoch, err := strconv.ParseUint(configJSON.AltairForkEpoch, 10, 64)
 	if err != nil {
 		return err
 	}
 	config.AltairForkEpoch = types.Epoch(altairForkEpoch)
+	if config.AltairForkVersion, err = hexutil.Decode(configJSON.AltairForkVersion); err != nil {
+		return err
+	}
+	if config.GenesisForkVersion, err = hexutil.Decode(configJSON.GenesisForkVersion); err != nil {
+		return err
+	}
 	if config.MinSyncCommitteeParticipants, err = strconv.ParseUint(configJSON.MinSyncCommitteeParticipants, 10,
 		64); err != nil {
 		return err
@@ -107,6 +120,11 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 		return err
 	}
 	config.GenesisSlot = types.Slot(genesisSlot)
+	domainSyncCommittee, err := hexutil.Decode(configJSON.DomainSyncCommittee)
+	if err != nil {
+		return err
+	}
+	config.DomainSyncCommittee = bytesutil.ToBytes4(domainSyncCommittee)
 	slotsPerEpoch, err := strconv.ParseUint(configJSON.SlotsPerEpoch, 10, 64)
 	if err != nil {
 		return err
