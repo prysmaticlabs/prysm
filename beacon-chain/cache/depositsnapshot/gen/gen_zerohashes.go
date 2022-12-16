@@ -56,11 +56,14 @@ func main() {
 	}
 	defer file.Close()
 
-	tmpl.Execute(file, struct {
+	err = tmpl.Execute(file, struct {
 		Package    string
 		Zerohashes [][32]byte
 	}{
 		Package:    "depositsnapshot",
 		Zerohashes: zerohashes,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
