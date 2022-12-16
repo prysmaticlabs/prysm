@@ -454,3 +454,9 @@ func LittleEndianBytesToBigInt(bytes []byte) *big.Int {
 	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
 	return new(big.Int).SetBytes(ReverseByteOrder(bytes))
 }
+
+// BigIntToLittleEndianBytes takes a big integer and returns its bytes stored as little-endian
+func BigIntToLittleEndianBytes(bigInt *big.Int) []byte {
+	// big.Int.Bytes() returns bytes in big-endian order, so we need to reverse the byte order
+	return ReverseByteOrder(bigInt.Bytes())
+}
