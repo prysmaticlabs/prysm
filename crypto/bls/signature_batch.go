@@ -156,12 +156,12 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 // reduce the number of pairings required when we finally verify the
 // whole batch.
 func (s *SignatureBatch) AggregateBatch() (*SignatureBatch, error) {
-	if len(s.Signatures) == 0 || len(s.PublicKeys) == 0 || len(s.Messages) == 0 {
-		return s, nil
+	if len(s.Signatures) != len(s.PublicKeys) || len(s.Signatures) != len(s.Messages) || len(s.Signatures) != len(s.Descriptions) {
+		return s, errors.Errorf("mismatch number of signatures, publickeys, messages and descriptions in signature batch. "+
+			"Signatures %d, Public Keys %d , Messages %d, Descriptions %d", len(s.Signatures), len(s.PublicKeys), len(s.Messages), len(s.Descriptions))
 	}
-	if len(s.Signatures) != len(s.PublicKeys) || len(s.Signatures) != len(s.Messages) {
-		return s, errors.Errorf("mismatch number of signatures, publickeys and messages in signature batch. "+
-			"Signatures %d, Public Keys %d , Messages %d", s.Signatures, s.PublicKeys, s.Messages)
+	if len(s.Signatures) == 0 {
+		return s, nil
 	}
 	msgMap := make(map[[32]byte]*SignatureBatch)
 

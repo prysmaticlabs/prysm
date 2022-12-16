@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
+const TestSignature = "test signature"
+
 func TestCopySignatureSet(t *testing.T) {
 	t.Run("blst", func(t *testing.T) {
 		key, err := RandKey()
@@ -395,6 +397,32 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "mismatch number of signatures and messages in batch",
+			batchCreator: func(t *testing.T) (*SignatureBatch, *SignatureBatch) {
+				key1 := keys[0]
+				key2 := keys[1]
+				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
+				sig1 := key1.Sign(msg[:])
+				sig2 := key2.Sign(msg[:])
+				signatures := [][]byte{sig1.Marshal(), sig2.Marshal()}
+				pubs := []common.PublicKey{key1.PublicKey(), key2.PublicKey()}
+				messages := [][32]byte{msg}
+				descs := createDescriptions(2)
+				return &SignatureBatch{
+						Signatures:   signatures,
+						PublicKeys:   pubs,
+						Messages:     messages,
+						Descriptions: descs,
+					}, &SignatureBatch{
+						Signatures:   signatures,
+						PublicKeys:   pubs,
+						Messages:     messages,
+						Descriptions: descs,
+					}
+			},
+			wantErr: true,
+		},
+		{
 			name: "valid signatures in batch",
 			batchCreator: func(t *testing.T) (*SignatureBatch, *SignatureBatch) {
 				chosenKeys := keys[:20]
@@ -421,7 +449,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 						Signatures:   [][]byte{aggSig.Marshal()},
 						PublicKeys:   []PublicKey{aggPub},
 						Messages:     [][32]byte{msg},
-						Descriptions: createDescriptions(1),
+						Descriptions: createDescriptions(1, AggregatedSignature),
 					}
 			},
 			wantErr: false,
@@ -498,7 +526,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 						Signatures:   [][]byte{aggSig1.Marshal(), aggSig2.Marshal(), aggSig3.Marshal()},
 						PublicKeys:   []PublicKey{aggPub1, aggPub2, aggPub3},
 						Messages:     [][32]byte{msg, msg1, msg2},
-						Descriptions: createDescriptions(3),
+						Descriptions: createDescriptions(3, AggregatedSignature),
 					}
 			},
 			wantErr: false,
@@ -581,7 +609,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 						Signatures:   [][]byte{aggSig1.Marshal(), signatures[5], aggSig2.Marshal(), signatures[15], aggSig3.Marshal(), signatures[25]},
 						PublicKeys:   []PublicKey{aggPub1, pubs[5], aggPub2, pubs[15], aggPub3, pubs[25]},
 						Messages:     [][32]byte{msg, messages[5], msg1, messages[15], msg2, messages[25]},
-						Descriptions: createDescriptions(6),
+						Descriptions: []string{AggregatedSignature, TestSignature, AggregatedSignature, TestSignature, AggregatedSignature, TestSignature},
 					}
 			},
 			wantErr: false,
@@ -609,6 +637,9 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.Messages, output.Messages) {
 				t.Errorf("AggregateBatch() Messages got = %v, want %v", got.Messages, output.Messages)
+			}
+			if !reflect.DeepEqual(got.Descriptions, output.Descriptions) {
+				t.Errorf("AggregateBatch() Descriptions got = %v, want %v", got.Descriptions, output.Descriptions)
 			}
 		})
 	}
@@ -674,10 +705,14 @@ func messageBytes(message string) [32]byte {
 	return bytes
 }
 
-func createDescriptions(length int) []string {
+func createDescriptions(length int, text ...string) []string {
 	desc := make([]string, length)
-	for i := 0; i < length; i++ {
-		desc = append(desc, "test signature")
+	for i := range desc {
+		if len(text) > 0 {
+			desc[i] = text[0]
+		} else {
+			desc[i] = TestSignature
+		}
 	}
 	return desc
 }
