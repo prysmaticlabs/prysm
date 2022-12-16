@@ -39,6 +39,6 @@ type Server struct {
 	V1Alpha1ValidatorServer       *v1alpha1validator.Server
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
-	HeadUpdater                   blockchain.HeadUpdater
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	FinalizationFetcher           blockchain.FinalizationFetcher
 }

@@ -289,113 +289,108 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	require.NoError(t, err)
 	headBlock := blkContainers[len(blkContainers)-1]
 
-	b2 := util.NewBeaconBlock()
-	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
-	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
-	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-	require.NoError(t, err)
+	t.Run("get header", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+		}
 
-	mockChainService := &mock.ChainService{
-		DB:                  beaconDB,
-		Block:               wsb,
-		Root:                headBlock.BlockRoot,
-		FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-	}
-	bs := &Server{
-		BeaconDB:              beaconDB,
-		ChainInfoFetcher:      mockChainService,
-		HeadFetcher:           mockChainService,
-		OptimisticModeFetcher: mockChainService,
-	}
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    *ethpbalpha.SignedBeaconBlock
+			wantErr bool
+		}{
+			{
+				name:    "slot",
+				blockID: []byte("10"),
+				want:    blkContainers[10].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "canonical",
+				blockID: []byte("30"),
+				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    genBlk,
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    genBlk,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{
+					BlockId: tt.blockID,
+				})
+				if !tt.wantErr {
+					require.NoError(t, err)
+				} else {
+					require.NotEqual(t, err, nil)
+					return
+				}
 
-	tests := []struct {
-		name    string
-		blockID []byte
-		want    *ethpbalpha.SignedBeaconBlock
-		wantErr bool
-	}{
-		{
-			name:    "slot",
-			blockID: []byte("30"),
-			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "root",
-			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "canonical",
-			blockID: []byte("30"),
-			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "genesis",
-			blockID: []byte("genesis"),
-			want:    genBlk,
-		},
-		{
-			name:    "genesis root",
-			blockID: root[:],
-			want:    genBlk,
-		},
-		{
-			name:    "head",
-			blockID: []byte("head"),
-			want:    headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "finalized",
-			blockID: []byte("finalized"),
-			want:    blkContainers[64].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-		},
-		{
-			name:    "no block",
-			blockID: []byte("105"),
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{
-				BlockId: tt.blockID,
-			})
-			if !tt.wantErr {
+				expectedBodyRoot, err := tt.want.Block.Body.HashTreeRoot()
 				require.NoError(t, err)
-			} else {
-				require.NotEqual(t, err, nil)
-				return
-			}
+				expectedHeader := &ethpbv1.BeaconBlockHeader{
+					Slot:          tt.want.Block.Slot,
+					ProposerIndex: tt.want.Block.ProposerIndex,
+					ParentRoot:    tt.want.Block.ParentRoot,
+					StateRoot:     make([]byte, 32),
+					BodyRoot:      expectedBodyRoot[:],
+				}
+				expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+				require.NoError(t, err)
+				headerRoot, err := header.Data.Header.Message.HashTreeRoot()
+				require.NoError(t, err)
+				assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
 
-			expectedBodyRoot, err := tt.want.Block.Body.HashTreeRoot()
-			require.NoError(t, err)
-			expectedHeader := &ethpbv1.BeaconBlockHeader{
-				Slot:          tt.want.Block.Slot,
-				ProposerIndex: tt.want.Block.ProposerIndex,
-				ParentRoot:    tt.want.Block.ParentRoot,
-				StateRoot:     make([]byte, 32),
-				BodyRoot:      expectedBodyRoot[:],
-			}
-			expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
-			require.NoError(t, err)
-			headerRoot, err := header.Data.Header.Message.HashTreeRoot()
-			require.NoError(t, err)
-			assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
-
-			assert.Equal(t, tt.want.Block.Slot, header.Data.Header.Message.Slot)
-			assert.DeepEqual(t, tt.want.Block.StateRoot, header.Data.Header.Message.StateRoot)
-			assert.DeepEqual(t, tt.want.Block.ParentRoot, header.Data.Header.Message.ParentRoot)
-			expectedRoot, err := tt.want.Block.Body.HashTreeRoot()
-			require.NoError(t, err)
-			assert.DeepEqual(t, expectedRoot[:], header.Data.Header.Message.BodyRoot)
-			assert.Equal(t, tt.want.Block.ProposerIndex, header.Data.Header.Message.ProposerIndex)
-		})
-	}
+				assert.Equal(t, tt.want.Block.Slot, header.Data.Header.Message.Slot)
+				assert.DeepEqual(t, tt.want.Block.StateRoot, header.Data.Header.Message.StateRoot)
+				assert.DeepEqual(t, tt.want.Block.ParentRoot, header.Data.Header.Message.ParentRoot)
+				expectedRoot, err := tt.want.Block.Body.HashTreeRoot()
+				require.NoError(t, err)
+				assert.DeepEqual(t, expectedRoot[:], header.Data.Header.Message.BodyRoot)
+				assert.Equal(t, tt.want.Block.ProposerIndex, header.Data.Header.Message.ProposerIndex)
+			})
+		}
+	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
@@ -406,16 +401,51 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: []byte("head")})
 		require.NoError(t, err)
 		assert.Equal(t, true, header.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
+				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: blkContainers[32].BlockRoot})
+			require.NoError(t, err)
+			assert.Equal(t, true, header.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: blkContainers[64].BlockRoot})
+			require.NoError(t, err)
+			assert.Equal(t, false, header.Finalized)
+		})
 	})
 }
 
@@ -425,100 +455,105 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
-	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-	require.NoError(t, err)
-	mockChainFetcher := &mock.ChainService{
-		DB:                  beaconDB,
-		Block:               wsb,
-		Root:                headBlock.BlockRoot,
-		FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-	}
-	bs := &Server{
-		BeaconDB:              beaconDB,
-		ChainInfoFetcher:      mockChainFetcher,
-		HeadFetcher:           mockChainFetcher,
-		OptimisticModeFetcher: mockChainFetcher,
-	}
 
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 30
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b1)
 	b2 := util.NewBeaconBlock()
 	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b2)
 	b3 := util.NewBeaconBlock()
-	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	b3.Block.Slot = 31
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b3)
 	b4 := util.NewBeaconBlock()
-	b4.Block.Slot = 31
+	b4.Block.Slot = 28
 	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b4)
-	b5 := util.NewBeaconBlock()
-	b5.Block.Slot = 28
-	b5.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b5)
 
-	tests := []struct {
-		name       string
-		slot       types.Slot
-		parentRoot []byte
-		want       []*ethpbalpha.SignedBeaconBlock
-		wantErr    bool
-	}{
-		{
-			name: "slot",
-			slot: types.Slot(30),
-			want: []*ethpbalpha.SignedBeaconBlock{
-				blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-				b2,
-				b3,
-			},
-		},
-		{
-			name:       "parent root",
-			parentRoot: b2.Block.ParentRoot,
-			want: []*ethpbalpha.SignedBeaconBlock{
-				blkContainers[1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-				b2,
-				b4,
-				b5,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-				Slot:       &tt.slot,
-				ParentRoot: tt.parentRoot,
-			})
-			require.NoError(t, err)
+	t.Run("list headers", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
 
-			require.Equal(t, len(tt.want), len(headers.Data))
-			for i, blk := range tt.want {
-				expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+		tests := []struct {
+			name       string
+			slot       types.Slot
+			parentRoot []byte
+			want       []*ethpbalpha.SignedBeaconBlock
+			wantErr    bool
+		}{
+			{
+				name: "slot",
+				slot: types.Slot(30),
+				want: []*ethpbalpha.SignedBeaconBlock{
+					blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b2,
+				},
+			},
+			{
+				name:       "parent root",
+				parentRoot: b1.Block.ParentRoot,
+				want: []*ethpbalpha.SignedBeaconBlock{
+					blkContainers[1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b3,
+					b4,
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
+					Slot:       &tt.slot,
+					ParentRoot: tt.parentRoot,
+				})
 				require.NoError(t, err)
-				expectedHeader := &ethpbv1.BeaconBlockHeader{
-					Slot:          blk.Block.Slot,
-					ProposerIndex: blk.Block.ProposerIndex,
-					ParentRoot:    blk.Block.ParentRoot,
-					StateRoot:     make([]byte, 32),
-					BodyRoot:      expectedBodyRoot[:],
+
+				require.Equal(t, len(tt.want), len(headers.Data))
+				for i, blk := range tt.want {
+					expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+					require.NoError(t, err)
+					expectedHeader := &ethpbv1.BeaconBlockHeader{
+						Slot:          blk.Block.Slot,
+						ProposerIndex: blk.Block.ProposerIndex,
+						ParentRoot:    blk.Block.ParentRoot,
+						StateRoot:     make([]byte, 32),
+						BodyRoot:      expectedBodyRoot[:],
+					}
+					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+					require.NoError(t, err)
+					headerRoot, err := headers.Data[i].Header.Message.HashTreeRoot()
+					require.NoError(t, err)
+					assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
+
+					assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
+					assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
+					assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)
+					expectedRoot, err := blk.Block.Body.HashTreeRoot()
+					require.NoError(t, err)
+					assert.DeepEqual(t, expectedRoot[:], headers.Data[i].Header.Message.BodyRoot)
+					assert.Equal(t, blk.Block.ProposerIndex, headers.Data[i].Header.Message.ProposerIndex)
 				}
-				expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
-				require.NoError(t, err)
-				headerRoot, err := headers.Data[i].Header.Message.HashTreeRoot()
-				require.NoError(t, err)
-				assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
-
-				assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
-				assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
-				assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)
-				expectedRoot, err := blk.Block.Body.HashTreeRoot()
-				require.NoError(t, err)
-				assert.DeepEqual(t, expectedRoot[:], headers.Data[i].Header.Message.BodyRoot)
-				assert.Equal(t, blk.Block.ProposerIndex, headers.Data[i].Header.Message.ProposerIndex)
-			}
-		})
-	}
+			})
+		}
+	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
@@ -529,12 +564,14 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainFetcher,
 			HeadFetcher:           mockChainFetcher,
 			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
 		}
 		slot := types.Slot(30)
 		headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
@@ -542,6 +579,61 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, headers.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		child1 := util.NewBeaconBlock()
+		child1.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child1.Block.Slot = 999
+		util.SaveBlock(t, ctx, beaconDB, child1)
+		child2 := util.NewBeaconBlock()
+		child2.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child2.Block.Slot = 1000
+		util.SaveBlock(t, ctx, beaconDB, child2)
+		child1Root, err := child1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		child2Root, err := child2.Block.HashTreeRoot()
+		require.NoError(t, err)
+		mockChainFetcher := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			slot := types.Slot(999)
+			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
+				Slot: &slot,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, true, headers.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			slot := types.Slot(1000)
+			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
+				Slot: &slot,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, false, headers.Finalized)
+		})
+		t.Run("false when at least one not finalized", func(t *testing.T) {
+			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
+				ParentRoot: []byte("parent"),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, false, headers.Finalized)
+		})
 	})
 }
 
@@ -1764,104 +1856,99 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
-	b2 := util.NewBeaconBlock()
-	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
-	b3.Block.Slot = 30
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
 
-	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-	require.NoError(t, err)
+	t.Run("get root", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
 
-	mockChainFetcher := &mock.ChainService{
-		DB:                  beaconDB,
-		Block:               wsb,
-		Root:                headBlock.BlockRoot,
-		FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-	}
-	bs := &Server{
-		BeaconDB:              beaconDB,
-		ChainInfoFetcher:      mockChainFetcher,
-		HeadFetcher:           mockChainFetcher,
-		OptimisticModeFetcher: mockChainFetcher,
-	}
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
 
-	root, err := genBlk.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	tests := []struct {
-		name    string
-		blockID []byte
-		want    []byte
-		wantErr bool
-	}{
-		{
-			name:    "bad formatting",
-			blockID: []byte("3bad0"),
-			wantErr: true,
-		},
-		{
-			name:    "canonical slot",
-			blockID: []byte("30"),
-			want:    blkContainers[30].BlockRoot,
-		},
-		{
-			name:    "head",
-			blockID: []byte("head"),
-			want:    headBlock.BlockRoot,
-		},
-		{
-			name:    "finalized",
-			blockID: []byte("finalized"),
-			want:    blkContainers[64].BlockRoot,
-		},
-		{
-			name:    "genesis",
-			blockID: []byte("genesis"),
-			want:    root[:],
-		},
-		{
-			name:    "genesis root",
-			blockID: root[:],
-			want:    root[:],
-		},
-		{
-			name:    "root",
-			blockID: blkContainers[20].BlockRoot,
-			want:    blkContainers[20].BlockRoot,
-		},
-		{
-			name:    "non-existent root",
-			blockID: bytesutil.PadTo([]byte("hi there"), 32),
-			wantErr: true,
-		},
-		{
-			name:    "slot",
-			blockID: []byte("40"),
-			want:    blkContainers[40].BlockRoot,
-		},
-		{
-			name:    "no block",
-			blockID: []byte("105"),
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
-				BlockId: tt.blockID,
+		tests := []struct {
+			name    string
+			blockID []byte
+			want    []byte
+			wantErr bool
+		}{
+			{
+				name:    "bad formatting",
+				blockID: []byte("3bad0"),
+				wantErr: true,
+			},
+			{
+				name:    "canonical slot",
+				blockID: []byte("30"),
+				want:    blkContainers[30].BlockRoot,
+			},
+			{
+				name:    "head",
+				blockID: []byte("head"),
+				want:    headBlock.BlockRoot,
+			},
+			{
+				name:    "finalized",
+				blockID: []byte("finalized"),
+				want:    blkContainers[64].BlockRoot,
+			},
+			{
+				name:    "genesis",
+				blockID: []byte("genesis"),
+				want:    root[:],
+			},
+			{
+				name:    "genesis root",
+				blockID: root[:],
+				want:    root[:],
+			},
+			{
+				name:    "root",
+				blockID: blkContainers[20].BlockRoot,
+				want:    blkContainers[20].BlockRoot,
+			},
+			{
+				name:    "non-existent root",
+				blockID: bytesutil.PadTo([]byte("hi there"), 32),
+				wantErr: true,
+			},
+			{
+				name:    "slot",
+				blockID: []byte("40"),
+				want:    blkContainers[40].BlockRoot,
+			},
+			{
+				name:    "no block",
+				blockID: []byte("105"),
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+					BlockId: tt.blockID,
+				})
+				if tt.wantErr {
+					require.NotEqual(t, err, nil)
+					return
+				}
+				require.NoError(t, err)
+				assert.DeepEqual(t, tt.want, blockRootResp.Data.Root)
 			})
-			if tt.wantErr {
-				require.NotEqual(t, err, nil)
-				return
-			}
-			require.NoError(t, err)
-			assert.DeepEqual(t, tt.want, blockRootResp.Data.Root)
-		})
-	}
+		}
+	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
@@ -1872,18 +1959,58 @@ func TestServer_GetBlockRoot(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainFetcher,
 			HeadFetcher:           mockChainFetcher,
 			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
 		}
 		blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, blockRootResp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
+				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+				BlockId: []byte("32"),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, true, blockRootResp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			blockRootResp, err := bs.GetBlockRoot(ctx, &ethpbv1.BlockRequest{
+				BlockId: []byte("64"),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, false, blockRootResp.Finalized)
+		})
 	})
 }
 
@@ -1901,12 +2028,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
@@ -2007,12 +2136,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               blk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
@@ -2114,12 +2245,14 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Block:               blk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 
 		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
@@ -2222,17 +2355,61 @@ func TestServer_ListBlockAttestations(t *testing.T) {
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
 		}
 		resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
 			BlockId: []byte("head"),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		beaconDB := dbTest.SetupDB(t)
+		ctx := context.Background()
+
+		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		headBlock := blkContainers[len(blkContainers)-1]
+		blk, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{
+			DB:                  beaconDB,
+			Block:               blk,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
+				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
+				BlockId: []byte("32"),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, true, resp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			resp, err := bs.ListBlockAttestations(ctx, &ethpbv1.BlockRequest{
+				BlockId: []byte("64"),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, false, resp.Finalized)
+		})
 	})
 }
