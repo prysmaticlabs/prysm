@@ -86,7 +86,7 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*e
 }
 
 func getSubtreeIndex(index uint64) uint64 {
-	return index % (uint64(1) << helpers.FloorLog2(index-1))
+	return index % (uint64(1) << ethpbv2.FloorLog2(index-1))
 }
 
 // TODO: this should be in the proto

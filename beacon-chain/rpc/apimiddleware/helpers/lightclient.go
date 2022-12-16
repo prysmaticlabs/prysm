@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"math/big"
-	"math/bits"
 	"strconv"
 	"time"
 
@@ -71,10 +70,6 @@ func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeader
 		return nil, err
 	}
 	return header, nil
-}
-
-func FloorLog2(x uint64) int {
-	return bits.Len64(uint64(x - 1))
 }
 
 func NewSyncAggregateFromJSON(syncAggregateJSON *ethrpc.SyncAggregateJson) (*ethpbv1.SyncAggregate, error) {
@@ -221,7 +216,7 @@ func NewLightClientUpdateFromJSON(updateJSON *ethrpc.LightClientUpdateJson) (*et
 }
 
 func NewLightClientUpdateFromFinalityUpdateJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
-	LightClientUpdate, error) {
+LightClientUpdate, error) {
 	update := &ethpbv2.LightClientUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
@@ -245,7 +240,7 @@ func NewLightClientUpdateFromFinalityUpdateJSON(updateJSON *ethrpc.LightClientFi
 }
 
 func NewLightClientUpdateFromOptimisticUpdateJSON(updateJSON *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.
-	LightClientUpdate, error) {
+LightClientUpdate, error) {
 	update := &ethpbv2.LightClientUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
@@ -263,7 +258,7 @@ func NewLightClientUpdateFromOptimisticUpdateJSON(updateJSON *ethrpc.LightClient
 }
 
 func NewLightClientFinalityUpdateFromJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
-	LightClientFinalityUpdate, error) {
+LightClientFinalityUpdate, error) {
 	update := &ethpbv2.LightClientFinalityUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {

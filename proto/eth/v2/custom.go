@@ -2,8 +2,7 @@ package eth
 
 import (
 	"bytes"
-
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
+	"math/bits"
 )
 
 const (
@@ -23,11 +22,15 @@ func (x *SyncCommittee) Equals(other *SyncCommittee) bool {
 	return bytes.Equal(x.AggregatePubkey, other.AggregatePubkey)
 }
 
+func FloorLog2(x uint64) int {
+	return bits.Len64(uint64(x - 1))
+}
+
 func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	if len(bb) == 0 {
 		return true
 	}
-	l := helpers.FloorLog2(length)
+	l := FloorLog2(length)
 	if len(bb) != l {
 		return false
 	}
