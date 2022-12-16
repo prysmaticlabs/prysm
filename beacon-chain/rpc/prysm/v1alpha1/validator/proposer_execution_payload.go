@@ -68,11 +68,15 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			return payload, nil
+			pb, err := payload.PbBellatrix()
+			if err != nil {
+				return nil, err
+			}
+			warnIfFeeRecipientDiffers(pb, feeRecipient)
+			return pb, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, errors.Wrap(err, "could not get cached payload from execution client")
@@ -168,12 +172,16 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, err
 	}
-	warnIfFeeRecipientDiffers(payload, feeRecipient)
-	return payload, nil
+	pb, err := payload.PbBellatrix()
+	if err != nil {
+		return nil, err
+	}
+	warnIfFeeRecipientDiffers(pb, feeRecipient)
+	return pb, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not

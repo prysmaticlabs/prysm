@@ -63,13 +63,30 @@ func TestClient_IPC(t *testing.T) {
 	ctx := context.Background()
 	fix := fixtures()
 
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.CapellaForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
 	t.Run(GetPayloadMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := srv.GetPayload(ctx, payloadId)
+		resp, err := srv.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
+		resPb, err := resp.PbBellatrix()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resPb)
+	})
+	t.Run(GetPayloadMethodV2, func(t *testing.T) {
+		want, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		payloadId := [8]byte{1}
+		resp, err := srv.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		resPb, err := resp.PbCapella()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, resPb)
 	})
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
@@ -102,6 +119,17 @@ func TestClient_IPC(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
+	t.Run(NewPayloadMethodV2, func(t *testing.T) {
+		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req)
+		require.NoError(t, err)
+		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
+		require.NoError(t, err)
+		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
+	})
 	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
 		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 		require.Equal(t, true, ok)
@@ -128,6 +156,11 @@ func TestClient_IPC(t *testing.T) {
 func TestClient_HTTP(t *testing.T) {
 	ctx := context.Background()
 	fix := fixtures()
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.CapellaForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
 
 	t.Run(GetPayloadMethod, func(t *testing.T) {
 		payloadId := [8]byte{1}
@@ -167,9 +200,55 @@ func TestClient_HTTP(t *testing.T) {
 		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.GetPayload(ctx, payloadId)
+		resp, err := client.GetPayload(ctx, payloadId, 1)
 		require.NoError(t, err)
-		require.DeepEqual(t, want, resp)
+		pb, err := resp.PbBellatrix()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, pb)
+	})
+	t.Run(GetPayloadMethodV2, func(t *testing.T) {
+		payloadId := [8]byte{1}
+		want, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			enc, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			jsonRequestString := string(enc)
+
+			reqArg, err := json.Marshal(pb.PayloadIDBytes(payloadId))
+			require.NoError(t, err)
+
+			// We expect the JSON string RPC request contains the right arguments.
+			require.Equal(t, true, strings.Contains(
+				jsonRequestString, string(reqArg),
+			))
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  want,
+			}
+			err = json.NewEncoder(w).Encode(resp)
+			require.NoError(t, err)
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		client := &Service{}
+		client.rpcClient = rpcClient
+
+		// We call the RPC method via HTTP and expect a proper result.
+		resp, err := client.GetPayload(ctx, payloadId, params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		pb, err := resp.PbCapella()
+		require.NoError(t, err)
+		require.DeepEqual(t, want, pb)
 	})
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
@@ -325,6 +404,20 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
+	t.Run(NewPayloadMethodV2+" VALID status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV2Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
+		require.NoError(t, err)
+		require.DeepEqual(t, want.LatestValidHash, resp)
+	})
 	t.Run(NewPayloadMethod+" SYNCING status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -334,6 +427,20 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
+		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
+		require.DeepEqual(t, []uint8(nil), resp)
+	})
+	t.Run(NewPayloadMethodV2+" SYNCING status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		want, ok := fix["SyncingStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV2Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -353,6 +460,20 @@ func TestClient_HTTP(t *testing.T) {
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
+	t.Run(NewPayloadMethodV2+" INVALID_BLOCK_HASH status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		want, ok := fix["InvalidBlockHashStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV2Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
+		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
+		require.DeepEqual(t, []uint8(nil), resp)
+	})
 	t.Run(NewPayloadMethod+" INVALID status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -362,6 +483,20 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
+		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
+		require.DeepEqual(t, want.LatestValidHash, resp)
+	})
+	t.Run(NewPayloadMethodV2+" INVALID status", func(t *testing.T) {
+		execPayload, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+		require.Equal(t, true, ok)
+		want, ok := fix["InvalidStatus"].(*pb.PayloadStatus)
+		require.Equal(t, true, ok)
+		client := newPayloadV2Setup(t, want, execPayload)
+
+		// We call the RPC method via HTTP and expect a proper result.
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload)
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -1142,6 +1277,23 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	executionPayloadFixtureCapella := &pb.ExecutionPayloadCapella{
+		ParentHash:    foo[:],
+		FeeRecipient:  bar,
+		StateRoot:     foo[:],
+		ReceiptsRoot:  foo[:],
+		LogsBloom:     baz,
+		PrevRandao:    foo[:],
+		BlockNumber:   1,
+		GasLimit:      1,
+		GasUsed:       1,
+		Timestamp:     1,
+		ExtraData:     foo[:],
+		BaseFeePerGas: bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength),
+		BlockHash:     foo[:],
+		Transactions:  [][]byte{foo[:]},
+		Withdrawals:   []*pb.Withdrawal{},
+	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
 	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
@@ -1236,6 +1388,7 @@ func fixtures() map[string]interface{} {
 	return map[string]interface{}{
 		"ExecutionBlock":                    executionBlock,
 		"ExecutionPayload":                  executionPayloadFixture,
+		"ExecutionPayloadCapella":           executionPayloadFixtureCapella,
 		"ValidPayloadStatus":                validStatus,
 		"InvalidBlockHashStatus":            inValidBlockHashStatus,
 		"AcceptedStatus":                    acceptedStatus,
@@ -1419,6 +1572,17 @@ func (*testEngineService) GetPayloadV1(
 	return item
 }
 
+func (*testEngineService) GetPayloadV2(
+	_ context.Context, _ pb.PayloadIDBytes,
+) *pb.ExecutionPayloadCapella {
+	fix := fixtures()
+	item, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
+	if !ok {
+		panic("not found")
+	}
+	return item
+}
+
 func (*testEngineService) ExchangeTransitionConfigurationV1(
 	_ context.Context, _ *pb.TransitionConfiguration,
 ) *pb.TransitionConfiguration {
@@ -1456,6 +1620,17 @@ func (*testEngineService) ForkchoiceUpdatedV2(
 
 func (*testEngineService) NewPayloadV1(
 	_ context.Context, _ *pb.ExecutionPayload,
+) *pb.PayloadStatus {
+	fix := fixtures()
+	item, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
+	if !ok {
+		panic("not found")
+	}
+	return item
+}
+
+func (*testEngineService) NewPayloadV2(
+	_ context.Context, _ *pb.ExecutionPayloadCapella,
 ) *pb.PayloadStatus {
 	fix := fixtures()
 	item, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
@@ -1544,6 +1719,40 @@ func forkchoiceUpdateSetupV2(t *testing.T, fcs *pb.ForkchoiceState, att *pb.Payl
 }
 
 func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Service {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		reqArg, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(reqArg),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  status,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
+}
+
+func newPayloadV2Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayloadCapella) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
