@@ -16,9 +16,9 @@ import (
 )
 
 func TestPrepareBeaconProposer_Valid(t *testing.T) {
-	const feeRecipient1 = "0x64d0f08d61388b2c7eb8ef4eb69e649daaf492890225cb525122d02f2da52a4d"
-	const feeRecipient2 = "0x69b166126aced90c8ed9a78ceba667d2232fab95ed5bbd104a4bf9e46ae0de76"
-	const feeRecipient3 = "0x00438a2bb632a91f335de330dd84b75cf28c5546c8335d9d18137402ea1f25ef"
+	const feeRecipient1 = "0xca008b199c03a2a2f6bc2ed52d6404c4d8510b35"
+	const feeRecipient2 = "0x8145d80111309e4621ed7632319664ac440b0198"
+	const feeRecipient3 = "0x085f2adb1295821838910be402b3c8cdc118bd86"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
