@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
+const proposeExitTestEndpoint = "/eth/v1/beacon/pool/voluntary_exits"
+
 func TestProposeExit_Valid(t *testing.T) {
 	const signature = "0xd0a030a1d6b4f8217062ccc98088fbd908797f107aaa825f2366f090445fa79a6417789aa1d232c4f9b1e56671165bde25eb5586f94fc5677df593b99369684e8f413b1bfbd3fa6f20615244f9381895c71d4f7136c528092a3d03294a98be2d"
 
@@ -34,7 +36,7 @@ func TestProposeExit_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
-		"/eth/v1/beacon/pool/voluntary_exits",
+		proposeExitTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledVoluntaryExit),
 		nil,
@@ -81,7 +83,7 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
-		"/eth/v1/beacon/pool/voluntary_exits",
+		proposeExitTestEndpoint,
 		nil,
 		gomock.Any(),
 		nil,
