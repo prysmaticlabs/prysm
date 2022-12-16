@@ -16,12 +16,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
-const (
-	CurrentSyncCommitteeIndex = uint64(54)
-	NextSyncCommitteeIndex    = uint64(55)
-	FinalizedRootIndex        = uint64(105)
-)
-
 func bytesFromBigInt(numStr string) ([]byte, error) {
 	num, err := strconv.ParseUint(numStr, 10, 64)
 	if err != nil {

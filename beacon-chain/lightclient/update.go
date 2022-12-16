@@ -1,9 +1,6 @@
 package lightclient
 
 import (
-	"bytes"
-
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware/helpers"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
@@ -12,32 +9,8 @@ type update struct {
 	*ethpbv2.LightClientUpdate
 }
 
-func isEmptyWithLength(bb [][]byte, length uint64) bool {
-	if len(bb) == 0 {
-		return true
-	}
-	l := helpers.FloorLog2(length)
-	if len(bb) != l {
-		return false
-	}
-	for _, b := range bb {
-		if !bytes.Equal(b, []byte{}) {
-			return false
-		}
-	}
-	return true
-}
-
-func (u *update) isSyncCommiteeUpdate() bool {
-	return !isEmptyWithLength(u.GetNextSyncCommitteeBranch(), helpers.NextSyncCommitteeIndex)
-}
-
-func (u *update) isFinalityUpdate() bool {
-	return !isEmptyWithLength(u.GetFinalityBranch(), helpers.FinalizedRootIndex)
-}
-
 func (u *update) hasRelevantSyncCommittee() bool {
-	return u.isSyncCommiteeUpdate() &&
+	return u.IsSyncCommiteeUpdate() &&
 		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
 			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
 }
@@ -73,8 +46,8 @@ func (u *update) isBetterUpdate(newUpdatePb *ethpbv2.LightClientUpdate) bool {
 	}
 
 	// Compare indication of any finality
-	newHasFinality := newUpdate.isFinalityUpdate()
-	oldHasFinality := u.isFinalityUpdate()
+	newHasFinality := newUpdate.IsFinalityUpdate()
+	oldHasFinality := u.IsFinalityUpdate()
 	if newHasFinality != oldHasFinality {
 		return newHasFinality
 	}

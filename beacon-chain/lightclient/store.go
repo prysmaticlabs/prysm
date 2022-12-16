@@ -22,6 +22,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
+const (
+	currentSyncCommitteeIndex = uint64(54)
+)
+
 type Store struct {
 	Config *Config `json:"config"`
 	// FinalizedHeader is a header that is finalized
@@ -115,7 +119,7 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	if !trie.VerifyMerkleProof(
 		bootstrap.Header.StateRoot,
 		root,
-		getSubtreeIndex(helpers.CurrentSyncCommitteeIndex),
+		getSubtreeIndex(currentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch) {
 		return nil, errors.New("current sync committee merkle proof is invalid")
 	}
@@ -183,7 +187,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 
 	// Verify update is relevant
 	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
-	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.isSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
+	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.IsSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
 	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
 	}
@@ -191,7 +195,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	// Verify that the finality branch, if present, confirms finalized header to match the finalized checkpoint root
 	// saved in the state of attested header. Note that the genesis finalized checkpoint root is represented as a zero
 	// hash.
-	if !update.isFinalityUpdate() {
+	if !update.IsFinalityUpdate() {
 		if update.GetFinalizedHeader() != nil {
 			return errors.New("finality branch is present but update is not finality")
 		}
@@ -211,7 +215,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			finalizedRoot[:],
-			getSubtreeIndex(helpers.FinalizedRootIndex),
+			getSubtreeIndex(ethpbv2.FinalizedRootIndex),
 			update.GetFinalityBranch()) {
 			return errors.New("finality branch is invalid")
 		}
@@ -219,7 +223,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 
 	// Verify that the next sync committee, if present, actually is the next sync committee saved in the state of the
 	// attested header
-	if !update.isSyncCommiteeUpdate() {
+	if !update.IsSyncCommiteeUpdate() {
 		if update.GetNextSyncCommittee() != nil {
 			return errors.New("sync committee branch is present but update is not sync committee")
 		}
@@ -236,7 +240,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 		if !trie.VerifyMerkleProof(
 			update.GetAttestedHeader().StateRoot,
 			root[:],
-			getSubtreeIndex(helpers.NextSyncCommitteeIndex),
+			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
 			update.GetNextSyncCommitteeBranch()) {
 			return errors.New("sync committee branch is invalid")
 		}
@@ -346,8 +350,8 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	}
 
 	// Update finalized header
-	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.isSyncCommiteeUpdate() &&
-		update.isFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
+	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.IsSyncCommiteeUpdate() &&
+		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
 		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
 		((update.GetFinalizedHeader() != nil && update.GetFinalizedHeader().Slot > s.FinalizedHeader.
