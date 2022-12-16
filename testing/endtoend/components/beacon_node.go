@@ -29,6 +29,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -177,7 +178,30 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
+func genesisFork(cfg *params.BeaconChainConfig) int {
+	if cfg.CapellaForkEpoch == 0 {
+		return version.Capella
+	}
+	if cfg.BellatrixForkEpoch == 0 {
+		return version.Bellatrix
+	}
+	if cfg.AltairForkEpoch == 0 {
+		return version.Altair
+	}
+	return version.Phase0
+}
+
 func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
+	v := genesisFork(params.BeaconConfig())
+	switch v {
+	case version.Bellatrix:
+		return node.generateGenesisBellatrix(ctx)
+	default:
+		return nil, fmt.Errorf("Unsupported genesis fork version %s", version.String(v))
+	}
+}
+
+func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context) (state.BeaconState, error) {
 	if e2e.TestParams.Eth1GenesisBlock == nil {
 		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
 	}
@@ -279,6 +303,17 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
 }
 
+func (node *BeaconNode) saveConfig() (string, error) {
+	cfg := params.BeaconConfig().Copy()
+	cfgBytes := params.ConfigToYaml(cfg)
+	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
+	if err := file.MkdirAll(cfgDir); err != nil {
+		return "", err
+	}
+	cfgPath := path.Join(cfgDir, "beacon-config.yaml")
+	return cfgPath, file.WriteFile(cfgPath, cfgBytes)
+}
+
 // Start starts a fresh beacon node, connecting to all passed in beacon nodes.
 func (node *BeaconNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
@@ -309,6 +344,10 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	cfgPath, err := node.saveConfig()
+	if err != nil {
+		return err
+	}
 	args := []string{
 		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
@@ -329,8 +368,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
+		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ForceClearDB.Name,
-		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}

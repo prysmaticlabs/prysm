@@ -260,7 +260,7 @@ func (node *LighthouseBeaconNode) Stop() error {
 func (node *LighthouseBeaconNode) createTestnetDir(index int) (string, error) {
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
 	configPath := filepath.Join(testNetDir, "config.yaml")
-	rawYaml := params.E2EMainnetConfigYaml()
+	rawYaml := params.ConfigToYaml(params.BeaconConfig())
 	// Add in deposit contract in yaml
 	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
