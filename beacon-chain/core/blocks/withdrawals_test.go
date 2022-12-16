@@ -244,6 +244,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		numValidators            = 128
 		notWithdrawableIndex     = 127
 		notPartiallyWithdrawable = 126
+		maxSweep                 = uint64(80)
 	)
 	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
 
@@ -297,7 +298,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				NextWithdrawalIndex:          3,
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 10,
+				NextWithdrawalValidatorIndex: 90,
 				NextWithdrawalIndex:          3,
 			},
 		},
@@ -306,29 +307,29 @@ func TestProcessWithdrawals(t *testing.T) {
 				Name:                         "success one full withdrawal",
 				NextWithdrawalIndex:          3,
 				NextWithdrawalValidatorIndex: 5,
-				FullWithdrawalIndices:        []types.ValidatorIndex{1},
+				FullWithdrawalIndices:        []types.ValidatorIndex{70},
 				Withdrawals: []*enginev1.Withdrawal{
-					fullWithdrawal(1, 3),
+					fullWithdrawal(70, 3),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
+				NextWithdrawalValidatorIndex: 85,
 				NextWithdrawalIndex:          4,
-				Balances:                     map[uint64]uint64{1: 0},
+				Balances:                     map[uint64]uint64{70: 0},
 			},
 		},
 		{
 			Args: args{
 				Name:                         "success one partial withdrawal",
 				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 37,
+				NextWithdrawalValidatorIndex: 120,
 				PartialWithdrawalIndices:     []types.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
 					partialWithdrawal(7, 21),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 8,
+				NextWithdrawalValidatorIndex: 72,
 				NextWithdrawalIndex:          22,
 				Balances:                     map[uint64]uint64{7: maxEffectiveBalance},
 			},
@@ -341,13 +342,45 @@ func TestProcessWithdrawals(t *testing.T) {
 				FullWithdrawalIndices:        []types.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
 					fullWithdrawal(7, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 24),
-					fullWithdrawal(1, 25),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
+				Balances:                     map[uint64]uint64{7: 0, 19: 0, 28: 0},
+			},
+		},
+		{
+			Args: args{
+				Name:                         "Less than max sweep at end",
+				NextWithdrawalIndex:          22,
+				NextWithdrawalValidatorIndex: 4,
+				FullWithdrawalIndices:        []types.ValidatorIndex{80, 81, 82, 83},
+				Withdrawals: []*enginev1.Withdrawal{
+					fullWithdrawal(80, 22), fullWithdrawal(81, 23), fullWithdrawal(82, 24),
+					fullWithdrawal(83, 25),
+				},
+			},
+			Control: control{
+				NextWithdrawalValidatorIndex: 84,
 				NextWithdrawalIndex:          26,
-				Balances:                     map[uint64]uint64{7: 0, 19: 0, 28: 0, 1: 0},
+				Balances:                     map[uint64]uint64{80: 0, 81: 0, 82: 0, 83: 0},
+			},
+		},
+		{
+			Args: args{
+				Name:                         "Less than max sweep and beginning",
+				NextWithdrawalIndex:          22,
+				NextWithdrawalValidatorIndex: 4,
+				FullWithdrawalIndices:        []types.ValidatorIndex{4, 5, 6},
+				Withdrawals: []*enginev1.Withdrawal{
+					fullWithdrawal(4, 22), fullWithdrawal(5, 23), fullWithdrawal(6, 24),
+				},
+			},
+			Control: control{
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
+				Balances:                     map[uint64]uint64{4: 0, 5: 0, 6: 0},
 			},
 		},
 		{
@@ -355,20 +388,18 @@ func TestProcessWithdrawals(t *testing.T) {
 				Name:                         "success many partial withdrawals",
 				NextWithdrawalIndex:          22,
 				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []types.ValidatorIndex{7, 19, 28, 1},
+				PartialWithdrawalIndices:     []types.ValidatorIndex{7, 19, 28},
 				Withdrawals: []*enginev1.Withdrawal{
 					partialWithdrawal(7, 22), partialWithdrawal(19, 23), partialWithdrawal(28, 24),
-					partialWithdrawal(1, 25),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
-				NextWithdrawalIndex:          26,
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
 				Balances: map[uint64]uint64{
 					7:  maxEffectiveBalance,
 					19: maxEffectiveBalance,
 					28: maxEffectiveBalance,
-					1:  maxEffectiveBalance,
 				},
 			},
 		},
@@ -376,17 +407,17 @@ func TestProcessWithdrawals(t *testing.T) {
 			Args: args{
 				Name:                         "success many withdrawals",
 				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 12,
+				NextWithdrawalValidatorIndex: 88,
 				FullWithdrawalIndices:        []types.ValidatorIndex{7, 19, 28},
 				PartialWithdrawalIndices:     []types.ValidatorIndex{2, 1, 89, 15},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(15, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 24),
-					partialWithdrawal(89, 25), partialWithdrawal(1, 26), partialWithdrawal(2, 27),
-					fullWithdrawal(7, 28),
+					partialWithdrawal(89, 22), partialWithdrawal(1, 23), partialWithdrawal(2, 24),
+					fullWithdrawal(7, 25), partialWithdrawal(15, 26), fullWithdrawal(19, 27),
+					fullWithdrawal(28, 28),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 8,
+				NextWithdrawalValidatorIndex: 40,
 				NextWithdrawalIndex:          29,
 				Balances: map[uint64]uint64{
 					7: 0, 19: 0, 28: 0,
@@ -589,6 +620,8 @@ func TestProcessWithdrawals(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Args.Name, func(t *testing.T) {
+			saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
+			params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = maxSweep
 			if test.Args.Withdrawals == nil {
 				test.Args.Withdrawals = make([]*enginev1.Withdrawal, 0)
 			}
@@ -614,6 +647,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				require.NoError(t, err)
 				checkPostState(t, test.Control, post)
 			}
+			params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 		})
 	}
 }

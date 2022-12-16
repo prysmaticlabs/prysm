@@ -140,13 +140,23 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
-		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+	}
+	var nextValidatorIndex types.ValidatorIndex
+	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
+		}
+		nextValidatorIndex += types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+		nextValidatorIndex = nextValidatorIndex % types.ValidatorIndex(st.NumValidators())
+	} else {
+		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
 		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
 			nextValidatorIndex = 0
 		}
-		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
-			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
-		}
+	}
+	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
+		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
 }
