@@ -342,9 +342,14 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	if err != nil {
 		return nil, err
 	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
 
 	result, err := getBlockPhase0(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -353,6 +358,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = getBlockAltair(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -361,6 +367,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = bs.getBlockBellatrix(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -369,6 +376,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = bs.getBlockCapella(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -388,9 +396,14 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	if err != nil {
 		return nil, err
 	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
 
 	result, err := getSSZBlockPhase0(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -399,6 +412,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = getSSZBlockAltair(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -407,6 +421,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = bs.getSSZBlockBellatrix(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -415,6 +430,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = bs.getSSZBlockCapella(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type

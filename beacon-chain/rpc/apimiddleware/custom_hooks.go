@@ -454,36 +454,42 @@ type phase0BlockResponseJson struct {
 	Version             string                          `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                            `json:"execution_optimistic"`
+	Finalized           bool                            `json:"finalized"`
 }
 
 type altairBlockResponseJson struct {
 	Version             string                                `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockAltairContainerJson `json:"data"`
 	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
+	Finalized           bool                                  `json:"finalized"`
 }
 
 type bellatrixBlockResponseJson struct {
 	Version             string                                   `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
+	Finalized           bool                                     `json:"finalized"`
 }
 
 type capellaBlockResponseJson struct {
 	Version             string                                 `json:"version"`
 	Data                *SignedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+	Finalized           bool                                   `json:"finalized"`
 }
 
 type bellatrixBlindedBlockResponseJson struct {
 	Version             string                                          `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
+	Finalized           bool                                            `json:"finalized"`
 }
 
 type capellaBlindedBlockResponseJson struct {
 	Version             string                                        `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
+	Finalized           bool                                          `json:"finalized"`
 }
 
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -502,6 +508,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
@@ -511,6 +518,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
@@ -520,6 +528,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
 		actualRespContainer = &capellaBlockResponseJson{
@@ -529,6 +538,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
@@ -557,6 +567,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
@@ -566,6 +577,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlindedBlockResponseJson{
@@ -575,6 +587,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
 		actualRespContainer = &capellaBlindedBlockResponseJson{
@@ -584,6 +597,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
