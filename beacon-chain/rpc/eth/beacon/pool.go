@@ -316,7 +316,7 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	for _, change := range req.List {
+	for _, change := range req.GetChanges() {
 		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
 		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
 		if err != nil {

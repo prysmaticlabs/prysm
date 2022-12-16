@@ -47,5 +47,5 @@ message SignedBLSToExecutionChange {
 
 // A list of SignedBLSToExecutionChange  objects
 message SubmitBLSToExecutionChangesRequest {
-	repeated SignedBLSToExecutionChange list = 1;
+	repeated SignedBLSToExecutionChange changes = 1;
 }

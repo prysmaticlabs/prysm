@@ -163,7 +163,10 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &SignedVoluntaryExitJson{}
 		endpoint.GetResponse = &VoluntaryExitsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/bls_to_execution_changes":
-		endpoint.PostRequest = &SignedBLSToExecutionChangeJson{}
+		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
+		}
 	case "/eth/v1/beacon/pool/sync_committees":
 		endpoint.PostRequest = &SubmitSyncCommitteeSignaturesRequestJson{}
 		endpoint.Err = &IndexedVerificationFailureErrorJson{}
