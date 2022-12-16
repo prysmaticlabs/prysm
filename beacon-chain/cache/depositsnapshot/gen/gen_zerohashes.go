@@ -49,12 +49,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO remove hardcoded path
-	file, err := os.Create("/home/sammy/prysmaticLabs/prysm/beacon-chain/cache/depositsnapshot/zerohashes.gen.go")
+	file, err := os.Create("zerohashes.gen.go")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err = file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(file)
 
 	err = tmpl.Execute(file, struct {
 		Package    string
