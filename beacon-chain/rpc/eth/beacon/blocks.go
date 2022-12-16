@@ -137,6 +137,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 			},
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, blkRoot),
 	}, nil
 }
 
@@ -172,6 +173,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 	}
 
 	isOptimistic := false
+	isFinalized := true
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
 		v1alpha1Header, err := bl.Header()
@@ -193,6 +195,9 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 			}
 		}
+		if isFinalized {
+			isFinalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
+		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
 			Root:      headerRoot[:],
 			Canonical: canonical,
@@ -203,7 +208,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		}
 	}
 
-	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic}, nil
+	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
@@ -492,7 +497,8 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
-	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
+	b32Root := bytesutil.ToBytes32(root)
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, b32Root)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -502,6 +508,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			Root: root,
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
 	}, nil
 }
 
@@ -533,6 +540,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	return &ethpbv1.BlockAttestationsResponse{
 		Data:                v1Attestations,
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, root),
 	}, nil
 }
 
