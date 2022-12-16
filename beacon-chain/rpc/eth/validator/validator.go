@@ -342,20 +342,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
-	if ok {
-		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlockResponseV2{
-			Version: ethpbv2.Version_CAPELLA,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_CapellaBlock{CapellaBlock: block},
-			},
-		}, nil
-	}
-	return nil, status.Errorf(codes.InvalidArgument, "Unsupported block type %T", v1alpha1resp.Block)
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
 // ProduceBlockV2SSZ requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
