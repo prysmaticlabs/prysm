@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
+const prepareBeaconProposerTestEndpoint = "/eth/v1/validator/prepare_beacon_proposer"
+
 func TestPrepareBeaconProposer_Valid(t *testing.T) {
 	const feeRecipient1 = "0xca008b199c03a2a2f6bc2ed52d6404c4d8510b35"
 	const feeRecipient2 = "0x8145d80111309e4621ed7632319664ac440b0198"
@@ -43,7 +45,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
-		"/eth/v1/validator/prepare_beacon_proposer",
+		prepareBeaconProposerTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledJsonRecipients),
 		nil,
@@ -85,7 +87,7 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
-		"/eth/v1/validator/prepare_beacon_proposer",
+		prepareBeaconProposerTestEndpoint,
 		nil,
 		gomock.Any(),
 		nil,
