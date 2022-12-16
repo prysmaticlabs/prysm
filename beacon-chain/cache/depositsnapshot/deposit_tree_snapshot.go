@@ -12,7 +12,7 @@ type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
 	depositCount   uint64
-	ExecutionBlock ExecutionBlock
+	executionBlock ExecutionBlock
 }
 
 // CalculateRoot returns the root of a deposit tree snapshot.
@@ -38,6 +38,6 @@ func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock Exe
 		finalized:      finalised,
 		depositRoot:    Zerohashes[0],
 		depositCount:   depositCount,
-		ExecutionBlock: executionBlock,
+		executionBlock: executionBlock,
 	}
 }

@@ -53,15 +53,11 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 	if snapshot.depositRoot != snapshot.CalculateRoot() {
 		return DepositTree{}, ErrInvalidSnapshotRoot
 	}
-	finalizedExecutionBlock := ExecutionBlock{
-		Hash:  snapshot.executionBlockHash,
-		Depth: snapshot.executionBlockHeight,
-	}
 	tree := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
 	return DepositTree{
 		tree:                    tree,
 		mixInLength:             snapshot.depositCount,
-		finalizedExecutionBlock: finalizedExecutionBlock,
+		finalizedExecutionBlock: snapshot.executionBlock,
 	}, nil
 }
 
