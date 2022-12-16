@@ -8,7 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
@@ -22,6 +21,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -57,7 +57,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, errors.Wrap(err, "Could not decode message")
 	}
 
-	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, m)
+	blk, ok := m.(interfaces.SignedBeaconBlock)
+	if !ok {
+		return pubsub.ValidationReject, errors.New("msg is not ethpb.SignedBeaconBlock")
+	}
+
+	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, blk, nil)
 	if err != nil || result != pubsub.ValidationAccept {
 		return result, err
 	}
@@ -65,17 +70,17 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBlockPubsubHelper(ctx context.Context, receivedTime time.Time, msg *pubsub.Message, m ssz.Unmarshaler) (pubsub.ValidationResult, error) {
+func (s *Service) validateBlockPubsubHelper(
+	ctx context.Context,
+	receivedTime time.Time,
+	msg *pubsub.Message,
+	blk interfaces.SignedBeaconBlock,
+	blob *eth.BlobsSidecar) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBlockPubsubHelper")
 	defer span.End()
 
 	s.validateBlockLock.Lock()
 	defer s.validateBlockLock.Unlock()
-
-	blk, ok := m.(interfaces.SignedBeaconBlock)
-	if !ok {
-		return pubsub.ValidationReject, errors.New("msg is not ethpb.SignedBeaconBlock")
-	}
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
@@ -162,7 +167,7 @@ func (s *Service) validateBlockPubsubHelper(ctx context.Context, receivedTime ti
 	// Otherwise queue it for processing in the right slot.
 	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
 		s.pendingQueueLock.Lock()
-		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, blob); err != nil {
 			s.pendingQueueLock.Unlock()
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not insert block to pending queue")
 			return pubsub.ValidationIgnore, err
@@ -176,7 +181,7 @@ func (s *Service) validateBlockPubsubHelper(ctx context.Context, receivedTime ti
 	// Handle block when the parent is unknown.
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		s.pendingQueueLock.Lock()
-		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blockRoot, blob); err != nil {
 			s.pendingQueueLock.Unlock()
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not insert block to pending queue")
 			return pubsub.ValidationIgnore, err

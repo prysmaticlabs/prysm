@@ -99,6 +99,7 @@ go_library(
         "//container/leaky-bucket:go_default_library",
         "//container/slice:go_default_library",
         "//crypto/bls:go_default_library",
+        "//crypto/bls/common:go_default_library",
         "//crypto/rand:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz/equality:go_default_library",

@@ -276,8 +276,18 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 	}
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
-	if slots.WithinDataAvailabilityBound(uint64(f.chain.GenesisTime().Unix()), slots.ToEpoch(start)) {
-		response.blobs, response.pid, response.err = f.fetchBlobsFromPeer(ctx, start, count, peers)
+	var blobStart types.Slot
+	var blobCount uint64
+	for i := types.Slot(0); i < types.Slot(count); i++ {
+		if slots.WithinDataAvailabilityBound(uint64(f.chain.GenesisTime().Unix()), slots.ToEpoch(start+i)) {
+			blobStart = start + i
+			blobCount = count - uint64(i)
+			break
+		}
+	}
+
+	if slots.WithinDataAvailabilityBound(uint64(f.chain.GenesisTime().Unix()), slots.ToEpoch(blobStart)) {
+		response.blobs, response.pid, response.err = f.fetchBlobsFromPeer(ctx, blobStart, blobCount, peers)
 	}
 	return response
 }
@@ -449,7 +459,7 @@ func (f *blocksFetcher) requestBlockAndSidecarByRoot(
 // waitForBandwidth blocks up until peer's bandwidth is restored.
 func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 	log.WithField("peer", pid).Debug("Slowing down for rate limit")
-	timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+	timer := time.NewTimer(time.Duration(f.rateLimiter.TillEmpty(pid.String()).Seconds()))
 	defer timer.Stop()
 	select {
 	case <-f.ctx.Done():

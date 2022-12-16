@@ -12,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -45,7 +47,12 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	}
 
 	sb := signed.BeaconBlock
-	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, sb)
+	pb, err := blocks.NewSignedBeaconBlock(sb)
+	if err != nil {
+		log.Error("Could not convert to proto", err)
+		return pubsub.ValidationIgnore, err
+	}
+	result, err := s.validateBlockPubsubHelper(ctx, receivedTime, msg, pb, signed.BlobsSidecar)
 	if err != nil || result != pubsub.ValidationAccept {
 		return result, err
 	}
@@ -70,6 +77,8 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	if err := blobs.ValidateBlobsSidecar(b.Slot, r, b.Body.BlobKzgCommitments, sc); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	msg.ValidatorData = signed // Used in downstream subscriber
 
 	return pubsub.ValidationAccept, nil
 }
@@ -111,7 +120,7 @@ func (s *Service) validateBlobsSidecar(b *ethpb.BlobsSidecar) (pubsub.Validation
 
 	// [REJECT] The KZG proof is a correctly encoded compressed BLS G1 Point
 	_, err := bls.PublicKeyFromBytes(b.AggregatedProof)
-	if err != nil {
+	if err != nil && !errors.Is(err, common.ErrInfinitePubKey) {
 		return pubsub.ValidationReject, errors.Wrap(err, "invalid blob kzg public key")
 	}
 

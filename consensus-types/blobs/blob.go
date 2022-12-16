@@ -55,12 +55,10 @@ func ValidateBlobsSidecar(slot types.Slot, root [32]byte, commitments [][]byte, 
 	}
 	log.WithFields(log.Fields{
 		"slot":            slot,
-		"root":            fmt.Sprintf("%#x", root),
+		"root":            fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"commitments":     len(commitments),
-		"sidecarSlot":     sidecar.BeaconBlockSlot,
-		"sidecarRoot":     fmt.Sprintf("%#x", sidecar.BeaconBlockRoot),
 		"sidecarBlobs":    len(sidecar.Blobs),
-		"aggregatedProof": fmt.Sprintf("%#x", sidecar.AggregatedProof),
-	}).Infof("Validating blobs sidecar for slot %d", slot)
+		"aggregatedProof": fmt.Sprintf("%#x", bytesutil.Trunc(sidecar.AggregatedProof)),
+	}).Info("Validating blobs")
 	return eth.ValidateBlobsSidecar(eth.Slot(slot), root, commitmentSequenceImpl(commitments), kzgSidecar)
 }

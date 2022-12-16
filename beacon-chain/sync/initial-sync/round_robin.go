@@ -158,7 +158,7 @@ func (s *Service) processFetchedDataRegSync(
 	blksWithoutParentCount := 0
 	for _, blk := range data.blocks {
 		blkSlot := blk.Block().Slot()
-		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), types.Epoch(blkSlot)) {
+		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
 			blob, ok := blobs[blkSlot]
 			if !ok {
 				log.Errorf("No blob found for block %d", blkSlot)

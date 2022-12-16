@@ -88,7 +88,7 @@ func (s *Service) sendBlocksAndSidecarsRequest(ctx context.Context, blockRoots *
 		}
 		s.pendingQueueLock.Lock()
 		defer s.pendingQueueLock.Unlock()
-		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blkRoot); err != nil {
+		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, blkAndSidecar.BlobsSidecar); err != nil {
 			return err
 		}
 		err = s.cfg.beaconDB.SaveBlobsSidecar(ctx, blkAndSidecar.BlobsSidecar) // TODO(4844): Dont forget to remove

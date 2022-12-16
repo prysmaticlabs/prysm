@@ -81,7 +81,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	// Add b2 to the cache
 	wsb, err := blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
@@ -90,7 +90,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	// Add b1 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1Root))
 	util.SaveBlock(t, context.Background(), r.cfg.beaconDB, b1)
 
 	nBlock := util.NewBeaconBlock()
@@ -101,7 +101,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
 	wsb, err = blocks.NewSignedBeaconBlock(nBlock)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(nBlock.Block.Slot, wsb, nRoot))
+	require.NoError(t, r.insertBlkAndBlobToQueue(nBlock.Block.Slot, wsb, nRoot))
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
@@ -153,7 +153,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 	// Add b2 to the cache
 	wsb, err := blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
@@ -162,7 +162,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 	// Add b1 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1Root))
 	util.SaveBlock(t, context.Background(), r.cfg.beaconDB, b1)
 
 	nBlock := util.NewBeaconBlock()
@@ -173,7 +173,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
 	wsb, err = blocks.NewSignedBeaconBlock(nBlock)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(nBlock.Block.Slot, wsb, nRoot))
+	require.NoError(t, r.insertBlkAndBlobToQueue(nBlock.Block.Slot, wsb, nRoot))
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
@@ -225,7 +225,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	// Add b2 to the cache
 	wsb, err := blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
@@ -234,7 +234,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	// Add b1 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1Root))
 	util.SaveBlock(t, context.Background(), r.cfg.beaconDB, b1)
 
 	nBlock := util.NewBeaconBlock()
@@ -245,7 +245,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	// Insert bad b1 in the cache to verify the good one doesn't get replaced.
 	wsb, err = blocks.NewSignedBeaconBlock(nBlock)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(nBlock.Block.Slot, wsb, nRoot))
+	require.NoError(t, r.insertBlkAndBlobToQueue(nBlock.Block.Slot, wsb, nRoot))
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
@@ -287,24 +287,24 @@ func TestRegularSync_InsertDuplicateBlocks(t *testing.T) {
 
 	wsb, err := blocks.NewSignedBeaconBlock(b0)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b0.Block.Slot, wsb, b0r))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b0.Block.Slot, wsb, b0r))
 	require.Equal(t, 1, len(r.pendingBlocksInCache(b0.Block.Slot)), "Block was not added to map")
 
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1r))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1r))
 	require.Equal(t, 1, len(r.pendingBlocksInCache(b1.Block.Slot)), "Block was not added to map")
 
 	// Add duplicate block which should not be saved.
 	wsb, err = blocks.NewSignedBeaconBlock(b0)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b0.Block.Slot, wsb, b0r))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b0.Block.Slot, wsb, b0r))
 	require.Equal(t, 1, len(r.pendingBlocksInCache(b0.Block.Slot)), "Block was added to map")
 
 	// Add duplicate block which should not be saved.
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1r))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1r))
 	require.Equal(t, 1, len(r.pendingBlocksInCache(b1.Block.Slot)), "Block was added to map")
 
 }
@@ -344,7 +344,7 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 	// Add b3 to the cache
 	wsb, err := blocks.NewSignedBeaconBlock(b3)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, wsb, b3Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b3.Block.Slot, wsb, b3Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
@@ -436,10 +436,10 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 
 	wsb, err := blocks.NewSignedBeaconBlock(b4)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b4.Block.Slot, wsb, b4Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b4.Block.Slot, wsb, b4Root))
 	wsb, err = blocks.NewSignedBeaconBlock(b5)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b5.Block.Slot, wsb, b5Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b5.Block.Slot, wsb, b5Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
@@ -450,7 +450,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	// Add b3 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b3)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, wsb, b3Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b3.Block.Slot, wsb, b3Root))
 	util.SaveBlock(t, context.Background(), r.cfg.beaconDB, b3)
 
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
@@ -462,7 +462,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	// Add b2 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 
 	util.SaveBlock(t, context.Background(), r.cfg.beaconDB, b2)
 
@@ -535,16 +535,16 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 
 	wsb, err := blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 	wsb, err = blocks.NewSignedBeaconBlock(b3)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, wsb, b3Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b3.Block.Slot, wsb, b3Root))
 	wsb, err = blocks.NewSignedBeaconBlock(b4)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b4.Block.Slot, wsb, b4Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b4.Block.Slot, wsb, b4Root))
 	wsb, err = blocks.NewSignedBeaconBlock(b5)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b5.Block.Slot, wsb, b5Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b5.Block.Slot, wsb, b5Root))
 
 	require.NoError(t, r.processPendingBlocks(context.Background()))
 	assert.Equal(t, 0, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
@@ -560,16 +560,16 @@ func TestService_sortedPendingSlots(t *testing.T) {
 	var lastSlot types.Slot = math.MaxUint64
 	wsb, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot}}))
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot, wsb, [32]byte{1}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(lastSlot, wsb, [32]byte{1}))
 	wsb, err = blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 3}}))
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-3, wsb, [32]byte{2}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(lastSlot-3, wsb, [32]byte{2}))
 	wsb, err = blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 5}}))
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-5, wsb, [32]byte{3}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(lastSlot-5, wsb, [32]byte{3}))
 	wsb, err = blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: lastSlot - 2}}))
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(lastSlot-2, wsb, [32]byte{4}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(lastSlot-2, wsb, [32]byte{4}))
 
 	want := []types.Slot{lastSlot - 5, lastSlot - 3, lastSlot - 2, lastSlot}
 	assert.DeepEqual(t, want, r.sortedPendingSlots(), "Unexpected pending slots list")
@@ -680,19 +680,19 @@ func TestService_AddPendingBlockToQueueOverMax(t *testing.T) {
 	b2.Block.StateRoot = []byte{'b'}
 	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(0, wsb, [32]byte{}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(0, wsb, [32]byte{}))
 	wsb, err = blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(0, wsb, [32]byte{1}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(0, wsb, [32]byte{1}))
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(0, wsb, [32]byte{2}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(0, wsb, [32]byte{2}))
 
 	b3 := ethpb.CopySignedBeaconBlock(b)
 	b3.Block.StateRoot = []byte{'c'}
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(0, wsb, [32]byte{3}))
+	require.NoError(t, r.insertBlkAndBlobToQueue(0, wsb, [32]byte{3}))
 	require.Equal(t, maxBlocksPerSlot, len(r.pendingBlocksInCache(0)))
 }
 
@@ -758,15 +758,15 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	// Add block1 for slot1
 	wsb, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b1.Block.Slot, wsb, b1Root))
 	// Add block2 for slot2
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b2.Block.Slot, wsb, b2Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b2.Block.Slot, wsb, b2Root))
 	// Add block3 for slot3
 	wsb, err = blocks.NewSignedBeaconBlock(b3)
 	require.NoError(t, err)
-	require.NoError(t, r.insertBlockToPendingQueue(b3.Block.Slot, wsb, b3Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b3.Block.Slot, wsb, b3Root))
 
 	// processPendingBlocks should process only blocks of the current slot. i.e. slot 1.
 	// Then check if the other two blocks are still in the pendingQueue.
@@ -828,7 +828,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Add block1 for slot 55
-	require.NoError(t, r.insertBlockToPendingQueue(b.Block.Slot, bA, b1Root))
+	require.NoError(t, r.insertBlkAndBlobToQueue(b.Block.Slot, bA, b1Root))
 	bB, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	assert.NoError(t, err)
 	// remove with a different block from the same slot.
