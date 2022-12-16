@@ -221,6 +221,11 @@ type executionPayloadJSON struct {
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
+type getPayloadV2ResponseJson struct {
+	executionPayload *executionPayloadCapellaJSON `json:"executionPayload"`
+	blockValue       string                       `json:"blockValue"`
+}
+
 type executionPayloadCapellaJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
@@ -392,78 +397,78 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 
 // UnmarshalJSON --
 func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
-	dec := executionPayloadCapellaJSON{}
+	dec := getPayloadV2ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}
 
-	if dec.ParentHash == nil {
+	if dec.executionPayload.ParentHash == nil {
 		return errors.New("missing required field 'parentHash' for ExecutionPayload")
 	}
-	if dec.FeeRecipient == nil {
+	if dec.executionPayload.FeeRecipient == nil {
 		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
 	}
-	if dec.StateRoot == nil {
+	if dec.executionPayload.StateRoot == nil {
 		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
 	}
-	if dec.ReceiptsRoot == nil {
+	if dec.executionPayload.ReceiptsRoot == nil {
 		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
 	}
-
-	if dec.LogsBloom == nil {
+	if dec.executionPayload.LogsBloom == nil {
 		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
 	}
-	if dec.PrevRandao == nil {
+	if dec.executionPayload.PrevRandao == nil {
 		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
 	}
-	if dec.ExtraData == nil {
+	if dec.executionPayload.ExtraData == nil {
 		return errors.New("missing required field 'extraData' for ExecutionPayload")
 	}
-	if dec.BlockHash == nil {
+	if dec.executionPayload.BlockHash == nil {
 		return errors.New("missing required field 'blockHash' for ExecutionPayload")
 	}
-	if dec.Transactions == nil {
+	if dec.executionPayload.Transactions == nil {
 		return errors.New("missing required field 'transactions' for ExecutionPayload")
 	}
-	if dec.BlockNumber == nil {
+	if dec.executionPayload.BlockNumber == nil {
 		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
 	}
-	if dec.Timestamp == nil {
+	if dec.executionPayload.Timestamp == nil {
 		return errors.New("missing required field 'timestamp' for ExecutionPayload")
 	}
-	if dec.GasUsed == nil {
+	if dec.executionPayload.GasUsed == nil {
 		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
 	}
-	if dec.GasLimit == nil {
+	if dec.executionPayload.GasLimit == nil {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
+
 	*e = ExecutionPayloadCapella{}
-	e.ParentHash = dec.ParentHash.Bytes()
-	e.FeeRecipient = dec.FeeRecipient.Bytes()
-	e.StateRoot = dec.StateRoot.Bytes()
-	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
-	e.LogsBloom = *dec.LogsBloom
-	e.PrevRandao = dec.PrevRandao.Bytes()
-	e.BlockNumber = uint64(*dec.BlockNumber)
-	e.GasLimit = uint64(*dec.GasLimit)
-	e.GasUsed = uint64(*dec.GasUsed)
-	e.Timestamp = uint64(*dec.Timestamp)
-	e.ExtraData = dec.ExtraData
-	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
+	e.ParentHash = dec.executionPayload.ParentHash.Bytes()
+	e.FeeRecipient = dec.executionPayload.FeeRecipient.Bytes()
+	e.StateRoot = dec.executionPayload.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.executionPayload.ReceiptsRoot.Bytes()
+	e.LogsBloom = *dec.executionPayload.LogsBloom
+	e.PrevRandao = dec.executionPayload.PrevRandao.Bytes()
+	e.BlockNumber = uint64(*dec.executionPayload.BlockNumber)
+	e.GasLimit = uint64(*dec.executionPayload.GasLimit)
+	e.GasUsed = uint64(*dec.executionPayload.GasUsed)
+	e.Timestamp = uint64(*dec.executionPayload.Timestamp)
+	e.ExtraData = dec.executionPayload.ExtraData
+	baseFee, err := hexutil.DecodeBig(dec.executionPayload.BaseFeePerGas)
 	if err != nil {
 		return err
 	}
 	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
-	e.BlockHash = dec.BlockHash.Bytes()
-	transactions := make([][]byte, len(dec.Transactions))
-	for i, tx := range dec.Transactions {
+	e.BlockHash = dec.executionPayload.BlockHash.Bytes()
+	transactions := make([][]byte, len(dec.executionPayload.Transactions))
+	for i, tx := range dec.executionPayload.Transactions {
 		transactions[i] = tx
 	}
 	e.Transactions = transactions
-	if dec.Withdrawals == nil {
-		dec.Withdrawals = make([]*Withdrawal, 0)
+	if dec.executionPayload.Withdrawals == nil {
+		dec.executionPayload.Withdrawals = make([]*Withdrawal, 0)
 	}
-	e.Withdrawals = dec.Withdrawals
+	e.Withdrawals = dec.executionPayload.Withdrawals
 	return nil
 }
 
