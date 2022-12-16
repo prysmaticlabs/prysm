@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
@@ -53,8 +54,12 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, _ types.Slot) (interfaces.ExecutionData, error) {
+	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return p, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
