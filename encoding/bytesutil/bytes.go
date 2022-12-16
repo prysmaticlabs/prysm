@@ -100,6 +100,15 @@ func ToBytes4(x []byte) [4]byte {
 	return y
 }
 
+// ToBytes20 is a convenience method for converting a byte slice to a fix
+// sized 20 byte array. This method will truncate the input if it is larger
+// than 20 bytes.
+func ToBytes20(x []byte) [20]byte {
+	var y [20]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBytes32 is a convenience method for converting a byte slice to a fix
 // sized 32 byte array. This method will truncate the input if it is larger
 // than 32 bytes.
@@ -452,4 +461,10 @@ func IsValidRoot(root []byte) bool {
 func LittleEndianBytesToBigInt(bytes []byte) *big.Int {
 	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
 	return new(big.Int).SetBytes(ReverseByteOrder(bytes))
+}
+
+// BigIntToLittleEndianBytes takes a big integer and returns its bytes stored as little-endian
+func BigIntToLittleEndianBytes(bigInt *big.Int) []byte {
+	// big.Int.Bytes() returns bytes in big-endian order, so we need to reverse the byte order
+	return ReverseByteOrder(bigInt.Bytes())
 }

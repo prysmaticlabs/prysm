@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -233,9 +232,19 @@ type bellatrixPublishBlockRequestJson struct {
 	Signature      string                    `json:"signature" hex:"true"`
 }
 
+type capellaPublishBlockRequestJson struct {
+	CapellaBlock *BeaconBlockCapellaJson `json:"capella_block"`
+	Signature    string                  `json:"signature" hex:"true"`
+}
+
 type bellatrixPublishBlindedBlockRequestJson struct {
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 	Signature      string                           `json:"signature" hex:"true"`
+}
+
+type capellaPublishBlindedBlockRequestJson struct {
+	CapellaBlock *BlindedBeaconBlockCapellaJson `json:"capella_block"`
+	Signature    string                         `json:"signature" hex:"true"`
 }
 
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
@@ -308,6 +317,15 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 		endpoint.PostRequest = actualPostReq
 		return nil
 	}
+	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockCapellaContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &capellaPublishBlockRequestJson{
+			CapellaBlock: block.Message,
+			Signature:    block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
@@ -326,7 +344,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 	}{}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
@@ -342,10 +360,12 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBlindedBeaconBlockBellatrixContainerJson{}
+	} else {
+		endpoint.PostRequest = &SignedBlindedBeaconBlockCapellaContainerJson{}
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
 }
 
@@ -377,6 +397,15 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		actualPostReq := &bellatrixPublishBlindedBlockRequestJson{
 			BellatrixBlock: block.Message,
 			Signature:      block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*SignedBlindedBeaconBlockCapellaContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &capellaPublishBlindedBlockRequestJson{
+			CapellaBlock: block.Message,
+			Signature:    block.Signature,
 		}
 		endpoint.PostRequest = actualPostReq
 		return nil
@@ -422,31 +451,37 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 }
 
 type phase0BlockResponseJson struct {
-	Version             string                          `json:"version"`
+	Version             string                          `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                            `json:"execution_optimistic"`
 }
 
 type altairBlockResponseJson struct {
-	Version             string                                `json:"version"`
+	Version             string                                `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockAltairContainerJson `json:"data"`
 	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
 }
 
 type bellatrixBlockResponseJson struct {
-	Version             string                                   `json:"version"`
+	Version             string                                   `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
 
+type capellaBlockResponseJson struct {
+	Version             string                                 `json:"version"`
+	Data                *SignedBeaconBlockCapellaContainerJson `json:"data"`
+	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+}
+
 type bellatrixBlindedBlockResponseJson struct {
-	Version             string                                          `json:"version"`
+	Version             string                                          `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
 }
 
 type capellaBlindedBlockResponseJson struct {
-	Version             string                                        `json:"version"`
+	Version             string                                        `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
 }
@@ -482,6 +517,15 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data: &SignedBeaconBlockBellatrixContainerJson{
 				Message:   respContainer.Data.BellatrixBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBeaconBlockCapellaContainerJson{
+				Message:   respContainer.Data.CapellaBlock,
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
@@ -553,22 +597,22 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 }
 
 type phase0StateResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconStateJson `json:"data"`
 }
 
 type altairStateResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconStateAltairJson `json:"data"`
 }
 
 type bellatrixStateResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconStateBellatrixJson `json:"data"`
 }
 
 type capellaStateResponseJson struct {
-	Version string                  `json:"version"`
+	Version string                  `json:"version" enum:"true"`
 	Data    *BeaconStateCapellaJson `json:"data"`
 }
 
@@ -612,22 +656,22 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 }
 
 type phase0ProduceBlockResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconBlockJson `json:"data"`
 }
 
 type altairProduceBlockResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconBlockAltairJson `json:"data"`
 }
 
 type bellatrixProduceBlockResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconBlockBellatrixJson `json:"data"`
 }
 
 type bellatrixProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
 }
 

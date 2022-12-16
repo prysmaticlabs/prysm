@@ -95,11 +95,13 @@ type RandaoResponseJson struct {
 type BlockHeadersResponseJson struct {
 	Data                []*BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
 }
 
 type BlockHeaderResponseJson struct {
 	Data                *BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
+	Finalized           bool                      `json:"finalized"`
 }
 
 type BlockResponseJson struct {
@@ -121,11 +123,13 @@ type BlindedBlockResponseJson struct {
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type BlockAttestationsResponseJson struct {
 	Data                []*AttestationJson `json:"data"`
 	ExecutionOptimistic bool               `json:"execution_optimistic"`
+	Finalized           bool               `json:"finalized"`
 }
 
 type AttestationsPoolResponseJson struct {
@@ -239,12 +243,12 @@ type ProduceBlockResponseJson struct {
 }
 
 type ProduceBlockResponseV2Json struct {
-	Version string                      `json:"version"`
+	Version string                      `json:"version" enum:"true"`
 	Data    *BeaconBlockContainerV2Json `json:"data"`
 }
 
 type ProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
@@ -374,6 +378,7 @@ type SignedBeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
 	Signature      string                    `json:"signature" hex:"true"`
 }
 
@@ -407,6 +412,11 @@ type SignedBeaconBlockBellatrixContainerJson struct {
 	Signature string                    `json:"signature" hex:"true"`
 }
 
+type SignedBeaconBlockCapellaContainerJson struct {
+	Message   *BeaconBlockCapellaJson `json:"message"`
+	Signature string                  `json:"signature" hex:"true"`
+}
+
 type SignedBlindedBeaconBlockBellatrixContainerJson struct {
 	Message   *BlindedBeaconBlockBellatrixJson `json:"message"`
 	Signature string                           `json:"signature" hex:"true"`
@@ -431,6 +441,14 @@ type BeaconBlockBellatrixJson struct {
 	ParentRoot    string                        `json:"parent_root" hex:"true"`
 	StateRoot     string                        `json:"state_root" hex:"true"`
 	Body          *BeaconBlockBodyBellatrixJson `json:"body"`
+}
+
+type BeaconBlockCapellaJson struct {
+	Slot          string                      `json:"slot"`
+	ProposerIndex string                      `json:"proposer_index"`
+	ParentRoot    string                      `json:"parent_root" hex:"true"`
+	StateRoot     string                      `json:"state_root" hex:"true"`
+	Body          *BeaconBlockBodyCapellaJson `json:"body"`
 }
 
 type BlindedBeaconBlockBellatrixJson struct {
@@ -472,6 +490,20 @@ type BeaconBlockBodyBellatrixJson struct {
 	VoluntaryExits    []*SignedVoluntaryExitJson `json:"voluntary_exits"`
 	SyncAggregate     *SyncAggregateJson         `json:"sync_aggregate"`
 	ExecutionPayload  *ExecutionPayloadJson      `json:"execution_payload"`
+}
+
+type BeaconBlockBodyCapellaJson struct {
+	RandaoReveal          string                            `json:"randao_reveal" hex:"true"`
+	Eth1Data              *Eth1DataJson                     `json:"eth1_data"`
+	Graffiti              string                            `json:"graffiti" hex:"true"`
+	ProposerSlashings     []*ProposerSlashingJson           `json:"proposer_slashings"`
+	AttesterSlashings     []*AttesterSlashingJson           `json:"attester_slashings"`
+	Attestations          []*AttestationJson                `json:"attestations"`
+	Deposits              []*DepositJson                    `json:"deposits"`
+	VoluntaryExits        []*SignedVoluntaryExitJson        `json:"voluntary_exits"`
+	SyncAggregate         *SyncAggregateJson                `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapellaJson      `json:"execution_payload"`
+	BLSToExecutionChanges []*SignedBLSToExecutionChangeJson `json:"bls_to_execution_changes"`
 }
 
 type BlindedBeaconBlockBodyBellatrixJson struct {
@@ -516,6 +548,24 @@ type ExecutionPayloadJson struct {
 	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
+}
+
+type ExecutionPayloadCapellaJson struct {
+	ParentHash    string            `json:"parent_hash" hex:"true"`
+	FeeRecipient  string            `json:"fee_recipient" hex:"true"`
+	StateRoot     string            `json:"state_root" hex:"true"`
+	ReceiptsRoot  string            `json:"receipts_root" hex:"true"`
+	LogsBloom     string            `json:"logs_bloom" hex:"true"`
+	PrevRandao    string            `json:"prev_randao" hex:"true"`
+	BlockNumber   string            `json:"block_number"`
+	GasLimit      string            `json:"gas_limit"`
+	GasUsed       string            `json:"gas_used"`
+	TimeStamp     string            `json:"timestamp"`
+	ExtraData     string            `json:"extra_data" hex:"true"`
+	BaseFeePerGas string            `json:"base_fee_per_gas" uint256:"true"`
+	BlockHash     string            `json:"block_hash" hex:"true"`
+	Transactions  []string          `json:"transactions" hex:"true"`
+	Withdrawals   []*WithdrawalJson `json:"withdrawals"`
 }
 
 type ExecutionPayloadHeaderJson struct {
@@ -685,7 +735,14 @@ type PeerJson struct {
 }
 
 type VersionJson struct {
-	Version string `json:"version"`
+	Version string `json:"version" enum:"true"`
+}
+
+type WithdrawalJson struct {
+	WithdrawalIndex  string `json:"index"`
+	ValidatorIndex   string `json:"validator_index"`
+	ExecutionAddress string `json:"address" hex:"true"`
+	Amount           string `json:"amount"`
 }
 
 type BeaconStateJson struct {
@@ -1000,7 +1057,7 @@ func (*SszResponseJson) SSZOptimistic() bool {
 }
 
 type VersionedSSZResponseJson struct {
-	Version             string `json:"version"`
+	Version             string `json:"version" enum:"true"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 	Data                string `json:"data"`
 }
