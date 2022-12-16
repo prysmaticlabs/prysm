@@ -354,10 +354,10 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(expected))
 		withdrawal := &enginev1.Withdrawal{
-			WithdrawalIndex:  0,
-			ValidatorIndex:   3,
-			ExecutionAddress: s.validators[3].WithdrawalCredentials[12:],
-			Amount:           params.BeaconConfig().MinDepositAmount,
+			Index:          0,
+			ValidatorIndex: 3,
+			Address:        s.validators[3].WithdrawalCredentials[12:],
+			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
 		params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
