@@ -309,25 +309,27 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 
 // SubmitSignedBLSToExecutionChange submits said object to the node's pool
 // if it passes validation the node must broadcast it to the network.
-func (bs *Server) SubmitSignedBLSToExecutionChange(ctx context.Context, req *ethpbv2.SignedBLSToExecutionChange) (*emptypb.Empty, error) {
+func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
 	defer span.End()
-	alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(req)
 	st, err := bs.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not validate SignedBLSToExecutionChange: %v", err)
-	}
-	if err := blocks.VerifyBLSChangeSignature(st, req); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
-	}
-	bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
-	if st.Version() >= version.Capella {
-		if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
+	for _, change := range req.List {
+		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
+		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not validate SignedBLSToExecutionChange: %v", err)
+		}
+		if err := blocks.VerifyBLSChangeSignature(st, change); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
+		}
+		bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
+		if st.Version() >= version.Capella {
+			if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
+			}
 		}
 	}
 	return &emptypb.Empty{}, nil
