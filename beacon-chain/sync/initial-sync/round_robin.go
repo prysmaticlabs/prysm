@@ -330,6 +330,9 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
 				return err
 			}
+			if err := s.cfg.DB.SaveBlobsSidecar(ctx, blob); err != nil {
+				return err
+			}
 		}
 	}
 	return bFunc(ctx, blks, blockRoots)

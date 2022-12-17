@@ -169,6 +169,23 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			default:
 			}
+
+			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+				if blockchain.IsInvalidBlock(err) {
+					r := blockchain.InvalidBlockRoot(err)
+					if r != [32]byte{} {
+						s.setBadBlock(ctx, r) // Setting head block as bad.
+					} else {
+						s.setBadBlock(ctx, blkRoot)
+					}
+				}
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
+
+				// In the next iteration of the queue, this block will be removed from
+				// the pending queue as it has been marked as a 'bad' block.
+				span.End()
+				continue
+			}
 			if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
 				sc := blobs[i]
 				_, err := s.validateBlobsSidecar(sc)
@@ -188,23 +205,10 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 					s.setBadBlock(ctx, blkRoot)
 					continue
 				}
-			}
-
-			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				if blockchain.IsInvalidBlock(err) {
-					r := blockchain.InvalidBlockRoot(err)
-					if r != [32]byte{} {
-						s.setBadBlock(ctx, r) // Setting head block as bad.
-					} else {
-						s.setBadBlock(ctx, blkRoot)
-					}
+				if err := s.cfg.beaconDB.SaveBlobsSidecar(ctx, sc); err != nil {
+					log.WithError(err).WithField("slot", b.Block().Slot()).Error("Could not save blobs sidecar")
+					continue
 				}
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
-
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
-				span.End()
-				continue
 			}
 
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
