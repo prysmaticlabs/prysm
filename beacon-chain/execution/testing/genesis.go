@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 
@@ -16,7 +17,7 @@ import (
 const defaultMinerAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
 const defaultTestChainId int64 = 1337
 const defaultCoinbase = "0x0000000000000000000000000000000000000000"
-const defaultDifficulty = "0x20000"
+const defaultDifficulty = "1"
 const defaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultMinerBalance = "100000000000000000000000000000"
@@ -77,7 +78,11 @@ const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000
 // DefaultTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
-func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) core.Genesis {
+func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig, preMerge bool) core.Genesis {
+	ttd, ok := big.NewInt(0).SetString(clparams.BeaconConfig().TerminalTotalDifficulty, 10)
+	if !ok {
+		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
+	}
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -95,16 +100,24 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 		ArrowGlacierBlock:             bigz,
 		GrayGlacierBlock:              bigz,
 		MergeNetsplitBlock:            bigz,
-		TerminalTotalDifficulty:       bigz,
+		TerminalTotalDifficulty:       ttd,
 		TerminalTotalDifficultyPassed: false,
+		Clique: &params.CliqueConfig{
+			Period: 2,
+			Epoch:  20000,
+		},
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
+	extra, err := hexutil.Decode(DefaultCliqueSigner)
+	if err != nil {
+		panic(fmt.Sprintf("unable to decode DefaultCliqueSigner, with error %v", err.Error()))
+	}
 	return core.Genesis{
 		Config:     cc,
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
-		ExtraData:  []byte(DefaultCliqueSigner),
+		ExtraData:  extra,
 		GasLimit:   math.MaxUint64 >> 1, // shift 1 back from the max, just in case
 		Difficulty: common.HexToHash(defaultDifficulty).Big(),
 		Mixhash:    common.HexToHash(defaultMixhash),

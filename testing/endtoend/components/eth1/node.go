@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
@@ -61,7 +62,7 @@ func (node *Node) Start(ctx context.Context) error {
 	}
 	gethJsonPath := path.Join(eth1Path, "genesis.json")
 
-	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
+	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig(), e2etypes.GenesisFork() >= version.Bellatrix)
 	b, err := json.Marshal(gen)
 	if err != nil {
 		return err

@@ -19,6 +19,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -71,10 +72,11 @@ func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn)
 		if fr := ctr.GetBellatrixBlock(); fr != nil {
 			var account common.Address
 
-			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
-			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
-				account = common.BytesToAddress(fr)
+			reci := fr.Block.Body.ExecutionPayload.FeeRecipient
+			if len(reci) != 0 && hexutil.Encode(reci) != params.BeaconConfig().EthBurnAddressHex {
+				account = common.BytesToAddress(reci)
 			} else {
+				log.WithField("proposer_index", fr.Block.ProposerIndex).WithField("slot", fr.Block.Slot).Error("fee recipient eval bug")
 				return errors.New("fee recipient is not set")
 			}
 			validatorRequest := &ethpb.GetValidatorRequest{

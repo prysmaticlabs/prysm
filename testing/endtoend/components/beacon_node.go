@@ -13,8 +13,8 @@ import (
 	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
@@ -178,35 +178,11 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
-func genesisFork(cfg *params.BeaconChainConfig) int {
-	if cfg.CapellaForkEpoch == 0 {
-		return version.Capella
-	}
-	if cfg.BellatrixForkEpoch == 0 {
-		return version.Bellatrix
-	}
-	if cfg.AltairForkEpoch == 0 {
-		return version.Altair
-	}
-	return version.Phase0
-}
-
 func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
-	v := genesisFork(params.BeaconConfig())
-	switch v {
-	case version.Bellatrix:
-		return node.generateGenesisBellatrix(ctx)
-	default:
-		return nil, fmt.Errorf("Unsupported genesis fork version %s", version.String(v))
-	}
-}
-
-func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context) (state.BeaconState, error) {
 	if e2e.TestParams.Eth1GenesisBlock == nil {
 		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
 	}
 	gb := e2e.TestParams.Eth1GenesisBlock
-
 	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
 	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
@@ -221,7 +197,26 @@ func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context) (state.Bea
 		DepositCount: 0,
 		BlockHash:    gb.Hash().Bytes(),
 	}
+	v := e2etypes.GenesisFork()
+	switch v {
+	case version.Bellatrix:
+		return node.generateGenesisBellatrix(ctx, gb, e1d)
+	case version.Phase0:
+		return node.generateGenesisPhase0(ctx, gb, e1d)
+	default:
+		return nil, fmt.Errorf("Unsupported genesis fork version %s", version.String(v))
+	}
+}
 
+func (node *BeaconNode) generateGenesisPhase0(ctx context.Context, gb *types.Block, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
+	g, _, err := interop.GeneratePreminedGenesisState(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, e1d)
+	if err != nil {
+		return nil, err
+	}
+	return state_native.InitializeFromProtoUnsafePhase0(g)
+}
+
+func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context, gb *types.Block, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
 	payload := &enginev1.ExecutionPayload{
 		ParentHash:    gb.ParentHash().Bytes(),
 		FeeRecipient:  gb.Coinbase().Bytes(),
@@ -238,37 +233,11 @@ func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context) (state.Bea
 		BlockHash:     gb.Hash().Bytes(),
 		Transactions:  make([][]byte, 0),
 	}
-	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
+	g, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
 	if err != nil {
 		return nil, err
 	}
-	lbhr, err := genesis.LatestBlockHeader.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	si, err := state_native.InitializeFromProtoUnsafeBellatrix(genesis)
-	if err != nil {
-		return nil, err
-	}
-	genb, err := blocks.NewGenesisBlockForState(ctx, si)
-	if err != nil {
-		return nil, err
-	}
-	gbr, err := genb.Block().HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	log.WithField("el_block_time", gb.Time()).
-		WithField("cl_genesis_time", genesis.GenesisTime).
-		WithField("state_root", fmt.Sprintf("%#x", genb.Block().StateRoot())).
-		WithField("latest_block_header_root", fmt.Sprintf("%#x", lbhr)).
-		WithField("latest_block_header_state_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.StateRoot)).
-		WithField("latest_block_header_parent_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.ParentRoot)).
-		WithField("latest_block_header_body_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.BodyRoot)).
-		WithField("derived_block_root", fmt.Sprintf("%#x", gbr)).
-		WithField("el_block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).
-		Info("genesis eth1 data")
-	return si, nil
+	return state_native.InitializeFromProtoUnsafeBellatrix(g)
 }
 
 func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
