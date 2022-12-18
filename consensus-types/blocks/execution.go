@@ -3,6 +3,7 @@ package blocks
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -739,4 +741,24 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// CopyExecutionData copies the provided ExecutionData.
+func CopyExecutionData(i interface{}) (interfaces.ExecutionData, error) {
+	data, ok := i.(interfaces.ExecutionData)
+	if !ok {
+		return nil, fmt.Errorf("not an execution data: %T", i)
+	}
+	switch d := data.Proto().(type) {
+	case *enginev1.ExecutionPayload:
+		return WrappedExecutionPayload(eth.CopyExecutionPayload(d))
+	case *enginev1.ExecutionPayloadHeader:
+		return WrappedExecutionPayloadHeader(eth.CopyExecutionPayloadHeader(d))
+	case *enginev1.ExecutionPayloadCapella:
+		return WrappedExecutionPayloadCapella(eth.CopyExecutionPayloadCapella(d))
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		return WrappedExecutionPayloadHeaderCapella(eth.CopyExecutionPayloadHeaderCapella(d))
+	default:
+		return nil, fmt.Errorf("not an execution data: %T", d)
+	}
 }

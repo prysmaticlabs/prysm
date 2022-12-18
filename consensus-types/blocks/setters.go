@@ -154,11 +154,15 @@ func (b *BeaconBlockBody) SetExecution(e interfaces.ExecutionData) error {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return ErrNotSupported("Execution", b.version)
 	}
+	copied, err := CopyExecutionData(e)
+	if err != nil {
+		return err
+	}
 	if b.isBlinded {
-		b.executionPayloadHeader = e
+		b.executionPayloadHeader = copied
 		return nil
 	}
-	b.executionPayload = e
+	b.executionPayload = copied
 	return nil
 }
 

@@ -234,6 +234,28 @@ func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
+func Test_CopyExecutionData(t *testing.T) {
+	e := createWrappedPayload(t)
+	ec, err := blocks.CopyExecutionData(e)
+	require.NoError(t, err)
+	require.DeepEqual(t, e, ec)
+
+	h := createWrappedPayloadHeader(t)
+	hc, err := blocks.CopyExecutionData(h)
+	require.NoError(t, err)
+	require.DeepEqual(t, h, hc)
+
+	e = createWrappedPayloadCapella(t)
+	ec, err = blocks.CopyExecutionData(e)
+	require.NoError(t, err)
+	require.DeepEqual(t, e, ec)
+
+	h = createWrappedPayloadHeaderCapella(t)
+	hc, err = blocks.CopyExecutionData(h)
+	require.NoError(t, err)
+	require.DeepEqual(t, h, hc)
+}
+
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 	wsb, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
