@@ -137,13 +137,8 @@ func (c *beaconApiValidatorClient) ProposeBeaconBlock(_ context.Context, in *eth
 	return c.proposeBeaconBlock(in)
 }
 
-func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ProposeExit(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeExit is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ProposeExit(_ context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
+	return c.proposeExit(in)
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
