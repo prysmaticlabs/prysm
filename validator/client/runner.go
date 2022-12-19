@@ -95,17 +95,10 @@ func run(ctx context.Context, v iface.Validator) {
 				log.WithError(err).Error("Could not properly handle reloaded keys")
 			}
 			if !anyActive {
-				log.Info("No active keys found. Waiting for activation...")
-				for {
-					err := v.WaitForActivation(ctx, accountsChangedChan)
-					if isConnectionError(err) {
-						log.WithError(err).Warn("Could not wait for validator activation")
-						continue
-					}
-					if err != nil {
-						log.WithError(err).Fatal("Could not wait for validator activation")
-					}
-					break // break out if successful
+				log.Warn("No active keys found. Waiting for activation...")
+				err := v.WaitForActivation(ctx, accountsChangedChan)
+				if err != nil {
+					log.WithError(err).Warn("Could not wait for validator activation")
 				}
 			}
 		case slot := <-v.NextSlot():
@@ -213,10 +206,6 @@ func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, erro
 			log.WithError(err).Fatal("Could not determine if beacon node synced")
 		}
 		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not wait for validator activation")
-			continue
-		}
 		if err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
