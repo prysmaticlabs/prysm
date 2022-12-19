@@ -112,12 +112,14 @@ type BlockV2ResponseJson struct {
 	Version             string                            `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerV2Json `json:"data"`
 	ExecutionOptimistic bool                              `json:"execution_optimistic"`
+	Finalized           bool                              `json:"finalized"`
 }
 
 type BlindedBlockResponseJson struct {
 	Version             string                                 `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+	Finalized           bool                                   `json:"finalized"`
 }
 
 type BlockRootResponseJson struct {
@@ -1038,6 +1040,7 @@ type SszResponse interface {
 	SSZVersion() string
 	SSZOptimistic() bool
 	SSZData() string
+	SSZFinalized() bool
 }
 
 type SszResponseJson struct {
@@ -1056,9 +1059,14 @@ func (*SszResponseJson) SSZOptimistic() bool {
 	return false
 }
 
+func (*SszResponseJson) SSZFinalized() bool {
+	return true
+}
+
 type VersionedSSZResponseJson struct {
 	Version             string `json:"version" enum:"true"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Finalized           bool   `json:"finalized"`
 	Data                string `json:"data"`
 }
 
@@ -1072,6 +1080,10 @@ func (ssz *VersionedSSZResponseJson) SSZVersion() string {
 
 func (ssz *VersionedSSZResponseJson) SSZOptimistic() bool {
 	return ssz.ExecutionOptimistic
+}
+
+func (ssz *VersionedSSZResponseJson) SSZFinalized() bool {
+	return ssz.Finalized
 }
 
 // ---------------

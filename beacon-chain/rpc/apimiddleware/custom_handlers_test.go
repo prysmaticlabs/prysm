@@ -22,6 +22,7 @@ import (
 type testSSZResponseJson struct {
 	Version             string `json:"version"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Finalized           bool   `json:"finalized"`
 	Data                string `json:"data"`
 }
 
@@ -35,6 +36,10 @@ func (t testSSZResponseJson) SSZOptimistic() bool {
 
 func (t testSSZResponseJson) SSZData() string {
 	return t.Data
+}
+
+func (t testSSZResponseJson) SSZFinalized() bool {
+	return t.Finalized
 }
 
 func TestSSZRequested(t *testing.T) {
