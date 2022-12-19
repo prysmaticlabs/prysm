@@ -120,13 +120,8 @@ func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, 
 	panic("beaconApiValidatorClient.MultipleValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.PrepareBeaconProposer(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.PrepareBeaconProposer is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) PrepareBeaconProposer(_ context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
+	return new(empty.Empty), c.prepareBeaconProposer(in.Recipients)
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
