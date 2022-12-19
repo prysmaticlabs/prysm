@@ -38,7 +38,7 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	headSlot, err := waitForActivation(ctx, v)
+	headSlot, err := initializeValidatorAndGetHeadSlot(ctx, v)
 	if err != nil {
 		return // Exit if context is canceled.
 	}
@@ -165,7 +165,7 @@ func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
 	}
 }
 
-func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, error) {
+func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (types.Slot, error) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
