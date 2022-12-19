@@ -98,7 +98,7 @@ func run(ctx context.Context, v iface.Validator) {
 				log.Info("No active keys found. Waiting for activation...")
 				err := v.WaitForActivation(ctx, accountsChangedChan)
 				if err != nil {
-					log.WithError(err).Warn("Could not wait for validator activation")
+					log.WithError(err).Fatal("Could not wait for validator activation")
 				}
 			}
 		case slot := <-v.NextSlot():
