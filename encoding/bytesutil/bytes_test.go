@@ -637,10 +637,36 @@ func TestToBytes48Array(t *testing.T) {
 	}
 }
 
+func TestToBytes20(t *testing.T) {
+	tests := []struct {
+		a []byte
+		b [20]byte
+	}{
+		{nil, [20]byte{}},
+		{[]byte{}, [20]byte{}},
+		{[]byte{1}, [20]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{[]byte{1, 2, 3}, [20]byte{1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}, [20]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+		{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21}, [20]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+	}
+	for _, tt := range tests {
+		b := bytesutil.ToBytes20(tt.a)
+		assert.DeepEqual(t, tt.b, b)
+	}
+}
+
 func TestLittleEndianBytesToBigInt(t *testing.T) {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, 1234567890)
 	converted := bytesutil.LittleEndianBytesToBigInt(bytes)
 	expected := new(big.Int).SetInt64(1234567890)
+	assert.DeepEqual(t, expected, converted)
+}
+
+func TestBigIntToLittleEndianBytes(t *testing.T) {
+	expected := make([]byte, 4)
+	binary.LittleEndian.PutUint32(expected, 1234567890)
+	bigInt := new(big.Int).SetUint64(1234567890)
+	converted := bytesutil.BigIntToLittleEndianBytes(bigInt)
 	assert.DeepEqual(t, expected, converted)
 }

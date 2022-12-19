@@ -105,37 +105,37 @@ func (b *BeaconBlockBody) SetGraffiti(g []byte) {
 // SetEth1Data sets the eth1 data in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetEth1Data(e *eth.Eth1Data) {
-	b.eth1Data = eth.CopyETH1Data(e)
+	b.eth1Data = e
 }
 
 // SetProposerSlashings sets the proposer slashings in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetProposerSlashings(p []*eth.ProposerSlashing) {
-	b.proposerSlashings = eth.CopyProposerSlashings(p)
+	b.proposerSlashings = p
 }
 
 // SetAttesterSlashings sets the attester slashings in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetAttesterSlashings(a []*eth.AttesterSlashing) {
-	b.attesterSlashings = eth.CopyAttesterSlashings(a)
+	b.attesterSlashings = a
 }
 
 // SetAttestations sets the attestations in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetAttestations(a []*eth.Attestation) {
-	b.attestations = eth.CopyAttestations(a)
+	b.attestations = a
 }
 
 // SetDeposits sets the deposits in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetDeposits(d []*eth.Deposit) {
-	b.deposits = eth.CopyDeposits(d)
+	b.deposits = d
 }
 
 // SetVoluntaryExits sets the voluntary exits in the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlockBody) SetVoluntaryExits(v []*eth.SignedVoluntaryExit) {
-	b.voluntaryExits = eth.CopySignedVoluntaryExits(v)
+	b.voluntaryExits = v
 }
 
 // SetSyncAggregate sets the sync aggregate in the block.
@@ -144,7 +144,7 @@ func (b *BeaconBlockBody) SetSyncAggregate(s *eth.SyncAggregate) error {
 	if b.version == version.Phase0 {
 		return ErrNotSupported("SyncAggregate", b.version)
 	}
-	b.syncAggregate = eth.CopySyncAggregate(s)
+	b.syncAggregate = s
 	return nil
 }
 
@@ -168,6 +168,6 @@ func (b *BeaconBlockBody) SetBLSToExecutionChanges(blsToExecutionChanges []*eth.
 	if b.version < version.Capella {
 		return ErrNotSupported("BLSToExecutionChanges", b.version)
 	}
-	b.blsToExecutionChanges = eth.CopyBLSToExecutionChanges(blsToExecutionChanges)
+	b.blsToExecutionChanges = blsToExecutionChanges
 	return nil
 }
