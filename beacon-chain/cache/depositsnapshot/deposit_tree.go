@@ -90,7 +90,7 @@ func (d *DepositTree) getRoot() [32]byte {
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...))
 }
 
-// pushLeaf adds a new deposit to the tree.
+// pushLeaf adds a new leaf to the tree.
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.mixInLength += 1

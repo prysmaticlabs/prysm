@@ -240,10 +240,12 @@ func (n *InnerNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error
 	return n, nil
 }
 
+// Right returns the child node on the right.
 func (n *InnerNode) Right() MerkleTreeNode {
 	return n.right
 }
 
+// Left returns the child node on the left.
 func (n *InnerNode) Left() MerkleTreeNode {
 	return n.left
 }
@@ -283,10 +285,12 @@ func (z *ZeroNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
 	return create([][32]byte{leaf}, depth), nil
 }
 
+// Right returns nil as a zero node can't have any children.
 func (z *ZeroNode) Right() MerkleTreeNode {
 	return nil
 }
 
+// Left returns nil as a zero node can't have any children.
 func (z *ZeroNode) Left() MerkleTreeNode {
 	return nil
 }
