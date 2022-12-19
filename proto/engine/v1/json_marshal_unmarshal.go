@@ -223,7 +223,7 @@ type executionPayloadJSON struct {
 
 type getPayloadV2ResponseJson struct {
 	ExecutionPayload *executionPayloadCapellaJSON `json:"executionPayload"`
-	BlockValue       uint64                       `json:"blockValue"`
+	BlockValue       string                       `json:"blockValue"`
 }
 
 type executionPayloadCapellaJSON struct {
