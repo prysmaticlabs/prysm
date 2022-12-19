@@ -14,5 +14,5 @@ func TestMinimal_Phase0_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.Phase0, "phase0")
+	forkchoice.Run(t, "minimal", version.Phase0)
 }

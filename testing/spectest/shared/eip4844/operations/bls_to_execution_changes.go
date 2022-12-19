@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"testing"
 
@@ -25,7 +24,6 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			fmt.Println("folder.Name(): ", folder.Name())
 			folderPath := path.Join(testsFolderPath, folder.Name())
 			changeFile, err := util.BazelFileBytes(folderPath, "address_change.ssz_snappy")
 			require.NoError(t, err)
@@ -46,7 +44,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 				if err != nil {
 					return nil, err
 				}
-				cSet, err := blocks.BLSChangesSignatureBatch(ctx, st, changes)
+				cSet, err := blocks.BLSChangesSignatureBatch(st, changes)
 				if err != nil {
 					return nil, err
 				}
