@@ -57,7 +57,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
 	}
 
-	blk, sBlk, err := emptyBlockToSign(req.Slot)
+	sBlk, err := emptyBlockToSign(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
@@ -75,6 +75,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
+	blk := sBlk.Block()
 	// Set slot, graffiti, randao reveal, and parent root.
 	blk.SetSlot(req.Slot)
 	blk.Body().SetGraffiti(req.Graffiti)
@@ -173,9 +174,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
-	if err := sBlk.SetBlock(blk); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set block: %v", err)
-	}
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
@@ -238,49 +236,32 @@ func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*
 	return validProposerSlashings, validAttSlashings
 }
 
-func emptyBlockToSign(slot types.Slot) (interfaces.BeaconBlock, interfaces.SignedBeaconBlock, error) {
-	var blk interfaces.BeaconBlock
+func emptyBlockToSign(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	var sBlk interfaces.SignedBeaconBlock
 	var err error
 	switch {
 	case slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().CapellaForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	default:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	}
-	return blk, sBlk, err
+	return sBlk, err
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt

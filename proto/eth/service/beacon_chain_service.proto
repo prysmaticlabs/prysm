@@ -385,9 +385,9 @@ service BeaconChain {
     };
   }
 
-  // SubmitSignedBLSToExecutionEngine submits said object to node's pool
+  // SubmitSignedBLSToExecutionChanges submits said object to node's pool
   // and if passes validation node MUST broadcast it to network.
-  rpc SubmitSignedBLSToExecutionChange(v2.SignedBLSToExecutionChange) returns (google.protobuf.Empty) {
+  rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
       body: "*"
