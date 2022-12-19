@@ -240,3 +240,15 @@ func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]s
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
 	return fvn
 }
+
+func (b *BeaconChainConfig) Eth1DataVotesLength() uint64 {
+	return uint64(b.EpochsPerEth1VotingPeriod.Mul(uint64(b.SlotsPerEpoch)))
+}
+
+func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
