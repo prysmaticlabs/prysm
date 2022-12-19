@@ -14,5 +14,5 @@ func TestMinimal_Bellatrix_Forkchoice(t *testing.T) {
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.Bellatrix, "bellatrix")
+	forkchoice.Run(t, "minimal", version.Bellatrix)
 }

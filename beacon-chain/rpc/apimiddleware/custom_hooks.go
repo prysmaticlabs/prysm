@@ -477,6 +477,12 @@ type capellaBlockResponseJson struct {
 	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
 }
 
+type eip4844BlockResponseJson struct {
+	Version             string                              `json:"version"`
+	Data                *SignedBeaconBlock4844ContainerJson `json:"data"`
+	ExecutionOptimistic bool                                `json:"execution_optimistic"`
+}
+
 type bellatrixBlindedBlockResponseJson struct {
 	Version             string                                          `json:"version"`
 	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
@@ -487,6 +493,12 @@ type capellaBlindedBlockResponseJson struct {
 	Version             string                                        `json:"version"`
 	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
+}
+
+type eip4844BlindedBlockResponseJson struct {
+	Version             string                                     `json:"version"`
+	Data                *SignedBlindedBeaconBlock4844ContainerJson `json:"data"`
+	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
 }
 
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -529,6 +541,15 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 			Version: respContainer.Version,
 			Data: &SignedBeaconBlockCapellaContainerJson{
 				Message:   respContainer.Data.CapellaBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_EIP4844.String())):
+		actualRespContainer = &eip4844BlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBeaconBlock4844ContainerJson{
+				Message:   respContainer.Data.Eip4844Block,
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
@@ -588,6 +609,15 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_EIP4844.String())):
+		actualRespContainer = &eip4844BlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBlindedBeaconBlock4844ContainerJson{
+				Message:   respContainer.Data.Eip4844Block,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
@@ -619,6 +649,11 @@ type capellaStateResponseJson struct {
 	Data    *BeaconStateCapellaJson `json:"data"`
 }
 
+type eip4844StateResponseJson struct {
+	Version string               `json:"version"`
+	Data    *BeaconState4844Json `json:"data"`
+}
+
 func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*BeaconStateV2ResponseJson)
 	if !ok {
@@ -646,6 +681,11 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 		actualRespContainer = &capellaStateResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.CapellaState,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_EIP4844.String())):
+		actualRespContainer = &eip4844StateResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.Eip4844State,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported state version '%s'", respContainer.Version))
