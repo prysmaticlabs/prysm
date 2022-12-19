@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -17,7 +17,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	assert.Equal(t, state.BeaconState(nil), s)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
-	s, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 
 	res := c.get(root)
 	assert.NotNil(t, s)
-	assert.DeepEqual(t, res.CloneInnerState(), s.CloneInnerState(), "Expected equal protos to return from cache")
+	assert.DeepEqual(t, res.ToProto(), s.ToProto(), "Expected equal protos to return from cache")
 
 	c.delete(root)
 	assert.Equal(t, false, c.has(root), "Cache not supposed to have the object")

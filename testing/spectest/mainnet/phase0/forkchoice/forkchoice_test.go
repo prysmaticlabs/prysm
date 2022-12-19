@@ -8,18 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/forkchoice"
 )
 
-func TestMainnet_Altair_Forkchoice(t *testing.T) {
+func TestMainnet_Phase0_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		DisablePullTips: true,
-	})
-	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.Phase0)
-}
-
-func TestMainnet_Altair_Forkchoice_DoublyLinkTree(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		DisablePullTips:                   true,
-		DisableForkchoiceDoublyLinkedTree: false,
+		EnableDefensivePull: false,
+		DisablePullTips:     true,
 	})
 	defer resetCfg()
 	forkchoice.Run(t, "mainnet", version.Phase0)

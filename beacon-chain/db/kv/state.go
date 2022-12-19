@@ -10,9 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -192,7 +189,7 @@ func getValidators(states []state.ReadOnlyBeaconState) ([][]byte, map[string]*et
 	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
-		pb, ok := st.InnerStateUnsafe().(withValidators)
+		pb, ok := st.ToProtoUnsafe().(withValidators)
 		if !ok {
 			return nil, nil, errors.New("could not cast state to interface with GetValidators()")
 		}
@@ -231,15 +228,9 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		// validator entries.To bring the gap closer, we empty the validators
 		// just before Put() and repopulate that state with original validators.
 		// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
-		switch rawType := states[i].InnerStateUnsafe().(type) {
+		switch rawType := states[i].ToProtoUnsafe().(type) {
 		case *ethpb.BeaconState:
-			var pbState *ethpb.BeaconState
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
-			} else {
-				pbState, err = v1.ProtobufBeaconState(rawType)
-			}
+			pbState, err := statenative.ProtobufBeaconStatePhase0(rawType)
 			if err != nil {
 				return err
 			}
@@ -260,13 +251,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateAltair:
-			var pbState *ethpb.BeaconStateAltair
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
-			} else {
-				pbState, err = v2.ProtobufBeaconState(rawType)
-			}
+			pbState, err := statenative.ProtobufBeaconStateAltair(rawType)
 			if err != nil {
 				return err
 			}
@@ -288,13 +273,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateBellatrix:
-			var pbState *ethpb.BeaconStateBellatrix
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
-			} else {
-				pbState, err = v3.ProtobufBeaconState(rawType)
-			}
+			pbState, err := statenative.ProtobufBeaconStateBellatrix(rawType)
 			if err != nil {
 				return err
 			}
@@ -308,6 +287,28 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 			encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
+			if err := bucket.Put(rt[:], encodedState); err != nil {
+				return err
+			}
+			pbState.Validators = valEntries
+			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+				return err
+			}
+		case *ethpb.BeaconStateCapella:
+			pbState, err := statenative.ProtobufBeaconStateCapella(rawType)
+			if err != nil {
+				return err
+			}
+			if pbState == nil {
+				return errors.New("nil state")
+			}
+			valEntries := pbState.Validators
+			pbState.Validators = make([]*ethpb.Validator, 0)
+			rawObj, err := pbState.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			encodedState := snappy.Encode(nil, append(capellaKey, rawObj...))
 			if err := bucket.Put(rt[:], encodedState); err != nil {
 				return err
 			}
@@ -472,11 +473,11 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
-	case hasBellatrixKey(enc):
-		// Marshal state bytes to altair beacon state.
-		protoState := &ethpb.BeaconStateBellatrix{}
-		if err := protoState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal encoding for altair")
+	case hasCapellaKey(enc):
+		// Marshal state bytes to capella beacon state.
+		protoState := &ethpb.BeaconStateCapella{}
+		if err := protoState.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for capella")
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
@@ -485,7 +486,21 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v3.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafeCapella(protoState)
+	case hasBellatrixKey(enc):
+		// Marshal state bytes to bellatrix beacon state.
+		protoState := &ethpb.BeaconStateBellatrix{}
+		if err := protoState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for bellatrix")
+		}
+		ok, err := s.isStateValidatorMigrationOver()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			protoState.Validators = validatorEntries
+		}
+		return statenative.InitializeFromProtoUnsafeBellatrix(protoState)
 	case hasAltairKey(enc):
 		// Marshal state bytes to altair beacon state.
 		protoState := &ethpb.BeaconStateAltair{}
@@ -499,7 +514,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v2.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafeAltair(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
 		protoState := &ethpb.BeaconState{}
@@ -513,21 +528,21 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v1.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafePhase0(protoState)
 	}
 }
 
 // marshal versioned state from struct type down to bytes.
 func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, error) {
-	switch st.InnerStateUnsafe().(type) {
+	switch st.ToProtoUnsafe().(type) {
 	case *ethpb.BeaconState:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconState)
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconState)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
 		return encode(ctx, rState)
 	case *ethpb.BeaconStateAltair:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateAltair)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
@@ -540,7 +555,7 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 		}
 		return snappy.Encode(nil, append(altairKey, rawObj...)), nil
 	case *ethpb.BeaconStateBellatrix:
-		rState, ok := st.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateBellatrix)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
@@ -552,6 +567,19 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(bellatrixKey, rawObj...)), nil
+	case *ethpb.BeaconStateCapella:
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateCapella)
+		if !ok {
+			return nil, errors.New("non valid inner state")
+		}
+		if rState == nil {
+			return nil, errors.New("nil state")
+		}
+		rawObj, err := rState.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		return snappy.Encode(nil, append(capellaKey, rawObj...)), nil
 	default:
 		return nil, errors.New("invalid inner state")
 	}

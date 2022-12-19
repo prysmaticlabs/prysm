@@ -5,16 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
-
-// This defines the minimal number of block nodes that can be in the tree
-// before getting pruned upon new finalization.
-const defaultPruneThreshold = 256
 
 // applyProposerBoostScore applies the current proposer boost scores to the
 // relevant nodes. This function requires a lock in Store.nodesLock.
@@ -27,25 +24,23 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			s.previousProposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
-			return nil
+		} else {
+			previousNode.balance -= s.previousProposerBoostScore
 		}
-		previousNode.balance -= s.previousProposerBoostScore
 	}
 
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			s.proposerBoostRoot = [32]byte{}
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
-			return nil
+		} else {
+			proposerScore, err = computeProposerBoostScore(newBalances)
+			if err != nil {
+				return err
+			}
+			currentNode.balance += proposerScore
 		}
-		proposerScore, err = computeProposerBoostScore(newBalances)
-		if err != nil {
-			return err
-		}
-		currentNode.balance += proposerScore
 	}
 	s.previousProposerBoostRoot = s.proposerBoostRoot
 	s.previousProposerBoostScore = proposerScore
@@ -57,11 +52,6 @@ func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 	s.proposerBoostLock.RLock()
 	defer s.proposerBoostLock.RUnlock()
 	return s.proposerBoostRoot
-}
-
-// PruneThreshold of fork choice store.
-func (s *Store) PruneThreshold() uint64 {
-	return s.pruneThreshold
 }
 
 // head starts from justified root and then follows the best descendant links
@@ -85,7 +75,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedNode = s.treeRootNode
 		} else {
-			return [32]byte{}, errUnknownJustifiedRoot
+			return [32]byte{}, errors.WithMessage(errUnknownJustifiedRoot, fmt.Sprintf("%#x", s.justifiedCheckpoint.Root))
 		}
 	}
 
@@ -151,6 +141,7 @@ func (s *Store) insert(ctx context.Context,
 		if s.treeRootNode == nil {
 			s.treeRootNode = n
 			s.headNode = n
+			s.highestReceivedNode = n
 		} else {
 			return n, errInvalidParentRoot
 		}
@@ -188,8 +179,8 @@ func (s *Store) insert(ctx context.Context,
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
 	// Update highest slot tracking.
-	if slot > s.highestReceivedSlot {
-		s.highestReceivedSlot = slot
+	if slot > s.highestReceivedNode.slot {
+		s.highestReceivedNode = n
 	}
 
 	return n, nil
@@ -211,12 +202,12 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 		}
 	}
 
+	node.children = nil
 	delete(s.nodeByRoot, node.root)
 	return nil
 }
 
-// prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
-// root is different than the current store finalized root, and the number of the store has met prune threshold.
+// prune prunes the fork choice store. It removes all nodes that compete with the finalized root.
 // This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
 func (s *Store) prune(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
@@ -230,12 +221,10 @@ func (s *Store) prune(ctx context.Context) error {
 
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
-		return errUnknownFinalizedRoot
+		return errors.WithMessage(errUnknownFinalizedRoot, fmt.Sprintf("%#x", finalizedRoot))
 	}
-
-	// The number of the nodes has not met the prune threshold.
-	// Pruning at small numbers incurs more cost than benefit.
-	if finalizedNode.depth() < s.pruneThreshold {
+	// return early if we haven't changed the finalized checkpoint
+	if finalizedNode.parent == nil {
 		return nil
 	}
 
@@ -273,7 +262,20 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	return f.store.highestReceivedSlot
+	if f.store.highestReceivedNode == nil {
+		return 0
+	}
+	return f.store.highestReceivedNode.slot
+}
+
+// HighestReceivedBlockRoot returns the highest slot root received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	if f.store.highestReceivedNode == nil {
+		return [32]byte{}
+	}
+	return f.store.highestReceivedNode.root
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch

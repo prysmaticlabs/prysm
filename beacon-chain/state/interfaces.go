@@ -18,6 +18,7 @@ import (
 type BeaconState interface {
 	SpecParametersProvider
 	ReadOnlyBeaconState
+	ReadOnlyWithdrawals
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
@@ -49,8 +50,8 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
-	InnerStateUnsafe() interface{}
-	CloneInnerState() interface{}
+	ToProtoUnsafe() interface{}
+	ToProto() interface{}
 	GenesisTime() uint64
 	GenesisValidatorsRoot() []byte
 	Slot() types.Slot
@@ -62,7 +63,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
+	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -85,6 +86,8 @@ type WriteOnlyBeaconState interface {
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
+	SetNextWithdrawalIndex(i uint64) error
+	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -96,6 +99,9 @@ type ReadOnlyValidator interface {
 	ExitEpoch() types.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
 	WithdrawalCredentials() []byte
+	HasETH1WithdrawalCredential() bool
+	IsFullyWithdrawable(types.Epoch) bool
+	IsPartiallyWithdrawable(uint64) bool
 	Slashed() bool
 	IsNil() bool
 }
@@ -159,6 +165,13 @@ type ReadOnlyEth1Data interface {
 type ReadOnlyAttestations interface {
 	PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error)
 	CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error)
+}
+
+// ReadOnlyWithdrawals defines a struct which only has read access to withdrawal methods.
+type ReadOnlyWithdrawals interface {
+	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
+	NextWithdrawalValidatorIndex() (types.ValidatorIndex, error)
+	NextWithdrawalIndex() (uint64, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.

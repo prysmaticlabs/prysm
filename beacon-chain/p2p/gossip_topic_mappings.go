@@ -20,12 +20,16 @@ var gossipTopicMappings = map[string]proto.Message{
 	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
+	BlsToExecutionChangeSubnetTopicFormat:     &ethpb.SignedBLSToExecutionChange{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
 // versioned by epoch.
 func GossipTopicMappings(topic string, epoch types.Epoch) proto.Message {
 	if topic == BlockSubnetTopicFormat {
+		if epoch >= params.BeaconConfig().CapellaForkEpoch {
+			return &ethpb.SignedBeaconBlockCapella{}
+		}
 		if epoch >= params.BeaconConfig().BellatrixForkEpoch {
 			return &ethpb.SignedBeaconBlockBellatrix{}
 		}
@@ -58,5 +62,6 @@ func init() {
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
 	// Specially handle Bellatrix objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBlindedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
+	// Specially handle Capella objects
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockCapella{})] = BlockSubnetTopicFormat
 }

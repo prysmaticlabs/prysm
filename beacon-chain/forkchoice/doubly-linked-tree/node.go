@@ -11,15 +11,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
-// depth returns the length of the path to the root of Fork Choice
-func (n *Node) depth() uint64 {
-	ret := uint64(0)
-	for node := n.parent; node != nil; node = node.parent {
-		ret += 1
-	}
-	return ret
-}
-
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
 // using the current balance stored in each node. This function requires a lock
 // in Store.nodesLock
@@ -104,10 +95,11 @@ func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch types.
 	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
 		if n.unrealizedJustifiedEpoch+1 >= currentEpoch {
 			justified = true
+		}
+		if n.unrealizedFinalizedEpoch >= finalizedEpoch {
 			finalized = true
 		}
 	}
-
 	return justified && finalized
 }
 
@@ -146,7 +138,7 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 	}
 	thisNode := &v1.ForkChoiceNode{
 		Slot:                     n.slot,
-		Root:                     n.root[:],
+		BlockRoot:                n.root[:],
 		ParentRoot:               parentRoot[:],
 		JustifiedEpoch:           n.justifiedEpoch,
 		FinalizedEpoch:           n.finalizedEpoch,
@@ -155,8 +147,13 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		Balance:                  n.balance,
 		Weight:                   n.weight,
 		ExecutionOptimistic:      n.optimistic,
-		ExecutionPayload:         n.payloadHash[:],
+		ExecutionBlockHash:       n.payloadHash[:],
 		Timestamp:                n.timestamp,
+	}
+	if n.optimistic {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_OPTIMISTIC
+	} else {
+		thisNode.Validity = v1.ForkChoiceNodeValidity_VALID
 	}
 
 	nodes = append(nodes, thisNode)
@@ -168,4 +165,22 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		}
 	}
 	return nodes, nil
+}
+
+// VotedFraction returns the fraction of the committee that voted directly for
+// this node.
+func (f *ForkChoice) VotedFraction(root [32]byte) (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	// Avoid division by zero before a block is inserted.
+	if f.store.committeeBalance == 0 {
+		return 0, nil
+	}
+
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
+		return 0, ErrNilNode
+	}
+	return node.balance * 100 / f.store.committeeBalance, nil
 }

@@ -6,9 +6,9 @@ import (
 	"runtime/debug"
 	"strings"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	corenet "github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	corenet "github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"

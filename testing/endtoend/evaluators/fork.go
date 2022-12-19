@@ -30,7 +30,7 @@ var BellatrixForkTransition = types.Evaluator{
 	Evaluation: bellatrixForkOccurs,
 }
 
-func altairForkOccurs(conns ...*grpc.ClientConn) error {
+func altairForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
@@ -72,7 +72,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	return nil
 }
 
-func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
+func bellatrixForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)

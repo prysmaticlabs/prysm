@@ -65,6 +65,12 @@ func (f FieldIndex) String(_ int) string {
 		return "nextSyncCommittee"
 	case LatestExecutionPayloadHeader:
 		return "latestExecutionPayloadHeader"
+	case LatestExecutionPayloadHeaderCapella:
+		return "LatestExecutionPayloadHeaderCapella"
+	case NextWithdrawalIndex:
+		return "NextWithdrawalIndex"
+	case NextWithdrawalValidatorIndex:
+		return "NextWithdrawalValidatorIndex"
 	default:
 		return ""
 	}
@@ -122,8 +128,12 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella:
 		return 24
+	case NextWithdrawalIndex:
+		return 25
+	case NextWithdrawalValidatorIndex:
+		return 26
 	default:
 		return -1
 	}
@@ -178,4 +188,7 @@ const (
 	CurrentSyncCommittee
 	NextSyncCommittee
 	LatestExecutionPayloadHeader
+	LatestExecutionPayloadHeaderCapella
+	NextWithdrawalIndex
+	NextWithdrawalValidatorIndex
 )

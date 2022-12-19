@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
@@ -30,9 +31,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
-//    /- b1 - b2
+//	/- b1 - b2
+//
 // b0
-//    \- b3
+//
+//	\- b3
+//
 // Test b1 was missing then received and we can process b0 -> b1 -> b2
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	db := dbtest.SetupDB(t)
@@ -47,7 +51,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -119,7 +123,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -191,7 +195,7 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 				},
 				ReceiveBlockMockErr: execution.ErrHTTPTimeout,
 			},
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -318,7 +322,7 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 					Epoch: 0,
 				},
 			},
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -347,9 +351,12 @@ func TestRegularSyncBeaconBlockSubscriber_DoNotReprocessBlock(t *testing.T) {
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
-//    /- b1 - b2 - b5
+//	/- b1 - b2 - b5
+//
 // b0
-//    \- b3 - b4
+//
+//	\- b3 - b4
+//
 // Test b2 and b3 were missed, after receiving them we can process 2 chains.
 func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testing.T) {
 	db := dbtest.SetupDB(t)
@@ -383,7 +390,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 					Root:  make([]byte, 32),
 				},
 			},
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -703,7 +710,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -781,7 +788,7 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 			p2p:      p1,
 			beaconDB: db,
 			chain:    &mockChain,
-			stateGen: stategen.New(db),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),

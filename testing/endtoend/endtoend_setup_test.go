@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators/beaconapi_evaluators"
 	"os"
 	"strconv"
 	"testing"
@@ -44,7 +45,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.VerifyBlockGraffiti,
 		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,
-		ev.ValidatorHasExited,
+		ev.ValidatorsHaveExited,
 		ev.ProcessesDepositsInBlocks,
 		ev.ActivatesDepositedValidators,
 		ev.DepositedValidatorsAreActive,
@@ -115,16 +116,17 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.PeersConnect,
 		ev.HealthzCheck,
 		ev.MetricsCheck,
-		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
-		ev.ValidatorHasExited,
+		ev.ValidatorsHaveExited,
+		ev.DepositedValidatorsAreActive,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.FeeRecipientIsPresent,
@@ -166,7 +168,7 @@ func scenarioEvals() []types.Evaluator {
 		ev.FinalizationOccurs(3),
 		ev.VerifyBlockGraffiti,
 		ev.ProposeVoluntaryExit,
-		ev.ValidatorHasExited,
+		ev.ValidatorsHaveExited,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
@@ -186,7 +188,7 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
-		ev.ValidatorHasExited,
+		ev.ValidatorsHaveExited,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,

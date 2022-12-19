@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -134,6 +134,11 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 }
 
 func TestBlocksQueue_Loop(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		highestExpectedSlot types.Slot
@@ -255,7 +260,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			})
 			assert.NoError(t, queue.start())
 			processBlock := func(block interfaces.SignedBeaconBlock) error {
-				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block().ParentRoot())) {
+				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
 				root, err := block.Block().HashTreeRoot()
@@ -1075,7 +1080,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
@@ -1295,7 +1300,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	// Connect peer that has all the blocks available.
 	allBlocksPeer := connectPeerHavingBlocks(t, p2p, chain, finalizedSlot, p2p.Peers())
@@ -1336,7 +1341,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 				continue
 			}
 
-			parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
+			parentRoot := blk.Block().ParentRoot()
 			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasBlock(ctx, parentRoot) {
 				log.Errorf("%v: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 				continue

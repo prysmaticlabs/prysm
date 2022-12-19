@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -39,7 +38,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 		return nil, err
 	}
 
-	preState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot()))
+	preState, err := s.cfg.StateGen.StateByRoot(ctx, b.ParentRoot())
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
@@ -65,7 +64,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
-	parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+	parentRoot := b.ParentRoot()
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// a subset of the block object.
@@ -73,7 +72,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyFinalizedBlkDescendant(ctx, parentRoot); err != nil {
 		return err
 	}
 
@@ -163,7 +162,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil && err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if err != nil && !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return err
 	}
 	if !optimistic {
@@ -172,24 +171,30 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 			return err
 		}
 	}
-	if err := s.cfg.StateGen.MigrateToCold(ctx, fRoot); err != nil {
-		return errors.Wrap(err, "could not migrate to cold")
-	}
+	go func() {
+		// We do not pass in the parent context from the method as this method call
+		// is meant to be asynchronous and run in the background rather than being
+		// tied to the execution of a block.
+		if err := s.cfg.StateGen.MigrateToCold(s.ctx, fRoot); err != nil {
+			log.WithError(err).Error("could not migrate to cold")
+		}
+	}()
 	return nil
 }
 
 // ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
-//   def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
-//    block = store.blocks[root]
-//    if block.slot > slot:
-//        return get_ancestor(store, block.parent_root, slot)
-//    elif block.slot == slot:
-//        return root
-//    else:
-//        # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
-//        return root
+//
+//	def get_ancestor(store: Store, root: Root, slot: Slot) -> Root:
+//	 block = store.blocks[root]
+//	 if block.slot > slot:
+//	     return get_ancestor(store, block.parent_root, slot)
+//	 elif block.slot == slot:
+//	     return root
+//	 else:
+//	     # root is older than queried slot, thus a skip slot. Return most recent root prior to slot
+//	     return root
 func (s *Service) ancestor(ctx context.Context, root []byte, slot types.Slot) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ancestor")
 	defer span.End()
@@ -241,7 +246,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return r[:], nil
 	}
 
-	return s.ancestorByDB(ctx, bytesutil.ToBytes32(b.ParentRoot()), slot)
+	return s.ancestorByDB(ctx, b.ParentRoot(), slot)
 }
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
@@ -259,7 +264,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
 		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
-	root := bytesutil.ToBytes32(blk.ParentRoot())
+	root := blk.ParentRoot()
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
 		b, err := s.getBlock(ctx, root)
 		if err != nil {
@@ -268,7 +273,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		if b.Block().Slot() <= fSlot {
 			break
 		}
-		root = bytesutil.ToBytes32(b.Block().ParentRoot())
+		root = b.Block().ParentRoot()
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedCheckpoint: jCheckpoint,
 			FinalizedCheckpoint: fCheckpoint}

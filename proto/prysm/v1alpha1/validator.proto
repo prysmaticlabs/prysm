@@ -168,6 +168,14 @@ service BeaconNodeValidator {
         };
     }
 
+    // GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+    rpc GetFeeRecipientByPubKey(FeeRecipientByPubKeyRequest) returns (FeeRecipientByPubKeyResponse){
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/fee_recipient_by_pub_key"
+            body: "*"
+        };
+    }
+
     // Retrieves the latest valid attestation data to be attested on the beacon chain.
     //
     // The server returns the latest valid data which represents the correct vote
@@ -514,6 +522,8 @@ message BlockRequest {
     // Validator's 32 byte graffiti message for the new block.
     bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 
+    // Signal server to skip outsourcing block request from mev-boost/relayer so that returned block will always be a local block.
+    bool skip_mev_boost = 4;
 }
 
 message ProposeResponse {
@@ -613,51 +623,6 @@ message Validator {
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
     uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-}
-
-// An Ethereum validator after Capella fork.
-message ValidatorCapella {
-    // 48 byte BLS public key used for the validator's activities.
-    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
-
-    // 32 byte hash of the withdrawal destination public key.
-    bytes withdrawal_credentials = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // The validators current effective balance in gwei.
-    uint64 effective_balance = 3;
-
-    // Whether or not the validator has been slashed.
-    bool slashed = 4;
-
-    // Epoch when the validator became eligible for activation. This field may
-    // be zero if the validator was present in the Ethereum proof of stake genesis. This
-    // field is FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-
-    // Epoch when the validator was activated. This field may be zero if the
-    // validator was present in the Ethereum proof of stake genesis. This field is
-    // FAR_FUTURE_EPOCH if the validator has not been activated.
-    uint64 activation_epoch = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-
-    // Epoch when the validator was exited. This field is FAR_FUTURE_EPOCH if
-    // the validator has not exited.
-    // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
-    // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 exit_epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-
-    // Epoch when the validator is eligible to withdraw their funds. This field
-    // is FAR_FUTURE_EPOCH if the validator has not exited.
-    // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
-    // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 withdrawable_epoch = 8 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
-
-    // New in Capella.
-    //
-    // Epoch when the validator's funds were withdrawn.
-    // This field is FAR_FUTURE_EPOCH if the validator's withdrawal has not been processed.
-    // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
-    // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants
-    uint64 fully_withdrawn_epoch = 9 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 }
 
 // ValidatorParticipation stores participation metrics during a given epoch.
@@ -764,4 +729,12 @@ message PrepareBeaconProposerRequest {
         uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
     }
     repeated FeeRecipientContainer recipients = 1;
+}
+
+message FeeRecipientByPubKeyRequest {
+    bytes public_key = 1 [(ethereum.eth.ext.ssz_size) = "48", (ethereum.eth.ext.spec_name) = "pubkey"];
+}
+
+message FeeRecipientByPubKeyResponse {
+    bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
 }

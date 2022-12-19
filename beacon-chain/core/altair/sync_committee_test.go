@@ -8,8 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -28,7 +27,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -46,14 +45,6 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		wantErr   bool
 		errString string
 	}{
-		{
-			name: "nil inner state",
-			args: args{
-				state: &v2.BeaconState{},
-			},
-			wantErr:   true,
-			errString: "nil inner state",
-		},
 		{
 			name: "genesis validator count, epoch 0",
 			args: args{
@@ -103,7 +94,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -140,7 +131,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -158,14 +149,6 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		wantErr   bool
 		errString string
 	}{
-		{
-			name: "nil inner state",
-			args: args{
-				state: &v2.BeaconState{},
-			},
-			wantErr:   true,
-			errString: "nil inner state",
-		},
 		{
 			name: "genesis validator count, epoch 0",
 			args: args{
@@ -395,7 +378,7 @@ func getState(t *testing.T, count uint64) state.BeaconState {
 			PublicKey:        blsKey.PublicKey().Marshal(),
 		}
 	}
-	st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})

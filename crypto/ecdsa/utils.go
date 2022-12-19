@@ -6,12 +6,15 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	gcrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 )
 
 func ConvertFromInterfacePrivKey(privkey crypto.PrivKey) (*ecdsa.PrivateKey, error) {
-	secpKey := (privkey.(*crypto.Secp256k1PrivateKey))
+	secpKey, ok := privkey.(*crypto.Secp256k1PrivateKey)
+	if !ok {
+		return nil, errors.New("could not cast to Secp256k1PrivateKey")
+	}
 	rawKey, err := secpKey.Raw()
 	if err != nil {
 		return nil, err

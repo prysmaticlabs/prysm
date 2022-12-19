@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -145,7 +144,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	m.validatorClient.EXPECT().SubmitSyncMessage(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.SyncCommitteeMessage{}),
-	).Do(func(_ context.Context, msg *ethpb.SyncCommitteeMessage, opts ...grpc.CallOption) {
+	).Do(func(_ context.Context, msg *ethpb.SyncCommitteeMessage) {
 		generatedMsg = msg
 	}).Return(&emptypb.Empty{}, nil /* error */)
 

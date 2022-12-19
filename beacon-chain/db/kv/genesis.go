@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -58,7 +58,7 @@ func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 	if err := st.UnmarshalSSZ(sb); err != nil {
 		return err
 	}
-	gs, err := statev1.InitializeFromProtoUnsafe(st)
+	gs, err := state_native.InitializeFromProtoUnsafePhase0(st)
 	if err != nil {
 		return err
 	}

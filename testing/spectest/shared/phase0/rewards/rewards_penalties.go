@@ -11,7 +11,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -51,9 +51,16 @@ func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	_, testsFolderPath := utils.TestFolders(t, config, "phase0", "rewards")
 	testTypes, err := util.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
+	if len(testTypes) == 0 {
+		t.Fatalf("No test types found for %s/%s/%s", config, "phase0", "rewards")
+	}
 
 	for _, testType := range testTypes {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
+		testPath := fmt.Sprintf("rewards/%s/pyspec_tests", testType)
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", testPath)
+		if len(testFolders) == 0 {
+			t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", testPath)
+		}
 		for _, folder := range testFolders {
 			helpers.ClearCache()
 			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {
@@ -72,7 +79,7 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, err, "Failed to decompress")
 	preBeaconStateBase := &ethpb.BeaconState{}
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-	preBeaconState, err := v1.InitializeFromProto(preBeaconStateBase)
+	preBeaconState, err := state_native.InitializeFromProtoPhase0(preBeaconStateBase)
 	require.NoError(t, err)
 
 	vp, bp, err := precompute.New(ctx, preBeaconState)

@@ -8,9 +8,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -25,14 +23,27 @@ func init() {
 	transition.SkipSlotCache.Disable()
 }
 
-// Run executes "forkchoice" test.
+// Run executes "forkchoice"  and "sync" test.
 func Run(t *testing.T, config string, fork int) {
+	runTest(t, config, fork, "fork_choice")
+	if fork >= version.Bellatrix {
+		runTest(t, config, fork, "sync")
+	}
+}
+
+func runTest(t *testing.T, config string, fork int, basePath string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, _ := utils.TestFolders(t, config, version.String(fork), "fork_choice")
+	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), basePath)
+	}
 
 	for _, folder := range testFolders {
-		folderPath := path.Join("fork_choice", folder.Name(), "pyspec_tests")
+		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
 		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
+		if len(testFolders) == 0 {
+			t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), folderPath)
+		}
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
@@ -63,6 +74,9 @@ func Run(t *testing.T, config string, fork int) {
 				case version.Bellatrix:
 					beaconState = unmarshalBellatrixState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalBellatrixBlock(t, blockSSZ)
+				case version.Capella:
+					beaconState = unmarshalCapellaState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalCapellaBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -86,6 +100,8 @@ func Run(t *testing.T, config string, fork int) {
 							beaconBlock = unmarshalSignedAltairBlock(t, blockSSZ)
 						case version.Bellatrix:
 							beaconBlock = unmarshalSignedBellatrixBlock(t, blockSSZ)
+						case version.Capella:
+							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
@@ -113,6 +129,10 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						builder.Attestation(t, att)
 					}
+					if step.PayloadStatus != nil {
+						require.NoError(t, builder.SetPayloadStatus(step.PayloadStatus))
+
+					}
 					if step.PowBlock != nil {
 						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
 						require.NoError(t, err)
@@ -132,7 +152,7 @@ func Run(t *testing.T, config string, fork int) {
 func unmarshalPhase0State(t *testing.T, raw []byte) state.BeaconState {
 	base := &ethpb.BeaconState{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := v1.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	return st
 }
@@ -156,7 +176,7 @@ func unmarshalSignedPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaco
 func unmarshalAltairState(t *testing.T, raw []byte) state.BeaconState {
 	base := &ethpb.BeaconStateAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := v2.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 	return st
 }
@@ -180,7 +200,7 @@ func unmarshalSignedAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaco
 func unmarshalBellatrixState(t *testing.T, raw []byte) state.BeaconState {
 	base := &ethpb.BeaconStateBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := v3.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoBellatrix(base)
 	require.NoError(t, err)
 	return st
 }
@@ -195,6 +215,30 @@ func unmarshalBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBl
 
 func unmarshalSignedBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockBellatrix{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(base)
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalCapellaState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateCapella{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	st, err := state_native.InitializeFromProtoCapella(base)
+	require.NoError(t, err)
+	return st
+}
+
+func unmarshalCapellaBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockCapella{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalSignedCapellaBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockCapella{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)

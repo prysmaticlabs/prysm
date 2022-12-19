@@ -8,6 +8,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -117,6 +118,31 @@ func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
+// WithdrawalSliceRoot computes the HTR of a slice of withdrawals.
+// The limit parameter is used as input to the bitwise merkleization algorithm.
+func WithdrawalSliceRoot(hasher HashFn, withdrawals []*enginev1.Withdrawal, limit uint64) ([32]byte, error) {
+	roots := make([][32]byte, len(withdrawals))
+	for i := 0; i < len(withdrawals); i++ {
+		r, err := withdrawalRoot(hasher, withdrawals[i])
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = r
+	}
+
+	bytesRoot, err := BitwiseMerkleize(hasher, roots, uint64(len(roots)), limit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute  merkleization")
+	}
+	bytesRootBuf := new(bytes.Buffer)
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(withdrawals))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal length")
+	}
+	bytesRootBufRoot := make([]byte, 32)
+	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
+	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
 func transactionRoot(tx []byte) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
 	chunkedRoots, err := PackByChunk([][]byte{tx})
@@ -136,4 +162,17 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 	bytesRootBufRoot := make([]byte, 32)
 	copy(bytesRootBufRoot, bytesRootBuf.Bytes())
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
+}
+
+func withdrawalRoot(hasher HashFn, w *enginev1.Withdrawal) ([32]byte, error) {
+	fieldRoots := make([][32]byte, 4)
+	if w != nil {
+		binary.LittleEndian.PutUint64(fieldRoots[0][:], w.WithdrawalIndex)
+
+		binary.LittleEndian.PutUint64(fieldRoots[1][:], uint64(w.ValidatorIndex))
+
+		fieldRoots[2] = bytesutil.ToBytes32(w.ExecutionAddress)
+		binary.LittleEndian.PutUint64(fieldRoots[3][:], w.Amount)
+	}
+	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

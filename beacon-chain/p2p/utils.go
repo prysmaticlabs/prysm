@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
@@ -39,7 +39,7 @@ func SerializeENR(record *enr.Record) (string, error) {
 	if err := record.EncodeRLP(buf); err != nil {
 		return "", errors.Wrap(err, "could not encode ENR record to bytes")
 	}
-	enrString := base64.URLEncoding.EncodeToString(buf.Bytes())
+	enrString := base64.RawURLEncoding.EncodeToString(buf.Bytes())
 	return enrString, nil
 }
 

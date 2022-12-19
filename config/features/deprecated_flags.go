@@ -47,6 +47,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableDefensivePull = &cli.BoolFlag{
+		Name:   "enable-back-pull",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDutyCountdown = &cli.BoolFlag{
 		Name:   "enable-duty-count-down",
 		Usage:  deprecatedUsage,
@@ -72,6 +77,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableNativeState = &cli.StringFlag{
+		Name:   "disable-native-state",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -88,6 +98,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedGossipBatchAggregation,
 	deprecatedEnableLargerGossipHistory,
 	deprecatedFallbackProvider,
+	deprecatedEnableDefensivePull,
+	deprecatedDisableNativeState,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

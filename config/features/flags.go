@@ -93,17 +93,13 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableNativeState = &cli.BoolFlag{
-		Name:  "disable-native-state",
-		Usage: "Disables representing the beacon state as a pure Go struct.",
-	}
 	disablePullTips = &cli.BoolFlag{
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
-	enableDefensivePull = &cli.BoolFlag{
-		Name:   "enable-back-pull",
-		Usage:  "Experimental enable of past boundary checks, useful for debugging, may cause bad votes.",
+	disableDefensivePull = &cli.BoolFlag{
+		Name:   "disable-back-pull",
+		Usage:  "Experimental disable of past boundary checks, useful for debugging, may cause bad votes.",
 		Hidden: true,
 	}
 	disableVecHTR = &cli.BoolFlag{
@@ -127,6 +123,10 @@ var (
 		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
 		Value:  false,
 		Hidden: true,
+	}
+	enableFullSSZDataLogging = &cli.BoolFlag{
+		Name:  "enable-full-ssz-data-logging",
+		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
 	}
 )
 
@@ -165,17 +165,25 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableNativeState,
 	disablePullTips,
 	disableVecHTR,
 	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 	enableStartupOptimistic,
-	enableDefensivePull,
+	disableDefensivePull,
+	enableFullSSZDataLogging,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--dev",
+}
+
+// NetworkFlags contains a list of network flags.
+var NetworkFlags = []cli.Flag{
+	Mainnet,
+	PraterTestnet,
+	RopstenTestnet,
+	SepoliaTestnet,
 }

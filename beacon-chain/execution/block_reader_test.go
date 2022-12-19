@@ -9,9 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/trie"
 	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -19,7 +19,6 @@ import (
 )
 
 func setDefaultMocks(service *Service) *Service {
-	service.eth1DataFetcher = &goodFetcher{}
 	service.httpLogger = &goodLogger{}
 	service.cfg.stateNotifier = &goodNotifier{}
 	return service
@@ -44,7 +43,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
 
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
@@ -57,7 +55,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	header, err := web3Service.eth1DataFetcher.HeaderByNumber(web3Service.ctx, nil)
+	header, err := web3Service.HeaderByNumber(web3Service.ctx, nil)
 	require.NoError(t, err)
 
 	tickerChan := make(chan time.Time)
@@ -67,7 +65,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	exitRoutine <- true
 
 	assert.Equal(t, web3Service.latestEth1Data.BlockHeight, header.Number.Uint64())
-	assert.Equal(t, hexutil.Encode(web3Service.latestEth1Data.BlockHash), header.Hash().Hex())
+	assert.Equal(t, hexutil.Encode(web3Service.latestEth1Data.BlockHash), header.Hash.Hex())
 	assert.Equal(t, web3Service.latestEth1Data.BlockTime, header.Time)
 }
 
@@ -85,6 +83,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	web3Service = setDefaultMocks(web3Service)
+	web3Service.rpcClient = &mockExecution.RPCClient{}
 	ctx := context.Background()
 
 	header := &gethTypes.Header{
@@ -117,15 +116,17 @@ func TestBlockHashByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = nil
+	web3Service.rpcClient = nil
 	ctx := context.Background()
 
 	_, err = web3Service.BlockHashByHeight(ctx, big.NewInt(0))
-	require.ErrorContains(t, "nil eth1DataFetcher", err)
+	require.ErrorContains(t, "nil rpc client", err)
 }
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
+	testAcc, err := mock.Setup()
+	require.NoError(t, err, "Unable to set up simulated backend")
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -138,16 +139,10 @@ func TestBlockExists_ValidHash(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	web3Service = setDefaultMocks(web3Service)
-
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(0),
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-		new(trie.Trie),
-	)
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
+	testAcc.Backend.Commit()
+	block, err := testAcc.Backend.BlockByNumber(context.Background(), big.NewInt(0))
+	assert.NoError(t, err)
 
 	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
 	require.NoError(t, err, "Could not get block hash with given height")
@@ -191,17 +186,15 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
-	// nil eth1DataFetcher would panic if cached value not used
-	web3Service.eth1DataFetcher = nil
 
-	header := &gethTypes.Header{
+	header := &types.HeaderInfo{
 		Number: big.NewInt(0),
 	}
 
 	err = web3Service.headerCache.AddHeader(header)
 	require.NoError(t, err)
 
-	exists, height, err := web3Service.BlockExists(context.Background(), header.Hash())
+	exists, height, err := web3Service.BlockExists(context.Background(), header.Hash)
 	require.NoError(t, err, "Could not get block hash with given height")
 	require.Equal(t, true, exists)
 	require.Equal(t, 0, height.Cmp(header.Number))
@@ -222,7 +215,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	)
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 
 	for i := 0; i < 200; i++ {
 		testAcc.Backend.Commit()
@@ -254,7 +247,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	)
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 
 	for i := 0; i < 200; i++ {
 		testAcc.Backend.Commit()
@@ -292,7 +285,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	)
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = &goodFetcher{backend: testAcc.Backend}
+	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 
 	for i := 0; i < 200; i++ {
 		testAcc.Backend.Commit()
@@ -329,9 +322,9 @@ func TestService_BlockTimeByHeight_ReturnsError_WhenNoEth1Client(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.eth1DataFetcher = nil
+	web3Service.rpcClient = nil
 	ctx := context.Background()
 
 	_, err = web3Service.BlockTimeByHeight(ctx, big.NewInt(0))
-	require.ErrorContains(t, "nil eth1DataFetcher", err)
+	require.ErrorContains(t, "nil rpc client", err)
 }

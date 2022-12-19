@@ -5,10 +5,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -314,7 +314,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	if err == nil {
 		return optimistic, nil
 	}
-	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return true, err
 	}
 	// If fockchoice does not have the headroot, then the node is considered
@@ -338,7 +338,7 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err == nil {
 		return optimistic, nil
 	}
-	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+	if !errors.Is(err, doublylinkedtree.ErrNilNode) {
 		return false, err
 	}
 	// if the requested root is the headroot and the root is not found in

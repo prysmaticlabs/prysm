@@ -14,13 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
-	ValidatorClient  ethpb.BeaconNodeValidatorClient
+	ValidatorClient  iface.ValidatorClient
 	NodeClient       ethpb.NodeClient
 	Keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte
@@ -52,7 +53,7 @@ func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 		return errors.New("could not get sync status")
 	}
 
-	if (*syncStatus).Syncing {
+	if syncStatus.Syncing {
 		return errors.New("could not perform exit: beacon node is syncing.")
 	}
 
@@ -126,8 +127,8 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
 			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.PraterName {
-				baseUrl = "https://prater.beaconcha.in/validator/"
+			if params.BeaconConfig().ConfigName == params.PraterName || params.BeaconConfig().ConfigName == params.GoerliName {
+				baseUrl = "https://goerli.beaconcha.in/validator/"
 			} else {
 				baseUrl = "https://beaconcha.in/validator/"
 			}
