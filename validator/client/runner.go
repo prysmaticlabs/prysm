@@ -89,8 +89,8 @@ func run(ctx context.Context, v iface.Validator) {
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
 			}
-		case newKeys := <-accountsChangedChan:
-			anyActive, err := v.HandleKeyReload(ctx, newKeys)
+		case currentKeys := <-accountsChangedChan:
+			anyActive, err := v.HandleKeyReload(ctx, currentKeys)
 			if err != nil {
 				log.WithError(err).Error("Could not properly handle reloaded keys")
 			}
@@ -98,7 +98,7 @@ func run(ctx context.Context, v iface.Validator) {
 				log.Info("No active keys found. Waiting for activation...")
 				err := v.WaitForActivation(ctx, accountsChangedChan)
 				if err != nil {
-					log.WithError(err).Fatal("Could not wait for validator activation")
+					log.WithError(err).Warn("Could not wait for validator activation")
 				}
 			}
 		case slot := <-v.NextSlot():
