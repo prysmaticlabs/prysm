@@ -10,6 +10,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -26,8 +27,11 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 	if len(testFolders) == 0 {
 		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", "operations/block_header/pyspec_tests")
 	}
+
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
+			helpers.ClearCache()
+
 			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)

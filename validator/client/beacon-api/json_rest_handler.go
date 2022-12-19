@@ -69,9 +69,12 @@ func (c beaconApiJsonRestHandler) PostRestJson(apiEndpoint string, headers map[s
 }
 
 func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
+	decoder := json.NewDecoder(resp.Body)
+	decoder.DisallowUnknownFields()
+
 	if resp.StatusCode != http.StatusOK {
 		errorJson := &apimiddleware.DefaultErrorJson{}
-		if err := json.NewDecoder(resp.Body).Decode(errorJson); err != nil {
+		if err := decoder.Decode(errorJson); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
 		}
 
@@ -79,7 +82,7 @@ func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddlewa
 	}
 
 	if responseJson != nil {
-		if err := json.NewDecoder(resp.Body).Decode(responseJson); err != nil {
+		if err := decoder.Decode(responseJson); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode response json for %s", resp.Request.URL)
 		}
 	}

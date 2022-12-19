@@ -662,3 +662,11 @@ func TestLittleEndianBytesToBigInt(t *testing.T) {
 	expected := new(big.Int).SetInt64(1234567890)
 	assert.DeepEqual(t, expected, converted)
 }
+
+func TestBigIntToLittleEndianBytes(t *testing.T) {
+	expected := make([]byte, 4)
+	binary.LittleEndian.PutUint32(expected, 1234567890)
+	bigInt := new(big.Int).SetUint64(1234567890)
+	converted := bytesutil.BigIntToLittleEndianBytes(bigInt)
+	assert.DeepEqual(t, expected, converted)
+}
