@@ -66,6 +66,19 @@ func CapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBeaconBlockCapella) 
 	return v1alpha1Block, nil
 }
 
+// Eip4844ToV1Alpha1SignedBlock converts a v2 SignedBeaconBlock4844 proto to a v1alpha1 proto.
+func Eip4844ToV1Alpha1SignedBlock(eip4844Blk *ethpbv2.SignedBeaconBlock4844) (*ethpbalpha.SignedBeaconBlock4844, error) {
+	marshaledBlk, err := proto.Marshal(eip4844Blk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBeaconBlock4844{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
 // BlindedBellatrixToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlockBellatrix proto to a v1alpha1 proto.
 func BlindedBellatrixToV1Alpha1SignedBlock(bellatrixBlk *ethpbv2.SignedBlindedBeaconBlockBellatrix) (*ethpbalpha.SignedBlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(bellatrixBlk)
@@ -86,6 +99,19 @@ func BlindedCapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBlindedBeacon
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlockCapella{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
+// Blinded4844ToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlock4844 proto to a v1alpha1 proto.
+func Blinded4844ToV1Alpha1SignedBlock(eip4844Blk *ethpbv2.SignedBlindedBeaconBlock4844) (*ethpbalpha.SignedBlindedBeaconBlock4844, error) {
+	marshaledBlk, err := proto.Marshal(eip4844Blk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlock4844{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -120,6 +146,20 @@ func V1Alpha1BeaconBlockCapellaToV2(v1alpha1Block *ethpbalpha.BeaconBlockCapella
 	return v2Block, nil
 }
 
+// V1Alpha1BeaconBlock4844ToV2 converts a v1alpha1 4844 beacon block to a v2
+// 4844 block.
+func V1Alpha1BeaconBlock4844ToV2(v1alpha1Block *ethpbalpha.BeaconBlock4844) (*ethpbv2.BeaconBlock4844, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BeaconBlock4844{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
 // V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
 func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
@@ -140,6 +180,19 @@ func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.Blin
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v2Block := &ethpbv2.BlindedBeaconBlockCapella{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
+// V1Alpha1BeaconBlockBlinded4844ToV2Blinded converts a v1alpha1 Blinded 4844 beacon block to a v2 Blinded 4844 block.
+func V1Alpha1BeaconBlockBlinded4844ToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlock4844) (*ethpbv2.BlindedBeaconBlock4844, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BlindedBeaconBlock4844{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -903,6 +956,156 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 			Timestamp:        sourceLatestExecutionPayloadHeader.Timestamp,
 			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExtraData),
 			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash),
+			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot),
+			WithdrawalsRoot:  bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.WithdrawalsRoot),
+		},
+		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
+		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
+	}
+
+	return result, nil
+}
+
+// BeaconState4844ToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, error) {
+	sourceFork := st.Fork()
+	sourceLatestBlockHeader := st.LatestBlockHeader()
+	sourceEth1Data := st.Eth1Data()
+	sourceEth1DataVotes := st.Eth1DataVotes()
+	sourceValidators := st.Validators()
+	sourceJustificationBits := st.JustificationBits()
+	sourcePrevJustifiedCheckpoint := st.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := st.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := st.FinalizedCheckpoint()
+
+	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
+	for i, vote := range sourceEth1DataVotes {
+		resultEth1DataVotes[i] = &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(vote.DepositRoot),
+			DepositCount: vote.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(vote.BlockHash),
+		}
+	}
+	resultValidators := make([]*ethpbv1.Validator, len(sourceValidators))
+	for i, validator := range sourceValidators {
+		resultValidators[i] = &ethpbv1.Validator{
+			Pubkey:                     bytesutil.SafeCopyBytes(validator.PublicKey),
+			WithdrawalCredentials:      bytesutil.SafeCopyBytes(validator.WithdrawalCredentials),
+			EffectiveBalance:           validator.EffectiveBalance,
+			Slashed:                    validator.Slashed,
+			ActivationEligibilityEpoch: validator.ActivationEligibilityEpoch,
+			ActivationEpoch:            validator.ActivationEpoch,
+			ExitEpoch:                  validator.ExitEpoch,
+			WithdrawableEpoch:          validator.WithdrawableEpoch,
+		}
+	}
+
+	sourcePrevEpochParticipation, err := st.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get previous epoch participation")
+	}
+	sourceCurrEpochParticipation, err := st.CurrentEpochParticipation()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current epoch participation")
+	}
+	sourceInactivityScores, err := st.InactivityScores()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get inactivity scores")
+	}
+	sourceCurrSyncCommittee, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current sync committee")
+	}
+	sourceNextSyncCommittee, err := st.NextSyncCommittee()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next sync committee")
+	}
+	executionPayloadHeaderInterface, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get latest execution payload header")
+	}
+	sourceLatestExecutionPayloadHeader, ok := executionPayloadHeaderInterface.Proto().(*enginev1.ExecutionPayloadHeader4844)
+	if !ok {
+		return nil, errors.New("execution payload header has incorrect type")
+	}
+	sourceNextWithdrawalIndex, err := st.NextWithdrawalIndex()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next withdrawal index")
+	}
+	sourceNextWithdrawalValIndex, err := st.NextWithdrawalValidatorIndex()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
+	}
+
+	result := &ethpbv2.BeaconState4844{
+		GenesisTime:           st.GenesisTime(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
+		Slot:                  st.Slot(),
+		Fork: &ethpbv1.Fork{
+			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
+			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
+			Epoch:           sourceFork.Epoch,
+		},
+		LatestBlockHeader: &ethpbv1.BeaconBlockHeader{
+			Slot:          sourceLatestBlockHeader.Slot,
+			ProposerIndex: sourceLatestBlockHeader.ProposerIndex,
+			ParentRoot:    bytesutil.SafeCopyBytes(sourceLatestBlockHeader.ParentRoot),
+			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
+			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
+		},
+		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		Eth1Data: &ethpbv1.Eth1Data{
+			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
+			DepositCount: sourceEth1Data.DepositCount,
+			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
+		},
+		Eth1DataVotes:              resultEth1DataVotes,
+		Eth1DepositIndex:           st.Eth1DepositIndex(),
+		Validators:                 resultValidators,
+		Balances:                   st.Balances(),
+		RandaoMixes:                bytesutil.SafeCopy2dBytes(st.RandaoMixes()),
+		Slashings:                  st.Slashings(),
+		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
+		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
+		JustificationBits:          bytesutil.SafeCopyBytes(sourceJustificationBits),
+		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
+		},
+		CurrentJustifiedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceCurrJustifiedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceCurrJustifiedCheckpoint.Root),
+		},
+		FinalizedCheckpoint: &ethpbv1.Checkpoint{
+			Epoch: sourceFinalizedCheckpoint.Epoch,
+			Root:  bytesutil.SafeCopyBytes(sourceFinalizedCheckpoint.Root),
+		},
+		InactivityScores: sourceInactivityScores,
+		CurrentSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceCurrSyncCommittee.Pubkeys),
+			AggregatePubkey: bytesutil.SafeCopyBytes(sourceCurrSyncCommittee.AggregatePubkey),
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
+			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
+		},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
+			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.PrevRandao),
+			BlockNumber:      sourceLatestExecutionPayloadHeader.BlockNumber,
+			GasLimit:         sourceLatestExecutionPayloadHeader.GasLimit,
+			GasUsed:          sourceLatestExecutionPayloadHeader.GasUsed,
+			Timestamp:        sourceLatestExecutionPayloadHeader.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas),
+			ExcessDataGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExcessDataGas),
 			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash),
 			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot),
 			WithdrawalsRoot:  bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.WithdrawalsRoot),

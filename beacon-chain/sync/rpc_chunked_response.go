@@ -156,7 +156,7 @@ func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.
 	return b, err
 }
 
-func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*ethpb.BlobsSidecar, error) {
+func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2p p2p.EncodingProvider, isFirstChunk bool) (*ethpb.BlobsSidecar, error) {
 	var (
 		code   uint8
 		errMsg string
