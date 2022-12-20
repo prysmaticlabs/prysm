@@ -121,13 +121,8 @@ func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in
 	return new(empty.Empty), c.prepareBeaconProposer(ctx, in.Recipients)
 }
 
-func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ProposeAttestation(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeAttestation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ProposeAttestation(_ context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+	return c.proposeAttestation(in)
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
