@@ -98,9 +98,9 @@ type Config struct {
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
-	BLSToExecPool                 blstoexec.PoolManager
 	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
+	BLSChangesPool                blstoexec.PoolManager
 	SyncService                   chainSync.Checker
 	Broadcaster                   p2p.Broadcaster
 	PeersFetcher                  p2p.PeersProvider
@@ -320,6 +320,7 @@ func (s *Service) Start() {
 		V1Alpha1ValidatorServer:       validatorServer,
 		SyncChecker:                   s.cfg.SyncService,
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
+		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
