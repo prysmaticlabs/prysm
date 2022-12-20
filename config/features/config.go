@@ -72,6 +72,8 @@ type Flags struct {
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
+	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
@@ -256,6 +258,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(enableFullSSZDataLogging.Name) {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
+	}
+	if ctx.IsSet(enableVerboseSigVerification.Name) {
+		logEnabled(enableVerboseSigVerification)
+		cfg.EnableVerboseSigVerification = true
 	}
 	Init(cfg)
 	return nil

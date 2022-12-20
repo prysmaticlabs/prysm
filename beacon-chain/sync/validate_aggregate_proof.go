@@ -299,9 +299,10 @@ func validateSelectionIndex(
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{proof},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{proof},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.SelectionProof},
 	}, nil
 }
 
@@ -326,8 +327,9 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{a.Signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{a.Signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.AggregatorSignature},
 	}, nil
 }
