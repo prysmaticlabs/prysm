@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 const TestSignature = "test signature"
@@ -56,15 +57,15 @@ func TestCopySignatureSet(t *testing.T) {
 }
 
 func TestVerifyVerbosely_AllSignaturesValid(t *testing.T) {
-	set := NewValidSignatureSet("good", 3)
+	set := NewValidSignatureSet(t, "good", 3)
 	valid, err := set.VerifyVerbosely()
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid, "SignatureSet is expected to be valid")
 }
 
 func TestVerifyVerbosely_SomeSignaturesInvalid(t *testing.T) {
-	goodSet := NewValidSignatureSet("good", 3)
-	badSet := NewInvalidSignatureSet("bad", 3, false)
+	goodSet := NewValidSignatureSet(t, "good", 3)
+	badSet := NewInvalidSignatureSet(t, "bad", 3, false)
 	set := NewSet().Join(goodSet).Join(badSet)
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
@@ -77,8 +78,8 @@ func TestVerifyVerbosely_SomeSignaturesInvalid(t *testing.T) {
 }
 
 func TestVerifyVerbosely_VerificationThrowsError(t *testing.T) {
-	goodSet := NewValidSignatureSet("good", 1)
-	badSet := NewInvalidSignatureSet("bad", 1, true)
+	goodSet := NewValidSignatureSet(t, "good", 1)
+	badSet := NewInvalidSignatureSet(t, "bad", 1, true)
 	set := NewSet().Join(goodSet).Join(badSet)
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
@@ -645,7 +646,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 	}
 }
 
-func NewValidSignatureSet(msgBody string, num int) *SignatureBatch {
+func NewValidSignatureSet(t *testing.T, msgBody string, num int) *SignatureBatch {
 	set := &SignatureBatch{
 		Signatures:   make([][]byte, num),
 		PublicKeys:   make([]common.PublicKey, num),
@@ -654,7 +655,8 @@ func NewValidSignatureSet(msgBody string, num int) *SignatureBatch {
 	}
 
 	for i := 0; i < num; i++ {
-		priv, _ := RandKey()
+		priv, err := RandKey()
+		require.NoError(t, err)
 		pubkey := priv.PublicKey()
 		msg := messageBytes(fmt.Sprintf("%s%d", msgBody, i))
 		sig := priv.Sign(msg[:]).Marshal()
@@ -669,7 +671,7 @@ func NewValidSignatureSet(msgBody string, num int) *SignatureBatch {
 	return set
 }
 
-func NewInvalidSignatureSet(msgBody string, num int, throwErr bool) *SignatureBatch {
+func NewInvalidSignatureSet(t *testing.T, msgBody string, num int, throwErr bool) *SignatureBatch {
 	set := &SignatureBatch{
 		Signatures:   make([][]byte, num),
 		PublicKeys:   make([]common.PublicKey, num),
@@ -678,7 +680,8 @@ func NewInvalidSignatureSet(msgBody string, num int, throwErr bool) *SignatureBa
 	}
 
 	for i := 0; i < num; i++ {
-		priv, _ := RandKey()
+		priv, err := RandKey()
+		require.NoError(t, err)
 		pubkey := priv.PublicKey()
 		msg := messageBytes(fmt.Sprintf("%s%d", msgBody, i))
 		var sig []byte
