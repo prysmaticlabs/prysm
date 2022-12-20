@@ -132,26 +132,26 @@ func (sd *snapshot) UnmarshalYAML(value *yaml.Node) error {
 	if err != nil {
 		return err
 	}
-	sd.Finalized = make([][32]byte, len(raw.Finalized))
+	sd.finalized = make([][32]byte, len(raw.Finalized))
 	for i, finalized := range raw.Finalized {
-		sd.Finalized[i], err = hexStringToByteArray(finalized)
+		sd.finalized[i], err = hexStringToByteArray(finalized)
 		if err != nil {
 			return err
 		}
 	}
-	sd.DepositRoot, err = hexStringToByteArray(raw.DepositRoot)
+	sd.depositRoot, err = hexStringToByteArray(raw.DepositRoot)
 	if err != nil {
 		return err
 	}
-	sd.DepositCount, err = stringToUint64(raw.DepositCount)
+	sd.depositCount, err = stringToUint64(raw.DepositCount)
 	if err != nil {
 		return err
 	}
-	sd.ExecutionBlockHash, err = hexStringToByteArray(raw.ExecutionBlockHash)
+	sd.executionBlock.Hash, err = hexStringToByteArray(raw.ExecutionBlockHash)
 	if err != nil {
 		return err
 	}
-	sd.ExecutionBlockHeight, err = stringToUint64(raw.ExecutionBlockHeight)
+	sd.executionBlock.Depth, err = stringToUint64(raw.ExecutionBlockHeight)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func TestDepositCases(t *testing.T) {
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
 		assert.NoError(t, err)
-		assert.Equal(t, c.Eth1Data.DepositRoot, c.Snapshot.DepositRoot)
+		assert.Equal(t, c.Eth1Data.DepositRoot, c.Snapshot.depositRoot)
 		assert.Equal(t, c.Eth1Data.DepositRoot, tree.getRoot())
 	}
 }
@@ -332,11 +332,13 @@ func TestEmptyTreeSnapshot(t *testing.T) {
 
 func TestInvalidSnapshot(t *testing.T) {
 	invalidSnapshot := DepositTreeSnapshot{
-		Finalized:            nil,
-		DepositRoot:          Zerohashes[0],
-		DepositCount:         0,
-		ExecutionBlockHash:   Zerohashes[0],
-		ExecutionBlockHeight: 0,
+		finalized:            nil,
+		depositRoot:          Zerohashes[0],
+		depositCount:         0,
+		executionBlock: ExecutionBlock{
+			Hash: Zerohashes[0],
+			Depth: 0,
+		},
 	}
 	_, err := fromSnapshot(invalidSnapshot)
 	assert.ErrorContains(t, "snapshot root is invalid", err)

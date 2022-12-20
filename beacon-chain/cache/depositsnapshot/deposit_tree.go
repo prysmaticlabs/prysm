@@ -11,6 +11,8 @@ import (
 var (
 	ErrEmptyExecutionBlock = errors.New("empty execution block")
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
+	ErrInvalidMixInLength  = errors.New("mixInLength should be greater than 0")
+	ErrInvalidIndex        = errors.New("index should be greater than finalizedDeposits - 1")
 )
 
 // DepositTree is the Merkle tree representation of deposits.
@@ -48,21 +50,18 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
 func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
-	if snapshot.DepositRoot != snapshot.CalculateRoot() {
+	if snapshot.depositRoot != snapshot.CalculateRoot() {
 		return DepositTree{}, ErrInvalidSnapshotRoot
 	}
-	finalizedExecutionBlock := ExecutionBlock{
-		Hash:  snapshot.ExecutionBlockHash,
-		Depth: snapshot.ExecutionBlockHeight,
-	}
-	tree := fromSnapshotParts(snapshot.Finalized, snapshot.DepositCount, DepositContractDepth)
+	tree := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
 	return DepositTree{
 		tree:                    tree,
-		mixInLength:             snapshot.DepositCount,
-		finalizedExecutionBlock: finalizedExecutionBlock,
+		mixInLength:             snapshot.depositCount,
+		finalizedExecutionBlock: snapshot.executionBlock,
 	}, nil
 }
 
+// finalize marks a deposit as finalized.
 func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) {
 	d.finalizedExecutionBlock = ExecutionBlock{
 		Hash:  *(*[32]byte)(eth1data.BlockHash),
@@ -71,13 +70,14 @@ func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 	d.tree.Finalize(eth1data.DepositCount, DepositContractDepth)
 }
 
+// getProof returns the Deposit tree proof.
 func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.mixInLength <= 0 {
-		return [32]byte{}, nil, nil
+		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
 	if index <= (finalizedDeposits - 1) {
-		return [32]byte{}, nil, nil
+		return [32]byte{}, nil, ErrInvalidIndex
 	}
 	leaf, proof := generateProof(d.tree, index, DepositContractDepth)
 	proof = append(proof, *(*[32]byte)(bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)))
@@ -90,7 +90,7 @@ func (d *DepositTree) getRoot() [32]byte {
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...))
 }
 
-// pushLeaf adds a new deposit to the tree.
+// pushLeaf adds a new leaf to the tree.
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.mixInLength += 1

@@ -52,9 +52,8 @@ func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, e
 	if !ok {
 		return nil, ErrIncorrectType
 	}
-	switch st.Version() {
-	case version.Altair, version.Bellatrix:
-	default:
+	// Sync committee is not supported in phase 0.
+	if st.Version() == version.Phase0 {
 		return nil, ErrIncorrectType
 	}
 	return st, nil

@@ -25,12 +25,14 @@ type MerkleTreeNode interface {
 	IsFull() bool
 	// Finalize marks deposits of the Merkle tree as finalized.
 	Finalize(deposits uint64, depth uint64) MerkleTreeNode
-	// GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
+	// GetFinalized returns the number of deposits and a list of hashes of all the finalized nodes.
 	GetFinalized(result [][32]byte) (uint64, [][32]byte)
 	// PushLeaf adds a new leaf node at the next available Zero node.
 	PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
 
+	// Right represents the right child of a node.
 	Right() MerkleTreeNode
+	// Left represents the left child of a node.
 	Left() MerkleTreeNode
 }
 
@@ -238,10 +240,12 @@ func (n *InnerNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error
 	return n, nil
 }
 
+// Right returns the child node on the right.
 func (n *InnerNode) Right() MerkleTreeNode {
 	return n.right
 }
 
+// Left returns the child node on the left.
 func (n *InnerNode) Left() MerkleTreeNode {
 	return n.left
 }
@@ -281,10 +285,12 @@ func (z *ZeroNode) PushLeaf(leaf [32]byte, depth uint64) (MerkleTreeNode, error)
 	return create([][32]byte{leaf}, depth), nil
 }
 
+// Right returns nil as a zero node can't have any children.
 func (z *ZeroNode) Right() MerkleTreeNode {
 	return nil
 }
 
+// Left returns nil as a zero node can't have any children.
 func (z *ZeroNode) Left() MerkleTreeNode {
 	return nil
 }

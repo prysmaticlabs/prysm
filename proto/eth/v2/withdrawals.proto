@@ -18,7 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
-option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v2;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/v2;eth";
 option java_multiple_files = true;
 option java_outer_classname = "WithdrawalsProto";
 option java_package = "org.ethereum.eth.v2";

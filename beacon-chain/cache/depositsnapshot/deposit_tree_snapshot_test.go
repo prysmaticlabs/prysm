@@ -39,8 +39,8 @@ func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
 				finalized = append(finalized, hexString(t, fmt.Sprintf("%064d", i)))
 			}
 			ds := &DepositTreeSnapshot{
-				Finalized:    finalized,
-				DepositCount: tt.depositCount,
+				finalized:    finalized,
+				depositCount: tt.depositCount,
 			}
 			if got := ds.CalculateRoot(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateRoot() = %v, want %v", got, tt.want)
