@@ -446,9 +446,9 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 			for i := types.Slot(0); i < slot; i++ {
 				v, ok := seenVotes[i]
 				if ok {
-					fmt.Printf("vote at slot=%d = %#x", slot, v)
+					fmt.Printf("vote at slot=%d = %#x\n", i, v)
 				} else {
-					fmt.Printf("did not see slot=%d", slot)
+					fmt.Printf("did not see slot=%d\n", i)
 				}
 			}
 			return fmt.Errorf("incorrect eth1data vote for slot %d; expected: %#x vs voted: %#x",
