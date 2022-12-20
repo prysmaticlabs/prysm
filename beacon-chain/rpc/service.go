@@ -98,6 +98,7 @@ type Config struct {
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
 	SlashingsPool                 slashings.PoolManager
+	BLSToExecPool                 blstoexec.PoolManager
 	SlashingChecker               slasherservice.SlashingChecker
 	SyncCommitteeObjectPool       synccommittee.Pool
 	BLSChangesPool                blstoexec.PoolManager
