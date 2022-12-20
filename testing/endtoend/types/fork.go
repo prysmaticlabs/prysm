@@ -8,7 +8,6 @@ import (
 func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
 	c = c.Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
-	c.TerminalTotalDifficulty = "300"
 	if v >= version.Altair {
 		c.AltairForkEpoch = 0
 	}
