@@ -76,7 +76,10 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
-	if index <= (finalizedDeposits - 1) {
+	if finalizedDeposits != 0 {
+		finalizedDeposits = finalizedDeposits-1
+	}
+	if index <= finalizedDeposits {
 		return [32]byte{}, nil, ErrInvalidIndex
 	}
 	leaf, proof := generateProof(d.tree, index, DepositContractDepth)
