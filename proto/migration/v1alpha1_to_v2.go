@@ -717,6 +717,7 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 	return result, nil
 }
 
+// V1Alpha1SignedContributionAndProofToV2 converts a v1alpha1 SignedContributionAndProof object to its v2 equivalent.
 func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.SignedContributionAndProof) *ethpbv2.SignedContributionAndProof {
 	result := &ethpbv2.SignedContributionAndProof{
 		Message: &ethpbv2.ContributionAndProof{
@@ -731,6 +732,19 @@ func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.Signed
 			SelectionProof: alphaContribution.Message.SelectionProof,
 		},
 		Signature: alphaContribution.Signature,
+	}
+	return result
+}
+
+// V1Alpha1SignedBLSToExecChangeToV2 converts a v1alpha1 SignedBLSToExecutionChange object to its v2 equivalent.
+func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecutionChange) *ethpbv2.SignedBLSToExecutionChange {
+	result := &ethpbv2.SignedBLSToExecutionChange{
+		Message: &ethpbv2.BLSToExecutionChange{
+			ValidatorIndex:     alphaChange.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(alphaChange.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(alphaChange.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(alphaChange.Signature),
 	}
 	return result
 }

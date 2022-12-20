@@ -760,3 +760,21 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 	assert.Equal(t, uint64(123), result.NextWithdrawalIndex)
 	assert.Equal(t, types.ValidatorIndex(123), result.NextWithdrawalValidatorIndex)
 }
+
+func TestV1Alpha1SignedBLSToExecChangeToV2(t *testing.T) {
+	alphaChange := &ethpbalpha.SignedBLSToExecutionChange{
+		Message: &ethpbalpha.BLSToExecutionChange{
+			ValidatorIndex:     validatorIndex,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("fromblspubkey"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("toexecutionaddress"), 20),
+		},
+		Signature: signature,
+	}
+	change := V1Alpha1SignedBLSToExecChangeToV2(alphaChange)
+	require.NotNil(t, change)
+	require.NotNil(t, change.Message)
+	assert.DeepEqual(t, signature, change.Signature)
+	assert.Equal(t, validatorIndex, change.Message.ValidatorIndex)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("fromblspubkey"), 48), change.Message.FromBlsPubkey)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("toexecutionaddress"), 20), change.Message.ToExecutionAddress)
+}
