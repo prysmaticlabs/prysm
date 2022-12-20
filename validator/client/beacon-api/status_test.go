@@ -481,7 +481,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 			outputErrMessage: "failed to get state validators",
 		},
 		{
-			name: "failed to parse validator public key",
+			name: "failed to parse validator public key NotAPublicKey",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
@@ -506,7 +506,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 			outputErrMessage: "failed to parse validator public key",
 		},
 		{
-			name: "failed to parse validator index",
+			name: "failed to parse validator index NotAnIndex",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
@@ -556,7 +556,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					outputErr: nil,
 				},
 			},
-			outputErrMessage: "invalid validator status: NotAStatus",
+			outputErrMessage: "invalid validator status NotAStatus",
 		},
 		{
 			name: "failed to parse activation epoch",
@@ -584,7 +584,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					outputErr: nil,
 				},
 			},
-			outputErrMessage: "failed to parse activation epoch",
+			outputErrMessage: "failed to parse activation epoch NotAnEpoch",
 		},
 		{
 			name: "failed to get state validators",
@@ -662,7 +662,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					outputErr: nil,
 				},
 			},
-			outputErrMessage: "failed to parse last validator index",
+			outputErrMessage: "failed to parse last validator index NotAnIndex",
 		},
 	}
 

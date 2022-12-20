@@ -44,12 +44,6 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 	[]*ethpb.ValidatorStatusResponse,
 	error,
 ) {
-	totalLen := len(inPubKeys) + len(inIndexes)
-
-	outPubKeys := make([][]byte, totalLen)
-	outIndexes := make([]types.ValidatorIndex, totalLen)
-	validatorsStatus := make([]*ethpb.ValidatorStatusResponse, totalLen)
-
 	// Represents the target set of keys
 	stringTargetPubKeysToPubKeys := make(map[string][]byte, len(inPubKeys))
 	stringTargetPubKeys := make([]string, len(inPubKeys))
@@ -59,6 +53,12 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 
 	// Contains all keys in targetPubKeys but not in retrievedPubKeys
 	missingPubKeys := [][]byte{}
+
+	totalLen := len(inPubKeys) + len(inIndexes)
+
+	outPubKeys := make([][]byte, totalLen)
+	outIndexes := make([]types.ValidatorIndex, totalLen)
+	outValidatorsStatuses := make([]*ethpb.ValidatorStatusResponse, totalLen)
 
 	for index, publicKey := range inPubKeys {
 		stringPubKey := hexutil.Encode(publicKey)
@@ -85,13 +85,13 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 			// string pub key is not already known because the index was used for this validator
 			pubKey, err = hexutil.Decode(stringPubKey)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "failed to parse validator public key")
+				return nil, nil, nil, errors.Wrapf(err, "failed to parse validator public key %s", stringPubKey)
 			}
 		}
 
 		validatorIndex, err := strconv.ParseUint(validatorContainer.Index, 10, 64)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "failed to parse validator index")
+			return nil, nil, nil, errors.Wrapf(err, "failed to parse validator index %s", validatorContainer.Index)
 		}
 
 		outPubKeys[i] = pubKey
@@ -102,7 +102,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 		// Set Status
 		status, ok := beaconAPITogRPCValidatorStatus[validatorContainer.Status]
 		if !ok {
-			return nil, nil, nil, errors.New("invalid validator status: " + validatorContainer.Status)
+			return nil, nil, nil, errors.New("invalid validator status " + validatorContainer.Status)
 		}
 
 		validatorStatus.Status = status
@@ -110,14 +110,14 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 		// Set activation epoch
 		activationEpoch, err := strconv.ParseUint(validatorContainer.Validator.ActivationEpoch, 10, 64)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "failed to parse activation epoch")
+			return nil, nil, nil, errors.Wrapf(err, "failed to parse activation epoch %s", validatorContainer.Validator.ActivationEpoch)
 		}
 
 		validatorStatus.ActivationEpoch = types.Epoch(activationEpoch)
 
 		// Set PositionInActivationQueue
 		switch status {
-		case ethpb.ValidatorStatus_DEPOSITED, ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED:
+		case ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, ethpb.ValidatorStatus_DEPOSITED:
 			if !isLastActivatedValidatorIndexRetrieved {
 				isLastActivatedValidatorIndexRetrieved = true
 
@@ -133,7 +133,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 
 					lastActivatedValidatorIndex, err = strconv.ParseUint(lastValidator.Index, 10, 64)
 					if err != nil {
-						return nil, nil, nil, errors.Wrap(err, "failed to parse last validator index")
+						return nil, nil, nil, errors.Wrapf(err, "failed to parse last validator index %s", lastValidator.Index)
 					}
 				}
 			}
@@ -141,7 +141,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 			validatorStatus.PositionInActivationQueue = validatorIndex - lastActivatedValidatorIndex
 		}
 
-		validatorsStatus[i] = validatorStatus
+		outValidatorsStatuses[i] = validatorStatus
 	}
 
 	for _, stringTargetPubKey := range stringTargetPubKeys {
@@ -157,12 +157,12 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 		outPubKeys[nbStringRetrievedPubKeys+i] = missingPubKey
 		outIndexes[nbStringRetrievedPubKeys+i] = types.ValidatorIndex(^uint64(0))
 
-		validatorsStatus[nbStringRetrievedPubKeys+i] = &ethpb.ValidatorStatusResponse{
+		outValidatorsStatuses[nbStringRetrievedPubKeys+i] = &ethpb.ValidatorStatusResponse{
 			Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
 	outLen := len(stateValidatorsResponse.Data) + len(missingPubKeys)
-	return outPubKeys[:outLen], outIndexes[:outLen], validatorsStatus[:outLen], nil
+	return outPubKeys[:outLen], outIndexes[:outLen], outValidatorsStatuses[:outLen], nil
 }
