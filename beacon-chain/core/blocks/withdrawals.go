@@ -170,9 +170,10 @@ func BLSChangesSignatureBatch(
 		return bls.NewSet(), nil
 	}
 	batch := &bls.SignatureBatch{
-		Signatures: make([][]byte, len(changes)),
-		PublicKeys: make([]bls.PublicKey, len(changes)),
-		Messages:   make([][32]byte, len(changes)),
+		Signatures:   make([][]byte, len(changes)),
+		PublicKeys:   make([]bls.PublicKey, len(changes)),
+		Messages:     make([][32]byte, len(changes)),
+		Descriptions: make([]string, len(changes)),
 	}
 	epoch := slots.ToEpoch(st.Slot())
 	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
@@ -191,6 +192,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
 		batch.Messages[i] = htr
+		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
 }
