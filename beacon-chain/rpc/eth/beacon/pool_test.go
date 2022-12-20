@@ -1178,7 +1178,7 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 	}
 
 	s := &Server{
-		BLSToExecPool: &blstoexecmock.PoolMock{Changes: []*ethpbv1alpha1.SignedBLSToExecutionChange{change1, change2}},
+		BLSChangesPool: &blstoexecmock.PoolMock{Changes: []*ethpbv1alpha1.SignedBLSToExecutionChange{change1, change2}},
 	}
 
 	resp, err := s.ListBLSToExecutionChanges(context.Background(), &emptypb.Empty{})

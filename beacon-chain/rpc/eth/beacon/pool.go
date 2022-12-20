@@ -340,7 +340,7 @@ func (bs *Server) ListBLSToExecutionChanges(ctx context.Context, _ *emptypb.Empt
 	ctx, span := trace.StartSpan(ctx, "beacon.ListBLSToExecutionChanges")
 	defer span.End()
 
-	sourceChanges, err := bs.BLSToExecPool.PendingBLSToExecChanges()
+	sourceChanges, err := bs.BLSChangesPool.PendingBLSToExecChanges()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get BLS to execution changes: %v", err)
 	}

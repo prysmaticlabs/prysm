@@ -33,7 +33,6 @@ type Server struct {
 	AttestationsPool              attestations.Pool
 	SlashingsPool                 slashings.PoolManager
 	VoluntaryExitsPool            voluntaryexits.PoolManager
-	BLSToExecPool                 blstoexec.PoolManager
 	StateGenService               stategen.StateManager
 	StateFetcher                  statefetcher.Fetcher
 	HeadFetcher                   blockchain.HeadFetcher
