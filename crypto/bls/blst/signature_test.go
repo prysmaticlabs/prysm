@@ -36,6 +36,7 @@ func TestAggregateVerify(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := AggregateSignatures(sigs)
+	// skipcq: GO-W1009
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
@@ -56,6 +57,7 @@ func TestAggregateVerify_CompressedSignatures(t *testing.T) {
 		msgs = append(msgs, msg)
 	}
 	aggSig := AggregateSignatures(sigs)
+	// skipcq: GO-W1009
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 
 	aggSig2, err := AggregateCompressedSignatures(sigBytes)
@@ -88,6 +90,29 @@ func TestVerifyCompressed(t *testing.T) {
 	sig := priv.Sign(msg)
 	assert.Equal(t, true, sig.Verify(pub, msg), "Non compressed signature did not verify")
 	assert.Equal(t, true, VerifyCompressed(sig.Marshal(), pub.Marshal(), msg), "Compressed signatures and pubkeys did not verify")
+}
+
+func TestVerifySingleSignature_InvalidSignature(t *testing.T) {
+	priv, err := RandKey()
+	require.NoError(t, err)
+	pub := priv.PublicKey()
+	msgA := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	msgB := [32]byte{'o', 'l', 'l', 'e', 'h'}
+	sigA := priv.Sign(msgA[:]).Marshal()
+	valid, err := VerifySignature(sigA, msgB, pub)
+	assert.NoError(t, err)
+	assert.Equal(t, false, valid, "Signature did verify")
+}
+
+func TestVerifySingleSignature_ValidSignature(t *testing.T) {
+	priv, err := RandKey()
+	require.NoError(t, err)
+	pub := priv.PublicKey()
+	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
+	sig := priv.Sign(msg[:]).Marshal()
+	valid, err := VerifySignature(sig, msg, pub)
+	assert.NoError(t, err)
+	assert.Equal(t, true, valid, "Signature did not verify")
 }
 
 func TestMultipleSignatureVerification(t *testing.T) {

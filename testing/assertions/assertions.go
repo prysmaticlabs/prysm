@@ -78,6 +78,23 @@ func DeepNotSSZEqual(loggerFn assertionLoggerFn, expected, actual interface{}, m
 	}
 }
 
+// StringContains checks whether a string contains specified substring. If flag is false, inverse is checked.
+func StringContains(loggerFn assertionLoggerFn, expected, actual string, flag bool, msg ...interface{}) {
+	if flag {
+		if !strings.Contains(actual, expected) {
+			errMsg := parseMsg("Expected substring is not found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
+	} else {
+		if strings.Contains(actual, expected) {
+			errMsg := parseMsg("Unexpected substring is found", msg...)
+			_, file, line, _ := runtime.Caller(2)
+			loggerFn("%s:%d %s, got: %v, not want: %s", filepath.Base(file), line, errMsg, actual, expected)
+		}
+	}
+}
+
 // NoError asserts that error is nil.
 func NoError(loggerFn assertionLoggerFn, err error, msg ...interface{}) {
 	if err != nil {
