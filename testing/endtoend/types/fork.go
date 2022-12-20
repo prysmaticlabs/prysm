@@ -14,7 +14,6 @@ func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
 	}
 	if v >= version.Bellatrix {
 		c.BellatrixForkEpoch = 0
-		c.TerminalTotalDifficulty = "0"
 	}
 	if v >= version.Capella {
 		c.CapellaForkEpoch = 0
