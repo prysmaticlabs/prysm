@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
 )
 
 func printTree(tree MerkleTreeNode) error {
@@ -12,7 +13,12 @@ func printTree(tree MerkleTreeNode) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err = file.Close()
+	}(file)
+	if err != nil {
+		return err
+	}
 	dataWriter := bufio.NewWriter(file)
 	_, err = dataWriter.WriteString("digraph G {")
 	if err != nil {
@@ -28,7 +34,10 @@ func printTree(tree MerkleTreeNode) error {
 	if err != nil {
 		return err
 	}
-	dataWriter.Flush()
+	err = dataWriter.Flush()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
