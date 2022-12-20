@@ -1,6 +1,7 @@
 package evaluators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -72,6 +73,11 @@ func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn)
 		if fr := ctr.GetBellatrixBlock(); fr != nil {
 			var account common.Address
 
+			// If the beacon chain has transitioned to Bellatrix, but the EL hasn't hit TTD, we could see a few slots
+			// of blocks with empty payloads.
+			if bytes.Equal(fr.Block.Body.ExecutionPayload.BlockHash, make([]byte, 32)) {
+				continue
+			}
 			reci := fr.Block.Body.ExecutionPayload.FeeRecipient
 			if len(reci) != 0 && hexutil.Encode(reci) != params.BeaconConfig().EthBurnAddressHex {
 				account = common.BytesToAddress(reci)

@@ -373,6 +373,5 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 	if err := file.WriteFile(configPath, jsonBytes); err != nil {
 		return "", err
 	}
-	fmt.Printf("validator node=%d, cfg=%s", validatorIndex, string(jsonBytes))
 	return configPath, nil
 }

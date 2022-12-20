@@ -115,7 +115,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: DomainAggregateAndProof", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: DomainAggregateAndProof", name)
 
-	assert.DeepEqual(t, expected, actual, "derp")
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
 

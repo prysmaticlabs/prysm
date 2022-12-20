@@ -103,7 +103,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig, pre
 		TerminalTotalDifficulty:       ttd,
 		TerminalTotalDifficultyPassed: false,
 		Clique: &params.CliqueConfig{
-			Period: 2,
+			Period: cfg.SecondsPerETH1Block,
 			Epoch:  20000,
 		},
 	}

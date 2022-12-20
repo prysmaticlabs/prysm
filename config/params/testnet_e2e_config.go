@@ -10,6 +10,7 @@ const (
 // WARNING: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
+	e2eConfig.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	e2eConfig.Eth1FollowDistance = 8
 
 	// Misc.
@@ -35,7 +36,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "468"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
@@ -73,7 +74,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "468"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName
