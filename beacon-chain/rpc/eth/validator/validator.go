@@ -60,10 +60,16 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	startSlot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
+	var startSlot types.Slot
+	if req.Epoch == currentEpoch+1 {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(req.Epoch)
 	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+	}
+
 	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
@@ -134,8 +140,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	if req.Epoch > currentEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
 	}
 
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
