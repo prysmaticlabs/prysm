@@ -366,5 +366,5 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 // plus enough hex chars to fill out the fee_recipient byte value.
 func FeeRecipientFromPubkey(key string) string {
 	// pubkey[:(2+fieldparams.FeeRecipientLength*2)] slicing 2 (for the 0x preamble) + 2 hex chars for each byte
-	return common.HexToAddress(key[:(2+fieldparams.FeeRecipientLength*2)]).Hex()
+	return common.HexToAddress(key[:(2 + fieldparams.FeeRecipientLength*2)]).Hex()
 }

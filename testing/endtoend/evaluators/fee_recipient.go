@@ -34,7 +34,7 @@ func lhKeyMap() (map[string]bool, error) {
 		return nil, nil
 	}
 	pry, lh := e2e.TestParams.BeaconNodeCount, e2e.TestParams.LighthouseBeaconNodeCount
-	valPerNode := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / (pry+lh)
+	valPerNode := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / (pry + lh)
 	lhOff := valPerNode * pry
 	_, keys, err := interop.DeterministicallyGenerateKeys(uint64(lhOff), uint64(valPerNode*lh))
 	if err != nil {
