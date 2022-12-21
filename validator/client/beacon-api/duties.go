@@ -11,7 +11,15 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
-func (c beaconApiValidatorClient) getAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) (*apimiddleware.AttesterDutiesResponseJson, error) {
+type dutiesProvider interface {
+	GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
+}
+
+type beaconApiDutiesProvider struct {
+	jsonRestHandler jsonRestHandler
+}
+
+func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
 
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
@@ -34,5 +42,5 @@ func (c beaconApiValidatorClient) getAttesterDuties(epoch types.Epoch, validator
 		}
 	}
 
-	return attesterDuties, nil
+	return attesterDuties.Data, nil
 }

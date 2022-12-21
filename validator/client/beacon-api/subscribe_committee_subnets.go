@@ -9,12 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-var log = logrus.WithField("prefix", "powchain")
-
-func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex, currentEpoch types.Epoch) error {
+func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) error {
 	if in == nil {
 		return errors.New("committee subnets subscribe request is nil")
 	}
@@ -23,36 +21,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeS
 		return errors.New("arrays `in.CommitteeIds`, `in.Slots`, `in.IsAggregator` and `validatorIndices` don't have the same length")
 	}
 
-	log.Errorf("****************************CURRENT EPOCH: %d", currentEpoch)
-	log.Errorf("****************************SUBSCRIBE SLOTS: %v", in.Slots)
-	currentEpochDuties, err := c.getAttesterDuties(currentEpoch, validatorIndices)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get duties for epoch `%d`", currentEpoch)
-	}
-
-	nextEpoch := currentEpoch + 1
-	nextEpochDuties, err := c.getAttesterDuties(nextEpoch, validatorIndices)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get duties for next epoch `%d`", nextEpoch)
-	}
-
-	duties := append(currentEpochDuties.Data, nextEpochDuties.Data...)
-
 	slotToCommitteesAtSlotMap := make(map[types.Slot]uint64)
-	for _, duty := range duties {
-		dutySlot, err := strconv.ParseUint(duty.Slot, 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse slot `%s`", duty.Slot)
-		}
-
-		committeesAtSlot, err := strconv.ParseUint(duty.CommitteesAtSlot, 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse committees at slot `%s`", duty.CommitteesAtSlot)
-		}
-
-		slotToCommitteesAtSlotMap[types.Slot(dutySlot)] = committeesAtSlot
-	}
-
 	jsonCommitteeSubscriptions := make([]*apimiddleware.BeaconCommitteeSubscribeJson, len(in.CommitteeIds))
 	for index := range in.CommitteeIds {
 		subscribeSlot := in.Slots[index]
@@ -62,7 +31,31 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeS
 
 		committeesAtSlot, foundSlot := slotToCommitteesAtSlotMap[subscribeSlot]
 		if !foundSlot {
-			return errors.Errorf("couldn't find committees for subscription slot `%d`", subscribeSlot)
+			// Lazily fetch the committeesAtSlot from the beacon node if they are not already in the map
+			epoch := slots.ToEpoch(subscribeSlot)
+			duties, err := c.dutiesProvider.GetAttesterDuties(epoch, validatorIndices)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get duties for epoch `%d`", epoch)
+			}
+
+			for _, duty := range duties {
+				dutySlot, err := strconv.ParseUint(duty.Slot, 10, 64)
+				if err != nil {
+					return errors.Wrapf(err, "failed to parse slot `%s`", duty.Slot)
+				}
+
+				newCommitteesAtSlot, err := strconv.ParseUint(duty.CommitteesAtSlot, 10, 64)
+				if err != nil {
+					return errors.Wrapf(err, "failed to parse CommitteesAtSlot `%s`", duty.CommitteesAtSlot)
+				}
+
+				slotToCommitteesAtSlotMap[types.Slot(dutySlot)] = newCommitteesAtSlot
+			}
+
+			// If the slot still isn't in the map, we either received bad data from the beacon node or the caller of this function gave us bad data
+			if committeesAtSlot, foundSlot = slotToCommitteesAtSlotMap[subscribeSlot]; !foundSlot {
+				return errors.Errorf("failed to get committees for slot `%d`", subscribeSlot)
+			}
 		}
 
 		jsonCommitteeSubscriptions[index] = &apimiddleware.BeaconCommitteeSubscribeJson{

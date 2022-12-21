@@ -587,9 +587,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	}
 	v.slashableKeysLock.RUnlock()
 
-	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	req := &ethpb.DutiesRequest{
-		Epoch:      epoch,
+		Epoch:      types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch),
 		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
@@ -606,7 +605,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	go func() {
-		if err := v.subscribeToSubnets(context.Background(), resp, epoch); err != nil {
+		if err := v.subscribeToSubnets(context.Background(), resp); err != nil {
 			log.WithError(err).Error("Failed to subscribe to subnets")
 		}
 	}()
@@ -616,7 +615,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 
 // subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node
 // to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
-func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse, currentEpoch types.Epoch) error {
+func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse) error {
 	subscribeSlots := make([]types.Slot, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeCommitteeIndices := make([]types.CommitteeIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
@@ -683,7 +682,6 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			IsAggregator: subscribeIsAggregator,
 		},
 		subscribeValidatorIndices,
-		currentEpoch,
 	)
 
 	return err

@@ -16,6 +16,7 @@ import (
 
 type beaconApiValidatorClient struct {
 	genesisProvider genesisProvider
+	dutiesProvider  dutiesProvider
 	jsonRestHandler jsonRestHandler
 	fallbackClient  iface.ValidatorClient
 }
@@ -220,8 +221,8 @@ func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Cont
 	panic("beaconApiValidatorClient.SubmitValidatorRegistrations is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(_ context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex, currentEpoch types.Epoch) (*empty.Empty, error) {
-	return new(empty.Empty), c.subscribeCommitteeSubnets(in, validatorIndices, currentEpoch)
+func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(_ context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) (*empty.Empty, error) {
+	return new(empty.Empty), c.subscribeCommitteeSubnets(in, validatorIndices)
 }
 
 func (c *beaconApiValidatorClient) ValidatorIndex(_ context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
