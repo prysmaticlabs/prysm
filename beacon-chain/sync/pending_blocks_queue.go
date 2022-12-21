@@ -188,7 +188,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 			if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
 				sc := blobs[i]
-				_, err := s.validateBlobsSidecar(sc)
+				_, err := s.validateBlobsSidecar(sc, false)
 				if err != nil {
 					log.WithError(err).WithField("slot", b.Block().Slot()).Error("Could not validate blobs sidecar")
 					s.setBadBlock(ctx, blkRoot)

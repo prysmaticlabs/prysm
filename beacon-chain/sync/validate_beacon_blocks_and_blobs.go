@@ -64,7 +64,7 @@ func (s *Service) validateBeaconBlockAndBlobsPubSub(ctx context.Context, pid pee
 	}
 
 	sc := signed.BlobsSidecar
-	status, err := s.validateBlobsSidecar(signed.BlobsSidecar)
+	status, err := s.validateBlobsSidecar(signed.BlobsSidecar, true)
 	if err != nil {
 		return status, err
 	}
@@ -106,10 +106,12 @@ func (s *Service) validateBeaconBlockKzgs(blk *ethpb.BeaconBlock4844) error {
 	return eth.VerifyKZGCommitmentsAgainstTransactions(txs, blobKzgsInput)
 }
 
-func (s *Service) validateBlobsSidecar(b *ethpb.BlobsSidecar) (pubsub.ValidationResult, error) {
-	// [IGNORE] the sidecar.beacon_block_slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-	if err := altair.ValidateSyncMessageTime(b.BeaconBlockSlot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
-		return pubsub.ValidationIgnore, err
+func (s *Service) validateBlobsSidecar(b *ethpb.BlobsSidecar, checkTime bool) (pubsub.ValidationResult, error) {
+	if checkTime {
+		// [IGNORE] the sidecar.beacon_block_slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+		if err := altair.ValidateSyncMessageTime(b.BeaconBlockSlot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			return pubsub.ValidationIgnore, err
+		}
 	}
 
 	// [REJECT] the sidecar.blobs are all well formatted, i.e. the BLSFieldElement in valid range
