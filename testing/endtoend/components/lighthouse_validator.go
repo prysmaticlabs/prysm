@@ -326,12 +326,11 @@ func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {
 	// Use lighthouse's default password for their insecure keystores.
 	password := "222222222222222222222222222222222222222222222222222"
 	g, _ := errgroup.WithContext(context.Background())
-	for idx, pkey := range pubKeys {
-		pk := pkey
-		i := idx
+	for i, pkey := range pubKeys {
+		pubKeyBytes := pkey.Marshal()
+		marshalledPriv := privKeys[i].Marshal()
 		g.Go(func() error {
-			pubKeyBytes := pk.Marshal()
-			cryptoFields, err := encryptor.Encrypt(privKeys[i].Marshal(), password)
+			cryptoFields, err := encryptor.Encrypt(marshalledPriv, password)
 			if err != nil {
 				return errors.Wrapf(
 					err,
