@@ -2812,8 +2812,31 @@ func TestGetAggregateAttestation(t *testing.T) {
 		},
 		Signature: sig22,
 	}
+	root33 := bytesutil.PadTo([]byte("root3_3"), 32)
+	sig33 := bls.NewAggregateSignature().Marshal()
+
+	attslot33 := &ethpbalpha.Attestation{
+		AggregationBits: []byte{1, 0, 0, 1},
+		Data: &ethpbalpha.AttestationData{
+			Slot:            2,
+			CommitteeIndex:  3,
+			BeaconBlockRoot: root33,
+			Source: &ethpbalpha.Checkpoint{
+				Epoch: 1,
+				Root:  root33,
+			},
+			Target: &ethpbalpha.Checkpoint{
+				Epoch: 1,
+				Root:  root33,
+			},
+		},
+		Signature: sig33,
+	}
+	pool := attestations.NewPool()
+	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{attSlot1, attslot21, attslot22})
+	assert.NoError(t, err)
 	vs := &Server{
-		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attslot21, attslot22}},
+		AttestationsPool: pool,
 	}
 
 	t.Run("OK", func(t *testing.T) {
@@ -2840,6 +2863,23 @@ func TestGetAggregateAttestation(t *testing.T) {
 		assert.DeepEqual(t, root22, att.Data.Data.Target.Root)
 	})
 
+	t.Run("Aggregate Beforehand", func(t *testing.T) {
+		reqRoot, err := attslot33.Data.HashTreeRoot()
+		require.NoError(t, err)
+		err = vs.AttestationsPool.SaveUnaggregatedAttestation(attslot33)
+		require.NoError(t, err)
+		newAtt := ethpbalpha.CopyAttestation(attslot33)
+		newAtt.AggregationBits = []byte{0, 1, 0, 1}
+		err = vs.AttestationsPool.SaveUnaggregatedAttestation(newAtt)
+		require.NoError(t, err)
+		req := &ethpbv1.AggregateAttestationRequest{
+			AttestationDataRoot: reqRoot[:],
+			Slot:                2,
+		}
+		aggAtt, err := vs.GetAggregateAttestation(ctx, req)
+		require.NoError(t, err)
+		assert.DeepEqual(t, bitfield.Bitlist{1, 1, 0, 1}, aggAtt.Data.AggregationBits)
+	})
 	t.Run("No matching attestation", func(t *testing.T) {
 		req := &ethpbv1.AggregateAttestationRequest{
 			AttestationDataRoot: bytesutil.PadTo([]byte("foo"), 32),
