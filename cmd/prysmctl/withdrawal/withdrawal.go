@@ -74,10 +74,11 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 				return errors.New("the list of signed requests is empty")
 			}
 			for _, jsonOb := range to {
-				if err := callWithdrawalEndpoint(ctx, BeaconNodeHost, r, jsonOb); err != nil {
+				if err := verifyWithdrawalCertainty(r, jsonOb); err != nil {
 					return err
 				}
 			}
+			return callWithdrawalEndpoint(ctx, BeaconNodeHost, to)
 		case "{":
 			var to *apimiddleware.SignedBLSToExecutionChangeJson
 			if err := json.Unmarshal(b, &to); err != nil {
@@ -86,7 +87,10 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 			if to == nil || to.Message == nil {
 				return errors.New("the object or object's message field in file is empty")
 			}
-			return callWithdrawalEndpoint(ctx, BeaconNodeHost, r, to)
+			if err := verifyWithdrawalCertainty(r, to); err != nil {
+				return err
+			}
+			return callWithdrawalEndpoint(ctx, BeaconNodeHost, []*apimiddleware.SignedBLSToExecutionChangeJson{to})
 		default:
 			return errors.New("the provided file is not a json object or list of jason objects")
 		}
@@ -94,7 +98,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 	return nil
 }
 
-func callWithdrawalEndpoint(ctx context.Context, host string, r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
+func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
 	au := aurora.NewAurora(true)
 	withdrawalConfirmation := request.Message.ToExecutionAddress
 	fmt.Println(au.Red("===================================="))
@@ -104,6 +108,10 @@ func callWithdrawalEndpoint(ctx context.Context, host string, r io.Reader, reque
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal json")
