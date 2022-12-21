@@ -91,10 +91,6 @@ func (s *Service) sendBlocksAndSidecarsRequest(ctx context.Context, blockRoots *
 		if err := s.insertBlkAndBlobToQueue(blk.Block().Slot(), blk, blkRoot, blkAndSidecar.BlobsSidecar); err != nil {
 			return err
 		}
-		err = s.cfg.beaconDB.SaveBlobsSidecar(ctx, blkAndSidecar.BlobsSidecar) // TODO(4844): Dont forget to remove
-		if err != nil {
-			return err
-		}
 		return nil
 	})
 	return err

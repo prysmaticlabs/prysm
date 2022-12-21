@@ -59,8 +59,8 @@ const (
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
 	// RPCBlobsSidecarsByRangeTopicV1 defines the v1 topic for the blobs sidecars by range rpc method.
 	RPCBlobsSidecarsByRangeTopicV1 = protocolPrefix + BlobsSidecarsByRangeMessageName + SchemaVersionV1
-	// RPCBeaconBlockAndBlobsSidecarByRootV1 defines the v1 topic for the beacon block and blobs sidecar by root rpc method.
-	RPCBeaconBlockAndBlobsSidecarByRootV1 = protocolPrefix + BeaconBlockAndBlobsSidecarByRootName + SchemaVersionV1
+	// RPCBeaconBlockAndBlobsSidecarByRootTopicV1 defines the v1 topic for the beacon block and blobs sidecar by root rpc method.
+	RPCBeaconBlockAndBlobsSidecarByRootTopicV1 = protocolPrefix + BeaconBlockAndBlobsSidecarByRootName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
@@ -94,8 +94,8 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
 	// RPC Blobs Sidecars By Range Message
-	RPCBlobsSidecarsByRangeTopicV1:        new(pb.BlobsSidecarsByRangeRequest),
-	RPCBeaconBlockAndBlobsSidecarByRootV1: new(p2ptypes.BeaconBlockByRootsReq),
+	RPCBlobsSidecarsByRangeTopicV1:             new(pb.BlobsSidecarsByRangeRequest),
+	RPCBeaconBlockAndBlobsSidecarByRootTopicV1: new(p2ptypes.BeaconBlockByRootsReq),
 }
 
 // Maps all registered protocol prefixes.

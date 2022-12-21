@@ -103,7 +103,7 @@ func (s *Service) registerRPCHandlers4844() {
 		s.blobsSidecarsByRangeRPCHandler,
 	)
 	s.registerRPC(
-		p2p.RPCBeaconBlockAndBlobsSidecarByRootV1,
+		p2p.RPCBeaconBlockAndBlobsSidecarByRootTopicV1,
 		s.beaconBlockAndBlobsSidecarByRootRPCHandler,
 	)
 }
