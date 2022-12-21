@@ -6,7 +6,9 @@ import (
 	"context"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc"
 )
 
@@ -63,6 +65,20 @@ type E2EConfig struct {
 	ValidatorFlags          []string
 	PeerIDs                 []string
 	ExtraEpochs             uint64
+}
+
+func GenesisFork() int {
+	cfg := params.BeaconConfig()
+	if cfg.CapellaForkEpoch == 0 {
+		return version.Capella
+	}
+	if cfg.BellatrixForkEpoch == 0 {
+		return version.Bellatrix
+	}
+	if cfg.AltairForkEpoch == 0 {
+		return version.Altair
+	}
+	return version.Phase0
 }
 
 // Evaluator defines the structure of the evaluators used to

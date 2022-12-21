@@ -38,11 +38,13 @@ ssz_gen_marshal(
         "//proto/eth/v1:go_default_library",
     ],
     objs = [
+        "BlsToExecutionChange",
         "SignedBeaconBlockAltair",
         "SignedBeaconBlockBellatrix",
         "SignedBlindedBeaconBlockBellatrix",
         "SignedBeaconBlockCapella",
         "SignedBlindedBeaconBlockCapella",
+        "SignedBlsToExecutionChange",
     ],
 )
 

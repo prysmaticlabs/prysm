@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
@@ -53,8 +54,12 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, _ types.Slot) (interfaces.ExecutionData, error) {
+	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return p, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --
@@ -76,7 +81,8 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 	return b, e.ErrExecBlockByHash
 }
 
-func (e *EngineClient) ReconstructFullBellatrixBlock(
+// ReconstructFullBlock --
+func (e *EngineClient) ReconstructFullBlock(
 	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
@@ -94,12 +100,13 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
+// ReconstructFullBellatrixBlockBatch --
 func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
 	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
 ) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
 	for _, b := range blindedBlocks {
-		newBlock, err := e.ReconstructFullBellatrixBlock(ctx, b)
+		newBlock, err := e.ReconstructFullBlock(ctx, b)
 		if err != nil {
 			return nil, err
 		}

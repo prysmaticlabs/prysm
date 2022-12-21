@@ -74,13 +74,8 @@ func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *eth
 	return c.getAttestationData(in.Slot, in.CommitteeIndex)
 }
 
-func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetBeaconBlock(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetBeaconBlock is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) GetBeaconBlock(_ context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	return c.getBeaconBlock(in.Slot, in.RandaoReveal, in.Graffiti)
 }
 
 func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
@@ -128,13 +123,8 @@ func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, 
 	panic("beaconApiValidatorClient.MultipleValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.PrepareBeaconProposer(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.PrepareBeaconProposer is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) PrepareBeaconProposer(_ context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
+	return new(empty.Empty), c.prepareBeaconProposer(in.Recipients)
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
@@ -150,13 +140,8 @@ func (c *beaconApiValidatorClient) ProposeBeaconBlock(_ context.Context, in *eth
 	return c.proposeBeaconBlock(in)
 }
 
-func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ProposeExit(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ProposeExit is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ProposeExit(_ context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
+	return c.proposeExit(in)
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
@@ -230,13 +215,8 @@ func (c *beaconApiValidatorClient) ValidatorIndex(_ context.Context, in *ethpb.V
 	return c.validatorIndex(in)
 }
 
-func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ValidatorStatus(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.ValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) ValidatorStatus(_ context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
+	return c.validatorStatus(in)
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
