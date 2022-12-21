@@ -130,7 +130,7 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("API request to %s , responded with a status other than OK, status: %v body: %v", fullpath, resp.Status, resp.Body)
 	}
-	log.Info("Successfully published message to update withdrawal address.")
+	log.Info("Successfully published message to update withdrawal addresses.")
 	return nil
 }
 
