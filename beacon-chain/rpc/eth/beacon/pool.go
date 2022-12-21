@@ -307,7 +307,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	return &emptypb.Empty{}, nil
 }
 
-// SubmitSignedBLSToExecutionChange submits said object to the node's pool
+// SubmitSignedBLSToExecutionChanges submits said object to the node's pool
 // if it passes validation the node must broadcast it to the network.
 func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
