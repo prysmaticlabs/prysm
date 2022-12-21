@@ -226,7 +226,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start beacon node: %w", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stderr, "Waiting for genesis"); err != nil {
+	if err = helpers.WaitForTextInFile(stderr, "Metrics HTTP server started"); err != nil {
 		return fmt.Errorf("could not find initialization for node %d, this means the node had issues starting: %w", index, err)
 	}
 
