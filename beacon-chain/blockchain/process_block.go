@@ -337,11 +337,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
-	sigSet := &bls.SignatureBatch{
-		Signatures: [][]byte{},
-		PublicKeys: []bls.PublicKey{},
-		Messages:   [][32]byte{},
-	}
+	sigSet := bls.NewSet()
 	type versionAndHeader struct {
 		version int
 		header  interfaces.ExecutionData
@@ -381,7 +377,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		}
 		sigSet.Join(set)
 	}
-	verify, err := sigSet.Verify()
+
+	var verify bool
+	if features.Get().EnableVerboseSigVerification {
+		verify, err = sigSet.VerifyVerbosely()
+	} else {
+		verify, err = sigSet.Verify()
+	}
 	if err != nil {
 		return invalidBlock{error: err}
 	}
@@ -529,11 +531,7 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 		}
 	}
 
-	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, st, root); err != nil {
-		return err
-	}
-
-	return nil
+	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
 // This feeds in the attestations included in the block to fork choice store. It's allows fork choice store

@@ -25,11 +25,7 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
-func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
-	yamlFile, err := os.ReadFile(path) // #nosec G304
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to read chain config file.")
-	}
+func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
 	// To track if config name is defined inside config file.
 	hasConfigName := false
 	// Convert 0x hex inputs to fixed bytes arrays
@@ -70,6 +66,14 @@ func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConf
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
 	return conf, nil
+}
+
+func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
+	yamlFile, err := os.ReadFile(path) // #nosec G304
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to read chain config file.")
+	}
+	return UnmarshalConfig(yamlFile, conf)
 }
 
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
@@ -201,6 +205,7 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("TERMINAL_TOTAL_DIFFICULTY: %s", cfg.TerminalTotalDifficulty),
 		fmt.Sprintf("TERMINAL_BLOCK_HASH: %#x", cfg.TerminalBlockHash),
 		fmt.Sprintf("TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: %d", cfg.TerminalBlockHashActivationEpoch),
+		fmt.Sprintf("DEPOSIT_CONTRACT_ADDRESS: %s", cfg.DepositContractAddress),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))

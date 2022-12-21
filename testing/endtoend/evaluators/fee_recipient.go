@@ -1,6 +1,7 @@
 package evaluators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -9,9 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components"
@@ -19,6 +18,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -27,6 +27,39 @@ var FeeRecipientIsPresent = types.Evaluator{
 	Name:       "fee_recipient_is_present_%d",
 	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
 	Evaluation: feeRecipientIsPresent,
+}
+
+func lhKeyMap() (map[string]bool, error) {
+	if e2e.TestParams.LighthouseBeaconNodeCount == 0 {
+		return nil, nil
+	}
+	pry, lh := e2e.TestParams.BeaconNodeCount, e2e.TestParams.LighthouseBeaconNodeCount
+	valPerNode := int(params.BeaconConfig().MinGenesisActiveValidatorCount) / (pry + lh)
+	lhOff := valPerNode * pry
+	_, keys, err := interop.DeterministicallyGenerateKeys(uint64(lhOff), uint64(valPerNode*lh))
+	if err != nil {
+		return nil, err
+	}
+
+	km := make(map[string]bool)
+	for _, k := range keys {
+		km[hexutil.Encode(k.Marshal())] = true
+	}
+	return km, nil
+}
+
+func valKeyMap() (map[string]bool, error) {
+	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
+	// matches validator start in validator component + validators used for deposits
+	_, pubs, err := interop.DeterministicallyGenerateKeys(0, nvals+e2e.DepositCount)
+	if err != nil {
+		return nil, err
+	}
+	km := make(map[string]bool)
+	for _, k := range pubs {
+		km[hexutil.Encode(k.Marshal())] = true
+	}
+	return km, nil
 }
 
 func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
@@ -47,96 +80,97 @@ func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn)
 		return err
 	}
 	defer rpcclient.Close()
-	web3 := ethclient.NewClient(rpcclient)
-	ctx := context.Background()
 
-	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum+int(e2e.DepositCount))) // matches validator start in validator component + validators used for deposits
+	valkeys, err := valKeyMap()
 	if err != nil {
 		return err
 	}
-	lighthouseKeys := []bls.PublicKey{}
-	if e2e.TestParams.LighthouseBeaconNodeCount != 0 {
-		totalNodecount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
-		valPerNode := validatorNum / totalNodecount
-		lighthouseOffset := valPerNode * e2e.TestParams.BeaconNodeCount
-
-		_, lighthouseKeys, err = interop.DeterministicallyGenerateKeys(uint64(lighthouseOffset), uint64(valPerNode*e2e.TestParams.LighthouseBeaconNodeCount))
-		if err != nil {
-			return err
-		}
+	lhkeys, err := lhKeyMap()
+	if err != nil {
+		return err
 	}
 
 	for _, ctr := range blks.BlockContainers {
-		if fr := ctr.GetBellatrixBlock(); fr != nil {
-			var account common.Address
-
-			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
-			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
-				account = common.BytesToAddress(fr)
-			} else {
+		if ctr.GetBellatrixBlock() != nil {
+			bb := ctr.GetBellatrixBlock().Block
+			payload := bb.Body.ExecutionPayload
+			// If the beacon chain has transitioned to Bellatrix, but the EL hasn't hit TTD, we could see a few slots
+			// of blocks with empty payloads.
+			if bytes.Equal(payload.BlockHash, make([]byte, 32)) {
+				continue
+			}
+			if len(payload.FeeRecipient) == 0 || hexutil.Encode(payload.FeeRecipient) == params.BeaconConfig().EthBurnAddressHex {
+				log.WithField("proposer_index", bb.ProposerIndex).WithField("slot", bb.Slot).Error("fee recipient eval bug")
 				return errors.New("fee recipient is not set")
 			}
-			validatorRequest := &ethpb.GetValidatorRequest{
+
+			fr := common.BytesToAddress(payload.FeeRecipient)
+			gvr := &ethpb.GetValidatorRequest{
 				QueryFilter: &ethpb.GetValidatorRequest_Index{
 					Index: ctr.GetBellatrixBlock().Block.ProposerIndex,
 				},
 			}
-			validator, err := client.GetValidator(context.Background(), validatorRequest)
+			validator, err := client.GetValidator(context.Background(), gvr)
 			if err != nil {
 				return errors.Wrap(err, "failed to get validators")
 			}
-			publickey := validator.GetPublicKey()
-			isDeterministicKey := false
-			isLighthouseKey := false
+			pk := hexutil.Encode(validator.GetPublicKey())
 
-			// If lighthouse keys are present, we skip the check.
-			for _, pub := range lighthouseKeys {
-				if hexutil.Encode(publickey) == hexutil.Encode(pub.Marshal()) {
-					isLighthouseKey = true
-					break
-				}
-			}
-			if isLighthouseKey {
+			if _, ok := lhkeys[pk]; ok {
+				// Don't check lighthouse keys.
 				continue
 			}
-			for _, pub := range pubs {
-				if hexutil.Encode(publickey) == hexutil.Encode(pub.Marshal()) {
-					isDeterministicKey = true
-					break
-				}
-			}
-			// calculate deterministic fee recipient using first 20 bytes of public key
-			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
-			if isDeterministicKey && deterministicFeeRecipient != account.Hex() {
-				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s",
-					hexutil.Encode(publickey), account.Hex(), deterministicFeeRecipient)
-			}
-			if !isDeterministicKey && components.DefaultFeeRecipientAddress != account.Hex() {
-				return fmt.Errorf("publickey %s, fee recipient %s does not match the default fee recipient %s",
-					hexutil.Encode(publickey), account.Hex(), components.DefaultFeeRecipientAddress)
-			}
-			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))
-			if err != nil {
-				return err
+
+			// In e2e we generate deterministic keys by validator index, and then use a slice of their public key bytes
+			// as the fee recipient, so that this will also be deterministic, so this test can statelessly verify it.
+			// These should be the only keys we see.
+			// Otherwise something has changed in e2e and this test needs to be updated.
+			_, knownKey := valkeys[pk]
+			if !knownKey {
+				log.WithField("pubkey", pk).
+					WithField("slot", bb.Slot).
+					WithField("proposer_index", bb.ProposerIndex).
+					WithField("fee_recipient", fr.Hex()).
+					Warn("unknown key observed, not a deterministically generated key")
+				return errors.New("unknown key observed, not a deterministically generated key")
 			}
 
-			accountBalance, err := web3.BalanceAt(ctx, account, currentBlock.Number())
-			if err != nil {
-				return err
+			if components.FeeRecipientFromPubkey(pk) != fr.Hex() {
+				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s",
+					pk, fr.Hex(), components.FeeRecipientFromPubkey(pk))
 			}
-			previousBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().ParentHash))
-			if err != nil {
+
+			if err := checkRecipientBalance(rpcclient, common.BytesToHash(payload.BlockHash), common.BytesToHash(payload.ParentHash), fr); err != nil {
 				return err
-			}
-			prevAccountBalance, err := web3.BalanceAt(ctx, account, previousBlock.Number())
-			if err != nil {
-				return err
-			}
-			if currentBlock.GasUsed() > 0 && accountBalance.Uint64() <= prevAccountBalance.Uint64() {
-				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 			}
 		}
+	}
+
+	return nil
+}
+
+func checkRecipientBalance(c *rpc.Client, block, parent common.Hash, account common.Address) error {
+	web3 := ethclient.NewClient(c)
+	ctx := context.Background()
+	b, err := web3.BlockByHash(ctx, block)
+	if err != nil {
+		return err
+	}
+
+	bal, err := web3.BalanceAt(ctx, account, b.Number())
+	if err != nil {
+		return err
+	}
+	pBlock, err := web3.BlockByHash(ctx, parent)
+	if err != nil {
+		return err
+	}
+	pBal, err := web3.BalanceAt(ctx, account, pBlock.Number())
+	if err != nil {
+		return err
+	}
+	if b.GasUsed() > 0 && bal.Uint64() <= pBal.Uint64() {
+		return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 	}
 
 	return nil

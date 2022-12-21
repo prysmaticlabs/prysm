@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -66,7 +67,13 @@ func ExecuteStateTransition(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not execute state transition")
 	}
-	valid, err := set.Verify()
+
+	var valid bool
+	if features.Get().EnableVerboseSigVerification {
+		valid, err = set.VerifyVerbosely()
+	} else {
+		valid, err = set.Verify()
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not batch verify signature")
 	}
