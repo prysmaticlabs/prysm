@@ -13,8 +13,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// We assume a cost of 1 MiB per sidecar responded to a range request.
-const avgSidecarBlobsTransferBytes = 1 << 10
+// We assume a cost of 512kB  per sidecar responded to a range request.
+const avgSidecarBlobsTransferBytes = 2 << 18
 
 type BlobsSidecarProcessor func(sidecar *pb.BlobsSidecar) error
 
