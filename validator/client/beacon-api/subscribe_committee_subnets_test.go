@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -110,32 +109,6 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 		validatorIndices,
 	)
 	require.NoError(t, err)
-}
-
-func TestSubscribeCommitteeSubnets_FailedAttesterDutiesQuery(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
-	dutiesProvider.EXPECT().GetAttesterDuties(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		nil,
-		errors.New("foo error"),
-	).Times(1)
-
-	validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
-	err := validatorClient.subscribeCommitteeSubnets(
-		&ethpb.CommitteeSubnetsSubscribeRequest{
-			Slots:        []types.Slot{1},
-			CommitteeIds: []types.CommitteeIndex{2},
-			IsAggregator: []bool{false},
-		},
-		[]types.ValidatorIndex{3},
-	)
-	assert.ErrorContains(t, "foo error", err)
-	assert.ErrorContains(t, fmt.Sprintf("failed to get duties for epoch `%d`", slots.ToEpoch(1)), err)
 }
 
 func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
