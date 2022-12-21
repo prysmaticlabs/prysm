@@ -108,6 +108,7 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 }
 
 func WriteBlockAndBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, b *ethpb.SignedBeaconBlockAndBlobsSidecar) error {
+	SetStreamWriteDeadline(stream, defaultWriteDuration)
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
