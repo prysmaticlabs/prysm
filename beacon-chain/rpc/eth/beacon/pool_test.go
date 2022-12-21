@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	blstoexecmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec/mock"
 	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
@@ -1156,4 +1157,33 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 		[]string{"{\"failures\":[{\"index\":0,\"message\":\"Incorrect attestation signature: signature must be 96 bytes\"}]}"},
 		v,
 	)
+}
+
+func TestListBLSToExecutionChanges(t *testing.T) {
+	change1 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     1,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey1"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address1"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	change2 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     2,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey2"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address2"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+
+	s := &Server{
+		BLSChangesPool: &blstoexecmock.PoolMock{Changes: []*ethpbv1alpha1.SignedBLSToExecutionChange{change1, change2}},
+	}
+
+	resp, err := s.ListBLSToExecutionChanges(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1SignedBLSToExecChangeToV2(change1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1SignedBLSToExecChangeToV2(change2), resp.Data[1])
 }
