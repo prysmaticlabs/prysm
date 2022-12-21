@@ -200,44 +200,12 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	v := e2etypes.GenesisFork()
 	switch v {
 	case version.Bellatrix:
-		return node.generateGenesisBellatrix(ctx, gb, e1d)
+		return generateGenesisBellatrix(ctx, gb, e1d)
 	case version.Phase0:
-		return node.generateGenesisPhase0(ctx, e1d)
+		return generateGenesisPhase0(ctx, e1d)
 	default:
 		return nil, fmt.Errorf("unsupported genesis fork version %s", version.String(v))
 	}
-}
-
-func (node *BeaconNode) generateGenesisPhase0(ctx context.Context, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
-	g, _, err := interop.GeneratePreminedGenesisState(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, e1d)
-	if err != nil {
-		return nil, err
-	}
-	return state_native.InitializeFromProtoUnsafePhase0(g)
-}
-
-func (node *BeaconNode) generateGenesisBellatrix(ctx context.Context, gb *types.Block, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
-	payload := &enginev1.ExecutionPayload{
-		ParentHash:    gb.ParentHash().Bytes(),
-		FeeRecipient:  gb.Coinbase().Bytes(),
-		StateRoot:     gb.Root().Bytes(),
-		ReceiptsRoot:  gb.ReceiptHash().Bytes(),
-		LogsBloom:     gb.Bloom().Bytes(),
-		PrevRandao:    params.BeaconConfig().ZeroHash[:],
-		BlockNumber:   gb.NumberU64(),
-		GasLimit:      gb.GasLimit(),
-		GasUsed:       gb.GasUsed(),
-		Timestamp:     gb.Time(),
-		ExtraData:     gb.Extra()[:32],
-		BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
-		BlockHash:     gb.Hash().Bytes(),
-		Transactions:  make([][]byte, 0),
-	}
-	g, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
-	if err != nil {
-		return nil, err
-	}
-	return state_native.InitializeFromProtoUnsafeBellatrix(g)
 }
 
 func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
@@ -420,4 +388,36 @@ func (node *BeaconNode) Stop() error {
 
 func (node *BeaconNode) UnderlyingProcess() *os.Process {
 	return node.cmd.Process
+}
+
+func generateGenesisPhase0(ctx context.Context, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
+	g, _, err := interop.GeneratePreminedGenesisState(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, e1d)
+	if err != nil {
+		return nil, err
+	}
+	return state_native.InitializeFromProtoUnsafePhase0(g)
+}
+
+func generateGenesisBellatrix(ctx context.Context, gb *types.Block, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
+	payload := &enginev1.ExecutionPayload{
+		ParentHash:    gb.ParentHash().Bytes(),
+		FeeRecipient:  gb.Coinbase().Bytes(),
+		StateRoot:     gb.Root().Bytes(),
+		ReceiptsRoot:  gb.ReceiptHash().Bytes(),
+		LogsBloom:     gb.Bloom().Bytes(),
+		PrevRandao:    params.BeaconConfig().ZeroHash[:],
+		BlockNumber:   gb.NumberU64(),
+		GasLimit:      gb.GasLimit(),
+		GasUsed:       gb.GasUsed(),
+		Timestamp:     gb.Time(),
+		ExtraData:     gb.Extra()[:32],
+		BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
+		BlockHash:     gb.Hash().Bytes(),
+		Transactions:  make([][]byte, 0),
+	}
+	g, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
+	if err != nil {
+		return nil, err
+	}
+	return state_native.InitializeFromProtoUnsafeBellatrix(g)
 }

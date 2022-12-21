@@ -256,7 +256,11 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	return nil
 }
 
-func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
+func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
+	return w.cmd.Process
+}
+
+func createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
 	rawYaml := params.ConfigToYaml(params.BeaconConfig())
@@ -272,8 +276,4 @@ func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
 	}
 
 	return configPath, nil
-}
-
-func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
-	return w.cmd.Process
 }
