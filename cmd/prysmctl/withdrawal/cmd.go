@@ -24,7 +24,7 @@ var (
 
 var Commands = []*cli.Command{
 	{
-		Name:    "set-withdrawal-address",
+		Name:    "set-withdrawal-addresses",
 		Aliases: []string{"swa"},
 		Usage:   "command for setting the withdrawal ethereum address to the associated validator key",
 		Flags: []cli.Flag{
