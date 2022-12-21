@@ -7,8 +7,6 @@ import (
 	"math"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -256,7 +254,6 @@ func getAllValidators(c ethpb.BeaconChainClient) ([]*ethpb.Validator, error) {
 			vals = append(vals, v.Validator)
 		}
 		pageToken = validators.NextPageToken
-		log.WithField("len", len(vals)).WithField("pageToken", pageToken).Info("getAllValidators")
 	}
 	return vals, nil
 }
@@ -425,6 +422,7 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}
+		seenVotes[slot] = vote
 
 		// We treat epoch 1 differently from other epoch for two reasons:
 		// - this evaluator is not executed for epoch 0 so we have to calculate the first slot differently
@@ -445,6 +443,14 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 		}
 
 		if !bytes.Equal(vote, expectedEth1DataVote) {
+			for i := types.Slot(0); i < slot; i++ {
+				v, ok := seenVotes[i]
+				if ok {
+					fmt.Printf("vote at slot=%d = %#x\n", i, v)
+				} else {
+					fmt.Printf("did not see slot=%d\n", i)
+				}
+			}
 			return fmt.Errorf("incorrect eth1data vote for slot %d; expected: %#x vs voted: %#x",
 				slot, expectedEth1DataVote, vote)
 		}
@@ -452,4 +458,5 @@ func validatorsVoteWithTheMajority(_ e2etypes.EvaluationContext, conns ...*grpc.
 	return nil
 }
 
+var seenVotes = make(map[types.Slot][]byte)
 var expectedEth1DataVote []byte
