@@ -21,7 +21,6 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -2928,10 +2927,12 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		},
 		Signature: sig,
 	}
+	pool := attestations.NewPool()
+	err := pool.SaveAggregatedAttestations([]*ethpbalpha.Attestation{att1, att2})
+	assert.NoError(t, err)
 	vs := &Server{
-		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{att1, att2}},
+		AttestationsPool: pool,
 	}
-
 	reqRoot, err := att1.Data.HashTreeRoot()
 	require.NoError(t, err)
 	req := &ethpbv1.AggregateAttestationRequest{
