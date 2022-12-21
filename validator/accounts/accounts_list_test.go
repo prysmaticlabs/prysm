@@ -177,6 +177,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		WithWalletDir(walletDir),
 		WithKeymanagerType(keymanager.Local),
 		WithWalletPassword("Passwordz0320$"),
+		WithMnemonicLanguage("english"),
 	}
 	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -333,6 +334,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		WithWalletDir(walletDir),
 		WithKeymanagerType(keymanager.Derived),
 		WithWalletPassword("Passwordz0320$"),
+		WithMnemonicLanguage("english"),
 	}
 	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -473,6 +475,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		WithWalletDir(walletDir),
 		WithKeymanagerType(keymanager.Remote),
 		WithWalletPassword(password),
+		WithMnemonicLanguage("english"),
 	}
 	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)

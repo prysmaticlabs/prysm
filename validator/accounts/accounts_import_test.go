@@ -37,6 +37,7 @@ func TestImportAccounts_NoPassword(t *testing.T) {
 		WithWalletDir(walletDir),
 		WithKeymanagerType(keymanager.Local),
 		WithWalletPassword(password),
+		WithMnemonicLanguage("english"),
 	}
 	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -145,6 +146,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		WithWalletDir(walletDir),
 		WithKeymanagerType(keymanager.Local),
 		WithWalletPassword(walletPass),
+		WithMnemonicLanguage("english"),
 	}
 	acc, err := NewCLIManager(opts...)
 	require.NoError(t, err)

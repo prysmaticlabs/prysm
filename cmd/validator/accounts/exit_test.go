@@ -70,6 +70,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
+		accounts.WithMnemonicLanguage("english"),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -171,6 +172,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
+		accounts.WithMnemonicLanguage("english"),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -269,6 +271,7 @@ func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
+		accounts.WithMnemonicLanguage("english"),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
