@@ -32,7 +32,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "35000",
@@ -76,7 +76,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{},
+		&rpcmiddleware.StateValidatorsResponseJson{},
 		errors.New("a specific error"),
 	).Times(1)
 
@@ -116,7 +116,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "11111",
@@ -180,7 +180,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{},
+		&rpcmiddleware.StateValidatorsResponseJson{},
 		errors.New("a specific error"),
 	).Times(1)
 
@@ -230,7 +230,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		validatorsIndex,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "11111",
@@ -282,7 +282,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 		[]string{"active"},
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "35000",
@@ -390,7 +390,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
 					Index:  "40000",
@@ -410,7 +410,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 		[]string{"active"},
 	).Return(
-		rpcmiddleware.StateValidatorsResponseJson{
+		&rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{},
 		},
 		nil,
@@ -443,7 +443,7 @@ type getStateValidatorsInterface struct {
 	inputStatuses      []string
 
 	// Outputs
-	outputStateValidatorsResponseJson rpcmiddleware.StateValidatorsResponseJson
+	outputStateValidatorsResponseJson *rpcmiddleware.StateValidatorsResponseJson
 	outputErr                         error
 }
 
@@ -474,7 +474,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{},
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{},
 					outputErr:                         errors.New("a specific error"),
 				},
 			},
@@ -491,7 +491,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Validator: &rpcmiddleware.ValidatorJson{
@@ -516,7 +516,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index: "NotAnIndex",
@@ -542,7 +542,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index:  "12345",
@@ -569,7 +569,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index:  "12345",
@@ -597,7 +597,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index:  "12345",
@@ -616,7 +616,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      []string{"active"},
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{},
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{},
 					outputErr:                         errors.New("a specific error"),
 				},
 			},
@@ -633,7 +633,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index:  "12345",
@@ -652,7 +652,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      []string{"active"},
 
-					outputStateValidatorsResponseJson: rpcmiddleware.StateValidatorsResponseJson{
+					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
 						Data: []*rpcmiddleware.ValidatorContainerJson{
 							{
 								Index: "NotAnIndex",

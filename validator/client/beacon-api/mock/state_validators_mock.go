@@ -35,10 +35,10 @@ func (m *MockstateValidatorsProvider) EXPECT() *MockstateValidatorsProviderMockR
 }
 
 // GetStateValidators mocks base method.
-func (m *MockstateValidatorsProvider) GetStateValidators(arg0 []string, arg1 []int64, arg2 []string) (apimiddleware.StateValidatorsResponseJson, error) {
+func (m *MockstateValidatorsProvider) GetStateValidators(arg0 []string, arg1 []int64, arg2 []string) (*apimiddleware.StateValidatorsResponseJson, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStateValidators", arg0, arg1, arg2)
-	ret0, _ := ret[0].(apimiddleware.StateValidatorsResponseJson)
+	ret0, _ := ret[0].(*apimiddleware.StateValidatorsResponseJson)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
