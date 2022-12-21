@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -303,4 +304,24 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+// ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
+func (bs *Server) ListBLSToExecutionChanges(ctx context.Context, _ *emptypb.Empty) (*v2.BLSToExecutionChangesPoolResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBLSToExecutionChanges")
+	defer span.End()
+
+	sourceChanges, err := bs.BLSChangesPool.PendingBLSToExecChanges()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get BLS to execution changes: %v", err)
+	}
+
+	changes := make([]*v2.SignedBLSToExecutionChange, len(sourceChanges))
+	for i, ch := range sourceChanges {
+		changes[i] = migration.V1Alpha1SignedBLSToExecChangeToV2(ch)
+	}
+
+	return &v2.BLSToExecutionChangesPoolResponse{
+		Data: changes,
+	}, nil
 }
