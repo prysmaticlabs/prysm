@@ -9,7 +9,7 @@ import (
 // BeaconAPIMultiClientVerifyIntegrity tests our API Middleware responses to other beacon nodes such as lighthouse.
 var BeaconAPIMultiClientVerifyIntegrity = e2etypes.Evaluator{
 	Name:       "beacon_api_multi-client_verify_integrity_epoch_%d",
-	Policy:     policies.AllEpochs,
+	Policy:     policies.AfterNthEpoch(0),
 	Evaluation: beaconAPIVerify,
 }
 

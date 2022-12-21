@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "beacon_node.go",
         "boot_node.go",
+        "genesis.go",
         "lighthouse_beacon.go",
         "lighthouse_validator.go",
         "log.go",
