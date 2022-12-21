@@ -587,8 +587,9 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	}
 	v.slashableKeysLock.RUnlock()
 
+	epoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	req := &ethpb.DutiesRequest{
-		Epoch:      types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch),
+		Epoch:      epoch,
 		PublicKeys: bytesutil.FromBytes48Array(filteredKeys),
 	}
 
@@ -605,7 +606,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	go func() {
-		if err := v.subscribeToSubnets(context.Background(), resp); err != nil {
+		if err := v.subscribeToSubnets(context.Background(), resp, epoch); err != nil {
 			log.WithError(err).Error("Failed to subscribe to subnets")
 		}
 	}()
@@ -615,10 +616,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 
 // subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node
 // to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
-func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse) error {
+func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesResponse, currentEpoch types.Epoch) error {
 	subscribeSlots := make([]types.Slot, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeCommitteeIndices := make([]types.CommitteeIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	subscribeValidatorIndices := make([]types.ValidatorIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range res.CurrentEpochDuties {
@@ -626,6 +628,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
+			validatorIndex := duty.ValidatorIndex
 
 			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
@@ -643,6 +646,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
 		}
 	}
 
@@ -650,6 +654,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
+			validatorIndex := duty.ValidatorIndex
 
 			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
@@ -667,14 +672,19 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
 		}
 	}
 
-	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        subscribeSlots,
-		CommitteeIds: subscribeCommitteeIndices,
-		IsAggregator: subscribeIsAggregator,
-	})
+	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx,
+		&ethpb.CommitteeSubnetsSubscribeRequest{
+			Slots:        subscribeSlots,
+			CommitteeIds: subscribeCommitteeIndices,
+			IsAggregator: subscribeIsAggregator,
+		},
+		subscribeValidatorIndices,
+		currentEpoch,
+	)
 
 	return err
 }

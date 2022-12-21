@@ -539,6 +539,8 @@ func TestUpdateDuties_OK(t *testing.T) {
 	client.EXPECT().SubscribeCommitteeSubnets(
 		gomock.Any(),
 		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
 	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
@@ -592,6 +594,8 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
