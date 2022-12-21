@@ -52,25 +52,33 @@ func readContextFromStream(stream network.Stream, chain blockchain.ForkFetcher) 
 
 // retrieve expected context depending on rpc topic schema version.
 func rpcContext(stream network.Stream, chain blockchain.ForkFetcher) ([]byte, error) {
-	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
+	_, message, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return nil, err
 	}
+
+	var provideCtx bool
 	switch version {
 	case p2p.SchemaVersionV1:
-		// Return empty context for a v1 method.
-		return []byte{}, nil
+		// and if it doesn't exist then we assume it's a new topic introduced after altair
+		provideCtx = !p2p.PreAltairV1SchemaMapping[message]
 	case p2p.SchemaVersionV2:
-		currFork := chain.CurrentFork()
-		genRoot := chain.GenesisValidatorsRoot()
-		digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
-		if err != nil {
-			return nil, err
-		}
-		return digest[:], nil
+		provideCtx = true
 	default:
 		return nil, errors.New("invalid version of %s registered for topic: %s")
 	}
+
+	if !provideCtx {
+		return []byte{}, nil
+	}
+	currFork := chain.CurrentFork()
+	genRoot := chain.GenesisValidatorsRoot()
+	digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
+	if err != nil {
+		return nil, err
+	}
+	return digest[:], nil
+
 }
 
 // Minimal interface for a stream with a protocol.

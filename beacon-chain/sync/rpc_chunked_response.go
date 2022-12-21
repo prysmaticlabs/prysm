@@ -148,11 +148,10 @@ func ReadChunkedBlockAndBlobsSidecar(stream libp2pcore.Stream, chain blockchain.
 	if err != nil {
 		return nil, err
 	}
-	// blobs sidecars use v1
-	if len(rpcCtx) != 0 {
-		return nil, errors.New("unexpected fork digest in stream")
+	b, err := extractBeaconBlockAndBlobsSidecarDataType(rpcCtx, chain)
+	if err != nil {
+		return nil, err
 	}
-	b := new(ethpb.SignedBeaconBlockAndBlobsSidecar)
 	err = p2p.Encoding().DecodeWithMaxLength(stream, b)
 	return b, err
 }
@@ -180,11 +179,10 @@ func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ForkFetc
 	if err != nil {
 		return nil, err
 	}
-	// blobs sidecars use v1
-	if len(rpcCtx) != 0 {
-		return nil, errors.New("unexpected fork digest in stream")
+	sidecar, err := extractBlobsSidecarDataType(rpcCtx, chain)
+	if err != nil {
+		return nil, err
 	}
-	sidecar := new(ethpb.BlobsSidecar)
 	err = p2p.Encoding().DecodeWithMaxLength(stream, sidecar)
 	return sidecar, err
 }
@@ -257,4 +255,34 @@ func extractBlockDataType(digest []byte, chain blockchain.ForkFetcher) (interfac
 		}
 	}
 	return nil, errors.New("no valid digest matched")
+}
+
+func extractBeaconBlockAndBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.SignedBeaconBlockAndBlobsSidecar, error) {
+	if len(digest) != forkDigestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
+	}
+	vRoot := chain.GenesisValidatorsRoot()
+	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().EIP4844ForkVersion, vRoot[:])
+	if err != nil {
+		return nil, err
+	}
+	if rDigest != bytesutil.ToBytes4(digest) {
+		return nil, errors.Errorf("invalid digest returned, wanted %x but received %x", rDigest, digest)
+	}
+	return &ethpb.SignedBeaconBlockAndBlobsSidecar{}, nil
+}
+
+func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*ethpb.BlobsSidecar, error) {
+	if len(digest) != forkDigestLength {
+		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
+	}
+	vRoot := chain.GenesisValidatorsRoot()
+	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().EIP4844ForkVersion, vRoot[:])
+	if err != nil {
+		return nil, err
+	}
+	if rDigest != bytesutil.ToBytes4(digest) {
+		return nil, errors.Errorf("invalid digest returned, wanted %x but received %x", rDigest, digest)
+	}
+	return &ethpb.BlobsSidecar{}, nil
 }

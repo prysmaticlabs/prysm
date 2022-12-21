@@ -128,6 +128,17 @@ var versionMapping = map[string]bool{
 	SchemaVersionV2: true,
 }
 
+var PreAltairV1SchemaMapping = map[string]bool{
+	StatusMessageName:                    true,
+	GoodbyeMessageName:                   true,
+	BeaconBlocksByRangeMessageName:       true,
+	BeaconBlocksByRootsMessageName:       true,
+	PingMessageName:                      true,
+	MetadataMessageName:                  true,
+	BlobsSidecarsByRangeMessageName:      false,
+	BeaconBlockAndBlobsSidecarByRootName: false,
+}
+
 // VerifyTopicMapping verifies that the topic and its accompanying
 // message type is correct.
 func VerifyTopicMapping(topic string, msg interface{}) error {
