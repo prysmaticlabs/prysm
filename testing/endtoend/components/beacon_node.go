@@ -202,13 +202,13 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 	case version.Bellatrix:
 		return node.generateGenesisBellatrix(ctx, gb, e1d)
 	case version.Phase0:
-		return node.generateGenesisPhase0(ctx, gb, e1d)
+		return node.generateGenesisPhase0(ctx, e1d)
 	default:
-		return nil, fmt.Errorf("Unsupported genesis fork version %s", version.String(v))
+		return nil, fmt.Errorf("unsupported genesis fork version %s", version.String(v))
 	}
 }
 
-func (node *BeaconNode) generateGenesisPhase0(ctx context.Context, gb *types.Block, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
+func (node *BeaconNode) generateGenesisPhase0(ctx context.Context, e1d *ethpb.Eth1Data) (state.BeaconState, error) {
 	g, _, err := interop.GeneratePreminedGenesisState(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, e1d)
 	if err != nil {
 		return nil, err

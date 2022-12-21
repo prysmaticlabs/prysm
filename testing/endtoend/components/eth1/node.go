@@ -62,7 +62,7 @@ func (node *Node) Start(ctx context.Context) error {
 	}
 	gethJsonPath := path.Join(eth1Path, "genesis.json")
 
-	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig(), e2etypes.GenesisFork() >= version.Bellatrix)
+	gen := testing.GethTestnetGenesis(e2e.TestParams.Eth1GenesisTime, params.BeaconConfig())
 	b, err := json.Marshal(gen)
 	if err != nil {
 		return err

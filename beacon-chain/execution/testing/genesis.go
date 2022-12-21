@@ -78,7 +78,7 @@ const DefaultCliqueSigner = "0x0000000000000000000000000000000000000000000000000
 // DefaultTestnetGenesis creates a genesis.json for eth1 clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be
 // customized as desired.
-func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig, preMerge bool) core.Genesis {
+func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) core.Genesis {
 	ttd, ok := big.NewInt(0).SetString(clparams.BeaconConfig().TerminalTotalDifficulty, 10)
 	if !ok {
 		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))

@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-// GenerateGenesisState deterministically given a genesis time and number of validators.
+// GeneratePreminedGenesisState deterministically given a genesis time and number of validators.
 // If a genesis time of 0 is supplied it is set to the current time.
 func GeneratePreminedGenesisState(ctx context.Context, genesisTime, numValidators uint64, e1d *ethpb.Eth1Data) (*ethpb.BeaconState, []*ethpb.Deposit, error) {
 	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
@@ -26,7 +26,7 @@ func GeneratePreminedGenesisState(ctx context.Context, genesisTime, numValidator
 	return GeneratePreminedGenesisStateFromDepositData(ctx, genesisTime, depositDataItems, depositDataRoots, e1d)
 }
 
-// GenerateGenesisStateFromDepositData creates a genesis state given a list of
+// GeneratePreminedGenesisStateFromDepositData creates a genesis state given a list of
 // deposit data items and their corresponding roots.
 func GeneratePreminedGenesisStateFromDepositData(
 	ctx context.Context, genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte, e1d *ethpb.Eth1Data,
