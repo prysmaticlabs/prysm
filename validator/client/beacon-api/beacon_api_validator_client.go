@@ -33,6 +33,7 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 
 	return &beaconApiValidatorClient{
 		genesisProvider: beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
+		dutiesProvider:  beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler: jsonRestHandler,
 		fallbackClient:  fallbackClient,
 	}
