@@ -70,7 +70,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
-	testDir, err := w.createTestnetDir()
+	testDir, err := createTestnetDir()
 	if err != nil {
 		return err
 	}
