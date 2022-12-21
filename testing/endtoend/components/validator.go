@@ -164,6 +164,17 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 	}
 }
 
+func (node *ValidatorNode) saveConfig() (string, error) {
+	cfg := params.BeaconConfig().Copy()
+	cfgBytes := params.ConfigToYaml(cfg)
+	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
+	if err := file.MkdirAll(cfgDir); err != nil {
+		return "", err
+	}
+	cfgPath := path.Join(cfgDir, "validator-config.yaml")
+	return cfgPath, file.WriteFile(cfgPath, cfgBytes)
+}
+
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
 	validatorHexPubKeys := make([]string, 0)
@@ -206,6 +217,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	cfgPath, err := v.saveConfig()
+	if err != nil {
+		return err
+	}
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
@@ -217,8 +232,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
+		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ForceClearDB.Name,
-		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
 
@@ -314,39 +329,25 @@ func (v *ValidatorNode) UnderlyingProcess() *os.Process {
 	return v.cmd.Process
 }
 
-func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {
-	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", validatorIndex)
+func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
+	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", nodeIdx)
 	configPath := filepath.Join(testNetDir, "config.json")
 	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
 	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
-	if len(pubkeys) == 1 {
-		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
-			DefaultConfig: &validator_service_config.ProposerOptionPayload{
-				FeeRecipient: DefaultFeeRecipientAddress,
-			},
-		}
-	} else {
-		config := make(map[string]*validator_service_config.ProposerOptionPayload)
+	config := make(map[string]*validator_service_config.ProposerOptionPayload)
 
-		for i, pubkey := range pubkeys {
-			// Create an account
-			byteval, err := hexutil.Decode(pubkey)
-			if err != nil {
-				return "", err
-			}
-			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(byteval[:fieldparams.FeeRecipientLength])).Hex()
-			config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
-				FeeRecipient: deterministicFeeRecipient,
-			}
+	for i, pubkey := range pubkeys {
+		config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
+			FeeRecipient: FeeRecipientFromPubkey(pubkey),
 		}
-		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
-			ProposerConfig: config,
-			DefaultConfig: &validator_service_config.ProposerOptionPayload{
-				FeeRecipient: DefaultFeeRecipientAddress,
-			},
-		}
+	}
+	proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+		ProposerConfig: config,
+		DefaultConfig: &validator_service_config.ProposerOptionPayload{
+			FeeRecipient: DefaultFeeRecipientAddress,
+		},
 	}
 	jsonBytes, err := json.Marshal(proposerSettingsPayload)
 	if err != nil {
@@ -359,4 +360,11 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 		return "", err
 	}
 	return configPath, nil
+}
+
+// FeeRecipientFromPubkey slices, from the beginning of the hex-encoded pubkey string, the 2 character 0x preamble
+// plus enough hex chars to fill out the fee_recipient byte value.
+func FeeRecipientFromPubkey(key string) string {
+	// pubkey[:(2+fieldparams.FeeRecipientLength*2)] slicing 2 (for the 0x preamble) + 2 hex chars for each byte
+	return common.HexToAddress(key[:(2 + fieldparams.FeeRecipientLength*2)]).Hex()
 }
