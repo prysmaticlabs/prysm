@@ -288,7 +288,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, err, "Could not set up genesis state")
 		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		require.NoError(t, bs.SetBlockRoots(roots))
-		chainSlot := types.Slot(32)
+		chainSlot := types.Slot(params.BeaconConfig().SlotsPerEpoch)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
