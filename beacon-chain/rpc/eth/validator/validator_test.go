@@ -90,7 +90,12 @@ func TestGetAttesterDuties(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{0: bs, params.BeaconConfig().SlotsPerEpoch: nextEpochState}},
+		StateFetcher: &testutil.MockFetcher{
+			StatesBySlot: map[types.Slot]state.BeaconState{
+				0:                                   bs,
+				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
+			},
+		},
 		TimeFetcher:           chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
