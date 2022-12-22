@@ -1,4 +1,4 @@
-package spectypes
+package util
 
 import (
 	"context"

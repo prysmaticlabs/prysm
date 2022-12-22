@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/v3/testing/spectypes"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -360,5 +360,5 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 	t := e2e.TestParams.CLGenesisTime
 	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
 	version := e2etypes.GenesisFork()
-	return spectypes.NewPreminedGenesis(ctx, t, nvals, version, gb)
+	return util.NewPreminedGenesis(ctx, t, nvals, version, gb)
 }
