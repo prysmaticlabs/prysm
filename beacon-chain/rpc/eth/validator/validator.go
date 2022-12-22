@@ -164,8 +164,13 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
+
 	if req.Epoch == currentEpoch+1 {
-		s, err = transition.ProcessSlotsIfPossible(ctx, s, startSlot)
+		nextEpochStart, err := slots.EpochStart(currentEpoch + 1)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", currentEpoch+1, err)
+		}
+		s, err = transition.ProcessSlotsIfPossible(ctx, s, nextEpochStart)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not advance state to next epoch: %v", err)
 		}
