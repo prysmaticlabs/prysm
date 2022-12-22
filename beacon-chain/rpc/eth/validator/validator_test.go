@@ -286,7 +286,6 @@ func TestGetProposerDuties(t *testing.T) {
 	t.Run("Next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		require.NoError(t, bs.SetBlockRoots(roots))
 		chainSlot := types.Slot(0)
 		chain := &mockChain.ChainService{
@@ -306,7 +305,7 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		resp, err := vs.GetProposerDuties(ctx, req)
 		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo([]byte("next_epoch_dependent_root"), 32), resp.DependentRoot)
+		assert.DeepEqual(t, bytesutil.PadTo(genesisRoot[:], 32), resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))
 		// We expect a proposer duty for slot 43.
 		var expectedDuty *ethpbv1.ProposerDuty
@@ -317,10 +316,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(4863), vid)
+		require.Equal(t, types.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, types.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {

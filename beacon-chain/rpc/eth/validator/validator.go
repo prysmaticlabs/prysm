@@ -146,11 +146,13 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
 	nextEpoch := currentEpoch + 1
+	var nextEpochLookahead bool
 	if req.Epoch > nextEpoch {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	} else if req.Epoch == nextEpoch {
 		// If the request is for the next epoch, we use the current epoch's state to compute duties.
 		req.Epoch = currentEpoch
+		nextEpochLookahead = true
 	}
 
 	startSlot, err := slots.EpochStart(req.Epoch)
@@ -163,7 +165,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	var proposals map[types.ValidatorIndex][]types.Slot
-	if req.Epoch == nextEpoch {
+	if nextEpochLookahead {
 		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
 	} else {
 		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
