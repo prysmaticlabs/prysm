@@ -170,7 +170,7 @@ type ReadOnlyAttestations interface {
 // ReadOnlyWithdrawals defines a struct which only has read access to withdrawal methods.
 type ReadOnlyWithdrawals interface {
 	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
-	LastWithdrawalValidatorIndex() (types.ValidatorIndex, error)
+	NextWithdrawalValidatorIndex() (types.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 }
 
@@ -227,6 +227,8 @@ type WriteOnlyCheckpoint interface {
 type WriteOnlyAttestations interface {
 	AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error
+	SetPreviousEpochAttestations([]*ethpb.PendingAttestation) error
+	SetCurrentEpochAttestations([]*ethpb.PendingAttestation) error
 	RotateAttestations() error
 }
 

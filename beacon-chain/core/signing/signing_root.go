@@ -21,6 +21,32 @@ const DomainByteLength = 4
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
+// List of descriptions for different kinds of signatures
+const (
+	// UnknownSignature represents all signatures other than below types
+	UnknownSignature string = "unknown signature"
+	// BlockSignature represents the block signature from block proposer
+	BlockSignature = "block signature"
+	// RandaoSignature represents randao specific signature
+	RandaoSignature = "randao signature"
+	// SelectionProof represents selection proof
+	SelectionProof = "selection proof"
+	// AggregatorSignature represents aggregator's signature
+	AggregatorSignature = "aggregator signature"
+	// AttestationSignature represents aggregated attestation signature
+	AttestationSignature = "attestation signature"
+	// BlsChangeSignature represents signature to BLSToExecutionChange
+	BlsChangeSignature = "blschange signature"
+	// SyncCommitteeSignature represents sync committee signature
+	SyncCommitteeSignature = "sync committee signature"
+	// SyncSelectionProof represents sync committee selection proof
+	SyncSelectionProof = "sync selection proof"
+	// ContributionSignature represents sync committee contributor's signature
+	ContributionSignature = "sync committee contribution signature"
+	// SyncAggregateSignature represents sync committee aggregator's signature
+	SyncAggregateSignature = "sync committee aggregator signature"
+)
+
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
@@ -47,12 +73,12 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj f
 //	       domain=domain,
 //	   ))
 func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
-	return signingData(object.HashTreeRoot, domain)
+	return SigningData(object.HashTreeRoot, domain)
 }
 
 // Computes the signing data by utilising the provided root function and then
 // returning the signing data of the container object.
-func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
 	if err != nil {
 		return [32]byte{}, err
@@ -107,7 +133,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(blkHdr.HashTreeRoot, domain)
+	root, err := SigningData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -146,14 +172,16 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	// utilize custom block hashing function
-	root, err := signingData(rootFunc, domain)
+	root, err := SigningData(rootFunc, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
+	desc := BlockSignature
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{desc},
 	}, nil
 }
 
@@ -178,7 +206,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValida
 	if genesisValidatorsRoot == nil {
 		genesisValidatorsRoot = params.BeaconConfig().ZeroHash[:]
 	}
-	forkBytes := [ForkVersionByteLength]byte{}
+	var forkBytes [ForkVersionByteLength]byte
 	copy(forkBytes[:], forkVersion)
 
 	forkDataRoot, err := computeForkDataRoot(forkBytes[:], genesisValidatorsRoot)

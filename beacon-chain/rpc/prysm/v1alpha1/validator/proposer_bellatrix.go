@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -129,7 +127,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bid.Message.Value))
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
 	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
@@ -155,7 +153,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
 	}
 
-	if err := vs.validateBuilderSignature(bid); err != nil {
+	if err := validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
@@ -212,7 +210,7 @@ func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltai
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
 func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 
@@ -331,7 +329,7 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err = coreBlock.BeaconBlockIsNil(b); err != nil {
+	if err = consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return false, err
 	}
 	return blocks.IsExecutionBlock(b.Block().Body())
@@ -445,7 +443,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)

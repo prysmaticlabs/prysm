@@ -101,3 +101,25 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	b.addDirtyIndices(nativetypes.PreviousEpochAttestations, []uint64{uint64(len(b.previousEpochAttestations) - 1)})
 	return nil
 }
+
+func (b *BeaconState) SetPreviousEpochAttestations(a []*ethpb.PendingAttestation) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return errNotSupported("SetPreviousEpochAttestations", b.version)
+	}
+	b.setPreviousEpochAttestations(a)
+	return nil
+}
+
+func (b *BeaconState) SetCurrentEpochAttestations(a []*ethpb.PendingAttestation) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return errNotSupported("SetCurrentEpochAttestations", b.version)
+	}
+	b.setCurrentEpochAttestations(a)
+	return nil
+}

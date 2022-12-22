@@ -196,6 +196,15 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 	return &Signature{s: signature.ToAffine()}
 }
 
+// VerifySignature verifies a single signature using public key and message.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	rSig, err := SignatureFromBytes(sig)
+	if err != nil {
+		return false, err
+	}
+	return rSig.Verify(pubKey, msg[:]), nil
+}
+
 // VerifyMultipleSignatures verifies a non-singular set of signatures and its respective pubkeys and messages.
 // This method provides a safe way to verify multiple signatures at once. We pick a number randomly from 1 to max
 // uint64 and then multiply the signature by it. We continue doing this for all signatures and its respective pubkeys.

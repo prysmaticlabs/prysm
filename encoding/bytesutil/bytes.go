@@ -4,6 +4,7 @@ package bytesutil
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"math/bits"
 	"regexp"
 
@@ -95,6 +96,15 @@ func FromBytes8(x []byte) uint64 {
 // than 4 bytes.
 func ToBytes4(x []byte) [4]byte {
 	var y [4]byte
+	copy(y[:], x)
+	return y
+}
+
+// ToBytes20 is a convenience method for converting a byte slice to a fix
+// sized 20 byte array. This method will truncate the input if it is larger
+// than 20 bytes.
+func ToBytes20(x []byte) [20]byte {
+	var y [20]byte
 	copy(y[:], x)
 	return y
 }
@@ -437,4 +447,16 @@ func IsRoot(root []byte) bool {
 // IsValidRoot checks whether the byte array is a valid root.
 func IsValidRoot(root []byte) bool {
 	return IsRoot(root) && !ZeroRoot(root)
+}
+
+// LittleEndianBytesToBigInt takes bytes of a number stored as little-endian and returns a big integer
+func LittleEndianBytesToBigInt(bytes []byte) *big.Int {
+	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
+	return new(big.Int).SetBytes(ReverseByteOrder(bytes))
+}
+
+// BigIntToLittleEndianBytes takes a big integer and returns its bytes stored as little-endian
+func BigIntToLittleEndianBytes(bigInt *big.Int) []byte {
+	// big.Int.Bytes() returns bytes in big-endian order, so we need to reverse the byte order
+	return ReverseByteOrder(bigInt.Bytes())
 }

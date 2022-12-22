@@ -87,9 +87,6 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 	if IsPreBellatrixVersion(st.Version()) {
 		return false, nil
 	}
-	if st.Version() > version.Bellatrix {
-		return true, nil
-	}
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return false, err
@@ -284,7 +281,7 @@ func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData)
 
 // GetBlockPayloadHash returns the hash of the execution payload of the block
 func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	payloadHash := [32]byte{}
+	var payloadHash [32]byte
 	if IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil
 	}

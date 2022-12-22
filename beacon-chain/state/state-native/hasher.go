@@ -42,7 +42,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[nativetypes.GenesisTime.RealPosition()] = genesisRoot[:]
 
 	// Genesis validators root.
-	r := [32]byte{}
+	var r [32]byte
 	copy(r[:], state.genesisValidatorsRoot[:])
 	fieldRoots[nativetypes.GenesisValidatorsRoot.RealPosition()] = r[:]
 
@@ -252,9 +252,9 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
 
 		// Next partial withdrawal validator index root.
-		nextPartialWithdrawalValidatorIndexRoot := make([]byte, 32)
-		binary.LittleEndian.PutUint64(nextPartialWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
-		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot
+		nextWithdrawalValidatorIndexRoot := make([]byte, 32)
+		binary.LittleEndian.PutUint64(nextWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
+		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
 	}
 
 	return fieldRoots, nil

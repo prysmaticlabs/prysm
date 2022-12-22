@@ -91,7 +91,7 @@ func VerifyBeaconStateMarshalSSZNilState(t *testing.T, factory getState, clear c
 
 func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 	keyCreator := func(input []byte) [fieldparams.BLSPubkeyLength]byte {
-		nKey := [fieldparams.BLSPubkeyLength]byte{}
+		var nKey [fieldparams.BLSPubkeyLength]byte
 		copy(nKey[:1], input)
 		return nKey
 	}

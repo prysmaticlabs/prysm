@@ -85,7 +85,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
 	if !ok {
@@ -153,19 +153,14 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		},
-		nil,
-	)
+	).Return(&ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+	}, nil)
 	require.NoError(t, v.WaitForChainStart(context.Background()))
 	savedGenValRoot, err = db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
@@ -178,15 +173,11 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		},
-		nil,
-	)
+	).Return(&ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+	}, nil)
 	require.NoError(t, v.WaitForChainStart(context.Background()))
 }
 
@@ -202,19 +193,14 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		},
-		nil,
-	)
+	).Return(&ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+	}, nil)
 	require.NoError(t, v.WaitForChainStart(context.Background()))
 	savedGenValRoot, err := db.GenesisValidatorsRoot(context.Background())
 	require.NoError(t, err)
@@ -229,15 +215,11 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		},
-		nil,
-	)
+	).Return(&ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+	}, nil)
 	err = v.WaitForChainStart(context.Background())
 	require.ErrorContains(t, "does not match root saved", err)
 }
@@ -253,48 +235,17 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
 	genesisValidatorsRoot := bytesutil.PadTo([]byte("validators"), 32)
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot,
-		},
-		nil,
-	)
+	).Return(&ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot,
+	}, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	assert.ErrorContains(t, cancelledCtx, v.WaitForChainStart(ctx))
-}
-
-func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := mock2.NewMockValidatorClient(ctrl)
-
-	privKey, err := bls.RandKey()
-	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
-	copy(pubKey[:], privKey.PublicKey().Marshal())
-	km := &mockKeymanager{
-		keysMap: make(map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey),
-	}
-	v := validator{
-		validatorClient: client,
-		keyManager:      km,
-	}
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
-	client.EXPECT().WaitForChainStart(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(clientStream, errors.New("failed stream"))
-	err = v.WaitForChainStart(context.Background())
-	want := "could not setup beacon chain ChainStart streaming client"
-	assert.ErrorContains(t, want, err)
 }
 
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
@@ -305,15 +256,10 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	v := validator{
 		validatorClient: client,
 	}
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&emptypb.Empty{},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		nil,
-		errors.New("fails"),
-	)
+	).Return(nil, errors.New("fails"))
 	err := v.WaitForChainStart(context.Background())
 	want := "could not receive ChainStart from stream"
 	assert.ErrorContains(t, want, err)
@@ -360,7 +306,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -398,7 +344,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -521,7 +467,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -559,7 +505,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -621,7 +567,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
-		pubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var pubKey [fieldparams.BLSPubkeyLength]byte
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
 		blacklistedPublicKeys[pubKey] = true

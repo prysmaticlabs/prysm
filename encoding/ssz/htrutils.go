@@ -167,11 +167,11 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 func withdrawalRoot(hasher HashFn, w *enginev1.Withdrawal) ([32]byte, error) {
 	fieldRoots := make([][32]byte, 4)
 	if w != nil {
-		binary.LittleEndian.PutUint64(fieldRoots[0][:], w.WithdrawalIndex)
+		binary.LittleEndian.PutUint64(fieldRoots[0][:], w.Index)
 
 		binary.LittleEndian.PutUint64(fieldRoots[1][:], uint64(w.ValidatorIndex))
 
-		fieldRoots[2] = bytesutil.ToBytes32(w.ExecutionAddress)
+		fieldRoots[2] = bytesutil.ToBytes32(w.Address)
 		binary.LittleEndian.PutUint64(fieldRoots[3][:], w.Amount)
 	}
 	return BitwiseMerkleize(hasher, fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))

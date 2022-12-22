@@ -75,7 +75,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		}
 
 		if blk.Block().IsBlinded() {
-			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 			if err != nil {
 				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
 				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -24,11 +25,11 @@ func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
 	return b.nextWithdrawalIndex, nil
 }
 
-// NextPartialWithdrawalValidatorIndex returns the index of the validator which is
-// next in line for a partial withdrawal.
-func (b *BeaconState) LastWithdrawalValidatorIndex() (types.ValidatorIndex, error) {
+// NextWithdrawalValidatorIndex returns the index of the validator which is
+// next in line for a withdrawal.
+func (b *BeaconState) NextWithdrawalValidatorIndex() (types.ValidatorIndex, error) {
 	if b.version < version.Capella {
-		return 0, errNotSupported("LastWithdrawalValidatorIndex", b.version)
+		return 0, errNotSupported("NextWithdrawalValidatorIndex", b.version)
 	}
 
 	b.lock.RLock()
@@ -52,23 +53,25 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	validatorIndex := b.nextWithdrawalValidatorIndex
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
-	for range b.validators {
+
+	bound := mathutil.Min(uint64(len(b.validators)), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+	for i := uint64(0); i < bound; i++ {
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
 		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance,
 			})
 			withdrawalIndex++
 		} else if isPartiallyWithdrawableValidator(val, balance) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				WithdrawalIndex:  withdrawalIndex,
-				ValidatorIndex:   validatorIndex,
-				ExecutionAddress: bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
-				Amount:           balance - params.BeaconConfig().MaxEffectiveBalance,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
 		}

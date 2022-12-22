@@ -155,6 +155,16 @@ func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbBellatrix --
+func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return e.p, nil
+}
+
+// PbCapella --
+func (executionPayload) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -293,6 +303,16 @@ func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
 
 // WithdrawalsRoot --
 func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbCapella --
+func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbBellatrix --
+func (executionPayloadHeader) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -465,6 +485,16 @@ func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
+// PbCapella --
+func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return e.p, nil
+}
+
+// PbBellatrix --
+func (executionPayloadCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
+}
+
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -601,9 +631,19 @@ func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, er
 	return nil, ErrUnsupportedGetter
 }
 
-// WitdrawalsRoot --
+// WithdrawalsRoot --
 func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
+}
+
+// PbCapella --
+func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+	return nil, ErrUnsupportedGetter
+}
+
+// PbBellatrix --
+func (executionPayloadHeaderCapella) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+	return nil, ErrUnsupportedGetter
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
@@ -647,10 +687,6 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
-	_, ok := data.Proto().(*enginev1.ExecutionPayloadCapella)
-	if ok {
-		return false, nil
-	}
 	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
 		return false, nil
 	}
