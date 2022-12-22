@@ -80,12 +80,22 @@ func TestGetAttesterDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
+	// nextEpochState must not be used for committee calculations when requesting next epoch
+	nextEpochState := bs.Copy()
+	require.NoError(t, nextEpochState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, nextEpochState.SetValidators(vals[:512]))
+
 	chainSlot := types.Slot(0)
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		StateFetcher:          &testutil.MockFetcher{BeaconState: bs},
+		StateFetcher: &testutil.MockFetcher{
+			StatesBySlot: map[types.Slot]state.BeaconState{
+				0:                                   bs,
+				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
+			},
+		},
 		TimeFetcher:           chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
@@ -185,7 +195,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:          &testutil.MockFetcher{BeaconState: bs},
+			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -243,7 +253,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -278,12 +288,12 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, err, "Could not set up genesis state")
 		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 		require.NoError(t, bs.SetBlockRoots(roots))
-		chainSlot := types.Slot(0)
+		chainSlot := types.Slot(params.BeaconConfig().SlotsPerEpoch)
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -323,7 +333,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -333,11 +343,11 @@ func TestGetProposerDuties(t *testing.T) {
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: currentEpoch + 2,
+			Epoch: currentEpoch + 1,
 		}
 		_, err = vs.GetProposerDuties(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
+		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than current epoch %d", currentEpoch+1, currentEpoch), err)
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
@@ -360,7 +370,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{BeaconState: bs},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[types.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -3887,11 +3897,17 @@ func TestGetLiveness(t *testing.T) {
 	require.NoError(t, headSt.AppendCurrentParticipationBits(0))
 
 	server := &Server{
-		HeadFetcher:  &mockChain.ChainService{State: headSt},
-		StateFetcher: &testutil.MockFetcher{BeaconState: oldSt},
+		HeadFetcher: &mockChain.ChainService{State: headSt},
+		StateFetcher: &testutil.MockFetcher{
+			// We configure states for last slots of an epoch
+			StatesBySlot: map[types.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
+			},
+		},
 	}
 
-	t.Run("current epoch", func(t *testing.T) {
+	t.Run("old epoch", func(t *testing.T) {
 		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
 			Epoch: 0,
 			Index: []types.ValidatorIndex{0, 1},
@@ -3913,7 +3929,7 @@ func TestGetLiveness(t *testing.T) {
 		assert.Equal(t, true, (data0.Index == 0 && !data0.IsLive) || (data0.Index == 1 && data0.IsLive))
 		assert.Equal(t, true, (data1.Index == 0 && !data1.IsLive) || (data1.Index == 1 && data1.IsLive))
 	})
-	t.Run("old epoch", func(t *testing.T) {
+	t.Run("current epoch", func(t *testing.T) {
 		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
 			Epoch: 2,
 			Index: []types.ValidatorIndex{0, 1},
