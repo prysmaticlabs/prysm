@@ -177,13 +177,8 @@ func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx conte
 	panic("beaconApiValidatorClient.SubmitSignedAggregateSelectionProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubmitSignedContributionAndProof(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitSignedContributionAndProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(_ context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
+	return new(empty.Empty), c.submitSignedContributionAndProof(in)
 }
 
 func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
