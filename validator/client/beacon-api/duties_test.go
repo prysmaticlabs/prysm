@@ -26,7 +26,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedAttesterDuties := apimiddleware.AttesterDutiesResponseJson{
-		Data: []*rpcmiddleware.AttesterDutyJson{
+		Data: []*apimiddleware.AttesterDutyJson{
 			{
 				Pubkey:                  hexutil.Encode([]byte{1}),
 				ValidatorIndex:          "2",
@@ -113,7 +113,7 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 	).SetArg(
 		3,
 		apimiddleware.AttesterDutiesResponseJson{
-			Data: []*rpcmiddleware.AttesterDutyJson{nil},
+			Data: []*apimiddleware.AttesterDutyJson{nil},
 		},
 	).Times(1)
 
