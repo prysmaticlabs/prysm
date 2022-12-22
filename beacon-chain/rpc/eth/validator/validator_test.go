@@ -235,6 +235,7 @@ func TestGetProposerDuties(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
+	// We DON'T WANT this root to be returned when testing the next epoch
 	roots[31] = []byte("next_epoch_dependent_root")
 	db := dbutil.SetupDB(t)
 
@@ -316,10 +317,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, types.ValidatorIndex(1360), vid)
+		require.Equal(t, types.ValidatorIndex(4863), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, types.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(4863), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[4863], expectedDuty.Pubkey)
 	})
 
 	t.Run("Prune payload ID cache ok", func(t *testing.T) {
