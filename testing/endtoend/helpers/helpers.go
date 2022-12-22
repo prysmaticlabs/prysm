@@ -97,6 +97,13 @@ func WaitForTextInFile(src *os.File, match string) error {
 			case <-ctx.Done():
 				return
 			case <-t.C:
+				// This is a paranoid check because I'm not sure if the underlying fd handle can be stuck mid-line
+				// when Scanner sees a partially written line at EOF. It's probably safest to just keep this.
+				_, err = f.Seek(0, io.SeekStart)
+				if err != nil {
+					errChan <- err
+					return
+				}
 				lineScanner := bufio.NewScanner(f)
 				// Scan will return true until it hits EOF or another error.
 				// If .Close is called on the underlying file, Scan will return false, causing this goroutine to exit.
