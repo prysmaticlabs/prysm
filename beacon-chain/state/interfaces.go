@@ -227,6 +227,8 @@ type WriteOnlyCheckpoint interface {
 type WriteOnlyAttestations interface {
 	AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error
 	AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error
+	SetPreviousEpochAttestations([]*ethpb.PendingAttestation) error
+	SetCurrentEpochAttestations([]*ethpb.PendingAttestation) error
 	RotateAttestations() error
 }
 

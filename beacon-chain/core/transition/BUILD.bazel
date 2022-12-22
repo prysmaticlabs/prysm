@@ -12,16 +12,7 @@ go_library(
         "transition_no_verify_sig.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition",
-    visibility = [
-        "//beacon-chain:__subpackages__",
-        "//runtime/interop:__pkg__",
-        "//testing/endtoend:__pkg__",
-        "//testing/spectest:__subpackages__",
-        "//testing/util:__pkg__",
-        "//tools/benchmark-files-gen:__pkg__",
-        "//tools/genesis-state-gen:__pkg__",
-        "//tools/pcli:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
