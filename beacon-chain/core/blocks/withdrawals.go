@@ -88,9 +88,6 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
 func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
-	if st.Version() < version.Capella {
-		return nil, ErrInvalidBLSChangeBeforeCapella
-	}
 	if signed == nil {
 		return nil, errNilSignedWithdrawalMessage
 	}
@@ -183,15 +180,18 @@ func BLSChangesSignatureBatch(
 		Messages:     make([][32]byte, len(changes)),
 		Descriptions: make([]string, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
+	var epoch types.Epoch
 	var fork *ethpb.Fork
 	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
 		fork = &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
 			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+			Epoch:           epoch,
 		}
+
 	} else {
+		epoch = slots.ToEpoch(st.Slot())
 		fork = st.Fork()
 	}
 	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
@@ -220,8 +220,21 @@ func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	var epoch types.Epoch
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           epoch,
+		}
+
+	} else {
+		epoch = slots.ToEpoch(st.Slot())
+		fork = st.Fork()
+	}
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing domain")
 	}
