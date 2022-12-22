@@ -138,27 +138,38 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, err
 	}
 
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
-	}
-
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
+	cs := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	nextEpoch := currentEpoch + 1
+	var nextEpochLookahead bool
+	if req.Epoch > nextEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	} else if req.Epoch == nextEpoch {
+		// If the request is for the next epoch, we use the current epoch's state to compute duties.
+		req.Epoch = currentEpoch
+		nextEpochLookahead = true
+	}
+
 	startSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
 	}
 	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	var proposals map[types.ValidatorIndex][]types.Slot
+	if nextEpochLookahead {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
+	} else {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -189,11 +200,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
-	slot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	vs.ProposerSlotIndexCache.PrunePayloadIDs(slot)
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(startSlot)
 
 	return &ethpbv1.ProposerDutiesResponse{
 		DependentRoot:       root,
