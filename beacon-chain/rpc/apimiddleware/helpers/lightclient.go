@@ -159,7 +159,7 @@ func syncCommitteeFromJSON(syncCommitteeJSON *ethrpc.SyncCommitteeJson) (*ethpbv
 }
 
 func branchFromJSON(branch []string) ([][]byte, error) {
-	branchBytes := [][]byte{}
+	var branchBytes [][]byte
 	for _, root := range branch {
 		branch, err := hexutil.Decode(root)
 		if err != nil {
@@ -216,7 +216,7 @@ func NewLightClientUpdateFromJSON(updateJSON *ethrpc.LightClientUpdateJson) (*et
 }
 
 func NewLightClientUpdateFromFinalityUpdateJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
-LightClientUpdate, error) {
+	LightClientUpdate, error) {
 	update := &ethpbv2.LightClientUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
@@ -240,7 +240,7 @@ LightClientUpdate, error) {
 }
 
 func NewLightClientUpdateFromOptimisticUpdateJSON(updateJSON *ethrpc.LightClientOptimisticUpdateJson) (*ethpbv2.
-LightClientUpdate, error) {
+	LightClientUpdate, error) {
 	update := &ethpbv2.LightClientUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {
@@ -258,7 +258,7 @@ LightClientUpdate, error) {
 }
 
 func NewLightClientFinalityUpdateFromJSON(updateJSON *ethrpc.LightClientFinalityUpdateJson) (*ethpbv2.
-LightClientFinalityUpdate, error) {
+	LightClientFinalityUpdate, error) {
 	update := &ethpbv2.LightClientFinalityUpdate{}
 	var err error
 	if update.AttestedHeader, err = headerFromJSON(updateJSON.AttestedHeader); err != nil {

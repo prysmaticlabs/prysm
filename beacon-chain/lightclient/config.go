@@ -87,7 +87,7 @@ func (c *Config) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, &configJSON); err != nil {
 		return err
 	}
-	config := Config{}
+	var config Config
 	capellaForkEpoch, err := strconv.ParseUint(configJSON.CapellaForkEpoch, 10, 64)
 	if err != nil {
 		return err

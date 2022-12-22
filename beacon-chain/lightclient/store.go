@@ -46,7 +46,7 @@ type Store struct {
 	CurrentMaxActiveParticipants uint64 `json:"current_max_active_participants,omitempty"`
 }
 
-// UnmarshalJSON allows to go from a strictly typed JSON update to a generic light client update. It can be used by
+// UnmarshalUpdateFromJSON allows to go from a strictly typed JSON update to a generic light client update. It can be used by
 // callers to propagate updates of different types over a single endpoint, and receivers to process it as a generic
 // update (e.g., by calling Store.ProcessUpdate()).
 func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {

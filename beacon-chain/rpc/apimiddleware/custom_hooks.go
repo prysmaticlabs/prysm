@@ -257,11 +257,11 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	s := struct {
+	var s struct {
 		Message struct {
 			Slot string
 		}
-	}{}
+	}
 
 	buf, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -339,11 +339,11 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	_ http.ResponseWriter,
 	req *http.Request,
 ) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	s := struct {
+	var s struct {
 		Message struct {
 			Slot string
 		}
-	}{}
+	}
 
 	buf, err := io.ReadAll(req.Body)
 	if err != nil {

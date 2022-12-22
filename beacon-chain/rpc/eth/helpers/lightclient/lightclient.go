@@ -88,11 +88,11 @@ func NewLightClientBootstrapFromBeaconState(ctx context.Context, state state.Bea
 func NewLightClientOptimisticUpdateFromBeaconState(
 	ctx context.Context,
 	config *params.BeaconChainConfig,
-	slotsPerPeriod uint64,
+	_ uint64,
 	state state.BeaconState,
 	block interfaces.SignedBeaconBlock,
 	attestedState state.BeaconState,
-	finalizedBlock interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
+	_ interfaces.SignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := types.Epoch(uint64(attestedState.Slot()) / uint64(config.SlotsPerEpoch))
