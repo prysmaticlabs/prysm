@@ -19,6 +19,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -73,40 +74,62 @@ func DeleteAndCreatePath(fp string) (*os.File, error) {
 }
 
 // WaitForTextInFile checks a file every polling interval for the text requested.
-func WaitForTextInFile(file *os.File, text string) error {
+func WaitForTextInFile(src *os.File, match string) error {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 	defer cancel()
 
-	// Use a ticker with a deadline to poll a given file.
-	ticker := time.NewTicker(filePollingInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			contents, err := io.ReadAll(file)
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
-		case <-ticker.C:
-			fileScanner := bufio.NewScanner(file)
-			buf := make([]byte, 0, fileBufferSize)
-			fileScanner.Buffer(buf, maxFileBufferSize)
-			for fileScanner.Scan() {
-				scanned := fileScanner.Text()
-				if strings.Contains(scanned, text) {
-					return nil
+	// Open a new file descriptor pointed at the same path.
+	f, err := os.Open(src.Name())
+	if err != nil {
+		return err
+	}
+
+	// spawn a goroutine to scan
+	errChan := make(chan error)
+	foundChan := make(chan struct{})
+	go func() {
+		t := time.NewTicker(filePollingInterval)
+		// This needs to happen in a loop because, even though the other process is still appending to the log file,
+		// scanner will see EOF once it hits the end of what's been written so far.
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				lineScanner := bufio.NewScanner(f)
+				// Scan will return true until it hits EOF or another error.
+				// If .Close is called on the underlying file, Scan will return false, causing this goroutine to exit.
+				for lineScanner.Scan() {
+					line := lineScanner.Text()
+					if strings.Contains(line, match) {
+						// closing foundChan causes the <-foundChan case in the outer select to execute,
+						// ending the function with a nil return (success result).
+						close(foundChan)
+						return
+					}
+				}
+				// If Scan returned false for an error (except EOF), Err will return it.
+				if err = lineScanner.Err(); err != nil {
+					// Bubble the error back up to the parent goroutine.
+					errChan <-err
 				}
 			}
-			if err := fileScanner.Err(); err != nil {
-				return err
-			}
-			_, err := file.Seek(0, io.SeekStart)
-			if err != nil {
-				return err
-			}
 		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		// Close the file to cause the scanning goroutine to terminate.
+		err = f.Close()
+		if err != nil {
+			return errors.Wrapf(err, "error calling .Close on the file handle for %s", f.Name())
+		}
+		return fmt.Errorf("could not find requested text \"%s\" in %s before deadline:\n", match, f.Name())
+	case <-foundChan:
+		return nil
+	case err = <-errChan:
+		return errors.Wrapf(err, "received error while scanning %s for %s", f.Name(), match)
 	}
 }
 
