@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "beacon_node.go",
         "boot_node.go",
+        "genesis.go",
         "lighthouse_beacon.go",
         "lighthouse_validator.go",
         "log.go",
@@ -51,6 +52,7 @@ go_library(
         "@com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4//:go_default_library",
         "@in_gopkg_yaml_v2//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@org_golang_x_sync//errgroup:go_default_library",
     ],
 )
 

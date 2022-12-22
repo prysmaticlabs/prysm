@@ -23,6 +23,7 @@ import (
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"golang.org/x/sync/errgroup"
 )
 
 var _ e2etypes.ComponentRunner = (*LighthouseValidatorNode)(nil)
@@ -324,46 +325,48 @@ func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {
 	encryptor := keystorev4.New()
 	// Use lighthouse's default password for their insecure keystores.
 	password := "222222222222222222222222222222222222222222222222222"
-	for i, pk := range pubKeys {
-		pubKeyBytes := pk.Marshal()
-		cryptoFields, err := encryptor.Encrypt(privKeys[i].Marshal(), password)
-		if err != nil {
-			return "", errors.Wrapf(
-				err,
-				"could not encrypt secret key for public key %#x",
-				pubKeyBytes,
-			)
-		}
-		id, err := uuid.NewRandom()
-		if err != nil {
-			return "", err
-		}
-		kStore := &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Pubkey:  fmt.Sprintf("%x", pubKeyBytes),
-			Version: encryptor.Version(),
-			Name:    encryptor.Name(),
-		}
+	g, _ := errgroup.WithContext(context.Background())
+	for i, pkey := range pubKeys {
+		pubKeyBytes := pkey.Marshal()
+		marshalledPriv := privKeys[i].Marshal()
+		g.Go(func() error {
+			cryptoFields, err := encryptor.Encrypt(marshalledPriv, password)
+			if err != nil {
+				return errors.Wrapf(
+					err,
+					"could not encrypt secret key for public key %#x",
+					pubKeyBytes,
+				)
+			}
+			id, err := uuid.NewRandom()
+			if err != nil {
+				return err
+			}
+			kStore := &keymanager.Keystore{
+				Crypto:  cryptoFields,
+				ID:      id.String(),
+				Pubkey:  fmt.Sprintf("%x", pubKeyBytes),
+				Version: encryptor.Version(),
+				Name:    encryptor.Name(),
+			}
 
-		fPath := filepath.Join(secretsPath, "0x"+kStore.Pubkey)
-		if err := file.WriteFile(fPath, []byte(password)); err != nil {
-			return "", err
-		}
-		keystorePath := filepath.Join(validatorKeystorePath, "0x"+kStore.Pubkey)
-		if err := file.MkdirAll(keystorePath); err != nil {
-			return "", err
-		}
-		fPath = filepath.Join(keystorePath, "voting-keystore.json")
-		encodedFile, err := json.MarshalIndent(kStore, "", "\t")
-		if err != nil {
-			return "", errors.Wrap(err, "could not marshal keystore to JSON file")
-		}
-		if err := file.WriteFile(fPath, encodedFile); err != nil {
-			return "", err
-		}
+			fPath := filepath.Join(secretsPath, "0x"+kStore.Pubkey)
+			if err := file.WriteFile(fPath, []byte(password)); err != nil {
+				return err
+			}
+			keystorePath := filepath.Join(validatorKeystorePath, "0x"+kStore.Pubkey)
+			if err := file.MkdirAll(keystorePath); err != nil {
+				return err
+			}
+			fPath = filepath.Join(keystorePath, "voting-keystore.json")
+			encodedFile, err := json.MarshalIndent(kStore, "", "\t")
+			if err != nil {
+				return errors.Wrap(err, "could not marshal keystore to JSON file")
+			}
+			return file.WriteFile(fPath, encodedFile)
+		})
 	}
-	return testNetDir, nil
+	return testNetDir, g.Wait()
 }
 
 func (k *KeystoreGenerator) UnderlyingProcess() *os.Process {
