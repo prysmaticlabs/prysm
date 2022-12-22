@@ -4,22 +4,26 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
+// update is a convenience wrapper for a LightClientUpdate to feed config parameters into misc utils.
 type update struct {
 	config *Config
 	*ethpbv2.LightClientUpdate
 }
 
+// hasRelevantSyncCommittee implements has_relevant_sync_committee from the spec.
 func (u *update) hasRelevantSyncCommittee() bool {
 	return u.IsSyncCommiteeUpdate() &&
 		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
 			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
 }
 
+// hasSyncCommitteeFinality implements has_sync_committee_finality from the spec.
 func (u *update) hasSyncCommitteeFinality() bool {
 	return computeSyncCommitteePeriodAtSlot(u.config, u.GetFinalizedHeader().Slot) ==
 		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot)
 }
 
+// isBetterUpdate implements is_better_update from the spec.
 func (u *update) isBetterUpdate(newUpdatePb *ethpbv2.LightClientUpdate) bool {
 	newUpdate := &update{
 		config:            u.config,

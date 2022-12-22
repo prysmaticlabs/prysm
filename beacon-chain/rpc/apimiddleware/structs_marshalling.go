@@ -38,9 +38,13 @@ func (p *EpochParticipation) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// TypedLightClientUpdateJson is a wrapper around updates of specific types. It allows callers to send typed updates
+// over a single endpoint while preserving strict typing.
 type TypedLightClientUpdateJson struct {
+	// TypeName is the name of the update type
 	TypeName string `json:"type_name"`
-	Data     string `json:"data"`
+	// Data is the update of type TypeName marshaled as JSON
+	Data string `json:"data"`
 }
 
 func NewTypedLightClientUpdateJsonFromUpdate(update *LightClientUpdateJson) (*TypedLightClientUpdateJson, error) {

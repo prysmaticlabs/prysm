@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
+// ConfigJSON is the JSON representation of the light client config.
 type ConfigJSON struct {
 	CapellaForkEpoch             string `json:"capella_fork_epoch"`
 	CapellaForkVersion           string `json:"capella_fork_version" hex:"true"`
@@ -26,6 +27,8 @@ type ConfigJSON struct {
 	SecondsPerSlot               string `json:"seconds_per_slot"`
 }
 
+// Config is the light client configuration. It consists of the subset of the beacon chain configuration relevant to the
+// light client. Unlike the beacon chain configuration it is serializable to JSON, hence it's a separate object.
 type Config struct {
 	CapellaForkEpoch             types.Epoch
 	CapellaForkVersion           []byte
@@ -42,6 +45,7 @@ type Config struct {
 	SecondsPerSlot               uint64
 }
 
+// NewConfig creates a new light client configuration from a beacon chain configuration.
 func NewConfig(chainConfig *params.BeaconChainConfig) *Config {
 	return &Config{
 		CapellaForkEpoch:             chainConfig.CapellaForkEpoch,

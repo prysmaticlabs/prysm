@@ -41,6 +41,7 @@ ssz_gen_marshal(
         "SignedBeaconBlockAltair",
         "SignedBeaconBlockBellatrix",
         "SignedBlindedBeaconBlockBellatrix",
+        "SyncCommittee",
     ],
 )
 

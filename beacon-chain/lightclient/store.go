@@ -19,13 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 const (
 	currentSyncCommitteeIndex = uint64(54)
 )
 
+// Store implements LightClientStore from the spec.
 type Store struct {
 	Config *Config `json:"config"`
 	// FinalizedHeader is a header that is finalized
@@ -46,6 +46,9 @@ type Store struct {
 	CurrentMaxActiveParticipants uint64 `json:"current_max_active_participants,omitempty"`
 }
 
+// UnmarshalJSON allows to go from a strictly typed JSON update to a generic light client update. It can be used by
+// callers to propagate updates of different types over a single endpoint, and receivers to process it as a generic
+// update (e.g., by calling Store.ProcessUpdate()).
 func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*ethpbv2.LightClientUpdate, error) {
 	var update *ethpbv2.LightClientUpdate
 	switch typedUpdate.TypeName {
@@ -85,21 +88,9 @@ func UnmarshalUpdateFromJSON(typedUpdate *ethrpc.TypedLightClientUpdateJson) (*e
 	return update, nil
 }
 
+// getSubtreeIndex implements get_subtree_index from the spec.
 func getSubtreeIndex(index uint64) uint64 {
 	return index % (uint64(1) << ethpbv2.FloorLog2(index-1))
-}
-
-// TODO: this should be in the proto
-func hashTreeRoot(committee *ethpbv2.SyncCommittee) ([]byte, error) {
-	v1alpha1Committee := ethpb.SyncCommittee{
-		Pubkeys:         committee.GetPubkeys(),
-		AggregatePubkey: committee.GetAggregatePubkey(),
-	}
-	root, err := v1alpha1Committee.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	return root[:], nil
 }
 
 // NewStore implements initialize_light_client_store from the spec.
@@ -112,13 +103,13 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	if trustedBlockRoot != bootstrapRoot {
 		return nil, errors.New("trusted block root does not match bootstrap header")
 	}
-	root, err := hashTreeRoot(bootstrap.CurrentSyncCommittee)
+	root, err := bootstrap.CurrentSyncCommittee.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	if !trie.VerifyMerkleProof(
 		bootstrap.Header.StateRoot,
-		root,
+		root[:],
 		getSubtreeIndex(currentSyncCommitteeIndex),
 		bootstrap.CurrentSyncCommitteeBranch) {
 		return nil, errors.New("current sync committee merkle proof is invalid")
@@ -132,6 +123,7 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 	}, nil
 }
 
+// isNextSyncCommitteeKnown implements is_next_sync_committee_known from the spec.
 func (s *Store) isNextSyncCommitteeKnown() bool {
 	return s.NextSyncCommittee != nil
 }
@@ -143,10 +135,12 @@ func max(a, b uint64) uint64 {
 	return b
 }
 
+// getSafetyThreshold implements get_safety_threshold from the spec.
 func (s *Store) getSafetyThreshold() uint64 {
 	return max(s.PreviousMaxActiveParticipants, s.CurrentMaxActiveParticipants) / 2
 }
 
+// computeForkVersion implements compute_fork_version from the spec.
 func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 	if epoch >= s.Config.CapellaForkEpoch {
 		return s.Config.CapellaForkVersion
@@ -160,6 +154,7 @@ func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 	return s.Config.GenesisForkVersion
 }
 
+// validateUpdate implements validate_light_client_update from the spec.
 func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.GetSyncAggregate()
@@ -233,7 +228,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 				return errors.New("next sync committee is not known")
 			}
 		}
-		root, err := hashTreeRoot(update.GetNextSyncCommittee())
+		root, err := update.GetNextSyncCommittee().HashTreeRoot()
 		if err != nil {
 			return err
 		}
@@ -284,6 +279,7 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	return nil
 }
 
+// applyUpdate implements apply_light_client_update from the spec.
 func (s *Store) applyUpdate(update *ethpbv2.LightClientUpdate) error {
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
 	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().Slot)
@@ -307,6 +303,7 @@ func (s *Store) applyUpdate(update *ethpbv2.LightClientUpdate) error {
 	return nil
 }
 
+// ProcessForceUpdate implements process_light_client_store_force_update from the spec.
 func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	if currentSlot > s.FinalizedHeader.Slot+s.Config.SlotsPerEpoch+types.Slot(s.Config.EpochsPerSyncCommitteePeriod) &&
 		s.BestValidUpdate != nil {
@@ -325,6 +322,7 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
+// ProcessUpdate implements process_light_client_update from the spec.
 func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	update := &update{
@@ -365,12 +363,14 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	return nil
 }
 
+// ProcessFinalityUpdate implements process_light_client_finality_update from the spec.
 func (s *Store) ProcessFinalityUpdate(update *ethpbv2.LightClientFinalityUpdate, currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(lightclient.NewLightClientUpdateFromFinalityUpdate(update), currentSlot,
 		genesisValidatorsRoot)
 }
 
+// ProcessOptimisticUpdate implements process_light_client_optimistic_update from the spec.
 func (s *Store) ProcessOptimisticUpdate(update *ethpbv2.LightClientOptimisticUpdate, currentSlot types.Slot,
 	genesisValidatorsRoot []byte) error {
 	return s.ProcessUpdate(lightclient.NewLightClientUpdateFromOptimisticUpdate(update), currentSlot,
