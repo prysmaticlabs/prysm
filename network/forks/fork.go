@@ -130,7 +130,7 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	nextForkEpoch := types.Epoch(math.MaxUint64)
-	nextForkVersion := [4]byte{}
+	var nextForkVersion [4]byte
 	for _, forkVersion := range sortedForkVersions {
 		epoch, ok := fSchedule[forkVersion]
 		if !ok {
