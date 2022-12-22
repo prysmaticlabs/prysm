@@ -363,10 +363,7 @@ func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {
 			if err != nil {
 				return errors.Wrap(err, "could not marshal keystore to JSON file")
 			}
-			if err := file.WriteFile(fPath, encodedFile); err != nil {
-				return err
-			}
-			return nil
+			return file.WriteFile(fPath, encodedFile)
 		})
 	}
 	return testNetDir, g.Wait()
