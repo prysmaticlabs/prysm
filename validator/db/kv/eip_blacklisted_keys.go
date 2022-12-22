@@ -19,7 +19,7 @@ func (s *Store) EIPImportBlacklistedPublicKeys(ctx context.Context) ([][fieldpar
 		bucket := tx.Bucket(slashablePublicKeysBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
 			if key != nil {
-				pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
+				var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 				copy(pubKeyBytes[:], key)
 				publicKeys = append(publicKeys, pubKeyBytes)
 			}

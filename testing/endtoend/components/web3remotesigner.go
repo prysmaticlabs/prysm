@@ -70,7 +70,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
-	testDir, err := w.createTestnetDir()
+	testDir, err := createTestnetDir()
 	if err != nil {
 		return err
 	}
@@ -256,10 +256,14 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	return nil
 }
 
-func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
+func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
+	return w.cmd.Process
+}
+
+func createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
-	rawYaml := params.E2ETestConfigYaml()
+	rawYaml := params.ConfigToYaml(params.BeaconConfig())
 	// Add in deposit contract in yaml
 	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
@@ -272,8 +276,4 @@ func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
 	}
 
 	return configPath, nil
-}
-
-func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
-	return w.cmd.Process
 }

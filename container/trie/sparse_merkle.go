@@ -111,7 +111,7 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 //	Spec Definition:
 //	 sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
 func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
-	enc := [32]byte{}
+	var enc [32]byte
 	depositCount := uint64(len(m.originalItems))
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], ZeroHashes[0][:]) {
 		// Accounting for empty tries
@@ -187,7 +187,7 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 			proof[i] = ZeroHashes[i][:]
 		}
 	}
-	enc := [32]byte{}
+	var enc [32]byte
 	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
 	proof[len(proof)-1] = enc[:]
 	return proof, nil

@@ -578,7 +578,7 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	blks := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
-	pr := [32]byte{}
+	var pr [32]byte
 	blk.Block.ParentRoot = pr[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
