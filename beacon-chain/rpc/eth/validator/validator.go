@@ -688,6 +688,10 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
 
+	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
+	}
+
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
 	var bestMatchingAtt *ethpbalpha.Attestation
 	for _, att := range allAtts {
