@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
@@ -119,7 +118,7 @@ func WaitForTextInFile(src *os.File, match string) error {
 				// If Scan returned false for an error (except EOF), Err will return it.
 				if err = lineScanner.Err(); err != nil {
 					// Bubble the error back up to the parent goroutine.
-					errChan <-err
+					errChan <- err
 				}
 			}
 		}
