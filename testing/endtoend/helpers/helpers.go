@@ -83,6 +83,13 @@ func WaitForTextInFile(src *os.File, match string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if ferr := f.Close(); ferr != nil {
+			if !errors.Is(err, os.ErrClosed) {
+				log.WithError(ferr).Errorf("error calling .Close on the file handle for %s", f.Name())
+			}
+		}
+	}()
 
 	// spawn a goroutine to scan
 	errChan := make(chan error)
@@ -126,11 +133,6 @@ func WaitForTextInFile(src *os.File, match string) error {
 
 	select {
 	case <-ctx.Done():
-		// Close the file to cause the scanning goroutine to terminate.
-		err = f.Close()
-		if err != nil {
-			return errors.Wrapf(err, "error calling .Close on the file handle for %s", f.Name())
-		}
 		return fmt.Errorf("could not find requested text \"%s\" in %s before deadline:\n", match, f.Name())
 	case <-foundChan:
 		return nil
