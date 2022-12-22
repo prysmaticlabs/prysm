@@ -14,14 +14,7 @@ go_library(
         "upgrade.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair",
-    visibility = [
-        "//beacon-chain:__subpackages__",
-        "//cmd/prysmctl/testnet:__pkg__",
-        "//testing/endtoend/evaluators:__subpackages__",
-        "//testing/spectest:__subpackages__",
-        "//testing/util:__pkg__",
-        "//validator/client:__pkg__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
