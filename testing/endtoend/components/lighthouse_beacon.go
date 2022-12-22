@@ -164,7 +164,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 	}
 
 	_, index, _ := node.config, node.index, node.enr
-	testDir, err := node.createTestnetDir(index)
+	testDir, err := node.createTestnetDir(ctx, index)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start beacon node: %w", err)
 	}
 
-	if err = helpers.WaitForTextInFile(stderr, "Configured for network"); err != nil {
+	if err = helpers.WaitForTextInFile(stderr, "Metrics HTTP server started"); err != nil {
 		return fmt.Errorf("could not find initialization for node %d, this means the node had issues starting: %w", index, err)
 	}
 
@@ -257,13 +257,10 @@ func (node *LighthouseBeaconNode) Stop() error {
 	return node.cmd.Process.Kill()
 }
 
-func (node *LighthouseBeaconNode) createTestnetDir(index int) (string, error) {
+func (node *LighthouseBeaconNode) createTestnetDir(ctx context.Context, index int) (string, error) {
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
 	configPath := filepath.Join(testNetDir, "config.yaml")
 	rawYaml := params.ConfigToYaml(params.BeaconConfig())
-	// Add in deposit contract in yaml
-	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
-	rawYaml = append(rawYaml, []byte(depContractStr)...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err
@@ -278,5 +275,37 @@ func (node *LighthouseBeaconNode) createTestnetDir(index int) (string, error) {
 	}
 	deployPath := filepath.Join(testNetDir, "deploy_block.txt")
 	deployYaml := []byte("0")
-	return testNetDir, file.WriteFile(deployPath, deployYaml)
+	if err := file.WriteFile(deployPath, deployYaml); err != nil {
+		return "", err
+	}
+
+	return testNetDir, node.saveGenesis(ctx, testNetDir)
+}
+
+func (node *LighthouseBeaconNode) saveGenesis(ctx context.Context, testNetDir string) error {
+	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
+	g, err := generateGenesis(ctx)
+	if err != nil {
+		return err
+	}
+
+	root, err := g.HashTreeRoot(ctx)
+	if err != nil {
+		return err
+	}
+	lbhr, err := g.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	log.WithField("fork_version", g.Fork().CurrentVersion).
+		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
+		WithField("state_root", fmt.Sprintf("%#x", root)).
+		Infof("BeaconState info")
+
+	genesisBytes, err := g.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	genesisPath := path.Join(testNetDir, "genesis.ssz")
+	return file.WriteFile(genesisPath, genesisBytes)
 }

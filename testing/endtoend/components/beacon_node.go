@@ -183,7 +183,7 @@ func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState,
 
 func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
-	g, err := node.generateGenesis(ctx)
+	g, err := generateGenesis(ctx)
 	if err != nil {
 		return "", err
 	}
