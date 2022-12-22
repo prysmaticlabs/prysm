@@ -2904,7 +2904,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	root := bytesutil.PadTo([]byte("root"), 32)
 	sig := bytesutil.PadTo([]byte("sig"), fieldparams.BLSSignatureLength)
 	att1 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1},
+		AggregationBits: []byte{3, 0, 0, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
@@ -2921,7 +2921,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 		Signature: sig,
 	}
 	att2 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1, 1},
+		AggregationBits: []byte{0, 3, 0, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            1,
 			CommitteeIndex:  1,
@@ -2953,7 +2953,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	require.NoError(t, err)
 	require.NotNil(t, att)
 	require.NotNil(t, att.Data)
-	assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1}, att.Data.AggregationBits)
+	assert.DeepEqual(t, bitfield.Bitlist{3, 0, 0, 1}, att.Data.AggregationBits)
 }
 
 func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
