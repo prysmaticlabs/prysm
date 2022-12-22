@@ -1,8 +1,6 @@
 package validator
 
 import (
-	"fmt"
-
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -16,12 +14,10 @@ func (vs *Server) getExits(head state.BeaconState, slot types.Slot) []*ethpb.Sig
 	for _, exit := range exits {
 		val, err := head.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
-			fmt.Println(err)
 			log.WithError(err).Warn("Could not retrieve validator index")
 			continue
 		}
 		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
-			fmt.Println(err)
 			log.WithError(err).Warn("Could not verify exit for block inclusion")
 			continue
 		}
