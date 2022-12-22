@@ -101,3 +101,39 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	b.addDirtyIndices(nativetypes.PreviousEpochAttestations, []uint64{uint64(len(b.previousEpochAttestations) - 1)})
 	return nil
 }
+
+func (b *BeaconState) SetPreviousEpochAttestations(al []*ethpb.PendingAttestation) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return errNotSupported("SetPreviousEpochAttestations", b.version)
+	}
+	max := uint64(fieldparams.PreviousEpochAttestationsLength)
+	if uint64(len(al)) >= max {
+		return fmt.Errorf("cannot set PreviousEpochAttestations to list longer than max length %d", max)
+	}
+
+	b.previousEpochAttestations = al
+	b.markFieldAsDirty(nativetypes.PreviousEpochAttestations)
+
+	return nil
+}
+
+func (b *BeaconState) SetCurrentEpochAttestations(al []*ethpb.PendingAttestation) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return errNotSupported("SetCurrentEpochAttestations", b.version)
+	}
+	max := uint64(fieldparams.CurrentEpochAttestationsLength)
+	if uint64(len(al)) >= max {
+		return fmt.Errorf("cannot set CurrentEpochAttestations to list longer than max length %d", max)
+	}
+
+	b.currentEpochAttestations = al
+	b.markFieldAsDirty(nativetypes.CurrentEpochAttestations)
+
+	return nil
+}
