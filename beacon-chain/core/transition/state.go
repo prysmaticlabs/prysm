@@ -237,18 +237,7 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		HistoricalRoots:           [][]byte{},
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{},
 		PreviousEpochAttestations: []*ethpb.PendingAttestation{},
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
+
 		// Eth1 data.
 		Eth1Data:         &ethpb.Eth1Data{},
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
