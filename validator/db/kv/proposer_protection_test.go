@@ -192,7 +192,7 @@ func TestStore_ProposedPublicKeys(t *testing.T) {
 	assert.DeepEqual(t, make([][fieldparams.BLSPubkeyLength]byte, 0), keys)
 
 	pubKey := [fieldparams.BLSPubkeyLength]byte{1}
-	dummyRoot := [32]byte{}
+	var dummyRoot [32]byte
 	err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, 1, dummyRoot[:])
 	require.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestStore_ProposedPublicKeys(t *testing.T) {
 func TestStore_LowestSignedProposal(t *testing.T) {
 	ctx := context.Background()
 	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
-	dummySigningRoot := [32]byte{}
+	var dummySigningRoot [32]byte
 	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
 	_, exists, err := validatorDB.LowestSignedProposal(ctx, pubkey)
@@ -245,7 +245,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 func TestStore_HighestSignedProposal(t *testing.T) {
 	ctx := context.Background()
 	pubkey := [fieldparams.BLSPubkeyLength]byte{3}
-	dummySigningRoot := [32]byte{}
+	var dummySigningRoot [32]byte
 	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubkey})
 
 	_, exists, err := validatorDB.HighestSignedProposal(ctx, pubkey)
