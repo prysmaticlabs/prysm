@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -140,8 +141,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
+	if req.Epoch > currentEpoch+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -149,13 +150,25 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	startSlot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
+	var startSlot types.Slot
+	if req.Epoch == currentEpoch+1 {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(req.Epoch)
 	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+	}
+
 	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+	if req.Epoch == currentEpoch+1 {
+		s, err = transition.ProcessSlotsIfPossible(ctx, s, startSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not advance state to next epoch: %v", err)
+		}
 	}
 
 	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
