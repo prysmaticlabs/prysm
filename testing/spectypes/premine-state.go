@@ -138,7 +138,7 @@ func (s *premineGenesisConfig) processDeposits(ctx context.Context, g state.Beac
 	if _, err = helpers.UpdateGenesisEth1Data(g, deposits, g.Eth1Data()); err != nil {
 		return err
 	}
-	g, err = b.ProcessPreGenesisDeposits(ctx, g, deposits)
+	_, err = b.ProcessPreGenesisDeposits(ctx, g, deposits)
 	if err != nil {
 		return errors.Wrap(err, "could not process validator deposits")
 	}
@@ -230,11 +230,7 @@ func (s *premineGenesisConfig) populate(g state.BeaconState) error {
 
 	// For pre-mined genesis, we want to keep the deposit root set to the root of an empty trie.
 	// This needs to be set again because the methods used by processDeposits mutate the state's eth1data.
-	if err := s.setEth1Data(g); err != nil {
-		return err
-	}
-
-	return nil
+	return s.setEth1Data(g)
 }
 
 func (s *premineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
@@ -294,10 +290,7 @@ func (s *premineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
 	if err = g.SetNextSyncCommittee(sc); err != nil {
 		return err
 	}
-	if err = g.SetCurrentSyncCommittee(sc); err != nil {
-		return err
-	}
-	return nil
+	return g.SetCurrentSyncCommittee(sc)
 }
 
 type rooter interface {
