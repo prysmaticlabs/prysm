@@ -88,9 +88,6 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
 func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
-	if st.Version() < version.Capella {
-		return nil, ErrInvalidBLSChangeBeforeCapella
-	}
 	if signed == nil {
 		return nil, errNilSignedWithdrawalMessage
 	}
@@ -131,7 +128,6 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 			return nil, errInvalidWithdrawalIndex
 		}
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
-			log.Errorf("Expected %v, got %v", expected[i], withdrawal)
 			return nil, errInvalidValidatorIndex
 		}
 		if !bytes.Equal(withdrawal.Address, expected[i].Address) {
@@ -149,13 +145,23 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
-		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+	}
+	var nextValidatorIndex types.ValidatorIndex
+	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
+		}
+		nextValidatorIndex += types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+		nextValidatorIndex = nextValidatorIndex % types.ValidatorIndex(st.NumValidators())
+	} else {
+		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
 		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
 			nextValidatorIndex = 0
 		}
-		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
-			return nil, errors.Wrap(err, "could not set next withdrawal validator index")
-		}
+	}
+	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
+		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
 }
@@ -169,12 +175,26 @@ func BLSChangesSignatureBatch(
 		return bls.NewSet(), nil
 	}
 	batch := &bls.SignatureBatch{
-		Signatures: make([][]byte, len(changes)),
-		PublicKeys: make([]bls.PublicKey, len(changes)),
-		Messages:   make([][32]byte, len(changes)),
+		Signatures:   make([][]byte, len(changes)),
+		PublicKeys:   make([]bls.PublicKey, len(changes)),
+		Messages:     make([][32]byte, len(changes)),
+		Descriptions: make([]string, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	var epoch types.Epoch
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           epoch,
+		}
+
+	} else {
+		epoch = slots.ToEpoch(st.Slot())
+		fork = st.Fork()
+	}
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +210,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
 		batch.Messages[i] = htr
+		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
 }
@@ -199,8 +220,21 @@ func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	var epoch types.Epoch
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           epoch,
+		}
+
+	} else {
+		epoch = slots.ToEpoch(st.Slot())
+		fork = st.Fork()
+	}
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing domain")
 	}

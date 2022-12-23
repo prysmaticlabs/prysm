@@ -718,6 +718,9 @@ func (s *Service) determineEarliestVotingBlock(ctx context.Context, followBlock 
 		return 0, errors.Errorf("invalid genesis time provided. %d > %d", followBackDist, votingTime)
 	}
 	earliestValidTime := votingTime - followBackDist
+	if earliestValidTime < genesisTime {
+		return 0, nil
+	}
 	hdr, err := s.BlockByTimestamp(ctx, earliestValidTime)
 	if err != nil {
 		return 0, err

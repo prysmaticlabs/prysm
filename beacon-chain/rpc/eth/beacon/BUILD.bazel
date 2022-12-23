@@ -93,6 +93,7 @@ go_test(
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/execution/testing:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
+        "//beacon-chain/operations/blstoexec/mock:go_default_library",
         "//beacon-chain/operations/slashings/mock:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/operations/voluntaryexits/mock:go_default_library",

@@ -1,9 +1,9 @@
 package params
 
 const (
-	AltairE2EForkEpoch    = 0
-	BellatrixE2EForkEpoch = 0
-	CapellaE2EForkEpoch   = 2
+	altairE2EForkEpoch    = 6
+	bellatrixE2EForkEpoch = 8
+	CapellaE2EForkEpoch   = 10
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -38,7 +38,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "0"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
@@ -78,7 +78,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "0"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName
@@ -90,14 +90,4 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
-}
-
-// E2EMainnetConfigYaml returns the e2e config in yaml format.
-func E2EMainnetConfigYaml() []byte {
-	return ConfigToYaml(E2EMainnetTestConfig())
-}
-
-// E2ETestConfigYaml returns the e2e config in yaml format.
-func E2ETestConfigYaml() []byte {
-	return ConfigToYaml(E2ETestConfig())
 }

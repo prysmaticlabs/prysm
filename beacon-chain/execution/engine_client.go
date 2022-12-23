@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	types2 "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	prysmType "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -32,7 +32,7 @@ import (
 const (
 	// NewPayloadMethod v1 request string for JSON-RPC.
 	NewPayloadMethod = "engine_newPayloadV1"
-	// NewPayloadMethod v2 request string for JSON-RPC.
+	// NewPayloadMethodV2 v2 request string for JSON-RPC.
 	NewPayloadMethodV2 = "engine_newPayloadV2"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
@@ -40,7 +40,7 @@ const (
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
-	// GetPayloadMethod v2 request string for JSON-RPC.
+	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
@@ -78,7 +78,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot types2.Slot) (interfaces.ExecutionData, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot prysmType.Slot) (interfaces.ExecutionData, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -86,7 +86,7 @@ type EngineCaller interface {
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
-// NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
+// NewPayload calls the engine_newPayloadVX method via JSON-RPC.
 func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
@@ -99,8 +99,9 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
-	if !ok {
+
+	switch payload.Proto().(type) {
+	case *pb.ExecutionPayload:
 		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
 		if !ok {
 			return nil, errors.New("execution data must be a Bellatrix or Capella execution payload")
@@ -109,11 +110,17 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-	} else {
+	case *pb.ExecutionPayloadCapella:
+		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
+		if !ok {
+			return nil, errors.New("execution data must be a Capella execution payload")
+		}
 		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, payloadPb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
+	default:
+		return nil, errors.New("unknown execution data type")
 	}
 
 	switch result.Status {
@@ -188,8 +195,8 @@ func (s *Service) ForkchoiceUpdated(
 	}
 }
 
-// GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot types2.Slot) (interfaces.ExecutionData, error) {
+// GetPayload calls the engine_getPayloadVX method via JSON-RPC.
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot prysmType.Slot) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -364,8 +371,7 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 }
 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
-// eth_blockByHash via JSON-RPC. The forkVersion parameter determines which fork's
-// execution block will be returned.
+// eth_blockByHash via JSON-RPC.
 func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()

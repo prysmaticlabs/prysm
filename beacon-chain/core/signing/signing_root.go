@@ -21,6 +21,32 @@ const DomainByteLength = 4
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
+// List of descriptions for different kinds of signatures
+const (
+	// UnknownSignature represents all signatures other than below types
+	UnknownSignature string = "unknown signature"
+	// BlockSignature represents the block signature from block proposer
+	BlockSignature = "block signature"
+	// RandaoSignature represents randao specific signature
+	RandaoSignature = "randao signature"
+	// SelectionProof represents selection proof
+	SelectionProof = "selection proof"
+	// AggregatorSignature represents aggregator's signature
+	AggregatorSignature = "aggregator signature"
+	// AttestationSignature represents aggregated attestation signature
+	AttestationSignature = "attestation signature"
+	// BlsChangeSignature represents signature to BLSToExecutionChange
+	BlsChangeSignature = "blschange signature"
+	// SyncCommitteeSignature represents sync committee signature
+	SyncCommitteeSignature = "sync committee signature"
+	// SyncSelectionProof represents sync committee selection proof
+	SyncSelectionProof = "sync selection proof"
+	// ContributionSignature represents sync committee contributor's signature
+	ContributionSignature = "sync committee contribution signature"
+	// SyncAggregateSignature represents sync committee aggregator's signature
+	SyncAggregateSignature = "sync committee aggregator signature"
+)
+
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
@@ -150,10 +176,12 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
+	desc := BlockSignature
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{desc},
 	}, nil
 }
 

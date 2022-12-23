@@ -244,6 +244,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		numValidators            = 128
 		notWithdrawableIndex     = 127
 		notPartiallyWithdrawable = 126
+		maxSweep                 = uint64(80)
 	)
 	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
 
@@ -275,18 +276,18 @@ func TestProcessWithdrawals(t *testing.T) {
 	}
 	fullWithdrawal := func(i types.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
-			WithdrawalIndex:  idx,
-			ValidatorIndex:   i,
-			ExecutionAddress: executionAddress(i),
-			Amount:           withdrawalAmount(i),
+			Index:          idx,
+			ValidatorIndex: i,
+			Address:        executionAddress(i),
+			Amount:         withdrawalAmount(i),
 		}
 	}
 	partialWithdrawal := func(i types.ValidatorIndex, idx uint64) *enginev1.Withdrawal {
 		return &enginev1.Withdrawal{
-			WithdrawalIndex:  idx,
-			ValidatorIndex:   i,
-			ExecutionAddress: executionAddress(i),
-			Amount:           withdrawalAmount(i) - maxEffectiveBalance,
+			Index:          idx,
+			ValidatorIndex: i,
+			Address:        executionAddress(i),
+			Amount:         withdrawalAmount(i) - maxEffectiveBalance,
 		}
 	}
 	tests := []Test{
@@ -297,7 +298,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				NextWithdrawalIndex:          3,
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 10,
+				NextWithdrawalValidatorIndex: 90,
 				NextWithdrawalIndex:          3,
 			},
 		},
@@ -306,29 +307,29 @@ func TestProcessWithdrawals(t *testing.T) {
 				Name:                         "success one full withdrawal",
 				NextWithdrawalIndex:          3,
 				NextWithdrawalValidatorIndex: 5,
-				FullWithdrawalIndices:        []types.ValidatorIndex{1},
+				FullWithdrawalIndices:        []types.ValidatorIndex{70},
 				Withdrawals: []*enginev1.Withdrawal{
-					fullWithdrawal(1, 3),
+					fullWithdrawal(70, 3),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
+				NextWithdrawalValidatorIndex: 85,
 				NextWithdrawalIndex:          4,
-				Balances:                     map[uint64]uint64{1: 0},
+				Balances:                     map[uint64]uint64{70: 0},
 			},
 		},
 		{
 			Args: args{
 				Name:                         "success one partial withdrawal",
 				NextWithdrawalIndex:          21,
-				NextWithdrawalValidatorIndex: 37,
+				NextWithdrawalValidatorIndex: 120,
 				PartialWithdrawalIndices:     []types.ValidatorIndex{7},
 				Withdrawals: []*enginev1.Withdrawal{
 					partialWithdrawal(7, 21),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 8,
+				NextWithdrawalValidatorIndex: 72,
 				NextWithdrawalIndex:          22,
 				Balances:                     map[uint64]uint64{7: maxEffectiveBalance},
 			},
@@ -341,13 +342,45 @@ func TestProcessWithdrawals(t *testing.T) {
 				FullWithdrawalIndices:        []types.ValidatorIndex{7, 19, 28, 1},
 				Withdrawals: []*enginev1.Withdrawal{
 					fullWithdrawal(7, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 24),
-					fullWithdrawal(1, 25),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
+				Balances:                     map[uint64]uint64{7: 0, 19: 0, 28: 0},
+			},
+		},
+		{
+			Args: args{
+				Name:                         "Less than max sweep at end",
+				NextWithdrawalIndex:          22,
+				NextWithdrawalValidatorIndex: 4,
+				FullWithdrawalIndices:        []types.ValidatorIndex{80, 81, 82, 83},
+				Withdrawals: []*enginev1.Withdrawal{
+					fullWithdrawal(80, 22), fullWithdrawal(81, 23), fullWithdrawal(82, 24),
+					fullWithdrawal(83, 25),
+				},
+			},
+			Control: control{
+				NextWithdrawalValidatorIndex: 84,
 				NextWithdrawalIndex:          26,
-				Balances:                     map[uint64]uint64{7: 0, 19: 0, 28: 0, 1: 0},
+				Balances:                     map[uint64]uint64{80: 0, 81: 0, 82: 0, 83: 0},
+			},
+		},
+		{
+			Args: args{
+				Name:                         "Less than max sweep and beginning",
+				NextWithdrawalIndex:          22,
+				NextWithdrawalValidatorIndex: 4,
+				FullWithdrawalIndices:        []types.ValidatorIndex{4, 5, 6},
+				Withdrawals: []*enginev1.Withdrawal{
+					fullWithdrawal(4, 22), fullWithdrawal(5, 23), fullWithdrawal(6, 24),
+				},
+			},
+			Control: control{
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
+				Balances:                     map[uint64]uint64{4: 0, 5: 0, 6: 0},
 			},
 		},
 		{
@@ -355,20 +388,18 @@ func TestProcessWithdrawals(t *testing.T) {
 				Name:                         "success many partial withdrawals",
 				NextWithdrawalIndex:          22,
 				NextWithdrawalValidatorIndex: 4,
-				PartialWithdrawalIndices:     []types.ValidatorIndex{7, 19, 28, 1},
+				PartialWithdrawalIndices:     []types.ValidatorIndex{7, 19, 28},
 				Withdrawals: []*enginev1.Withdrawal{
 					partialWithdrawal(7, 22), partialWithdrawal(19, 23), partialWithdrawal(28, 24),
-					partialWithdrawal(1, 25),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 2,
-				NextWithdrawalIndex:          26,
+				NextWithdrawalValidatorIndex: 84,
+				NextWithdrawalIndex:          25,
 				Balances: map[uint64]uint64{
 					7:  maxEffectiveBalance,
 					19: maxEffectiveBalance,
 					28: maxEffectiveBalance,
-					1:  maxEffectiveBalance,
 				},
 			},
 		},
@@ -376,17 +407,17 @@ func TestProcessWithdrawals(t *testing.T) {
 			Args: args{
 				Name:                         "success many withdrawals",
 				NextWithdrawalIndex:          22,
-				NextWithdrawalValidatorIndex: 12,
+				NextWithdrawalValidatorIndex: 88,
 				FullWithdrawalIndices:        []types.ValidatorIndex{7, 19, 28},
 				PartialWithdrawalIndices:     []types.ValidatorIndex{2, 1, 89, 15},
 				Withdrawals: []*enginev1.Withdrawal{
-					partialWithdrawal(15, 22), fullWithdrawal(19, 23), fullWithdrawal(28, 24),
-					partialWithdrawal(89, 25), partialWithdrawal(1, 26), partialWithdrawal(2, 27),
-					fullWithdrawal(7, 28),
+					partialWithdrawal(89, 22), partialWithdrawal(1, 23), partialWithdrawal(2, 24),
+					fullWithdrawal(7, 25), partialWithdrawal(15, 26), fullWithdrawal(19, 27),
+					fullWithdrawal(28, 28),
 				},
 			},
 			Control: control{
-				NextWithdrawalValidatorIndex: 8,
+				NextWithdrawalValidatorIndex: 40,
 				NextWithdrawalIndex:          29,
 				Balances: map[uint64]uint64{
 					7: 0, 19: 0, 28: 0,
@@ -589,6 +620,8 @@ func TestProcessWithdrawals(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Args.Name, func(t *testing.T) {
+			saved := params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep
+			params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = maxSweep
 			if test.Args.Withdrawals == nil {
 				test.Args.Withdrawals = make([]*enginev1.Withdrawal, 0)
 			}
@@ -614,6 +647,7 @@ func TestProcessWithdrawals(t *testing.T) {
 				require.NoError(t, err)
 				checkPostState(t, test.Control, post)
 			}
+			params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep = saved
 		})
 	}
 }
@@ -737,6 +771,76 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpb.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		signedChanges[i] = signed
+	}
+	batch, err := blocks.BLSChangesSignatureBatch(st, signedChanges)
+	require.NoError(t, err)
+	verify, err := batch.Verify()
+	require.NoError(t, err)
+	require.Equal(t, true, verify)
+}
+
+func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
+	spb := &ethpb.BeaconStateBellatrix{
+		Fork: &ethpb.Fork{
+			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+		},
+	}
+	numValidators := 10
+	validators := make([]*ethpb.Validator, numValidators)
+	blsChanges := make([]*ethpb.BLSToExecutionChange, numValidators)
+	spb.Balances = make([]uint64, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
+	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
+
+	for i := range validators {
+		v := &ethpb.Validator{}
+		v.EffectiveBalance = maxEffectiveBalance
+		v.WithdrawableEpoch = params.BeaconConfig().FarFutureEpoch
+		v.WithdrawalCredentials = make([]byte, 32)
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+
+		message := &ethpb.BLSToExecutionChange{
+			ToExecutionAddress: executionAddress,
+			ValidatorIndex:     types.ValidatorIndex(i),
+			FromBlsPubkey:      pubkey,
+		}
+
+		hashFn := ssz.NewHasherFunc(hash.CustomSHA256Hasher())
+		digest := hashFn.Hash(pubkey)
+		digest[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+		copy(v.WithdrawalCredentials, digest[:])
+		validators[i] = v
+		blsChanges[i] = message
+	}
+	spb.Validators = validators
+	st, err := state_native.InitializeFromProtoBellatrix(spb)
+	require.NoError(t, err)
+
+	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
+	spc := &ethpb.BeaconStateCapella{
+		Fork: &ethpb.Fork{
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		},
+	}
+	stc, err := state_native.InitializeFromProtoCapella(spc)
+	require.NoError(t, err)
+
+	for i, message := range blsChanges {
+		signature, err := signing.ComputeDomainAndSign(stc, time.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpb.SignedBLSToExecutionChange{

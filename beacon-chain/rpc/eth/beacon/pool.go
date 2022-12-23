@@ -307,7 +307,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 	return &emptypb.Empty{}, nil
 }
 
-// SubmitSignedBLSToExecutionChange submits said object to the node's pool
+// SubmitSignedBLSToExecutionChanges submits said object to the node's pool
 // if it passes validation the node must broadcast it to the network.
 func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
@@ -333,4 +333,24 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		}
 	}
 	return &emptypb.Empty{}, nil
+}
+
+// ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
+func (bs *Server) ListBLSToExecutionChanges(ctx context.Context, _ *emptypb.Empty) (*ethpbv2.BLSToExecutionChangesPoolResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.ListBLSToExecutionChanges")
+	defer span.End()
+
+	sourceChanges, err := bs.BLSChangesPool.PendingBLSToExecChanges()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get BLS to execution changes: %v", err)
+	}
+
+	changes := make([]*ethpbv2.SignedBLSToExecutionChange, len(sourceChanges))
+	for i, ch := range sourceChanges {
+		changes[i] = migration.V1Alpha1SignedBLSToExecChangeToV2(ch)
+	}
+
+	return &ethpbv2.BLSToExecutionChangesPoolResponse{
+		Data: changes,
+	}, nil
 }

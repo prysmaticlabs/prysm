@@ -9,6 +9,7 @@ proto_library(
     name = "proto",
     srcs = [
         "beacon_block.proto",
+        "beacon_chain.proto",
         "ssz.proto",
         "version.proto",
         ":ssz_proto_files",
@@ -38,13 +39,13 @@ ssz_gen_marshal(
         "//proto/eth/v1:go_default_library",
     ],
     objs = [
+        "BlsToExecutionChange",
         "SignedBeaconBlockAltair",
         "SignedBeaconBlockBellatrix",
         "SignedBlindedBeaconBlockBellatrix",
         "SignedBeaconBlockCapella",
         "SignedBlindedBeaconBlockCapella",
-        "BlsToExecutionChange",
-	"SignedBlsToExecutionChange",
+        "SignedBlsToExecutionChange",
     ],
 )
 
