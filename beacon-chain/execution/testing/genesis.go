@@ -115,7 +115,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 			Period: cfg.SecondsPerETH1Block,
 			Epoch:  20000,
 		},
-		ShanghaiTime:                  shanghaiTime,
+		ShanghaiTime: shanghaiTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
