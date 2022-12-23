@@ -26,7 +26,7 @@ func TestService_CanSubscribe(t *testing.T) {
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type test struct {
@@ -216,7 +216,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
-	valRoot := [32]byte{}
+	var valRoot [32]byte
 	digest, err := forks.CreateForkDigest(genesisTime, valRoot[:])
 	assert.NoError(t, err)
 	type args struct {

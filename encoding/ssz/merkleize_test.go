@@ -41,7 +41,7 @@ func TestMerkleizeLimitAndCountAreZero(t *testing.T) {
 	leafIndexer := func(i uint64) []byte {
 		return chunks[i]
 	}
-	expected := [32]byte{}
+	var expected [32]byte
 	result := ssz.Merkleize(hashFn, count, limit, leafIndexer)
 	assert.Equal(t, expected, result)
 }

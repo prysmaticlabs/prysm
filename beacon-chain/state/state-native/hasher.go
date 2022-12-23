@@ -42,7 +42,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[nativetypes.GenesisTime.RealPosition()] = genesisRoot[:]
 
 	// Genesis validators root.
-	r := [32]byte{}
+	var r [32]byte
 	copy(r[:], state.genesisValidatorsRoot[:])
 	fieldRoots[nativetypes.GenesisValidatorsRoot.RealPosition()] = r[:]
 
