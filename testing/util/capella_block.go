@@ -16,7 +16,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -118,7 +117,7 @@ func GenerateFullBlockCapella(
 		return nil, err
 	}
 	blockHash := indexToHash(uint64(slot))
-	newExecutionPayloadCapella := &enginev1.ExecutionPayloadCapella{
+	newExecutionPayloadCapella := &v1.ExecutionPayloadCapella{
 		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
