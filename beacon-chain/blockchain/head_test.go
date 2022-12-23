@@ -10,6 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -303,31 +304,37 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
+	service.cfg.BLSToExecPool = blstoexec.NewPool()
 	service.genesisTime = time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch+2)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
 	// Chain setup
 	// 0 -- 1 -- 2
 	//  \-4
-	st, keys := util.DeterministicGenesisState(t, 64)
-	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
+	st, keys := util.DeterministicGenesisStateCapella(t, 64)
+	blkConfig := util.DefaultBlockGenConfig()
+	blkConfig.NumBLSChanges = 5
+	blkG, err := util.GenerateFullBlockCapella(st, keys, blkConfig, 1)
 	assert.NoError(t, err)
 	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	blk1, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	blkConfig.NumBLSChanges = 10
+	blk1, err := util.GenerateFullBlockCapella(st, keys, blkConfig, 2)
 	assert.NoError(t, err)
 	blk1.Block.ParentRoot = rG[:]
 	r1, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	blk2, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
+	blkConfig.NumBLSChanges = 15
+	blk2, err := util.GenerateFullBlockCapella(st, keys, blkConfig, 3)
 	assert.NoError(t, err)
 	blk2.Block.ParentRoot = r1[:]
 	r2, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	blk4 := util.NewBeaconBlock()
+	blk4 := util.NewBeaconBlockCapella()
+	blkConfig.NumBLSChanges = 0
 	blk4.Block.Slot = 4
 	blk4.Block.ParentRoot = rG[:]
 	r4, err := blk4.Block.HashTreeRoot()
@@ -335,7 +342,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 
-	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk4} {
+	for _, blk := range []*ethpb.SignedBeaconBlockCapella{blkG, blk1, blk2, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
@@ -345,7 +352,10 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	}
 
 	require.NoError(t, service.saveOrphanedOperations(ctx, r2, r4))
-	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
+	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
+	pending, err := service.cfg.BLSToExecPool.PendingBLSToExecChanges()
+	require.NoError(t, err)
+	require.Equal(t, 15, len(pending))
 }
 
 func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
