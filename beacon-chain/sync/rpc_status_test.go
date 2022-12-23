@@ -107,7 +107,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
-	root := [32]byte{}
+	var root [32]byte
 
 	r := &Service{
 		cfg: &config{

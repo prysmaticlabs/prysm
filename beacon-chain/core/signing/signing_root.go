@@ -206,7 +206,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValida
 	if genesisValidatorsRoot == nil {
 		genesisValidatorsRoot = params.BeaconConfig().ZeroHash[:]
 	}
-	forkBytes := [ForkVersionByteLength]byte{}
+	var forkBytes [ForkVersionByteLength]byte
 	copy(forkBytes[:], forkVersion)
 
 	forkDataRoot, err := computeForkDataRoot(forkBytes[:], genesisValidatorsRoot)

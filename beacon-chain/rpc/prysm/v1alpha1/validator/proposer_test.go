@@ -1751,7 +1751,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
-					zeroSig := [96]byte{}
+					var zeroSig [96]byte
 					atts[i].Signature = zeroSig[:]
 
 					for i, indice := range attestingIndices {

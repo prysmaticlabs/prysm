@@ -98,7 +98,7 @@ func TestStore_SaveBackfillBlockRoot(t *testing.T) {
 	_, err := db.BackfillBlockRoot(ctx)
 	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
 
-	expected := [32]byte{}
+	var expected [32]byte
 	copy(expected[:], []byte{0x23})
 	err = db.SaveBackfillBlockRoot(ctx, expected)
 	require.NoError(t, err)
