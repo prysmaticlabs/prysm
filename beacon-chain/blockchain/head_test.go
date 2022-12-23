@@ -285,7 +285,7 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
-	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
+	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
 	wantAtts := []*ethpb.Attestation{
 		blk3.Block.Body.Attestations[0],
@@ -344,7 +344,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
-	require.NoError(t, service.saveOrphanedAtts(ctx, r2, r4))
+	require.NoError(t, service.saveOrphanedOperations(ctx, r2, r4))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
@@ -404,7 +404,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
-	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
+	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
 	wantAtts := []*ethpb.Attestation{
 		blk3.Block.Body.Attestations[0],
@@ -468,7 +468,7 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
-	require.NoError(t, service.saveOrphanedAtts(ctx, r2, r4))
+	require.NoError(t, service.saveOrphanedOperations(ctx, r2, r4))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
