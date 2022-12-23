@@ -97,24 +97,16 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
 	w.cmd = cmd
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stderr.log"))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
 	log.Infof("Starting web3signer with flags: %s %s", binaryPath, strings.Join(args, " "))

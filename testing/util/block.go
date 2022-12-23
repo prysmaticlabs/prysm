@@ -359,6 +359,22 @@ func generateDepositsAndEth1Data(
 	return currentDeposits[previousDepsLen:], eth1Data, nil
 }
 
+func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx types.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+	currentEpoch := time.CurrentEpoch(bState)
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          time.PrevEpoch(bState),
+			ValidatorIndex: idx,
+		},
+	}
+	var err error
+	exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
+	if err != nil {
+		return nil, err
+	}
+	return exit, nil
+}
+
 func generateVoluntaryExits(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
