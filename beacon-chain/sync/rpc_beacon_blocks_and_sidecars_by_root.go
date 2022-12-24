@@ -15,7 +15,7 @@ import (
 
 // beaconBlockAndBlobsSidecarByRootRPCHandler looks up the request beacon block and blobs from the database from a given root
 func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
+	ctx, span := trace.StartSpan(ctx, "sync.beaconBlockAndBlobsSidecarByRootRPCHandler")
 	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
