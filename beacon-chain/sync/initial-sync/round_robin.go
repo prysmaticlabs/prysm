@@ -159,20 +159,23 @@ func (s *Service) processFetchedDataRegSync(
 	for _, blk := range data.blocks {
 		blkSlot := blk.Block().Slot()
 		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
-			blob, ok := blobs[blkSlot]
-			if !ok {
-				log.Errorf("No blob found for block %d", blkSlot)
-			}
 			kzgs, err := blk.Block().Body().BlobKzgCommitments()
 			if err != nil {
 				log.WithError(err).Error("Failed to get kzg commitments")
+				continue
 			}
-			blkRoot, err := blk.Block().HashTreeRoot()
-			if err != nil {
-				log.WithError(err).Error("Failed to get block root")
-			}
-			if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
-				log.WithError(err).Error("Failed to validate blobs sidecar")
+			if len(kzgs) > 0 {
+				blob, ok := blobs[blkSlot]
+				if !ok {
+					log.Errorf("No blob found for block %d", blkSlot)
+				}
+				blkRoot, err := blk.Block().HashTreeRoot()
+				if err != nil {
+					log.WithError(err).Error("Failed to get block root")
+				}
+				if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
+					log.WithError(err).Error("Failed to validate blobs sidecar")
+				}
 			}
 		}
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
@@ -319,19 +322,21 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		blockRoots[i] = blkRoot
 		blkSlot := b.Block().Slot()
 		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
-			blob, ok := blobs[b.Block().Slot()]
-			if !ok {
-				return fmt.Errorf("missing sidecar blob for slot %d", b.Block().Slot())
-			}
 			kzgs, err := b.Block().Body().BlobKzgCommitments()
 			if err != nil {
 				return fmt.Errorf("failed to get blob kzg commitments: %w", err)
 			}
-			if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
-				return err
-			}
-			if err := s.cfg.DB.SaveBlobsSidecar(ctx, blob); err != nil {
-				return err
+			if len(kzgs) > 0 {
+				blob, ok := blobs[b.Block().Slot()]
+				if !ok {
+					return fmt.Errorf("missing sidecar blob for slot %d", b.Block().Slot())
+				}
+				if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
+					return err
+				}
+				if err := s.cfg.DB.SaveBlobsSidecar(ctx, blob); err != nil {
+					return err
+				}
 			}
 		}
 	}
