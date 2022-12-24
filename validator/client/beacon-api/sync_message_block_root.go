@@ -10,19 +10,22 @@ import (
 func (c *beaconApiValidatorClient) getSyncMessageBlockRoot() (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
 	var resp apimiddleware.BlockRootResponseJson
-	errorJson, err := c.jsonRestHandler.GetRestJsonResponse("/eth/v1/beacon/blocks/head/root", &resp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get json response")
-	}
-
-	if errorJson.Code/100 != 2 {
-		return nil, errors.Errorf("get request failed with status code: %d and message: %s", errorJson.Code, errorJson.Message)
+	if _, err := c.jsonRestHandler.GetRestJsonResponse("/eth/v1/beacon/blocks/head/root", &resp); err != nil {
+		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	}
 
 	// An optimistic validator MUST NOT participate in sync committees
 	// (i.e., sign across the DOMAIN_SYNC_COMMITTEE, DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF or DOMAIN_CONTRIBUTION_AND_PROOF domains).
 	if resp.ExecutionOptimistic {
 		return nil, errors.New("the node is currently optimistic and cannot serve validators")
+	}
+
+	if resp.Data == nil {
+		return nil, errors.New("no data returned")
+	}
+
+	if resp.Data.Root == "" {
+		return nil, errors.New("no root returned")
 	}
 
 	blockRoot, err := hexutil.Decode(resp.Data.Root)

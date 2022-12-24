@@ -1,31 +1,28 @@
 package beacon_api
 
 import (
+	"errors"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	apimiddleware2 "github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 	"testing"
 )
 
-func TestGetSyncMessageBlockRoot_Valid(t *testing.T) {
+func TestGetSyncMessageBlockRoot(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	const blockRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	tests := []struct {
 		name                 string
+		endpointError        error
 		expectedErrorMessage string
-		errorJson            apimiddleware2.DefaultErrorJson
 		expectedResponse     apimiddleware.BlockRootResponseJson
 	}{
 		{
 			name: "valid request",
-			errorJson: apimiddleware2.DefaultErrorJson{
-				Code: 200,
-			},
 			expectedResponse: apimiddleware.BlockRootResponseJson{
 				Data: &apimiddleware.BlockRootContainerJson{
 					Root: blockRoot,
@@ -33,30 +30,28 @@ func TestGetSyncMessageBlockRoot_Valid(t *testing.T) {
 			},
 		},
 		{
-			name: "internal server error",
-			errorJson: apimiddleware2.DefaultErrorJson{
-				Message: "Internal server error",
-				Code:    500,
-			},
-			expectedErrorMessage: "get request failed with status code: 500 and message: Internal server error",
+			name:                 "internal server error",
+			expectedErrorMessage: "internal server error",
+			endpointError:        errors.New("internal server error"),
 		},
 		{
 			name: "execution optimistic",
-			errorJson: apimiddleware2.DefaultErrorJson{
-				Code: 200,
-			},
 			expectedResponse: apimiddleware.BlockRootResponseJson{
 				ExecutionOptimistic: true,
 			},
 			expectedErrorMessage: "the node is currently optimistic and cannot serve validators",
 		},
 		{
-			name: "block not found",
-			errorJson: apimiddleware2.DefaultErrorJson{
-				Message: "Block not found",
-				Code:    404,
+			name:                 "no data",
+			expectedResponse:     apimiddleware.BlockRootResponseJson{},
+			expectedErrorMessage: "no data returned",
+		},
+		{
+			name: "no root",
+			expectedResponse: apimiddleware.BlockRootResponseJson{
+				Data: new(apimiddleware.BlockRootContainerJson),
 			},
-			expectedErrorMessage: "get request failed with status code: 404 and message: Block not found",
+			expectedErrorMessage: "no root returned",
 		},
 	}
 
@@ -70,8 +65,8 @@ func TestGetSyncMessageBlockRoot_Valid(t *testing.T) {
 				1,
 				test.expectedResponse,
 			).Return(
-				&test.errorJson,
 				nil,
+				test.endpointError,
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -80,6 +75,8 @@ func TestGetSyncMessageBlockRoot_Valid(t *testing.T) {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return
 			}
+
+			require.NoError(t, err)
 
 			expectedRootBytes, err := hexutil.Decode(test.expectedResponse.Data.Root)
 			require.NoError(t, err)
