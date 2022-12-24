@@ -10,13 +10,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 // beaconBlockAndBlobsSidecarByRootRPCHandler looks up the request beacon block and blobs from the database from a given root
 func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
+	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
+
 	log := log.WithField("handler", "beacon_block_and_blobs_sidecar_by_root")
 
 	rawMsg, ok := msg.(*types.BeaconBlockByRootsReq)
@@ -70,6 +74,7 @@ func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context
 			return err
 		}
 	}
+	closeStream(stream, log)
 	return nil
 }
 
