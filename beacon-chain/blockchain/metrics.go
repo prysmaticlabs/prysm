@@ -317,8 +317,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	var b *precompute.Balance
 	var v []*precompute.Validator
 	var err error
-	switch headState.Version() {
-	case version.Phase0:
+	switch {
+	case headState.Version() == version.Phase0:
 		// Validator participation should be viewed on the canonical chain.
 		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
@@ -328,7 +328,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair, version.Bellatrix, version.Capella:
+	case headState.Version() >= version.Altair:
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
