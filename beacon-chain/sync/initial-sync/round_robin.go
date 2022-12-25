@@ -10,10 +10,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -83,15 +81,7 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	}
 
 	for data := range queue.fetchedData {
-		blobsMap := make(map[types.Slot]*eth.BlobsSidecar)
-		for _, blob := range data.blobs {
-			blobsMap[blob.BeaconBlockSlot] = blob
-		}
-
-		// If blobs are available. Verify blobs and blocks are consistence.
-		// We can't import a block if there's no associated blob within DA bound.
-		// The blob has to pass aggregated proof check.
-		s.processFetchedData(ctx, genesis, s.cfg.Chain.HeadSlot(), data, blobsMap)
+		s.processFetchedData(ctx, genesis, s.cfg.Chain.HeadSlot(), data)
 	}
 
 	log.WithFields(logrus.Fields{
@@ -119,12 +109,7 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 		return err
 	}
 	for data := range queue.fetchedData {
-		blobsMap := make(map[types.Slot]*eth.BlobsSidecar)
-		for _, blob := range data.blobs {
-			blobsMap[blob.BeaconBlockSlot] = blob
-		}
-
-		s.processFetchedDataRegSync(ctx, genesis, s.cfg.Chain.HeadSlot(), data, blobsMap)
+		s.processFetchedDataRegSync(ctx, genesis, s.cfg.Chain.HeadSlot(), data)
 	}
 	log.WithFields(logrus.Fields{
 		"syncedSlot":  s.cfg.Chain.HeadSlot(),
@@ -139,45 +124,24 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
-	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData, blobs map[types.Slot]*eth.BlobsSidecar) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
-	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch, blobs); err != nil {
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch); err != nil {
 		log.WithError(err).Warn("Skip processing batched blocks")
 	}
 }
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
-	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData, blobs map[types.Slot]*eth.BlobsSidecar) {
+	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.cfg.Chain.ReceiveBlock
 	invalidBlocks := 0
 	blksWithoutParentCount := 0
 	for _, blk := range data.blocks {
-		blkSlot := blk.Block().Slot()
-		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
-			kzgs, err := blk.Block().Body().BlobKzgCommitments()
-			if err != nil {
-				log.WithError(err).Error("Failed to get kzg commitments")
-				continue
-			}
-			if len(kzgs) > 0 {
-				blob, ok := blobs[blkSlot]
-				if !ok {
-					log.Errorf("No blob found for block %d", blkSlot)
-				}
-				blkRoot, err := blk.Block().HashTreeRoot()
-				if err != nil {
-					log.WithError(err).Error("Failed to get block root")
-				}
-				if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
-					log.WithError(err).Error("Failed to validate blobs sidecar")
-				}
-			}
-		}
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
@@ -281,7 +245,7 @@ func (s *Service) processBlock(
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn, blobs map[types.Slot]*eth.BlobsSidecar) error {
+	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -320,25 +284,6 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			return err
 		}
 		blockRoots[i] = blkRoot
-		blkSlot := b.Block().Slot()
-		if slots.WithinDataAvailabilityBound(uint64(s.cfg.Chain.GenesisTime().Unix()), slots.ToEpoch(blkSlot)) {
-			kzgs, err := b.Block().Body().BlobKzgCommitments()
-			if err != nil {
-				return fmt.Errorf("failed to get blob kzg commitments: %w", err)
-			}
-			if len(kzgs) > 0 {
-				blob, ok := blobs[b.Block().Slot()]
-				if !ok {
-					return fmt.Errorf("missing sidecar blob for slot %d", b.Block().Slot())
-				}
-				if err := blobs2.ValidateBlobsSidecar(blkSlot, blkRoot, kzgs, blob); err != nil {
-					return err
-				}
-				if err := s.cfg.DB.SaveBlobsSidecar(ctx, blob); err != nil {
-					return err
-				}
-			}
-		}
 	}
 	return bFunc(ctx, blks, blockRoots)
 }
