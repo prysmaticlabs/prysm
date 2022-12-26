@@ -317,9 +317,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	var b *precompute.Balance
 	var v []*precompute.Validator
 	var err error
-	switch {
-	case headState.Version() == version.Phase0:
-		// Validator participation should be viewed on the canonical chain.
+
+	if headState.Version() == version.Phase0 {
 		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
 			return err
@@ -328,7 +327,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case headState.Version() >= version.Altair:
+	} else if headState.Version() >= version.Altair {
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err
@@ -337,9 +336,10 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	default:
+	} else {
 		return errors.Errorf("invalid state type provided: %T", headState.ToProtoUnsafe())
 	}
+
 	prevEpochActiveBalances.Set(float64(b.ActivePrevEpoch))
 	prevEpochSourceBalances.Set(float64(b.PrevEpochAttested))
 	prevEpochTargetBalances.Set(float64(b.PrevEpochTargetAttested))
