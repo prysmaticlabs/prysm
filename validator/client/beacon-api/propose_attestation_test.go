@@ -3,6 +3,7 @@ package beacon_api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -13,9 +14,6 @@ import (
 )
 
 func TestProposeAttestation_Valid(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-
 	attestation := &ethpb.Attestation{
 		AggregationBits: test_helpers.FillByteSlice(4, 74),
 		Data: &ethpb.AttestationData{
@@ -34,24 +32,76 @@ func TestProposeAttestation_Valid(t *testing.T) {
 		Signature: test_helpers.FillByteSlice(96, 82),
 	}
 
-	marshalledAttestations, err := json.Marshal(jsonifyAttestations([]*ethpb.Attestation{attestation}))
-	require.NoError(t, err)
+	tests := []struct {
+		name                 string
+		attestation          *ethpb.Attestation
+		expectedErrorMessage string
+		endpointError        error
+		endpointCall         int
+	}{
+		{
+			name:         "valid",
+			attestation:  attestation,
+			endpointCall: 1,
+		},
+		{
+			name:                 "nil attestation",
+			expectedErrorMessage: "attestation is nil",
+		},
+		{
+			name: "nil attestation data",
+			attestation: &ethpb.Attestation{
+				AggregationBits: test_helpers.FillByteSlice(4, 74),
+				Signature:       test_helpers.FillByteSlice(96, 82),
+			},
+			expectedErrorMessage: "attestation data is nil",
+		},
+		{
+			name:                 "bad request",
+			attestation:          attestation,
+			expectedErrorMessage: "bad request",
+			endpointError:        errors.New("bad request"),
+			endpointCall:         1,
+		},
+	}
 
-	jsonRestHandler.EXPECT().PostRestJson(
-		"/eth/v1/beacon/pool/attestations",
-		nil,
-		bytes.NewBuffer(marshalledAttestations),
-		nil,
-	)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	proposeResponse, err := validatorClient.proposeAttestation(attestation)
-	require.NoError(t, err)
-	require.NotNil(t, proposeResponse)
+			var marshalledAttestations []byte
+			if checkNilAttestation(test.attestation) == nil {
+				b, err := json.Marshal(jsonifyAttestations([]*ethpb.Attestation{test.attestation}))
+				require.NoError(t, err)
+				marshalledAttestations = b
+			}
 
-	expectedAttestationDataRoot, err := attestation.Data.HashTreeRoot()
-	require.NoError(t, err)
+			jsonRestHandler.EXPECT().PostRestJson(
+				"/eth/v1/beacon/pool/attestations",
+				nil,
+				bytes.NewBuffer(marshalledAttestations),
+				nil,
+			).Return(
+				nil,
+				test.endpointError,
+			).Times(test.endpointCall)
 
-	// Make sure that the attestation data root is set
-	assert.DeepEqual(t, expectedAttestationDataRoot[:], proposeResponse.AttestationDataRoot)
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			proposeResponse, err := validatorClient.proposeAttestation(test.attestation)
+			if test.expectedErrorMessage != "" {
+				require.ErrorContains(t, test.expectedErrorMessage, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, proposeResponse)
+
+			expectedAttestationDataRoot, err := attestation.Data.HashTreeRoot()
+			require.NoError(t, err)
+
+			// Make sure that the attestation data root is set
+			assert.DeepEqual(t, expectedAttestationDataRoot[:], proposeResponse.AttestationDataRoot)
+		})
+	}
 }
