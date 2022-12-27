@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	coreBlock "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/stateutils"
@@ -356,4 +357,18 @@ func TestHydrateBlindedBeaconBlockBodyCapella_NoError(t *testing.T) {
 	b = HydrateBlindedBeaconBlockBodyCapella(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
+}
+
+func TestGenerateVoluntaryExits(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.ShardCommitteePeriod = 0
+	params.OverrideBeaconConfig(config)
+
+	beaconState, privKeys := DeterministicGenesisState(t, 256)
+	exit, err := GenerateVoluntaryExits(beaconState, privKeys[0], 0)
+	require.NoError(t, err)
+	val, err := beaconState.ValidatorAtIndexReadOnly(0)
+	require.NoError(t, err)
+	require.NoError(t, coreBlock.VerifyExitAndSignature(val, 0, beaconState.Fork(), exit, beaconState.GenesisValidatorsRoot()))
 }

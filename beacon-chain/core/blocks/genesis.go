@@ -46,7 +46,7 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 	}
 	ps := st.ToProto()
 	switch ps.(type) {
-	case *ethpb.BeaconState, *ethpb.BeaconStateAltair:
+	case *ethpb.BeaconState:
 		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				ParentRoot: params.BeaconConfig().ZeroHash[:],
@@ -58,6 +58,26 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 						BlockHash:   make([]byte, 32),
 					},
 					Graffiti: make([]byte, 32),
+				},
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		})
+	case *ethpb.BeaconStateAltair:
+		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{
+			Block: &ethpb.BeaconBlockAltair{
+				ParentRoot: params.BeaconConfig().ZeroHash[:],
+				StateRoot:  root[:],
+				Body: &ethpb.BeaconBlockBodyAltair{
+					RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
+					SyncAggregate: &ethpb.SyncAggregate{
+						SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+						SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+					},
 				},
 			},
 			Signature: params.BeaconConfig().EmptySignature[:],

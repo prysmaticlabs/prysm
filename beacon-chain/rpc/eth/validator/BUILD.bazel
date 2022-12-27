@@ -61,7 +61,6 @@ go_test(
         "//beacon-chain/execution/testing:go_default_library",
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
-        "//beacon-chain/operations/attestations/mock:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",

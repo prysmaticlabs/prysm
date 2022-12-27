@@ -515,7 +515,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 	duplicates := make([][]byte, 0)
 	for _, valRes := range response {
 		if valRes.DuplicateExists {
-			copiedKey := [fieldparams.BLSPubkeyLength]byte{}
+			var copiedKey [fieldparams.BLSPubkeyLength]byte
 			copy(copiedKey[:], valRes.PublicKey)
 			duplicates = append(duplicates, copiedKey[:])
 		}
