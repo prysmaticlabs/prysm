@@ -382,7 +382,7 @@ func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBloc
 func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
