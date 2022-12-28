@@ -43,6 +43,113 @@ const depositDeadline = 20 * time.Second
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 
+// sendLightClientOptimisticUpdate sends a light client optimistic update notification of  to the state feed.
+func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed interfaces.SignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+	// Determine slots per period
+	config := params.BeaconConfig()
+	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
+
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	// Get finalized block
+	var finalizedBlock interfaces.SignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
+	}
+
+	update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
+		ctx,
+		config,
+		slotsPerPeriod,
+		postState,
+		signed,
+		attestedState,
+		finalizedBlock,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
+
+	// Return the result
+	result := &ethpbv2.LightClientOptimisticUpdateResponse{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    optimisticUpdate,
+	}
+
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientOptimisticUpdate,
+		Data: result,
+	}), nil
+}
+
+// sendLightClientFinalityUpdate sends a light client finality update notification of  to the state feed.
+func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed interfaces.SignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+	// Determine slots per period
+	config := params.BeaconConfig()
+	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
+
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	// Get finalized block
+	var finalizedBlock interfaces.SignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
+	}
+
+	update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
+		ctx,
+		config,
+		slotsPerPeriod,
+		postState,
+		signed,
+		attestedState,
+		finalizedBlock,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
+
+	// Return the result
+	result := &ethpbv2.LightClientFinalityUpdateResponse{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    finalityUpdate,
+	}
+
+	// Send event
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientFinalityUpdate,
+		Data: result,
+	}), nil
+}
+
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 // The block's signing root should be computed before calling this method to avoid redundant
 // computation in this method and methods it calls into.
@@ -220,59 +327,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		},
 	})
 
-	func() {
-		// Send notification of light client optimistic update to the state feed.
-		// Determine slots per period
-		config := params.BeaconConfig()
-		slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
-
-		// Get attested state
-		attestedRoot := signed.Block().ParentRoot()
-		attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
-		if err != nil {
-			log.WithError(err).Error("Could not get attested state")
-			return
-		}
-
-		// Get finalized block
-		var finalizedBlock interfaces.SignedBeaconBlock
-		finalizedCheckPoint := attestedState.FinalizedCheckpoint()
-		if finalizedCheckPoint != nil {
-			finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-			finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
-			if err != nil {
-				finalizedBlock = nil
-			}
-		}
-
-		update, err := lightclienthelpers.NewLightClientOptimisticUpdateFromBeaconState(
-			ctx,
-			config,
-			slotsPerPeriod,
-			postState,
-			signed,
-			attestedState,
-			finalizedBlock,
-		)
-
-		if err != nil {
-			log.WithError(err).Error("Could not create light client update")
-			return
-		}
-
-		optimisticUpdate := lightclienthelpers.NewLightClientOptimisticUpdateFromUpdate(update)
-
-		// Return the result
-		result := &ethpbv2.LightClientOptimisticUpdateResponse{
-			Version: ethpbv2.Version(signed.Version()),
-			Data:    optimisticUpdate,
-		}
-
-		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.LightClientOptimisticUpdate,
-			Data: result,
-		})
-	}()
+	if _, err := s.sendLightClientOptimisticUpdate(ctx, signed, postState); err != nil {
+		log.WithError(err)
+	}
 
 	// Updating next slot state cache can happen in the background. It shouldn't block rest of the process.
 	go func() {
@@ -323,60 +380,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 				})
 			}()
 
-			func() {
-				// Send an event regarding the new light client finality update over a common event feed.
-				// Determine slots per period
-				config := params.BeaconConfig()
-				slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
-
-				// Get attested state
-				attestedRoot := signed.Block().ParentRoot()
-				attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
-				if err != nil {
-					log.WithError(err).Error("Could not get attested state")
-					return
-				}
-
-				// Get finalized block
-				var finalizedBlock interfaces.SignedBeaconBlock
-				finalizedCheckPoint := attestedState.FinalizedCheckpoint()
-				if finalizedCheckPoint != nil {
-					finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-					finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
-					if err != nil {
-						finalizedBlock = nil
-					}
-				}
-
-				update, err := lightclienthelpers.NewLightClientFinalityUpdateFromBeaconState(
-					ctx,
-					config,
-					slotsPerPeriod,
-					postState,
-					signed,
-					attestedState,
-					finalizedBlock,
-				)
-
-				if err != nil {
-					log.WithError(err).Error("Could not create light client update")
-					return
-				}
-
-				finalityUpdate := lightclienthelpers.NewLightClientFinalityUpdateFromUpdate(update)
-
-				// Return the result
-				result := &ethpbv2.LightClientFinalityUpdateResponse{
-					Version: ethpbv2.Version(signed.Version()),
-					Data:    finalityUpdate,
-				}
-
-				// Send event
-				s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-					Type: statefeed.LightClientFinalityUpdate,
-					Data: result,
-				})
-			}()
+			_, err := s.sendLightClientFinalityUpdate(ctx, signed, postState)
+			if err != nil {
+				log.WithError(err)
+			}
 
 			// Use a custom deadline here, since this method runs asynchronously.
 			// We ignore the parent method's context and instead create a new one
