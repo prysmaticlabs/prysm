@@ -334,15 +334,26 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
-// ProcessUpdate implements process_light_client_update from the spec.
-func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+// ValidateUpdate provides a wrapper around validateUpdate() for callers that want to separate validate and apply.
+func (s *Store) ValidateUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	update := &update{
 		LightClientUpdate: lightClientUpdate,
 		config:            s.Config,
 	}
-	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
-		return err
+	return s.validateUpdate(update, currentSlot, genesisValidatorsRoot)
+}
+
+func (s *Store) processUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte, validated bool) error {
+	update := &update{
+		LightClientUpdate: lightClientUpdate,
+		config:            s.Config,
+	}
+	if !validated {
+		if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
+			return err
+		}
 	}
 	syncCommiteeBits := update.SyncAggregate.SyncCommitteeBits
 
@@ -373,6 +384,18 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 		s.BestValidUpdate = nil
 	}
 	return nil
+}
+
+// ProcessUpdate implements process_light_client_update from the spec.
+func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, false)
+}
+
+// ProcessValidatedUpdate processes a pre-validated update.
+func (s *Store) ProcessValidatedUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, true)
 }
 
 // ProcessFinalityUpdate implements process_light_client_finality_update from the spec.
