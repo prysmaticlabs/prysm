@@ -170,7 +170,6 @@ go_test(
     srcs = [
         "aggregator_test.go",
         "assignments_test.go",
-        "attester_mainnet_test.go",
         "attester_test.go",
         "blocks_test.go",
         "exit_test.go",

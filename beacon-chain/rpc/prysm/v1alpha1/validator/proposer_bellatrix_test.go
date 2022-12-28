@@ -158,7 +158,9 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				require.ErrorContains(t, tc.err, err)
 			} else {
 				require.NoError(t, err)
-				require.DeepEqual(t, tc.returnedHeader, h)
+				want, err := blocks.WrappedExecutionPayloadHeader(tc.returnedHeader)
+				require.NoError(t, err)
+				require.DeepEqual(t, want, h)
 			}
 		})
 	}
