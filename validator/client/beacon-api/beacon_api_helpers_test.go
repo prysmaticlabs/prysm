@@ -1,11 +1,18 @@
 package beacon_api
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"net/url"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
 func TestBeaconApiHelpers(t *testing.T) {
@@ -79,4 +86,196 @@ func TestBuildURL_WithParams(t *testing.T) {
 	wanted := "/aaa/bbb/ccc?xxxx=1&yyyy=2&zzzz=3"
 	actual := buildURL("/aaa/bbb/ccc", params)
 	assert.Equal(t, wanted, actual)
+}
+
+const forkEndpoint = "/eth/v1/beacon/states/head/fork"
+
+func TestGetFork_Nominal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	expected := apimiddleware.StateForkResponseJson{
+		Data: &apimiddleware.ForkJson{
+			PreviousVersion: "0x1",
+			CurrentVersion:  "0x2",
+			Epoch:           "3",
+		},
+	}
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		forkEndpoint,
+		&stateForkResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		expected,
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	fork, err := validatorClient.getFork()
+	require.NoError(t, err)
+	assert.DeepEqual(t, &expected, fork)
+}
+
+func TestGetFork_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		forkEndpoint,
+		gomock.Any(),
+	).Return(
+		nil,
+		errors.New("custom error"),
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	_, err := validatorClient.getFork()
+	require.ErrorContains(t, "failed to get json response from `/eth/v1/beacon/states/head/fork` REST endpoint", err)
+}
+
+const headersEndpoint = "/eth/v1/beacon/headers"
+
+func TestGetHeaders_Nominal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	expected := apimiddleware.BlockHeadersResponseJson{
+		Data: []*apimiddleware.BlockHeaderContainerJson{
+			{
+				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
+					Message: &apimiddleware.BeaconBlockHeaderJson{
+						Slot: "42",
+					},
+				},
+			},
+		},
+	}
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		headersEndpoint,
+		&blockHeadersResponseJson,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		1,
+		expected,
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	headers, err := validatorClient.getHeaders()
+	require.NoError(t, err)
+	assert.DeepEqual(t, &expected, headers)
+}
+
+func TestGetHeaders_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		headersEndpoint,
+		gomock.Any(),
+	).Return(
+		nil,
+		errors.New("custom error"),
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	_, err := validatorClient.getHeaders()
+	require.ErrorContains(t, "failed to get json response from `/eth/v1/beacon/headers` REST endpoint", err)
+}
+
+const livenessEndpoint = "/eth/v1/validator/liveness/42"
+
+func TestGetLiveness_Nominal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	livenessResponseJson := apimiddleware.LivenessResponseJson{}
+
+	indexes := []string{"1", "2"}
+	marshalledIndexes, err := json.Marshal(indexes)
+	require.NoError(t, err)
+
+	expected := apimiddleware.LivenessResponseJson{
+		Data: []*struct {
+			Index  string `json:"index"`
+			IsLive bool   `json:"is_live"`
+		}{
+			{
+				Index:  "1",
+				IsLive: true,
+			},
+			{
+				Index:  "2",
+				IsLive: false,
+			},
+		},
+	}
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().PostRestJson(
+		livenessEndpoint,
+		nil,
+		bytes.NewBuffer(marshalledIndexes),
+		&livenessResponseJson,
+	).SetArg(
+		3,
+		expected,
+	).Return(
+		nil,
+		nil,
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	liveness, err := validatorClient.getLiveness(42, indexes)
+
+	require.NoError(t, err)
+	assert.DeepEqual(t, &expected, liveness)
+}
+
+func TestGetLiveness_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().PostRestJson(
+		livenessEndpoint,
+		nil,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		nil,
+		errors.New("custom error"),
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	_, err := validatorClient.getLiveness(42, nil)
+
+	require.ErrorContains(t, "failed to send POST data to `/eth/v1/validator/liveness/42` REST URL", err)
 }
