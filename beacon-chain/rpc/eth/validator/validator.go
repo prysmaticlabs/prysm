@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -41,18 +42,14 @@ var errParticipation = status.Error(codes.Internal, "Could not obtain epoch part
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
 // which should be performed by validators, for a particular epoch.
 func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDutiesRequest) (*ethpbv1.AttesterDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
+	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
+	if req.Epoch > currentEpoch+1 {
+		return nil, status.Errorf(codes.Unavailable, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -60,19 +57,20 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	var startSlot types.Slot
-	if req.Epoch == currentEpoch+1 {
-		startSlot, err = slots.EpochStart(currentEpoch)
-	} else {
-		startSlot, err = slots.EpochStart(req.Epoch)
-	}
+	// Advance state with empty transitions up to the requested epoch start slot.
+	epochStartSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+		return nil, err
 	}
-
-	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	if s.Slot() < epochStartSlot {
+		headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+		}
+		s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+		}
 	}
 
 	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
@@ -155,13 +153,25 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		nextEpochLookahead = true
 	}
 
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Advance state with empty transitions up to the requested epoch start slot.
 	startSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+		return nil, err
 	}
-	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	if s.Slot() < startSlot {
+		headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+		}
+		s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, startSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", startSlot, err)
+		}
 	}
 
 	var proposals map[types.ValidatorIndex][]types.Slot

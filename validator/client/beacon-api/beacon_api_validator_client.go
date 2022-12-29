@@ -41,13 +41,8 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 	}
 }
 
-func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetDuties(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) GetDuties(_ context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+	return c.getDuties(in)
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
