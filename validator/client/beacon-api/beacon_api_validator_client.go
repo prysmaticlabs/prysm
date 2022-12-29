@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
@@ -16,6 +17,7 @@ import (
 type beaconApiValidatorClient struct {
 	genesisProvider         genesisProvider
 	stateValidatorsProvider stateValidatorsProvider
+	dutiesProvider          dutiesProvider
 	jsonRestHandler         jsonRestHandler
 	fallbackClient          iface.ValidatorClient
 }
@@ -33,6 +35,7 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 	return &beaconApiValidatorClient{
 		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
+		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		fallbackClient:          fallbackClient,
 	}
@@ -201,13 +204,8 @@ func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Cont
 	panic("beaconApiValidatorClient.SubmitValidatorRegistrations is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest) (*empty.Empty, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubscribeCommitteeSubnets(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubscribeCommitteeSubnets is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(_ context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) (*empty.Empty, error) {
+	return new(empty.Empty), c.subscribeCommitteeSubnets(in, validatorIndices)
 }
 
 func (c *beaconApiValidatorClient) ValidatorIndex(_ context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
