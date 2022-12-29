@@ -231,7 +231,7 @@ func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaco
 // This returns the head slot.
 // This is a lock free version.
 func (s *Service) headSlot() types.Slot {
-	if s.head == nil || s.head.block == nil {
+	if s.head == nil || s.head.block == nil || s.head.block.Block() == nil {
 		return 0
 	}
 	return s.head.block.Block().Slot()
