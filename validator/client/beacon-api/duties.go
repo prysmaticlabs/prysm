@@ -18,6 +18,7 @@ type dutiesProvider interface {
 	GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
 	GetProposerDuties(epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error)
 	GetSyncDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error)
+	GetCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error)
 }
 
 type beaconApiDutiesProvider struct {
@@ -116,7 +117,7 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		syncDutiesMapping[types.ValidatorIndex(validatorIndex)] = true
 	}
 
-	committees, err := c.getCommittees(epoch)
+	committees, err := c.dutiesProvider.GetCommittees(epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
 	}
@@ -157,8 +158,6 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		var attesterSlot uint64
 		var committeeIndex uint64
 		var committeeValidatorIndices []types.ValidatorIndex
-		var isSyncCommittee bool
-		var proposerSlots []types.Slot
 
 		if attesterDuty, ok := attesterDutiesMapping[validatorIndex]; ok {
 			attesterSlot, err = strconv.ParseUint(attesterDuty.Slot, 10, 64)
@@ -179,27 +178,25 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 			if !ok {
 				return nil, errors.Wrapf(err, "failed to find validators for committee index `%d` and slot %d", committeeIndex, attesterSlot)
 			}
-
-			isSyncCommittee = syncDutiesMapping[types.ValidatorIndex(validatorIndex)]
-			proposerSlots = proposerDutySlots[types.ValidatorIndex(validatorIndex)]
 		}
 
 		duties[index] = &ethpb.DutiesResponse_Duty{
 			Committee:       committeeValidatorIndices,
 			CommitteeIndex:  types.CommitteeIndex(committeeIndex),
 			AttesterSlot:    types.Slot(attesterSlot),
-			ProposerSlots:   proposerSlots,
+			ProposerSlots:   proposerDutySlots[types.ValidatorIndex(validatorIndex)],
 			PublicKey:       pubkey,
 			Status:          validatorStatus.Status,
 			ValidatorIndex:  types.ValidatorIndex(validatorIndex),
-			IsSyncCommittee: isSyncCommittee,
+			IsSyncCommittee: syncDutiesMapping[types.ValidatorIndex(validatorIndex)],
 		}
 	}
 
 	return duties, nil
 }
 
-func (c beaconApiValidatorClient) getCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+// GetCommittees retrieves the committees for the given epoch
+func (c beaconApiDutiesProvider) GetCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
 	committeeParams := url.Values{}
 	committeeParams.Add("epoch", strconv.FormatUint(uint64(epoch), 10))
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
@@ -211,6 +208,12 @@ func (c beaconApiValidatorClient) getCommittees(epoch types.Epoch) ([]*apimiddle
 
 	if stateCommittees.Data == nil {
 		return nil, errors.New("state committees data is nil")
+	}
+
+	for index, committee := range stateCommittees.Data {
+		if committee == nil {
+			return nil, errors.Errorf("committee at index `%d` is nil", index)
+		}
 	}
 
 	return stateCommittees.Data, nil

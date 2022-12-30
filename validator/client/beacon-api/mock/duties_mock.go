@@ -50,6 +50,21 @@ func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(epoch, validatorIndi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttesterDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetAttesterDuties), epoch, validatorIndices)
 }
 
+// GetCommittees mocks base method.
+func (m *MockdutiesProvider) GetCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCommittees", epoch)
+	ret0, _ := ret[0].([]*apimiddleware.CommitteeJson)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommittees indicates an expected call of GetCommittees.
+func (mr *MockdutiesProviderMockRecorder) GetCommittees(epoch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittees", reflect.TypeOf((*MockdutiesProvider)(nil).GetCommittees), epoch)
+}
+
 // GetProposerDuties mocks base method.
 func (m *MockdutiesProvider) GetProposerDuties(epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
 	m.ctrl.T.Helper()
