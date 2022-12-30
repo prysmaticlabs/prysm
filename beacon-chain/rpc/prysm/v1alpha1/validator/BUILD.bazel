@@ -163,6 +163,7 @@ common_deps = [
     "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
 ]
 
+# gazelle:ignore
 go_test(
     name = "go_default_test",
     timeout = "moderate",
@@ -210,6 +211,7 @@ go_test(
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
+        "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/execution/testing:go_default_library",
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
