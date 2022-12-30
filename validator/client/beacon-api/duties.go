@@ -25,7 +25,7 @@ type beaconApiDutiesProvider struct {
 	jsonRestHandler jsonRestHandler
 }
 
-type committeeMappingKey struct {
+type committeeIndexSlotPair struct {
 	committeeIndex types.CommitteeIndex
 	slot           types.Slot
 }
@@ -82,21 +82,41 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		}
 	}
 
-	attesterDutiesMapping := make(map[types.ValidatorIndex]*apimiddleware.AttesterDutyJson)
+	committees, err := c.dutiesProvider.GetCommittees(epoch)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
+	}
+
+	// Mapping from a validator index to its attesting committee's index and slot
+	attesterDutiesMapping := make(map[types.ValidatorIndex]committeeIndexSlotPair)
 	for _, attesterDuty := range attesterDuties {
 		validatorIndex, err := strconv.ParseUint(attesterDuty.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", attesterDuty.ValidatorIndex)
+			return nil, errors.Wrapf(err, "failed to parse attester validator index `%s`", attesterDuty.ValidatorIndex)
 		}
 
-		attesterDutiesMapping[types.ValidatorIndex(validatorIndex)] = attesterDuty
+		slot, err := strconv.ParseUint(attesterDuty.Slot, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse attester slot `%s`", attesterDuty.Slot)
+		}
+
+		committeeIndex, err := strconv.ParseUint(attesterDuty.CommitteeIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse attester committee index `%s`", attesterDuty.CommitteeIndex)
+		}
+
+		attesterDutiesMapping[types.ValidatorIndex(validatorIndex)] = committeeIndexSlotPair{
+			slot:           types.Slot(slot),
+			committeeIndex: types.CommitteeIndex(committeeIndex),
+		}
 	}
 
+	// Mapping from a validator index to it's proposal slot
 	proposerDutySlots := make(map[types.ValidatorIndex][]types.Slot)
 	for _, proposerDuty := range proposerDuties {
 		validatorIndex, err := strconv.ParseUint(proposerDuty.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", proposerDuty.ValidatorIndex)
+			return nil, errors.Wrapf(err, "failed to parse proposer validator index `%s`", proposerDuty.ValidatorIndex)
 		}
 
 		slot, err := strconv.ParseUint(proposerDuty.Slot, 10, 64)
@@ -107,22 +127,19 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		proposerDutySlots[types.ValidatorIndex(validatorIndex)] = append(proposerDutySlots[types.ValidatorIndex(validatorIndex)], types.Slot(slot))
 	}
 
+	// Set containing all validator indices that are part of a sync committee for this epoch
 	syncDutiesMapping := make(map[types.ValidatorIndex]bool)
 	for _, syncDuty := range syncDuties {
 		validatorIndex, err := strconv.ParseUint(syncDuty.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", syncDuty.ValidatorIndex)
+			return nil, errors.Wrapf(err, "failed to parse sync validator index `%s`", syncDuty.ValidatorIndex)
 		}
 
 		syncDutiesMapping[types.ValidatorIndex(validatorIndex)] = true
 	}
 
-	committees, err := c.dutiesProvider.GetCommittees(epoch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
-	}
-
-	committeeMapping := make(map[committeeMappingKey][]types.ValidatorIndex)
+	// Mapping from the {committeeIndex, slot} to each of the committee's validator indices
+	committeeMapping := make(map[committeeIndexSlotPair][]types.ValidatorIndex)
 	for _, committee := range committees {
 		committeeIndex, err := strconv.ParseUint(committee.Index, 10, 64)
 		if err != nil {
@@ -138,12 +155,12 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		for index, validatorIndexString := range committee.Validators {
 			validatorIndex, err := strconv.ParseUint(validatorIndexString, 10, 64)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse validator index `%s`", validatorIndexString)
+				return nil, errors.Wrapf(err, "failed to parse committee validator index `%s`", validatorIndexString)
 			}
 			validatorIndices[index] = types.ValidatorIndex(validatorIndex)
 		}
 
-		key := committeeMappingKey{
+		key := committeeIndexSlotPair{
 			committeeIndex: types.CommitteeIndex(committeeIndex),
 			slot:           types.Slot(slot),
 		}
@@ -155,35 +172,23 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		validatorIndex := multipleValidatorStatus.Indices[index]
 		pubkey := multipleValidatorStatus.PublicKeys[index]
 
-		var attesterSlot uint64
-		var committeeIndex uint64
+		var attesterSlot types.Slot
+		var committeeIndex types.CommitteeIndex
 		var committeeValidatorIndices []types.ValidatorIndex
 
-		if attesterDuty, ok := attesterDutiesMapping[validatorIndex]; ok {
-			attesterSlot, err = strconv.ParseUint(attesterDuty.Slot, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse attester slot `%s`", attesterDuty.Slot)
-			}
+		if committeeMappingKey, ok := attesterDutiesMapping[validatorIndex]; ok {
+			committeeIndex = committeeMappingKey.committeeIndex
+			attesterSlot = committeeMappingKey.slot
 
-			committeeIndex, err = strconv.ParseUint(attesterDuty.CommitteeIndex, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse committee index `%s`", attesterDuty.CommitteeIndex)
-			}
-
-			key := committeeMappingKey{
-				committeeIndex: types.CommitteeIndex(committeeIndex),
-				slot:           types.Slot(attesterSlot),
-			}
-			committeeValidatorIndices, ok = committeeMapping[key]
-			if !ok {
-				return nil, errors.Wrapf(err, "failed to find validators for committee index `%d` and slot %d", committeeIndex, attesterSlot)
+			if committeeValidatorIndices, ok = committeeMapping[committeeMappingKey]; !ok {
+				return nil, errors.Errorf("failed to find validators for committee index `%d` and slot `%d`", committeeIndex, attesterSlot)
 			}
 		}
 
 		duties[index] = &ethpb.DutiesResponse_Duty{
 			Committee:       committeeValidatorIndices,
-			CommitteeIndex:  types.CommitteeIndex(committeeIndex),
-			AttesterSlot:    types.Slot(attesterSlot),
+			CommitteeIndex:  committeeIndex,
+			AttesterSlot:    attesterSlot,
 			ProposerSlots:   proposerDutySlots[types.ValidatorIndex(validatorIndex)],
 			PublicKey:       pubkey,
 			Status:          validatorStatus.Status,
@@ -219,6 +224,7 @@ func (c beaconApiDutiesProvider) GetCommittees(epoch types.Epoch) ([]*apimiddlew
 	return stateCommittees.Data, nil
 }
 
+// GetAttesterDuties retrieves the attester duties for the given epoch and validatorIndices
 func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
 
 	jsonValidatorIndices := make([]string, len(validatorIndices))
@@ -245,6 +251,7 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorI
 	return attesterDuties.Data, nil
 }
 
+// GetProposerDuties retrieves the proposer duties for the given epoch
 func (c beaconApiDutiesProvider) GetProposerDuties(epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
 	proposerDuties := apimiddleware.ProposerDutiesResponseJson{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
@@ -260,6 +267,7 @@ func (c beaconApiDutiesProvider) GetProposerDuties(epoch types.Epoch) ([]*apimid
 	return proposerDuties.Data, nil
 }
 
+// GetSyncDuties retrieves the sync committee duties for the given epoch and validatorIndices
 func (c beaconApiDutiesProvider) GetSyncDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {

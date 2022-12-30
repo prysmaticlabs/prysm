@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -430,6 +431,236 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 	assert.ErrorContains(t, "committee at index `0` is nil", err)
 }
 
+func TestGetDutiesForEpoch_Error(t *testing.T) {
+	const epoch = types.Epoch(1)
+	pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
+	validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+	committeeIndices := []types.CommitteeIndex{25, 26, 27}
+	committeeSlots := []types.Slot{28, 29, 30}
+	proposerSlots := []types.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+
+	testCases := []struct {
+		name                     string
+		expectedError            string
+		generateAttesterDuties   func() []*apimiddleware.AttesterDutyJson
+		fetchAttesterDutiesError error
+		generateProposerDuties   func() []*apimiddleware.ProposerDutyJson
+		fetchProposerDutiesError error
+		generateSyncDuties       func() []*apimiddleware.SyncCommitteeDuty
+		fetchSyncDutiesError     error
+		generateCommittees       func() []*apimiddleware.CommitteeJson
+		fetchCommitteesError     error
+	}{
+		{
+			name:                     "get attester duties failed",
+			expectedError:            "failed to get attester duties for epoch `1`: foo error",
+			fetchAttesterDutiesError: errors.New("foo error"),
+		},
+		{
+			name:                     "get proposer duties failed",
+			expectedError:            "failed to get proposer duties for epoch `1`: foo error",
+			fetchAttesterDutiesError: nil,
+			fetchProposerDutiesError: errors.New("foo error"),
+		},
+		{
+			name:                 "get sync duties failed",
+			expectedError:        "failed to get sync duties for epoch `1`: foo error",
+			fetchSyncDutiesError: errors.New("foo error"),
+		},
+		{
+			name:                 "get committees failed",
+			expectedError:        "failed to get committees for epoch `1`: foo error",
+			fetchCommitteesError: errors.New("foo error"),
+		},
+		{
+			name:          "bad attester validator index",
+			expectedError: "failed to parse attester validator index `foo`",
+			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
+				attesterDuties[0].ValidatorIndex = "foo"
+				return attesterDuties
+			},
+		},
+		{
+			name:          "bad attester slot",
+			expectedError: "failed to parse attester slot `foo`",
+			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
+				attesterDuties[0].Slot = "foo"
+				return attesterDuties
+			},
+		},
+		{
+			name:          "bad attester committee index",
+			expectedError: "failed to parse attester committee index `foo`",
+			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
+				attesterDuties[0].CommitteeIndex = "foo"
+				return attesterDuties
+			},
+		},
+		{
+			name:          "bad proposer validator index",
+			expectedError: "failed to parse proposer validator index `foo`",
+			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
+				proposerDuties[0].ValidatorIndex = "foo"
+				return proposerDuties
+			},
+		},
+		{
+			name:          "bad proposer slot",
+			expectedError: "failed to parse proposer slot `foo`",
+			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
+				proposerDuties[0].Slot = "foo"
+				return proposerDuties
+			},
+		},
+		{
+			name:          "bad sync validator index",
+			expectedError: "failed to parse sync validator index `foo`",
+			generateSyncDuties: func() []*apimiddleware.SyncCommitteeDuty {
+				syncDuties := generateValidSyncDuties(pubkeys, validatorIndices)
+				syncDuties[0].ValidatorIndex = "foo"
+				return syncDuties
+			},
+		},
+		{
+			name:          "bad committee index",
+			expectedError: "failed to parse committee index `foo`",
+			generateCommittees: func() []*apimiddleware.CommitteeJson {
+				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
+				committees[0].Index = "foo"
+				return committees
+			},
+		},
+		{
+			name:          "bad committee slot",
+			expectedError: "failed to parse slot `foo`",
+			generateCommittees: func() []*apimiddleware.CommitteeJson {
+				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
+				committees[0].Slot = "foo"
+				return committees
+			},
+		},
+		{
+			name:          "bad committee validator index",
+			expectedError: "failed to parse committee validator index `foo`",
+			generateCommittees: func() []*apimiddleware.CommitteeJson {
+				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
+				committees[0].Validators[0] = "foo"
+				return committees
+			},
+		},
+		{
+			name:          "committee index and slot not found in committees mapping",
+			expectedError: "failed to find validators for committee index `1` and slot `2`",
+			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
+				attesterDuties[0].CommitteeIndex = "1"
+				attesterDuties[0].Slot = "2"
+				return attesterDuties
+			},
+			generateCommittees: func() []*apimiddleware.CommitteeJson {
+				return []*apimiddleware.CommitteeJson{}
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			var attesterDuties []*apimiddleware.AttesterDutyJson
+			if testCase.generateAttesterDuties == nil {
+				attesterDuties = generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
+			} else {
+				attesterDuties = testCase.generateAttesterDuties()
+			}
+
+			var proposerDuties []*apimiddleware.ProposerDutyJson
+			if testCase.generateProposerDuties == nil {
+				proposerDuties = generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
+			} else {
+				proposerDuties = testCase.generateProposerDuties()
+			}
+
+			var syncDuties []*apimiddleware.SyncCommitteeDuty
+			if testCase.generateSyncDuties == nil {
+				syncDuties = generateValidSyncDuties(pubkeys, validatorIndices)
+			} else {
+				syncDuties = testCase.generateSyncDuties()
+			}
+
+			var committees []*apimiddleware.CommitteeJson
+			if testCase.generateCommittees == nil {
+				committees = generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
+			} else {
+				committees = testCase.generateCommittees()
+			}
+
+			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
+			dutiesProvider.EXPECT().GetAttesterDuties(
+				epoch,
+				gomock.Any(),
+			).Return(
+				attesterDuties,
+				testCase.fetchAttesterDutiesError,
+			).AnyTimes()
+
+			dutiesProvider.EXPECT().GetProposerDuties(
+				epoch,
+			).Return(
+				proposerDuties,
+				testCase.fetchProposerDutiesError,
+			).AnyTimes()
+
+			dutiesProvider.EXPECT().GetSyncDuties(
+				epoch,
+				gomock.Any(),
+			).Return(
+				syncDuties,
+				testCase.fetchSyncDutiesError,
+			).AnyTimes()
+
+			dutiesProvider.EXPECT().GetCommittees(
+				epoch,
+			).Return(
+				committees,
+				testCase.fetchCommitteesError,
+			).AnyTimes()
+
+			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
+			_, err := validatorClient.getDutiesForEpoch(
+				epoch,
+				&ethpb.MultipleValidatorStatusResponse{
+					PublicKeys: pubkeys,
+					Indices:    validatorIndices,
+					Statuses: []*ethpb.ValidatorStatusResponse{
+						{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS},
+						{Status: ethpb.ValidatorStatus_DEPOSITED},
+						{Status: ethpb.ValidatorStatus_PENDING},
+						{Status: ethpb.ValidatorStatus_ACTIVE},
+						{Status: ethpb.ValidatorStatus_EXITING},
+						{Status: ethpb.ValidatorStatus_SLASHING},
+						{Status: ethpb.ValidatorStatus_EXITED},
+						{Status: ethpb.ValidatorStatus_INVALID},
+						{Status: ethpb.ValidatorStatus_PARTIALLY_DEPOSITED},
+						{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS},
+						{Status: ethpb.ValidatorStatus_DEPOSITED},
+						{Status: ethpb.ValidatorStatus_PENDING},
+					},
+				},
+				true,
+				true,
+			)
+			assert.ErrorContains(t, testCase.expectedError, err)
+		})
+	}
+}
+
 func TestGetDutiesForEpoch_Valid(t *testing.T) {
 	testCases := []struct {
 		name                string
@@ -461,7 +692,6 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			const epoch = types.Epoch(1)
-
 			pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
 			validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
 			committeeIndices := []types.CommitteeIndex{25, 26, 27}
@@ -509,32 +739,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			dutiesProvider.EXPECT().GetCommittees(
 				epoch,
 			).Return(
-				[]*apimiddleware.CommitteeJson{
-					{
-						Index: strconv.FormatUint(uint64(committeeIndices[0]), 10),
-						Slot:  strconv.FormatUint(uint64(committeeSlots[0]), 10),
-						Validators: []string{
-							strconv.FormatUint(uint64(validatorIndices[0]), 10),
-							strconv.FormatUint(uint64(validatorIndices[1]), 10),
-						},
-					},
-					{
-						Index: strconv.FormatUint(uint64(committeeIndices[1]), 10),
-						Slot:  strconv.FormatUint(uint64(committeeSlots[1]), 10),
-						Validators: []string{
-							strconv.FormatUint(uint64(validatorIndices[2]), 10),
-							strconv.FormatUint(uint64(validatorIndices[3]), 10),
-						},
-					},
-					{
-						Index: strconv.FormatUint(uint64(committeeIndices[2]), 10),
-						Slot:  strconv.FormatUint(uint64(committeeSlots[2]), 10),
-						Validators: []string{
-							strconv.FormatUint(uint64(validatorIndices[4]), 10),
-							strconv.FormatUint(uint64(validatorIndices[5]), 10),
-						},
-					},
-				},
+				generateValidCommittees(committeeIndices, committeeSlots, validatorIndices),
 				nil,
 			).Times(1)
 
@@ -542,44 +747,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				epoch,
 				multipleValidatorStatus.Indices,
 			).Return(
-				[]*apimiddleware.AttesterDutyJson{
-					{
-						Pubkey:         hexutil.Encode(pubkeys[0]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[0]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[0]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[0]), 10),
-					},
-					{
-						Pubkey:         hexutil.Encode(pubkeys[1]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[1]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[0]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[0]), 10),
-					},
-					{
-						Pubkey:         hexutil.Encode(pubkeys[2]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[2]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[1]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[1]), 10),
-					},
-					{
-						Pubkey:         hexutil.Encode(pubkeys[3]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[3]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[1]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[1]), 10),
-					},
-					{
-						Pubkey:         hexutil.Encode(pubkeys[4]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[2]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[2]), 10),
-					},
-					{
-						Pubkey:         hexutil.Encode(pubkeys[5]),
-						ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
-						CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[2]), 10),
-						Slot:           strconv.FormatUint(uint64(committeeSlots[2]), 10),
-					},
-				},
+				generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots),
 				nil,
 			).Times(1)
 
@@ -587,48 +755,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				dutiesProvider.EXPECT().GetProposerDuties(
 					epoch,
 				).Return(
-					[]*apimiddleware.ProposerDutyJson{
-						{
-							Pubkey:         hexutil.Encode(pubkeys[4]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[0]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[4]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[1]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[5]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[2]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[5]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[3]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[6]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[4]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[6]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[5]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[7]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[6]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[7]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
-							Slot:           strconv.FormatUint(uint64(proposerSlots[7]), 10),
-						},
-					},
+					generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
 					nil,
 				).Times(1)
 			}
@@ -638,28 +765,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					epoch,
 					multipleValidatorStatus.Indices,
 				).Return(
-					[]*apimiddleware.SyncCommitteeDuty{
-						{
-							Pubkey:         hexutil.Encode(pubkeys[5]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[6]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[7]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[8]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[8]), 10),
-						},
-						{
-							Pubkey:         hexutil.Encode(pubkeys[9]),
-							ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[9]), 10),
-						},
-					},
+					generateValidSyncDuties(pubkeys, validatorIndices),
 					nil,
 				).Times(1)
 			}
@@ -810,4 +916,485 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			assert.DeepEqual(t, expectedDuties, duties)
 		})
 	}
+}
+
+func TestGetDuties_Valid(t *testing.T) {
+	testCases := []struct {
+		name  string
+		epoch types.Epoch
+	}{
+		{
+			name:  "genesis epoch",
+			epoch: params.BeaconConfig().GenesisEpoch,
+		},
+		{
+			name:  "altair epoch",
+			epoch: params.BeaconConfig().AltairForkEpoch,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
+			validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+			committeeIndices := []types.CommitteeIndex{25, 26, 27}
+			committeeSlots := []types.Slot{28, 29, 30}
+			proposerSlots := []types.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+
+			statuses := []ethpb.ValidatorStatus{
+				ethpb.ValidatorStatus_DEPOSITED,
+				ethpb.ValidatorStatus_PENDING,
+				ethpb.ValidatorStatus_ACTIVE,
+				ethpb.ValidatorStatus_EXITING,
+				ethpb.ValidatorStatus_SLASHING,
+				ethpb.ValidatorStatus_EXITED,
+				ethpb.ValidatorStatus_EXITED,
+				ethpb.ValidatorStatus_EXITED,
+				ethpb.ValidatorStatus_EXITED,
+				ethpb.ValidatorStatus_DEPOSITED,
+				ethpb.ValidatorStatus_PENDING,
+				ethpb.ValidatorStatus_ACTIVE,
+			}
+
+			multipleValidatorStatus := &ethpb.MultipleValidatorStatusResponse{
+				PublicKeys: pubkeys,
+				Indices:    validatorIndices,
+				Statuses: []*ethpb.ValidatorStatusResponse{
+					{Status: statuses[0]},
+					{Status: statuses[1]},
+					{Status: statuses[2]},
+					{Status: statuses[3]},
+					{Status: statuses[4]},
+					{Status: statuses[5]},
+					{Status: statuses[6]},
+					{Status: statuses[7]},
+					{Status: statuses[8]},
+					{Status: statuses[9]},
+					{Status: statuses[10]},
+					{Status: statuses[11]},
+				},
+			}
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
+			dutiesProvider.EXPECT().GetCommittees(
+				testCase.epoch,
+			).Return(
+				generateValidCommittees(committeeIndices, committeeSlots, validatorIndices),
+				nil,
+			).Times(2)
+
+			dutiesProvider.EXPECT().GetAttesterDuties(
+				testCase.epoch,
+				multipleValidatorStatus.Indices,
+			).Return(
+				generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots),
+				nil,
+			).Times(2)
+
+			dutiesProvider.EXPECT().GetProposerDuties(
+				testCase.epoch,
+			).Return(
+				generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
+				nil,
+			).Times(2)
+
+			fetchSyncDuties := testCase.epoch >= params.BeaconConfig().AltairForkEpoch
+			if fetchSyncDuties {
+				dutiesProvider.EXPECT().GetSyncDuties(
+					testCase.epoch,
+					multipleValidatorStatus.Indices,
+				).Return(
+					generateValidSyncDuties(pubkeys, validatorIndices),
+					nil,
+				).Times(2)
+			}
+
+			dutiesProvider.EXPECT().GetCommittees(
+				testCase.epoch+1,
+			).Return(
+				reverseSlice(generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)),
+				nil,
+			).Times(2)
+
+			dutiesProvider.EXPECT().GetAttesterDuties(
+				testCase.epoch+1,
+				validatorIndices,
+			).Return(
+				reverseSlice(generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)),
+				nil,
+			).Times(2)
+
+			if fetchSyncDuties {
+				dutiesProvider.EXPECT().GetSyncDuties(
+					testCase.epoch+1,
+					validatorIndices,
+				).Return(
+					reverseSlice(generateValidSyncDuties(pubkeys, validatorIndices)),
+					nil,
+				).Times(2)
+			}
+
+			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider.EXPECT().GetStateValidators(
+				gomock.Any(),
+				gomock.Any(),
+				gomock.Any(),
+			).Return(
+				&apimiddleware.StateValidatorsResponseJson{
+					Data: []*apimiddleware.ValidatorContainerJson{
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[0]), 10),
+							Status: "pending_initialized",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[0]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[1]), 10),
+							Status: "pending_queued",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[1]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[2]), 10),
+							Status: "active_ongoing",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[2]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[3]), 10),
+							Status: "active_exiting",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[3]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[4]), 10),
+							Status: "active_slashed",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[4]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[5]), 10),
+							Status: "exited_unslashed",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[5]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[6]), 10),
+							Status: "exited_slashed",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[6]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[7]), 10),
+							Status: "withdrawal_possible",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[7]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[8]), 10),
+							Status: "withdrawal_done",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[8]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[9]), 10),
+							Status: "pending_initialized",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[9]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[10]), 10),
+							Status: "pending_queued",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[10]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+						{
+							Index:  strconv.FormatUint(uint64(validatorIndices[11]), 10),
+							Status: "active_ongoing",
+							Validator: &apimiddleware.ValidatorJson{
+								PublicKey:       hexutil.Encode(pubkeys[11]),
+								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
+							},
+						},
+					},
+				},
+				nil,
+			).MinTimes(1)
+
+			// Make sure that our values are equal to what would be returned by calling getDutiesForEpoch individually
+			validatorClient := &beaconApiValidatorClient{
+				dutiesProvider:          dutiesProvider,
+				stateValidatorsProvider: stateValidatorsProvider,
+			}
+
+			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
+				testCase.epoch,
+				multipleValidatorStatus,
+				true,
+				fetchSyncDuties,
+			)
+			require.NoError(t, err)
+
+			expectedNextEpochDuties, err := validatorClient.getDutiesForEpoch(
+				testCase.epoch+1,
+				multipleValidatorStatus,
+				false,
+				fetchSyncDuties,
+			)
+			require.NoError(t, err)
+
+			expectedDuties := &ethpb.DutiesResponse{
+				Duties:             expectedCurrentEpochDuties,
+				CurrentEpochDuties: expectedCurrentEpochDuties,
+				NextEpochDuties:    expectedNextEpochDuties,
+			}
+
+			duties, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+				Epoch:      testCase.epoch,
+				PublicKeys: pubkeys,
+			})
+			require.NoError(t, err)
+
+			assert.DeepEqual(t, expectedDuties, duties)
+		})
+	}
+}
+
+func TestGetDuties_GetValidatorStatusFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider.EXPECT().GetStateValidators(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		nil,
+		errors.New("foo error"),
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+	}
+
+	_, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+		Epoch:      1,
+		PublicKeys: [][]byte{},
+	})
+	assert.ErrorContains(t, "failed to get validator status", err)
+	assert.ErrorContains(t, "foo error", err)
+}
+
+func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider.EXPECT().GetStateValidators(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&apimiddleware.StateValidatorsResponseJson{
+			Data: []*apimiddleware.ValidatorContainerJson{},
+		},
+		nil,
+	).Times(1)
+
+	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
+	dutiesProvider.EXPECT().GetAttesterDuties(
+		types.Epoch(1),
+		gomock.Any(),
+	).Return(
+		nil,
+		errors.New("foo error"),
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+		dutiesProvider:          dutiesProvider,
+	}
+
+	_, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+		Epoch:      1,
+		PublicKeys: [][]byte{},
+	})
+	assert.ErrorContains(t, "failed to get duties for current epoch `1`", err)
+	assert.ErrorContains(t, "foo error", err)
+}
+
+func generateValidCommittees(committeeIndices []types.CommitteeIndex, slots []types.Slot, validatorIndices []types.ValidatorIndex) []*apimiddleware.CommitteeJson {
+	return []*apimiddleware.CommitteeJson{
+		{
+			Index: strconv.FormatUint(uint64(committeeIndices[0]), 10),
+			Slot:  strconv.FormatUint(uint64(slots[0]), 10),
+			Validators: []string{
+				strconv.FormatUint(uint64(validatorIndices[0]), 10),
+				strconv.FormatUint(uint64(validatorIndices[1]), 10),
+			},
+		},
+		{
+			Index: strconv.FormatUint(uint64(committeeIndices[1]), 10),
+			Slot:  strconv.FormatUint(uint64(slots[1]), 10),
+			Validators: []string{
+				strconv.FormatUint(uint64(validatorIndices[2]), 10),
+				strconv.FormatUint(uint64(validatorIndices[3]), 10),
+			},
+		},
+		{
+			Index: strconv.FormatUint(uint64(committeeIndices[2]), 10),
+			Slot:  strconv.FormatUint(uint64(slots[2]), 10),
+			Validators: []string{
+				strconv.FormatUint(uint64(validatorIndices[4]), 10),
+				strconv.FormatUint(uint64(validatorIndices[5]), 10),
+			},
+		},
+	}
+}
+
+func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex, committeeIndices []types.CommitteeIndex, slots []types.Slot) []*apimiddleware.AttesterDutyJson {
+	return []*apimiddleware.AttesterDutyJson{
+		{
+			Pubkey:         hexutil.Encode(pubkeys[0]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[0]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[0]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[0]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[1]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[1]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[0]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[0]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[2]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[2]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[1]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[1]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[3]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[3]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[1]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[1]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[4]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[2]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[2]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[5]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
+			CommitteeIndex: strconv.FormatUint(uint64(committeeIndices[2]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[2]), 10),
+		},
+	}
+}
+
+func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex, slots []types.Slot) []*apimiddleware.ProposerDutyJson {
+	return []*apimiddleware.ProposerDutyJson{
+		{
+			Pubkey:         hexutil.Encode(pubkeys[4]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[0]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[4]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[1]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[5]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[2]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[5]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[3]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[6]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[4]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[6]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[5]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[7]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[6]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[7]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
+			Slot:           strconv.FormatUint(uint64(slots[7]), 10),
+		},
+	}
+}
+
+func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex) []*apimiddleware.SyncCommitteeDuty {
+	return []*apimiddleware.SyncCommitteeDuty{
+		{
+			Pubkey:         hexutil.Encode(pubkeys[5]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[6]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[6]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[7]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[7]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[8]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[8]), 10),
+		},
+		{
+			Pubkey:         hexutil.Encode(pubkeys[9]),
+			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[9]), 10),
+		},
+	}
+}
+
+// We will use a reverse function to easily make sure that the current epoch and next epoch data returned by getDutiesForEpoch
+// are not the same
+func reverseSlice[T interface{}](slice []T) []T {
+	reversedSlice := make([]T, len(slice))
+	for i := range slice {
+		reversedSlice[len(reversedSlice)-1-i] = slice[i]
+	}
+	return reversedSlice
 }
