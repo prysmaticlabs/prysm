@@ -62,6 +62,7 @@ func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeader
 	if header.ExtraData, err = hexutil.Decode(headerJSON.ExtraData); err != nil {
 		return nil, err
 	}
+
 	if header.BaseFeePerGas, err = bytesFromBigInt(headerJSON.BaseFeePerGas); err != nil {
 		return nil, err
 	}
@@ -71,6 +72,12 @@ func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeader
 		padded := make([]byte, 32-len(header.BaseFeePerGas))
 		header.BaseFeePerGas = append(padded, header.BaseFeePerGas...)
 	}
+	for i := 0; i < len(header.BaseFeePerGas)/2; i++ {
+		temp := header.BaseFeePerGas[i]
+		header.BaseFeePerGas[i] = header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i]
+		header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i] = temp
+	}
+
 	if header.BlockHash, err = hexutil.Decode(headerJSON.BlockHash); err != nil {
 		return nil, err
 	}
