@@ -13,14 +13,14 @@ type update struct {
 // hasRelevantSyncCommittee implements has_relevant_sync_committee from the spec.
 func (u *update) hasRelevantSyncCommittee() bool {
 	return u.IsSyncCommiteeUpdate() &&
-		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot) ==
-			computeSyncCommitteePeriodAtSlot(u.config, u.GetSignatureSlot())
+		computeSyncCommitteePeriodAtSlot(u.config, u.AttestedHeader.Slot) ==
+			computeSyncCommitteePeriodAtSlot(u.config, u.SignatureSlot)
 }
 
 // hasSyncCommitteeFinality implements has_sync_committee_finality from the spec.
 func (u *update) hasSyncCommitteeFinality() bool {
-	return computeSyncCommitteePeriodAtSlot(u.config, u.GetFinalizedHeader().Slot) ==
-		computeSyncCommitteePeriodAtSlot(u.config, u.GetAttestedHeader().Slot)
+	return computeSyncCommitteePeriodAtSlot(u.config, u.FinalizedHeader.Slot) ==
+		computeSyncCommitteePeriodAtSlot(u.config, u.AttestedHeader.Slot)
 }
 
 // isBetterUpdate implements is_better_update from the spec.
@@ -30,9 +30,9 @@ func (u *update) isBetterUpdate(newUpdatePb *ethpbv2.LightClientUpdate) bool {
 		LightClientUpdate: newUpdatePb,
 	}
 	// Compare supermajority (> 2/3) sync committee participation
-	maxActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Len()
-	newNumActiveParticipants := newUpdate.GetSyncAggregate().SyncCommitteeBits.Count()
-	oldNumActiveParticipants := u.GetSyncAggregate().SyncCommitteeBits.Count()
+	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
+	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	oldNumActiveParticipants := u.SyncAggregate.SyncCommitteeBits.Count()
 	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
 	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
 	if newHasSupermajority != oldHasSupermajority {
@@ -71,8 +71,8 @@ func (u *update) isBetterUpdate(newUpdatePb *ethpbv2.LightClientUpdate) bool {
 	}
 
 	// Tiebreaker 2: Prefer older data (fewer changes to best)
-	if newUpdate.GetAttestedHeader().Slot != u.GetAttestedHeader().Slot {
-		return newUpdate.GetAttestedHeader().Slot < u.GetAttestedHeader().Slot
+	if newUpdate.AttestedHeader.Slot != u.AttestedHeader.Slot {
+		return newUpdate.AttestedHeader.Slot < u.AttestedHeader.Slot
 	}
-	return newUpdate.GetSignatureSlot() < u.GetSignatureSlot()
+	return newUpdate.SignatureSlot < u.SignatureSlot
 }

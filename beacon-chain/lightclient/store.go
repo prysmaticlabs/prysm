@@ -96,6 +96,12 @@ func getSubtreeIndex(index uint64) uint64 {
 // NewStore implements initialize_light_client_store from the spec.
 func NewStore(config *Config, trustedBlockRoot [32]byte,
 	bootstrap *ethpbv2.LightClientBootstrap) (*Store, error) {
+	if config == nil {
+		return nil, errors.New("light client config cannot be nil")
+	}
+	if bootstrap.Header == nil || bootstrap.CurrentSyncCommittee == nil {
+		return nil, errors.New("malformed bootstrap")
+	}
 	bootstrapRoot, err := bootstrap.Header.HashTreeRoot()
 	if err != nil {
 		panic(err)
@@ -157,19 +163,25 @@ func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 // validateUpdate implements validate_light_client_update from the spec.
 func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
-	syncAggregate := update.GetSyncAggregate()
+	syncAggregate := update.SyncAggregate
+	if syncAggregate == nil || syncAggregate.SyncCommitteeBits == nil {
+		return errors.New("sync aggregate in update is invalid")
+	}
 	if syncAggregate.SyncCommitteeBits.Count() < s.Config.MinSyncCommitteeParticipants {
 		return errors.New("sync committee does not have sufficient participants")
 	}
 
+	if update.AttestedHeader == nil {
+		return errors.New("attested header in update is not set")
+	}
 	// Verify update does not skip a sync committee period
-	if !(currentSlot >= update.GetSignatureSlot() &&
-		update.GetSignatureSlot() > update.GetAttestedHeader().Slot &&
-		(update.GetFinalizedHeader() == nil || update.GetAttestedHeader().Slot >= update.GetFinalizedHeader().Slot)) {
+	if !(currentSlot >= update.SignatureSlot &&
+		update.SignatureSlot > update.AttestedHeader.Slot &&
+		(update.FinalizedHeader == nil || update.AttestedHeader.Slot >= update.FinalizedHeader.Slot)) {
 		return errors.New("update skips a sync committee period")
 	}
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
-	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetSignatureSlot())
+	updateSignaturePeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.SignatureSlot)
 	if s.isNextSyncCommitteeKnown() {
 		if !(updateSignaturePeriod == storePeriod || updateSignaturePeriod == storePeriod+1) {
 			return errors.New("update skips a sync committee period")
@@ -181,9 +193,9 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	}
 
 	// Verify update is relevant
-	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
+	updateAttestedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.AttestedHeader.Slot)
 	updateHasNextSyncCommittee := !s.isNextSyncCommitteeKnown() && (update.IsSyncCommiteeUpdate() && updateAttestedPeriod == storePeriod)
-	if !(update.GetAttestedHeader().Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
+	if !(update.AttestedHeader.Slot > s.FinalizedHeader.Slot || updateHasNextSyncCommittee) {
 		return errors.New("update is not relevant")
 	}
 
@@ -191,27 +203,27 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	// saved in the state of attested header. Note that the genesis finalized checkpoint root is represented as a zero
 	// hash.
 	if !update.IsFinalityUpdate() {
-		if update.GetFinalizedHeader() != nil {
+		if update.FinalizedHeader != nil {
 			return errors.New("finality branch is present but update is not finality")
 		}
 	} else {
 		var finalizedRoot [32]byte
-		if update.GetFinalizedHeader().Slot == s.Config.GenesisSlot {
-			if update.GetFinalizedHeader().String() != (&ethpbv1.BeaconBlockHeader{}).String() {
+		if update.FinalizedHeader.Slot == s.Config.GenesisSlot {
+			if update.FinalizedHeader.String() != (&ethpbv1.BeaconBlockHeader{}).String() {
 				return errors.New("genesis finalized checkpoint root is not represented as a zero hash")
 			}
 			finalizedRoot = [32]byte{}
 		} else {
 			var err error
-			if finalizedRoot, err = update.GetFinalizedHeader().HashTreeRoot(); err != nil {
+			if finalizedRoot, err = update.FinalizedHeader.HashTreeRoot(); err != nil {
 				return err
 			}
 		}
 		if !trie.VerifyMerkleProof(
-			update.GetAttestedHeader().StateRoot,
+			update.AttestedHeader.StateRoot,
 			finalizedRoot[:],
 			getSubtreeIndex(ethpbv2.FinalizedRootIndex),
-			update.GetFinalityBranch()) {
+			update.FinalityBranch) {
 			return errors.New("finality branch is invalid")
 		}
 	}
@@ -219,24 +231,24 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 	// Verify that the next sync committee, if present, actually is the next sync committee saved in the state of the
 	// attested header
 	if !update.IsSyncCommiteeUpdate() {
-		if update.GetNextSyncCommittee() != nil {
+		if update.NextSyncCommittee != nil {
 			return errors.New("sync committee branch is present but update is not sync committee")
 		}
 	} else {
 		if updateAttestedPeriod == storePeriod && s.isNextSyncCommitteeKnown() {
-			if !update.GetNextSyncCommittee().Equals(s.NextSyncCommittee) {
+			if !update.NextSyncCommittee.Equals(s.NextSyncCommittee) {
 				return errors.New("next sync committee is not known")
 			}
 		}
-		root, err := update.GetNextSyncCommittee().HashTreeRoot()
+		root, err := update.NextSyncCommittee.HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		if !trie.VerifyMerkleProof(
-			update.GetAttestedHeader().StateRoot,
+			update.AttestedHeader.StateRoot,
 			root[:],
 			getSubtreeIndex(ethpbv2.NextSyncCommitteeIndex),
-			update.GetNextSyncCommitteeBranch()) {
+			update.NextSyncCommitteeBranch) {
 			return errors.New("sync committee branch is invalid")
 		}
 	}
@@ -259,12 +271,12 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 			participantPubkeys = append(participantPubkeys, publicKey)
 		}
 	}
-	forkVersion := s.computeForkVersion(computeEpochAtSlot(s.Config, update.GetSignatureSlot()))
+	forkVersion := s.computeForkVersion(computeEpochAtSlot(s.Config, update.SignatureSlot))
 	domain, err := signing.ComputeDomain(s.Config.DomainSyncCommittee, forkVersion, genesisValidatorsRoot)
 	if err != nil {
 		return err
 	}
-	signingRoot, err := signing.ComputeSigningRoot(update.GetAttestedHeader(), domain)
+	signingRoot, err := signing.ComputeSigningRoot(update.AttestedHeader, domain)
 	if err != nil {
 		return err
 	}
@@ -282,20 +294,20 @@ func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisVa
 // applyUpdate implements apply_light_client_update from the spec.
 func (s *Store) applyUpdate(update *ethpbv2.LightClientUpdate) error {
 	storePeriod := computeSyncCommitteePeriodAtSlot(s.Config, s.FinalizedHeader.Slot)
-	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().Slot)
+	updateFinalizedPeriod := computeSyncCommitteePeriodAtSlot(s.Config, update.FinalizedHeader.Slot)
 	if !s.isNextSyncCommitteeKnown() {
 		if updateFinalizedPeriod != storePeriod {
 			return errors.New("update finalized period does not match store period")
 		}
-		s.NextSyncCommittee = update.GetNextSyncCommittee()
+		s.NextSyncCommittee = update.NextSyncCommittee
 	} else if updateFinalizedPeriod == storePeriod+1 {
 		s.CurrentSyncCommittee = s.NextSyncCommittee
-		s.NextSyncCommittee = update.GetNextSyncCommittee()
+		s.NextSyncCommittee = update.NextSyncCommittee
 		s.PreviousMaxActiveParticipants = s.CurrentMaxActiveParticipants
 		s.CurrentMaxActiveParticipants = 0
 	}
-	if update.GetFinalizedHeader().Slot > s.FinalizedHeader.Slot {
-		s.FinalizedHeader = update.GetFinalizedHeader()
+	if update.FinalizedHeader.Slot > s.FinalizedHeader.Slot {
+		s.FinalizedHeader = update.FinalizedHeader
 		if s.FinalizedHeader.Slot > s.OptimisticHeader.Slot {
 			s.OptimisticHeader = s.FinalizedHeader
 		}
@@ -311,8 +323,8 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 		// Because the apply logic waits for `finalized_header.slot` to indicate sync committee finality,
 		// the `attested_header` may be treated as `finalized_header` in extended periods of non-finality
 		// to guarantee progression into later sync committee periods according to `is_better_update`.
-		if s.BestValidUpdate.GetFinalizedHeader().Slot <= s.FinalizedHeader.Slot {
-			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.GetAttestedHeader()
+		if s.BestValidUpdate.FinalizedHeader.Slot <= s.FinalizedHeader.Slot {
+			s.BestValidUpdate.FinalizedHeader = s.BestValidUpdate.AttestedHeader
 		}
 		if err := s.applyUpdate(s.BestValidUpdate); err != nil {
 			return err
@@ -322,17 +334,28 @@ func (s *Store) ProcessForceUpdate(currentSlot types.Slot) error {
 	return nil
 }
 
-// ProcessUpdate implements process_light_client_update from the spec.
-func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+// ValidateUpdate provides a wrapper around validateUpdate() for callers that want to separate validate and apply.
+func (s *Store) ValidateUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	update := &update{
 		LightClientUpdate: lightClientUpdate,
 		config:            s.Config,
 	}
-	if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
-		return err
+	return s.validateUpdate(update, currentSlot, genesisValidatorsRoot)
+}
+
+func (s *Store) processUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte, validated bool) error {
+	update := &update{
+		LightClientUpdate: lightClientUpdate,
+		config:            s.Config,
 	}
-	syncCommiteeBits := update.GetSyncAggregate().SyncCommitteeBits
+	if !validated {
+		if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
+			return err
+		}
+	}
+	syncCommiteeBits := update.SyncAggregate.SyncCommitteeBits
 
 	// Update the best update in case we have to force-update to it if the timeout elapses
 	if s.BestValidUpdate == nil || update.isBetterUpdate(s.BestValidUpdate) {
@@ -343,17 +366,17 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	s.CurrentMaxActiveParticipants = max(s.CurrentMaxActiveParticipants, syncCommiteeBits.Count())
 
 	// Update the optimistic header
-	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.GetAttestedHeader().Slot > s.OptimisticHeader.Slot {
-		s.OptimisticHeader = update.GetAttestedHeader()
+	if syncCommiteeBits.Count() > s.getSafetyThreshold() && update.AttestedHeader.Slot > s.OptimisticHeader.Slot {
+		s.OptimisticHeader = update.AttestedHeader
 	}
 
 	// Update finalized header
 	updateHasFinalizedNextSyncCommittee := !s.isNextSyncCommitteeKnown() && update.IsSyncCommiteeUpdate() &&
-		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.GetFinalizedHeader().
-		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.GetAttestedHeader().Slot)
+		update.IsFinalityUpdate() && computeSyncCommitteePeriodAtSlot(s.Config, update.FinalizedHeader.
+		Slot) == computeSyncCommitteePeriodAtSlot(s.Config, update.AttestedHeader.Slot)
 	if syncCommiteeBits.Count()*3 >= syncCommiteeBits.Len()*2 &&
-		((update.GetFinalizedHeader() != nil && update.GetFinalizedHeader().Slot > s.FinalizedHeader.
-			Slot) || updateHasFinalizedNextSyncCommittee) {
+		((update.FinalizedHeader != nil && update.FinalizedHeader.Slot > s.FinalizedHeader.Slot) ||
+			updateHasFinalizedNextSyncCommittee) {
 		// Normal update throught 2/3 threshold
 		if err := s.applyUpdate(update.LightClientUpdate); err != nil {
 			return err
@@ -361,6 +384,18 @@ func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 		s.BestValidUpdate = nil
 	}
 	return nil
+}
+
+// ProcessUpdate implements process_light_client_update from the spec.
+func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, false)
+}
+
+// ProcessValidatedUpdate processes a pre-validated update.
+func (s *Store) ProcessValidatedUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, true)
 }
 
 // ProcessFinalityUpdate implements process_light_client_finality_update from the spec.
