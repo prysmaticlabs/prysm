@@ -41,7 +41,7 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 	}
 }
 
-func (c *beaconApiValidatorClient) GetDuties(_ context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	return c.getDuties(in)
 }
 
