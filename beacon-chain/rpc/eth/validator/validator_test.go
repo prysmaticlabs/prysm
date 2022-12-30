@@ -689,18 +689,20 @@ func TestProduceBlockV2(t *testing.T) {
 		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       mockChainService,
-			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     mockChainService,
-			HeadUpdater:       mockChainService,
-			ChainStartFetcher: mockExecutionChain,
-			Eth1InfoFetcher:   mockExecutionChain,
-			Eth1BlockFetcher:  mockExecutionChain,
-			MockEth1Votes:     true,
-			AttPool:           attestations.NewPool(),
-			SlashingsPool:     slashings.NewPool(),
-			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db, doublylinkedtree.New()),
+			HeadFetcher:           mockChainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:         mockChainService,
+			HeadUpdater:           mockChainService,
+			ChainStartFetcher:     mockExecutionChain,
+			Eth1InfoFetcher:       mockExecutionChain,
+			Eth1BlockFetcher:      mockExecutionChain,
+			MockEth1Votes:         true,
+			AttPool:               attestations.NewPool(),
+			SlashingsPool:         slashings.NewPool(),
+			ExitPool:              voluntaryexits.NewPool(),
+			StateGen:              stategen.New(db, doublylinkedtree.New()),
+			TimeFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
@@ -797,19 +799,21 @@ func TestProduceBlockV2(t *testing.T) {
 		mochChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
 		mockExecutionChain := &mockExecution.Chain{}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			HeadFetcher:       mochChainService,
-			SyncChecker:       &mockSync.Sync{IsSyncing: false},
-			BlockReceiver:     mochChainService,
-			HeadUpdater:       mochChainService,
-			ChainStartFetcher: mockExecutionChain,
-			Eth1InfoFetcher:   mockExecutionChain,
-			Eth1BlockFetcher:  mockExecutionChain,
-			MockEth1Votes:     true,
-			AttPool:           attestations.NewPool(),
-			SlashingsPool:     slashings.NewPool(),
-			ExitPool:          voluntaryexits.NewPool(),
-			StateGen:          stategen.New(db, doublylinkedtree.New()),
-			SyncCommitteePool: synccommittee.NewStore(),
+			HeadFetcher:           mochChainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:         mochChainService,
+			HeadUpdater:           mochChainService,
+			ChainStartFetcher:     mockExecutionChain,
+			Eth1InfoFetcher:       mockExecutionChain,
+			Eth1BlockFetcher:      mockExecutionChain,
+			MockEth1Votes:         true,
+			AttPool:               attestations.NewPool(),
+			SlashingsPool:         slashings.NewPool(),
+			ExitPool:              voluntaryexits.NewPool(),
+			StateGen:              stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:     synccommittee.NewStore(),
+			TimeFetcher:           mochChainService,
+			OptimisticModeFetcher: mochChainService,
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
