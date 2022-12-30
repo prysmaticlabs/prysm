@@ -164,7 +164,7 @@ func TestListSyncCommittees(t *testing.T) {
 	chainService := &mock.ChainService{}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
-			Genesis: time.Now(),``
+			Genesis: time.Now(),
 		},
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,

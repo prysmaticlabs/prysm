@@ -30,7 +30,7 @@ func TestSaveHead_Same(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	r := [32]byte{'A'}
-	service.head = &head{slot: 0, root: r}
+	service.head = &head{root: r}
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 1)
@@ -53,7 +53,6 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
-		slot:  0,
 		root:  oldRoot,
 		block: oldBlock,
 	}
@@ -107,7 +106,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
-		slot:  0,
 		root:  oldRoot,
 		block: oldBlock,
 	}
