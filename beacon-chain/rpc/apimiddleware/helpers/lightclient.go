@@ -1,14 +1,16 @@
 package helpers
 
 import (
+	"errors"
 	"math/big"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	ethrpc "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -62,6 +64,12 @@ func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeader
 	}
 	if header.BaseFeePerGas, err = bytesFromBigInt(headerJSON.BaseFeePerGas); err != nil {
 		return nil, err
+	}
+	if len(header.BaseFeePerGas) > 32 {
+		return nil, errors.New("base fee per gas is too long")
+	} else if len(header.BaseFeePerGas) < 32 {
+		padded := make([]byte, 32-len(header.BaseFeePerGas))
+		header.BaseFeePerGas = append(padded, header.BaseFeePerGas...)
 	}
 	if header.BlockHash, err = hexutil.Decode(headerJSON.BlockHash); err != nil {
 		return nil, err
