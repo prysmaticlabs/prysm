@@ -51,7 +51,6 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  types.Slot                   // current head slot.
 	root  [32]byte                     // current head root.
 	block interfaces.SignedBeaconBlock // current head block.
 	state state.BeaconState            // current head state.
@@ -202,7 +201,6 @@ func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, sta
 		return err
 	}
 	s.head = &head{
-		slot:  block.Block().Slot(),
 		root:  root,
 		block: bCp,
 		state: state.Copy(),
@@ -223,7 +221,6 @@ func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaco
 		return err
 	}
 	s.head = &head{
-		slot:  block.Block().Slot(),
 		root:  root,
 		block: bCp,
 		state: state,
@@ -234,7 +231,10 @@ func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaco
 // This returns the head slot.
 // This is a lock free version.
 func (s *Service) headSlot() types.Slot {
-	return s.head.slot
+	if s.head == nil || s.head.block == nil || s.head.block.Block() == nil {
+		return 0
+	}
+	return s.head.block.Block().Slot()
 }
 
 // This returns the head root.
