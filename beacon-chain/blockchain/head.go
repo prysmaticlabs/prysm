@@ -348,7 +348,7 @@ func (s *Service) notifyNewHeadEvent(
 	return nil
 }
 
-// This saves the attestations and BLSToExecChanges between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
+// This saves the Attestations and BLSToExecChanges between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
 // It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
 	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestor(ctx, newHeadRoot, orphanedRoot)
