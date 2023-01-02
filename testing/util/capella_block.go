@@ -174,21 +174,9 @@ func GenerateFullBlockCapella(
 
 	changes := make([]*ethpb.SignedBLSToExecutionChange, conf.NumBLSChanges)
 	for i := uint64(0); i < conf.NumBLSChanges; i++ {
-		cred := indexToHash(i)
-		priv := privs[i+1]
-		pubkey := priv.PublicKey().Marshal()
-		message := &ethpb.BLSToExecutionChange{
-			ToExecutionAddress: cred[12:],
-			ValidatorIndex:     types.ValidatorIndex(i),
-			FromBlsPubkey:      pubkey,
-		}
-		signature, err := signing.ComputeDomainAndSign(bState, time.CurrentEpoch(bState), message, params.BeaconConfig().DomainBLSToExecutionChange, priv)
+		changes[i], err = GenerateBLSToExecutionChange(bState, privs[i+1], types.ValidatorIndex(i))
 		if err != nil {
 			return nil, err
-		}
-		changes[i] = &ethpb.SignedBLSToExecutionChange{
-			Message:   message,
-			Signature: signature,
 		}
 	}
 
@@ -218,4 +206,23 @@ func GenerateFullBlockCapella(
 	}
 
 	return &ethpb.SignedBeaconBlockCapella{Block: block, Signature: signature.Marshal()}, nil
+}
+
+// GenerateBLSToExecutionChange generates a valid bls to exec changae for validator `val` and its private key `priv` with the given beacon state `st`.
+func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val types.ValidatorIndex) (*ethpb.SignedBLSToExecutionChange, error) {
+	cred := indexToHash(uint64(val))
+	pubkey := priv.PublicKey().Marshal()
+	message := &ethpb.BLSToExecutionChange{
+		ToExecutionAddress: cred[12:],
+		ValidatorIndex:     val,
+		FromBlsPubkey:      pubkey,
+	}
+	signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, priv)
+	if err != nil {
+		return nil, err
+	}
+	return &ethpb.SignedBLSToExecutionChange{
+		Message:   message,
+		Signature: signature,
+	}, nil
 }
