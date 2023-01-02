@@ -53,7 +53,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 		return nil, nil, errors.New("nil block")
 	}
 
-	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransitionNoVerifyAttSigs")
+	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransitionNoVerifyAnySig")
 	defer span.End()
 	var err error
 
