@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -138,7 +139,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, oldHeadRoot, newHeadRoot); err != nil {
+		if err := s.saveOrphanedOperations(ctx, oldHeadRoot, newHeadRoot); err != nil {
 			return err
 		}
 		reorgCount.Inc()
@@ -347,9 +348,9 @@ func (s *Service) notifyNewHeadEvent(
 	return nil
 }
 
-// This saves the attestations between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
+// This saves the Attestations and BLSToExecChanges between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
 // It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
-func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
+func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
 	commonAncestorRoot, _, err := s.ForkChoicer().CommonAncestor(ctx, newHeadRoot, orphanedRoot)
 	switch {
 	// Exit early if there's no common ancestor and root doesn't exist, there would be nothing to save.
@@ -387,6 +388,15 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, n
 				}
 			}
 			saveOrphanedAttCount.Inc()
+		}
+		if orphanedBlk.Version() >= version.Capella {
+			changes, err := orphanedBlk.Block().Body().BLSToExecutionChanges()
+			if err != nil {
+				return errors.Wrap(err, "could not get BLSToExecutionChanges")
+			}
+			for _, c := range changes {
+				s.cfg.BLSToExecPool.InsertBLSToExecChange(c)
+			}
 		}
 		parentRoot := orphanedBlk.Block().ParentRoot()
 		orphanedRoot = bytesutil.ToBytes32(parentRoot[:])
