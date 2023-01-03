@@ -73,9 +73,8 @@ func NewExecutionPayloadHeaderFromJSON(headerJSON *ethrpc.ExecutionPayloadHeader
 		header.BaseFeePerGas = append(padded, header.BaseFeePerGas...)
 	}
 	for i := 0; i < len(header.BaseFeePerGas)/2; i++ {
-		temp := header.BaseFeePerGas[i]
-		header.BaseFeePerGas[i] = header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i]
-		header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i] = temp
+		header.BaseFeePerGas[i], header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i] =
+			header.BaseFeePerGas[len(header.BaseFeePerGas)-1-i], header.BaseFeePerGas[i]
 	}
 
 	if header.BlockHash, err = hexutil.Decode(headerJSON.BlockHash); err != nil {

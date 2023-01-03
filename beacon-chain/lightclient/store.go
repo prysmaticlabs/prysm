@@ -161,7 +161,7 @@ func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 }
 
 // validateUpdate implements validate_light_client_update from the spec.
-func (s *Store) validateUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
+func (s *Store) validateWrappedUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.SyncAggregate
 	if syncAggregate == nil || syncAggregate.SyncCommitteeBits == nil {
@@ -341,17 +341,17 @@ func (s *Store) ValidateUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 		LightClientUpdate: lightClientUpdate,
 		config:            s.Config,
 	}
-	return s.validateUpdate(update, currentSlot, genesisValidatorsRoot)
+	return s.validateWrappedUpdate(update, currentSlot, genesisValidatorsRoot)
 }
 
-func (s *Store) processUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
+func (s *Store) maybeValidateAndProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte, validated bool) error {
 	update := &update{
 		LightClientUpdate: lightClientUpdate,
 		config:            s.Config,
 	}
 	if !validated {
-		if err := s.validateUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
+		if err := s.validateWrappedUpdate(update, currentSlot, genesisValidatorsRoot); err != nil {
 			return err
 		}
 	}
@@ -389,13 +389,13 @@ func (s *Store) processUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 // ProcessUpdate implements process_light_client_update from the spec.
 func (s *Store) ProcessUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
-	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, false)
+	return s.maybeValidateAndProcessUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, false)
 }
 
 // ProcessValidatedUpdate processes a pre-validated update.
 func (s *Store) ProcessValidatedUpdate(lightClientUpdate *ethpbv2.LightClientUpdate,
 	currentSlot types.Slot, genesisValidatorsRoot []byte) error {
-	return s.processUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, true)
+	return s.maybeValidateAndProcessUpdate(lightClientUpdate, currentSlot, genesisValidatorsRoot, true)
 }
 
 // ProcessFinalityUpdate implements process_light_client_finality_update from the spec.
