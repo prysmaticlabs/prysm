@@ -63,7 +63,7 @@ func BitwiseMerkleize(hasher HashFn, chunks [][32]byte, count, limit uint64) ([3
 
 // PackByChunk a given byte array's final chunk with zeroes if needed.
 func PackByChunk(serializedItems [][]byte) ([][bytesPerChunk]byte, error) {
-	emptyChunk := [bytesPerChunk]byte{}
+	var emptyChunk [bytesPerChunk]byte
 	// If there are no items, we return an empty chunk.
 	if len(serializedItems) == 0 {
 		return [][bytesPerChunk]byte{emptyChunk}, nil
