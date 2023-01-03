@@ -99,7 +99,13 @@ func TestServer_canUseBuilder(t *testing.T) {
 	proposerServer := &Server{}
 	ctx := context.Background()
 
-	reg, err := proposerServer.validatorRegistered(ctx, 0)
+	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
+	proposerServer.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+	reg, err := proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+
+	reg, err = proposerServer.validatorRegistered(ctx, 0)
 	require.ErrorContains(t, "nil beacon db", err)
 	require.Equal(t, false, reg)
 
@@ -112,12 +118,6 @@ func TestServer_canUseBuilder(t *testing.T) {
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
 	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{0},
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}}))
-
-	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	proposerServer.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
-	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
-	require.NoError(t, err)
-	require.Equal(t, false, reg)
 
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots, 0)
 	require.NoError(t, err)

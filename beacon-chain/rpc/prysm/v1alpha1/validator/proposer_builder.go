@@ -14,18 +14,14 @@ import (
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
 func (vs *Server) canUseBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (bool, error) {
-	registered, err := vs.validatorRegistered(ctx, idx)
-	if err != nil {
-		return false, err
-	}
-	if !registered {
-		return false, nil
-	}
 	activated, err := vs.circuitBreakBuilder(slot)
 	if err != nil {
 		return false, err
 	}
-	return !activated, nil
+	if activated {
+		return false, nil
+	}
+	return vs.validatorRegistered(ctx, idx)
 }
 
 // validatorRegistered returns true if validator with index `id` was previously registered in the database.
