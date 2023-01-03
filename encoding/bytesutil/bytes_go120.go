@@ -9,54 +9,40 @@ package bytesutil
 // sized 4 byte array. This method will truncate the input if it is larger
 // than 4 bytes.
 func ToBytes4(x []byte) [4]byte {
-	var y [4]byte
-	copy(y[:], x)
-	return y
+	return [4]byte(PadTo(x, 4))
 }
 
 // ToBytes20 is a convenience method for converting a byte slice to a fix
 // sized 20 byte array. This method will truncate the input if it is larger
 // than 20 bytes.
 func ToBytes20(x []byte) [20]byte {
-	var y [20]byte
-	copy(y[:], x)
-	return y
+	return [20]byte(PadTo(x, 20))
 }
 
 // ToBytes32 is a convenience method for converting a byte slice to a fix
 // sized 32 byte array. This method will truncate the input if it is larger
 // than 32 bytes.
 func ToBytes32(x []byte) [32]byte {
-	if len(x) < 32 {
-		// TODO: Pad x to 32 bytes.
-		panic("not implemented")
-	}
-	return [32]byte(x)
+	return [32]byte(PadTo(x, 32))
 }
 
 // ToBytes48 is a convenience method for converting a byte slice to a fix
 // sized 48 byte array. This method will truncate the input if it is larger
 // than 48 bytes.
 func ToBytes48(x []byte) [48]byte {
-	var y [48]byte
-	copy(y[:], x)
-	return y
+	return [48]byte(PadTo(x, 48))
 }
 
 // ToBytes64 is a convenience method for converting a byte slice to a fix
 // sized 64 byte array. This method will truncate the input if it is larger
 // than 64 bytes.
 func ToBytes64(x []byte) [64]byte {
-	var y [64]byte
-	copy(y[:], x)
-	return y
+	return [64]byte(PadTo(x, 64))
 }
 
 // ToBytes96 is a convenience method for converting a byte slice to a fix
 // sized 96 byte array. This method will truncate the input if it is larger
 // than 96 bytes.
 func ToBytes96(x []byte) [96]byte {
-	var y [96]byte
-	copy(y[:], x)
-	return y
+	return [96]byte(PadTo(x, 96))
 }
