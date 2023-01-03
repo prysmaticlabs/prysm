@@ -160,7 +160,7 @@ func (s *Store) computeForkVersion(epoch types.Epoch) []byte {
 	return s.Config.GenesisForkVersion
 }
 
-// validateUpdate implements validate_light_client_update from the spec.
+// validateWrappedUpdate implements validate_light_client_update from the spec.
 func (s *Store) validateWrappedUpdate(update *update, currentSlot types.Slot, genesisValidatorsRoot []byte) error {
 	// Verify sync committee has sufficient participants
 	syncAggregate := update.SyncAggregate
