@@ -159,7 +159,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, service.saveInitSyncBlock(ctx, r1, wsb))
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
-		slot:  1,
 		root:  r1,
 		block: wsb,
 		state: st,
@@ -177,7 +176,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, err)
 	st, _ = util.DeterministicGenesisState(t, 1)
 	service.head = &head{
-		slot:  1,
 		root:  r1,
 		block: wsb,
 		state: st,
