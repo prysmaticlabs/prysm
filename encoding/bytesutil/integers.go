@@ -62,6 +62,15 @@ func Bytes32(x uint64) []byte {
 	return bytes
 }
 
+// FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
+// from a byte array.
+func FromBytes2(x []byte) uint16 {
+	if len(x) < 2 {
+		return 0
+	}
+	return binary.LittleEndian.Uint16(x[:2])
+}
+
 // FromBytes4 returns an integer which is stored in the little-endian format(4, 'little')
 // from a byte array.
 func FromBytes4(x []byte) uint64 {

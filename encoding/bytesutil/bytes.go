@@ -2,7 +2,6 @@
 package bytesutil
 
 import (
-	"encoding/binary"
 	"fmt"
 )
 
@@ -20,15 +19,6 @@ func ToBytes48Array(x [][]byte) [][48]byte {
 // This method will use the first bit of the 0 byte to generate the returned value.
 func ToBool(x byte) bool {
 	return x&1 == 1
-}
-
-// FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
-// from a byte array.
-func FromBytes2(x []byte) uint16 {
-	if len(x) < 2 {
-		return 0
-	}
-	return binary.LittleEndian.Uint16(x[:2])
 }
 
 // FromBool is a convenience method for converting a bool to a byte.
