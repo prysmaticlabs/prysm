@@ -45,7 +45,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 
 	foundFilePaths, err := findWithdrawalFiles(c.String(FileFlag.Name))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to find withdrawal files")
 	}
 	if len(foundFilePaths) == 0 {
 		return errors.New("no compatible files were found")
