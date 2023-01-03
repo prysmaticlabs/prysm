@@ -18,7 +18,7 @@ var (
 	}
 	FileFlag = &cli.StringFlag{
 		Name:  "file",
-		Usage: "file location for for the blsToExecutionAddress JSON or Yaml",
+		Usage: "file location for for the BLSToExecutionChange JSON",
 	}
 )
 
