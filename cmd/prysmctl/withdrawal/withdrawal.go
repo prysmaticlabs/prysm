@@ -28,7 +28,7 @@ const (
 )
 
 func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
-	ctx, span := trace.StartSpan(c.Context, "withdrawal.blsToExecutionAddress")
+	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
 	defer span.End()
 
 	BeaconNodeHost := "http://localhost:3500"
