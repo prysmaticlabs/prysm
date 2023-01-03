@@ -40,7 +40,7 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 		return errors.Wrap(err, "invalid format, unable to parse url")
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", BeaconNodeHost)
+		return fmt.Errorf("provided url %s is not in the format of http(s)://host:port", BeaconNodeHost)
 	}
 
 	foundFilePaths, err := findWithdrawalFiles(c.String(FileFlag.Name))
