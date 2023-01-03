@@ -1,9 +1,10 @@
-//go:build go1.17 && !go1.20
-// +build go1.17,!go1.20
+//go:build !go1.20
+// +build !go1.20
 
 package bytesutil
 
-// These methods use go1.17 syntax to convert a byte slice to a fixed size array.
+// These methods use copy() to convert a byte slice to a fixed size array.
+// This approach is used for go1.19 and below.
 
 // ToBytes4 is a convenience method for converting a byte slice to a fix
 // sized 4 byte array. This method will truncate the input if it is larger
