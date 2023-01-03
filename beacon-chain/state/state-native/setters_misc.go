@@ -106,7 +106,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 }
 
 // AppendHistoricalRoots for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -121,6 +121,25 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 	b.historicalRoots = append(roots, root)
 	b.markFieldAsDirty(nativetypes.HistoricalRoots)
+	return nil
+}
+
+// AppendHistoricalSummariesUpdate AppendHistoricalSummary for the beacon state. Appends the new value
+// to the end of list.
+func (b *BeaconState) AppendHistoricalSummariesUpdate(summary *ethpb.HistoricalSummary) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	summaries := b.historicalSummaries
+	if b.sharedFieldReferences[nativetypes.HistoricalSummaries].Refs() > 1 {
+		summaries = make([]*ethpb.HistoricalSummary, len(b.historicalSummaries))
+		copy(summaries, b.historicalSummaries)
+		b.sharedFieldReferences[nativetypes.HistoricalSummaries].MinusRef()
+		b.sharedFieldReferences[nativetypes.HistoricalSummaries] = stateutil.NewRef(1)
+	}
+
+	b.historicalSummaries = append(summaries, summary)
+	b.markFieldAsDirty(nativetypes.HistoricalSummaries)
 	return nil
 }
 

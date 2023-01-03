@@ -14,11 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -366,16 +369,30 @@ func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, e
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
-		historicalBatch := &ethpb.HistoricalBatch{
-			BlockRoots: state.BlockRoots(),
-			StateRoots: state.StateRoots(),
-		}
-		batchRoot, err := historicalBatch.HashTreeRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash historical batch")
-		}
-		if err := state.AppendHistoricalRoots(batchRoot); err != nil {
-			return nil, err
+		if state.Version() >= version.Capella {
+			br, err := stateutil.ArraysRoot(state.BlockRoots(), fieldparams.BlockRootsLength)
+			if err != nil {
+				return nil, err
+			}
+			sr, err := stateutil.ArraysRoot(state.StateRoots(), fieldparams.StateRootsLength)
+			if err != nil {
+				return nil, err
+			}
+			if err := state.AppendHistoricalSummariesUpdate(&ethpb.HistoricalSummary{BlockSummaryRoot: br[:], StateSummaryRoot: sr[:]}); err != nil {
+				return nil, err
+			}
+		} else {
+			historicalBatch := &ethpb.HistoricalBatch{
+				BlockRoots: state.BlockRoots(),
+				StateRoots: state.StateRoots(),
+			}
+			batchRoot, err := historicalBatch.HashTreeRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash historical batch")
+			}
+			if err := state.AppendHistoricalRoots(batchRoot); err != nil {
+				return nil, err
+			}
 		}
 	}
 

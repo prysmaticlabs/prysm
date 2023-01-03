@@ -82,6 +82,7 @@ var capellaFields = append(
 	nativetypes.LatestExecutionPayloadHeaderCapella,
 	nativetypes.NextWithdrawalIndex,
 	nativetypes.NextWithdrawalValidatorIndex,
+	nativetypes.HistoricalSummaries,
 )
 
 const (
@@ -433,6 +434,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		latestExecutionPayloadHeaderCapella: st.LatestExecutionPayloadHeader,
 		nextWithdrawalIndex:                 st.NextWithdrawalIndex,
 		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
+		historicalSummaries:                 st.HistoricalSummaries,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -530,6 +532,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		nextSyncCommittee:                   b.nextSyncCommitteeVal(),
 		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
+		historicalSummaries:                 b.historicalSummariesVal(),
 
 		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -833,6 +836,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
 	case nativetypes.NextWithdrawalValidatorIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
+	case nativetypes.HistoricalSummaries:
+		return historicalSummaryRoot(b.historicalSummaries)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
