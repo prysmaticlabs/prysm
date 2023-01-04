@@ -60,8 +60,9 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		validatorService:      vs,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
-		WalletPassword: strongPass,
+		Keymanager:       pb.KeymanagerKind_IMPORTED,
+		WalletPassword:   strongPass,
+		MnemonicLanguage: "english",
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
@@ -117,15 +118,17 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
-		WalletPassword: "", // Weak password, empty string
+		Keymanager:       pb.KeymanagerKind_IMPORTED,
+		WalletPassword:   "", // Weak password, empty string
+		MnemonicLanguage: "english",
 	}
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
 
 	req = &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
-		WalletPassword: "a", // Weak password, too short
+		Keymanager:       pb.KeymanagerKind_IMPORTED,
+		WalletPassword:   "a", // Weak password, too short
+		MnemonicLanguage: "english",
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
@@ -174,10 +177,11 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.WalletPassword = strongPass
 	// Create(derived) should fail then test recover.
 	reqCreate := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_DERIVED,
-		WalletPassword: strongPass,
-		NumAccounts:    2,
-		Mnemonic:       mnemonic,
+		Keymanager:       pb.KeymanagerKind_DERIVED,
+		WalletPassword:   strongPass,
+		NumAccounts:      2,
+		Mnemonic:         mnemonic,
+		MnemonicLanguage: "english",
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
