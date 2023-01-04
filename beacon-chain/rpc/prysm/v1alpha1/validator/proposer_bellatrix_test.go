@@ -10,7 +10,6 @@ import (
 	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -39,56 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func TestServer_buildHeaderBlock(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
-	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	copiedState := beaconState.Copy()
-
-	proposerServer := &Server{
-		BeaconDB: db,
-		StateGen: stategen.New(db, doublylinkedtree.New()),
-	}
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
-	require.NoError(t, err)
-	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
-	require.NoError(t, proposerServer.BeaconDB.SaveState(ctx, beaconState, r))
-
-	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
-	require.NoError(t, err)
-
-	vs := &Server{StateGen: stategen.New(db, doublylinkedtree.New()), BeaconDB: db}
-	h := &v1.ExecutionPayloadHeader{
-		BlockNumber:      123,
-		GasLimit:         456,
-		GasUsed:          789,
-		ParentHash:       make([]byte, fieldparams.RootLength),
-		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
-		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-		BlockHash:        make([]byte, fieldparams.RootLength),
-		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		ExtraData:        make([]byte, 0),
-	}
-	got, err := vs.buildBlindBlock(ctx, b1.Block, h)
-	require.NoError(t, err)
-	require.DeepEqual(t, h, got.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
-
-	_, err = vs.buildBlindBlock(ctx, nil, h)
-	require.ErrorContains(t, "nil block", err)
-
-	_, err = vs.buildBlindBlock(ctx, b1.Block, nil)
-	require.ErrorContains(t, "nil header", err)
-}
 
 func TestServer_getPayloadHeader(t *testing.T) {
 	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
@@ -407,121 +356,6 @@ func TestServer_readyForBuilder(t *testing.T) {
 	ready, err = vs.readyForBuilder(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
-}
-
-func TestServer_getAndBuildHeaderBlock(t *testing.T) {
-	ctx := context.Background()
-	vs := &Server{}
-
-	// Nil builder
-	ready, _, err := vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Not configured
-	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Block is not ready
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
-	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, nil)
-	require.NoError(t, err)
-	require.Equal(t, false, ready)
-
-	// Failed to get header
-	b1 := util.NewBeaconBlockBellatrix()
-	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := blocks.NewSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	wbr1, err := wb1.Block().HashTreeRoot()
-	require.NoError(t, err)
-	vs.BeaconDB = dbTest.SetupDB(t)
-	require.NoError(t, vs.BeaconDB.SaveBlock(ctx, wb1))
-	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
-	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	ready, _, err = vs.GetAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
-	require.ErrorContains(t, "could not get payload", err)
-	require.Equal(t, false, ready)
-
-	// Block built and validated!
-	beaconState, keys := util.DeterministicGenesisStateAltair(t, 16384)
-	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
-	copiedState := beaconState.Copy()
-
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
-	require.NoError(t, err)
-	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, vs.BeaconDB, b)
-	require.NoError(t, vs.BeaconDB.SaveState(ctx, beaconState, r))
-
-	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
-	require.NoError(t, err)
-
-	ts := uint64(time.Now().Unix()) + uint64(altairBlk.Block.Slot)*params.BeaconConfig().SecondsPerSlot
-	h := &v1.ExecutionPayloadHeader{
-		BlockNumber:      123,
-		GasLimit:         456,
-		GasUsed:          789,
-		ParentHash:       make([]byte, fieldparams.RootLength),
-		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
-		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-		BlockHash:        make([]byte, fieldparams.RootLength),
-		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		Timestamp:        ts,
-	}
-
-	vs.StateGen = stategen.New(vs.BeaconDB, doublylinkedtree.New())
-	vs.GenesisFetcher = &blockchainTest.ChainService{}
-	vs.ForkFetcher = &blockchainTest.ChainService{Fork: &ethpb.Fork{}}
-
-	sk, err := bls.RandKey()
-	require.NoError(t, err)
-	bid := &ethpb.BuilderBid{
-		Header: &v1.ExecutionPayloadHeader{
-			BlockNumber:      123,
-			GasLimit:         456,
-			GasUsed:          789,
-			ParentHash:       make([]byte, fieldparams.RootLength),
-			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-			PrevRandao:       make([]byte, fieldparams.RootLength),
-			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-			BlockHash:        make([]byte, fieldparams.RootLength),
-			TransactionsRoot: make([]byte, fieldparams.RootLength),
-			Timestamp:        ts,
-		},
-		Pubkey: sk.PublicKey().Marshal(),
-		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
-	}
-	d := params.BeaconConfig().DomainApplicationBuilder
-	domain, err := signing.ComputeDomain(d, nil, nil)
-	require.NoError(t, err)
-	sr, err := signing.ComputeSigningRoot(bid, domain)
-	require.NoError(t, err)
-	sBid := &ethpb.SignedBuilderBid{
-		Message:   bid,
-		Signature: sk.Sign(sr[:]).Marshal(),
-	}
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
-	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	ready, builtBlk, err := vs.GetAndBuildBlindBlock(ctx, altairBlk.Block)
-	require.NoError(t, err)
-	require.Equal(t, true, ready)
-	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
 }
 
 func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {

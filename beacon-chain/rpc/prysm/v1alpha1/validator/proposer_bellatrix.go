@@ -231,50 +231,6 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
-// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
-// If the status is false that means builder the header block is disallowed.
-// This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
-	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
-	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return false, nil, nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
-	defer cancel()
-	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
-	ready, err := vs.readyForBuilder(ctx)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder is ready")
-	}
-	if !ready {
-		return false, nil, nil
-	}
-
-	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
-	}
-	if circuitBreak {
-		return false, nil, nil
-	}
-
-	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not get payload header")
-	}
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Slot,
-	}).Info("Retrieved header from builder")
-	gb, err := vs.buildBlindBlock(ctx, b, h)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
-	}
-	return true, gb, nil
-}
-
 // Validates builder signature and returns an error if the signature is invalid.
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
