@@ -119,3 +119,25 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 	assert.LogsContain(t, hook, "validator index: 0 with set withdrawal address: 0x0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 	assert.LogsContain(t, hook, "validator index: 1 with set withdrawal address: 0x0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 }
+
+func TestCallWithdrawalEndpoint_Empty(t *testing.T) {
+	baseurl := "127.0.0.1:3500"
+	content := []byte("[]")
+	tmpfile, err := os.CreateTemp("./testdata", "*.json")
+	require.NoError(t, err)
+	_, err = tmpfile.Write(content)
+	require.NoError(t, err)
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		require.NoError(t, err)
+	}()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("file", tmpfile.Name(), "")
+	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	assert.NoError(t, set.Set("file", tmpfile.Name()))
+	cliCtx := cli.NewContext(&app, set, nil)
+	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	assert.ErrorContains(t, "the list of signed requests is empty", err)
+}

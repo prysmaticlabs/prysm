@@ -85,7 +85,7 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 			}
 		}
 	}
-	return callWithdrawalEndpoint(ctx, beaconNodeHost, setWithdrawalAddressJsons)
+	return callWithdrawalEndpoints(ctx, beaconNodeHost, setWithdrawalAddressJsons)
 }
 
 func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
@@ -100,18 +100,25 @@ func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToEx
 	return nil
 }
 
-func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+	fullpath := host + apiPath
+	client := &http.Client{}
+	if err := changeBLStoExecutionCall(ctx, client, fullpath, request); err != nil {
+		return err
+	}
+	return checkIfWithdrawsAreInPool(ctx, client, fullpath, request)
+}
+
+func changeBLStoExecutionCall(ctx context.Context, client *http.Client, fullpath string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal json")
 	}
-	fullpath := host + apiPath
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
 	if err != nil {
 		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -130,14 +137,17 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
 	}
 	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
+	return nil
+}
 
+func checkIfWithdrawsAreInPool(ctx context.Context, client *http.Client, fullpath string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	log.Info("retrieving list of withdrawal messages known to node...")
-	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -162,7 +172,6 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 	for _, signedMessage := range poolResponse.Data {
 		log.Infof("validator index: %s with set withdrawal address: 0x%s", signedMessage.Message.ValidatorIndex, signedMessage.Message.ToExecutionAddress)
 	}
-
 	return nil
 }
 
