@@ -98,6 +98,16 @@ func GenerateAttestations(
 				return nil, err
 			}
 			headState = genState
+		case version.Capella:
+			pbState, err := state_native.ProtobufBeaconStateCapella(bState.ToProto())
+			if err != nil {
+				return nil, err
+			}
+			genState, err := state_native.InitializeFromProtoUnsafeCapella(pbState)
+			if err != nil {
+				return nil, err
+			}
+			headState = genState
 		default:
 			return nil, errors.New("state type isn't supported")
 		}

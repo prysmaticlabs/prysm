@@ -129,7 +129,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errNilBlockHeader
 	}
 	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
-	payloadHash := [32]byte{}
+	var payloadHash [32]byte
 	if state.Version() >= version.Bellatrix {
 		ph, err := state.LatestExecutionPayloadHeader()
 		if err != nil {

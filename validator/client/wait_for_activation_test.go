@@ -34,7 +34,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -70,7 +70,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -103,7 +103,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -141,7 +141,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -179,7 +179,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -222,7 +222,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	beaconClient := mock.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -262,11 +262,11 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	t.Run("Imported keymanager", func(t *testing.T) {
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var activePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
 			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -327,12 +327,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		inactivePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
 		require.NoError(t, err)
-		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err :=
 			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 1))
 		require.NoError(t, err)
-		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var activePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		wallet := &walletMock.Wallet{
 			Files:            make(map[string]map[string][]byte),

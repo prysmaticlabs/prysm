@@ -11,6 +11,7 @@ import (
 type MockFetcher struct {
 	BeaconState     state.BeaconState
 	BeaconStateRoot []byte
+	StatesBySlot    map[types.Slot]state.BeaconState
 }
 
 // State --
@@ -23,6 +24,6 @@ func (m *MockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
 	return m.BeaconStateRoot, nil
 }
 
-func (m *MockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
-	return m.BeaconState, nil
+func (m *MockFetcher) StateBySlot(_ context.Context, s types.Slot) (state.BeaconState, error) {
+	return m.StatesBySlot[s], nil
 }
