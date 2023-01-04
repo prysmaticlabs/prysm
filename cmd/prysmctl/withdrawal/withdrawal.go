@@ -149,7 +149,7 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 		}
 		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
 	}
-	log.Infoln("known withdrawal messages to node, but not necessarily incorporated into any block yet: ")
+	log.Infoln("withdrawal messages in the node's operations pool:  ")
 	for _, signedMessage := range poolResponse.Data {
 		log.Infof("validator index: %s with set withdrawal address: 0x%s", signedMessage.Message.ValidatorIndex, signedMessage.Message.ToExecutionAddress)
 	}
