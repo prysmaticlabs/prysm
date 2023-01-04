@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -335,54 +334,6 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
-// circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
-func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
-	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
-		return true, errors.New("no fork choicer configured")
-	}
-
-	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
-	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
-	diff, err := s.SafeSubSlot(highestReceivedSlot)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxConsecutiveSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"currentSlot":                    s,
-			"highestReceivedSlot":            highestReceivedSlot,
-			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
-		return true, nil
-	}
-
-	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
-	if s < params.BeaconConfig().SlotsPerEpoch {
-		return false, nil
-	}
-
-	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
-	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
-	if err != nil {
-		return true, err
-	}
-	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
-	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxEpochSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"totalMissed":              diff,
-			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
-		return true, nil
-	}
-
-	return false, nil
-}
-
 // GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
@@ -425,21 +376,6 @@ func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBloc
 		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
 	}
 	return true, gb, nil
-}
-
-// validatorRegistered returns true if validator with index `id` was previously registered in the database.
-func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
-	if vs.BeaconDB == nil {
-		return false, errors.New("nil beacon db")
-	}
-	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
-	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-	return true, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
