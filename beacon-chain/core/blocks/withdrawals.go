@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -175,15 +176,18 @@ func BLSChangesSignatureBatch(
 		Messages:     make([][32]byte, len(changes)),
 		Descriptions: make([]string, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
+	var epoch types.Epoch
 	var fork *ethpb.Fork
 	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
 		fork = &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
 			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+			Epoch:           epoch,
 		}
+
 	} else {
+		epoch = slots.ToEpoch(st.Slot())
 		fork = st.Fork()
 	}
 	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
@@ -205,4 +209,31 @@ func BLSChangesSignatureBatch(
 		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
+}
+
+// VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+func VerifyBLSChangeSignature(
+	st state.BeaconState,
+	change *ethpbv2.SignedBLSToExecutionChange,
+) error {
+	var epoch types.Epoch
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           epoch,
+		}
+
+	} else {
+		epoch = slots.ToEpoch(st.Slot())
+		fork = st.Fork()
+	}
+	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing domain")
+	}
+	publicKey := change.Message.FromBlsPubkey
+	return signing.VerifySigningRoot(change.Message, publicKey, change.Signature, domain)
 }
