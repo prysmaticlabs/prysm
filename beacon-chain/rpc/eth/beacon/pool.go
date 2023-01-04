@@ -316,21 +316,46 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	for _, change := range req.GetChanges() {
+	var failures []*helpers.SingleIndexedVerificationFailure
+	for i, change := range req.GetChanges() {
 		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
 		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
 		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not validate SignedBLSToExecutionChange: %v", err)
+			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
+			})
+			continue
 		}
 		if err := blocks.VerifyBLSChangeSignature(st, change); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Could not validate signature: %v", err)
+			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not validate signature: " + err.Error(),
+			})
+			continue
 		}
 		bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
 		if st.Version() >= version.Capella {
 			if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not broadcast BLSToExecutionChange: %v", err)
+				failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+					Index:   i,
+					Message: "Could not broadcast BLSToExecutionChange: " + err.Error(),
+				})
+				continue
 			}
 		}
+	}
+	if len(failures) > 0 {
+		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
+		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"One or more BLSToExecutionChange failed validation. Could not prepare BLSToExecutionChange failure information: %v",
+				err,
+			)
+		}
+		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation")
 	}
 	return &emptypb.Empty{}, nil
 }
