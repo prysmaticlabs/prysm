@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -784,19 +785,33 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 	verify, err := batch.Verify()
 	require.NoError(t, err)
 	require.Equal(t, true, verify)
+
+	// Verify a single change
+	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
 }
 
 func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
+	cfg := params.BeaconConfig()
+	savedConfig := cfg.Copy()
+	cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch.AddEpoch(2)
+	params.OverrideBeaconConfig(cfg)
+
 	spb := &ethpb.BeaconStateBellatrix{
 		Fork: &ethpb.Fork{
-			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
+			PreviousVersion: params.BeaconConfig().AltairForkVersion,
+			Epoch:           params.BeaconConfig().BellatrixForkEpoch,
 		},
 	}
 	numValidators := 10
 	validators := make([]*ethpb.Validator, numValidators)
 	blsChanges := make([]*ethpb.BLSToExecutionChange, numValidators)
 	spb.Balances = make([]uint64, numValidators)
+	slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+	require.NoError(t, err)
+	spb.Slot = slot
+
 	privKeys := make([]common.SecretKey, numValidators)
 	maxEffectiveBalance := params.BeaconConfig().MaxEffectiveBalance
 	executionAddress := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13}
@@ -836,6 +851,10 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 			Epoch:           params.BeaconConfig().CapellaForkEpoch,
 		},
 	}
+	slot, err = slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+	require.NoError(t, err)
+	spc.Slot = slot
+
 	stc, err := state_native.InitializeFromProtoCapella(spc)
 	require.NoError(t, err)
 
@@ -854,4 +873,9 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 	verify, err := batch.Verify()
 	require.NoError(t, err)
 	require.Equal(t, true, verify)
+
+	// Verify a single change
+	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
+	params.OverrideBeaconConfig(savedConfig)
 }

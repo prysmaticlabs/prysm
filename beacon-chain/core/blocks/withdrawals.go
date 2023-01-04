@@ -212,6 +212,8 @@ func BLSChangesSignatureBatch(
 }
 
 // VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+// It validates the signature with the Capella fork version if the passed state
+// is from a previous fork.
 func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
