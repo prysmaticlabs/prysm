@@ -3,6 +3,7 @@ package derived
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/tyler-smith/go-bip39"
@@ -35,13 +36,15 @@ func Test_setBip39Lang(t *testing.T) {
 		{lang: "korean", expectedWordlist: wordlists.Korean, wantErr: nil},
 		{lang: "italian", expectedWordlist: wordlists.Italian, wantErr: nil},
 		{lang: "spanish", expectedWordlist: wordlists.Spanish, wantErr: nil},
-		{lang: "undefined", expectedWordlist: []string{}, wantErr: ErrUnsupportedMnemonicLanguage},
+		{lang: "undefined", expectedWordlist: []string{}, wantErr: errors.Wrapf(ErrUnsupportedMnemonicLanguage, "%s", "undefined")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.lang, func(t *testing.T) {
 			err := setBip39Lang(tt.lang)
-			assert.Equal(t, tt.wantErr, err)
-			if err == nil {
+			if err != nil {
+				assert.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				assert.Equal(t, tt.wantErr, err)
 				wordlist := bip39.GetWordList()
 				assert.DeepEqual(t, tt.expectedWordlist, wordlist, "Expected wordlist to match")
 			}

@@ -108,7 +108,7 @@ func setBip39Lang(lang string) error {
 	if wl, ok := allowedLanguages[lang]; ok {
 		wordlist = wl
 	} else {
-		return ErrUnsupportedMnemonicLanguage
+		return errors.Wrapf(ErrUnsupportedMnemonicLanguage, "%s", lang)
 	}
 	bip39.SetWordList(wordlist)
 	return nil
