@@ -53,6 +53,10 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
+
 	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
@@ -214,7 +218,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil /* genesis val root */)
+		nil  /* genesis val root */)
 	if err != nil {
 		return err
 	}
