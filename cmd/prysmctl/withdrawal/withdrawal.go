@@ -23,26 +23,23 @@ import (
 )
 
 const (
-	basePath = "/eth/v1"
-	apiPath  = "/beacon/pool/bls_to_execution_changes"
+	apiPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
 )
 
-func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
+func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
 	defer span.End()
-
-	BeaconNodeHost := "http://localhost:3500"
+	beaconNodeHost := "http://localhost:3500"
 	if c.String(BeaconHostFlag.Name) != "" {
-		BeaconNodeHost = c.String(BeaconHostFlag.Name)
+		beaconNodeHost = c.String(BeaconHostFlag.Name)
 	}
-	u, err := url.ParseRequestURI(BeaconNodeHost)
+	u, err := url.ParseRequestURI(beaconNodeHost)
 	if err != nil {
 		return errors.Wrap(err, "invalid format, unable to parse url")
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("provided url %s is not in the format of http(s)://host:port", BeaconNodeHost)
+		return fmt.Errorf("provided url %s is not in the format of http(s)://host:port", beaconNodeHost)
 	}
-
 	foundFilePaths, err := findWithdrawalFiles(c.String(FileFlag.Name))
 	if err != nil {
 		return errors.Wrap(err, "failed to find withdrawal files")
@@ -59,43 +56,33 @@ func setWithdrawalAddress(c *cli.Context, r io.Reader) error {
 		"of changing your bls withdrawal address to an ethereum address. " +
 		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
 		"You will NOT be able to change the address again once changed. ")
+	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	for _, foundFilePath := range foundFilePaths {
 		b, err := os.ReadFile(filepath.Clean(foundFilePath))
 		if err != nil {
 			return errors.Wrap(err, "failed to open file")
 		}
-		switch string(b)[0:1] {
-		case "[":
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
-			if err := json.Unmarshal(b, &to); err != nil {
-				return errors.Wrap(err, "failed to unmarshal file")
-			}
-			if len(to) == 0 {
-				return errors.New("the list of signed requests is empty")
-			}
-			for _, jsonOb := range to {
-				if err := verifyWithdrawalCertainty(r, jsonOb); err != nil {
-					return err
-				}
-			}
-			return callWithdrawalEndpoint(ctx, BeaconNodeHost, to)
-		case "{":
-			var to *apimiddleware.SignedBLSToExecutionChangeJson
-			if err := json.Unmarshal(b, &to); err != nil {
-				return errors.Wrap(err, "failed to unmarshal file")
-			}
-			if to == nil || to.Message == nil {
-				return errors.New("the object or object's message field in file is empty")
-			}
-			if err := verifyWithdrawalCertainty(r, to); err != nil {
+		if string(b)[0:1] != "[" {
+			log.Warnf("provided file: %s, is not a list \n", foundFilePath)
+			continue
+		}
+		var to []*apimiddleware.SignedBLSToExecutionChangeJson
+		if err := json.Unmarshal(b, &to); err != nil {
+			return errors.Wrap(err, "failed to unmarshal file")
+		}
+		setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, to...)
+	}
+	if len(setWithdrawalAddressJsons) == 0 {
+		return errors.New("the list of signed requests is empty")
+	}
+	if !c.Bool(SkipPromptsFlag.Name) {
+		for _, jsonOb := range setWithdrawalAddressJsons {
+			if err := verifyWithdrawalCertainty(r, jsonOb); err != nil {
 				return err
 			}
-			return callWithdrawalEndpoint(ctx, BeaconNodeHost, []*apimiddleware.SignedBLSToExecutionChangeJson{to})
-		default:
-			return errors.New("the provided file is not a json object or list of jason objects")
 		}
 	}
-	return nil
+	return callWithdrawalEndpoint(ctx, beaconNodeHost, setWithdrawalAddressJsons)
 }
 
 func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
@@ -116,7 +103,7 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal json")
 	}
-	fullpath := host + basePath + apiPath
+	fullpath := host + apiPath
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
 	if err != nil {
 		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
@@ -130,7 +117,40 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("API request to %s responded with a status other than OK - status %v, body %v", fullpath, resp.Status, resp.Body)
 	}
-	log.Info("Successfully published message to update withdrawal addresses.")
+	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
+
+	log.Info("retrieving list of withdrawal messages known to node.")
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request to %s responded with a status other than OK - status %v, body %v", fullpath, resp.Status, resp.Body)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.WithError(err).Error("could not close response body")
+		}
+	}(resp.Body)
+	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
+	if err := json.NewDecoder(resp.Body).Decode(poolResponse); err != nil {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "failed to read response body")
+		}
+		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
+	}
+	log.Info("retrieved the following list:")
+	for _, signedMessage := range poolResponse.Data {
+		log.Infof("validator index: %s with set withdrawal address: 0x%s", signedMessage.Message.ValidatorIndex, signedMessage.Message.ToExecutionAddress)
+	}
+
 	return nil
 }
 

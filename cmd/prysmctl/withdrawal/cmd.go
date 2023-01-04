@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/v3/cmd"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/runtime/tos"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -20,20 +19,21 @@ var (
 		Name:  "file",
 		Usage: "file location for for the BLSToExecutionChange JSON",
 	}
+	SkipPromptsFlag = &cli.BoolFlag{
+		Name:  "skip-prompts",
+		Usage: "skips all prompts for verifying each provided signed withdrawal message to for setting the withdrawal address",
+	}
 )
 
 var Commands = []*cli.Command{
 	{
 		Name:    "set-withdrawal-addresses",
 		Aliases: []string{"swa"},
-		Usage:   "command for setting the withdrawal ethereum address to the associated validator key",
+		Usage:   "command for setting the withdrawal ethereum addresses to their associated validator keys. WARN: once set values are included they can no longer be updated.",
 		Flags: []cli.Flag{
 			BeaconHostFlag,
 			FileFlag,
-			features.Mainnet,
-			features.PraterTestnet,
-			features.RopstenTestnet,
-			features.SepoliaTestnet,
+			cmd.ConfigFileFlag,
 			cmd.AcceptTosFlag,
 		},
 		Before: func(cliCtx *cli.Context) error {
@@ -43,7 +43,7 @@ var Commands = []*cli.Command{
 			return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			if err := setWithdrawalAddress(cliCtx, os.Stdin); err != nil {
+			if err := setWithdrawalAddresses(cliCtx, os.Stdin); err != nil {
 				log.WithError(err).Fatal("Could not set withdrawal address")
 			}
 			return nil
