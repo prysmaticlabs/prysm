@@ -138,6 +138,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		} else if canUseBuilder {
 			h, err := vs.getPayloadHeaderFromBuilder(ctx, req.Slot, idx)
 			if err != nil {
+				builderGetPayloadMissCount.Inc()
 				log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 			} else {
 				blk.SetBlinded(true)
