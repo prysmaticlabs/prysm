@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -36,17 +35,6 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
-
-func (vs *Server) canUseBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (bool, error) {
-	registered, err := vs.validatorRegistered(ctx, idx)
-	if err != nil {
-		return false, err
-	}
-	if !registered {
-		return false, nil
-	}
-	return vs.circuitBreakBuilder(slot)
-}
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
@@ -225,74 +213,73 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	return wb, nil
 }
 
-// circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
-func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
-	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
-		return true, errors.New("no fork choicer configured")
-	}
-
-	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
-	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
-	diff, err := s.SafeSubSlot(highestReceivedSlot)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxConsecutiveSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"currentSlot":                    s,
-			"highestReceivedSlot":            highestReceivedSlot,
-			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
-		return true, nil
-	}
-
-	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
-	if s < params.BeaconConfig().SlotsPerEpoch {
+// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
+// first finalized checkpt has been execution-enabled.
+func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
+	cp := vs.FinalizationFetcher.FinalizedCheckpt()
+	// Checkpoint root is zero means we are still at genesis epoch.
+	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
 		return false, nil
 	}
-
-	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
-	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
+	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		return true, err
-	}
-	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
-	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
-	if err != nil {
-		return true, err
-	}
-	if diff > maxEpochSkipSlotsAllowed {
-		log.WithFields(logrus.Fields{
-			"totalMissed":              diff,
-			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
-		return true, nil
-	}
-
-	return false, nil
-}
-
-// validatorRegistered returns true if validator with index `id` was previously registered in the database.
-func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
-	if vs.BeaconDB == nil {
-		return false, errors.New("nil beacon db")
-	}
-	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
-	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		return false, nil
-	case err != nil:
 		return false, err
 	}
-	return true, nil
+	if err = consensusblocks.BeaconBlockIsNil(b); err != nil {
+		return false, err
+	}
+	return blocks.IsExecutionBlock(b.Block().Body())
+}
+
+// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
+// If the status is false that means builder the header block is disallowed.
+// This routine is time limited by `blockBuilderTimeout`.
+func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
+	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return false, nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
+	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
+	ready, err := vs.readyForBuilder(ctx)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not determine if builder is ready")
+	}
+	if !ready {
+		return false, nil, nil
+	}
+
+	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
+	}
+	if circuitBreak {
+		return false, nil, nil
+	}
+
+	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not get payload header")
+	}
+	log.WithFields(logrus.Fields{
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"gasUsed":      h.GasUsed,
+		"slot":         b.Slot,
+	}).Info("Retrieved header from builder")
+	gb, err := vs.buildBlindBlock(ctx, b, h)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
+	}
+	return true, gb, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
