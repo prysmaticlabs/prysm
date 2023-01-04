@@ -49,13 +49,16 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	}
 	au := aurora.NewAurora(true)
 	fmt.Println(au.Red("===============IMPORTANT==============="))
-	fmt.Println(au.Red("Please read the following carefully"))
-	fmt.Println("This action will allow you to partially withdraw any amount over the 32 staked eth in your validator balance. " +
-		"You will also be entitled to the full withdrawal if your validator has exited. " +
-		"Please navigate to the following website and make sure you understand the current implications " +
-		"of changing your bls withdrawal address to an ethereum address. " +
-		"THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. " +
-		"You will NOT be able to change the address again once changed. ")
+	if !c.Bool(SkipPromptsFlag.Name) {
+		fmt.Println(au.Red("Please read the following carefully"))
+	}
+	fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
+		"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
+		"The partial or full withdrawal of the validator balance may require several days of processing. \n" +
+		"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
+	fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
+	fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
+
 	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	for _, foundFilePath := range foundFilePaths {
 		b, err := os.ReadFile(filepath.Clean(foundFilePath))
@@ -119,7 +122,7 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 	}
 	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
 
-	log.Info("retrieving list of withdrawal messages known to node.")
+	log.Info("retrieving list of withdrawal messages known to node...")
 	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
 	if err != nil {
 		return err
@@ -146,7 +149,7 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 		}
 		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
 	}
-	log.Info("retrieved the following list:")
+	log.Infoln("known withdrawal messages to node, but not necessarily incorporated into any block yet: ")
 	for _, signedMessage := range poolResponse.Data {
 		log.Infof("validator index: %s with set withdrawal address: 0x%s", signedMessage.Message.ValidatorIndex, signedMessage.Message.ToExecutionAddress)
 	}
