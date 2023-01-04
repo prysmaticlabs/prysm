@@ -172,7 +172,7 @@ message CreateWalletRequest {
     string wallet_password = 2;
     // Mnemonic in case the user is creating a derived wallet.
     string mnemonic = 3;
-    // User specified mnemonic language
+    // User specified mnemonic language.
     string mnemonic_language = 4;
     // Number of accounts.
     uint64 num_accounts = 5;
