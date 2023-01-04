@@ -22,7 +22,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -1231,7 +1230,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     types.ValidatorIndex(i),
+			ValidatorIndex:     eth2types.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1323,7 +1322,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     types.ValidatorIndex(i),
+			ValidatorIndex:     eth2types.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1431,7 +1430,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     types.ValidatorIndex(i),
+			ValidatorIndex:     eth2types.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
