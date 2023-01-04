@@ -92,8 +92,7 @@ func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToEx
 	au := aurora.NewAurora(true)
 	withdrawalConfirmation := request.Message.ToExecutionAddress
 	fmt.Println(au.Red("===================================="))
-	fmt.Println("YOU ARE ATTEMPTING TO CHANGE THE BLS WITHDRAWAL(" + au.Red(request.Message.FromBLSPubkey).String() + ") ADDRESS " +
-		"TO AN ETHEREUM ADDRESS(" + au.Red(request.Message.ToExecutionAddress).String() + ") FOR VALIDATOR INDEX(" + au.Red(request.Message.ValidatorIndex).String() + "). ")
+	fmt.Println("YOU ARE ATTEMPTING TO SET A WITHDRAWAL ADDRESS TO  " + au.Red(request.Message.ToExecutionAddress).String() + " FOR VALIDATOR INDEX" + au.Red(request.Message.ValidatorIndex).String() + ". ")
 	_, err := withdrawalPrompt(withdrawalConfirmation, r)
 	if err != nil {
 		return err
@@ -118,7 +117,17 @@ func callWithdrawalEndpoint(ctx context.Context, host string, request []*apimidd
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request to %s responded with a status other than OK - status %v, body %v", fullpath, resp.Status, resp.Body)
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		if err := decoder.Decode(errorJson); err != nil {
+			return errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+		}
+		for _, failure := range errorJson.Failures {
+			w := request[failure.Index].Message
+			log.Errorf("validator index: %s set to withdrawal address: %s failed with message: %s \n", w.ValidatorIndex, w.ToExecutionAddress, failure.Message)
+		}
+		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
 	}
 	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
 
