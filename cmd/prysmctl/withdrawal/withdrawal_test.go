@@ -141,3 +141,56 @@ func TestCallWithdrawalEndpoint_Empty(t *testing.T) {
 	err = setWithdrawalAddresses(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "the list of signed requests is empty", err)
 }
+
+func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
+	file := "./testdata/change-operations.json"
+	baseurl := "127.0.0.1:3500"
+	l, err := net.Listen("tcp", baseurl)
+	require.NoError(t, err)
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(400)
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
+			Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
+				{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
+			},
+		})
+		require.NoError(t, err)
+	}))
+	err = srv.Listener.Close()
+	require.NoError(t, err)
+	srv.Listener = l
+	srv.Start()
+	defer srv.Close()
+	hook := logtest.NewGlobal()
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("file", file, "")
+	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	assert.NoError(t, set.Set("file", file))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	content := []byte("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+	tmpfile, err := os.CreateTemp("", "content")
+	require.NoError(t, err)
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		require.NoError(t, err)
+	}()
+
+	_, err = tmpfile.Write(content)
+	require.NoError(t, err)
+
+	_, err = tmpfile.Seek(0, 0)
+	require.NoError(t, err)
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }() // Restore original Stdin
+
+	os.Stdin = tmpfile
+	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	assert.ErrorContains(t, "POST error", err)
+
+	assert.LogsContain(t, hook, "Could not validate SignedBLSToExecutionChange")
+}

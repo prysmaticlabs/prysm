@@ -132,7 +132,10 @@ func changeBLStoExecutionCall(ctx context.Context, client *http.Client, fullpath
 		}
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
-			log.Errorf("validator index: %s set to withdrawal address: %s failed with message: %s \n", w.ValidatorIndex, w.ToExecutionAddress, failure.Message)
+			log.WithFields(log.Fields{
+				"validator index":    w.ValidatorIndex,
+				"withdrawal address": w.ToExecutionAddress,
+			}).Error(failure.Message)
 		}
 		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
 	}
