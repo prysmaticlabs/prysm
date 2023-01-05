@@ -879,3 +879,51 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
 	params.OverrideBeaconConfig(savedConfig)
 }
+
+func TestBLSChangesSigningDomain(t *testing.T) {
+	cfg := params.BeaconConfig()
+	savedConfig := cfg.Copy()
+	cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch.AddEpoch(2)
+	params.OverrideBeaconConfig(cfg)
+	capellaDomain := []byte{0xa, 0x0, 0x0, 0x0, 0xe7, 0xb4, 0xbb, 0x67, 0x55, 0x1d, 0xde, 0x95, 0x89, 0xc1, 0x55, 0x3d, 0xfd, 0xa3, 0x7a, 0x94, 0x2a, 0x18, 0xca, 0xf1, 0x84, 0xf9, 0xcc, 0x16, 0x29, 0xd2, 0x5c, 0xf5}
+
+	t.Run("pre-Capella fork", func(t *testing.T) {
+		spb := &ethpb.BeaconStateBellatrix{
+			Fork: &ethpb.Fork{
+				CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,
+				PreviousVersion: params.BeaconConfig().AltairForkVersion,
+				Epoch:           params.BeaconConfig().BellatrixForkEpoch,
+			},
+		}
+		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+		require.NoError(t, err)
+		spb.Slot = slot
+
+		st, err := state_native.InitializeFromProtoBellatrix(spb)
+		require.NoError(t, err)
+
+		domain, err := blocks.BLSChangesSigningDomain(st)
+		require.NoError(t, err)
+		require.DeepEqual(t, capellaDomain, domain)
+	})
+	t.Run("post-Capella fork", func(t *testing.T) {
+		spb := &ethpb.BeaconStateCapella{
+			Fork: &ethpb.Fork{
+				CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+				PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+				Epoch:           params.BeaconConfig().CapellaForkEpoch,
+			},
+		}
+		slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+		require.NoError(t, err)
+		spb.Slot = slot
+
+		st, err := state_native.InitializeFromProtoCapella(spb)
+		require.NoError(t, err)
+
+		domain, err := blocks.BLSChangesSigningDomain(st)
+		require.NoError(t, err)
+		require.DeepEqual(t, capellaDomain, domain)
+	})
+	params.OverrideBeaconConfig(savedConfig)
+}

@@ -162,20 +162,8 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	return st, nil
 }
 
-func BLSChangesSignatureBatch(
-	st state.ReadOnlyBeaconState,
-	changes []*ethpb.SignedBLSToExecutionChange,
-) (*bls.SignatureBatch, error) {
-	// Return early if no changes
-	if len(changes) == 0 {
-		return bls.NewSet(), nil
-	}
-	batch := &bls.SignatureBatch{
-		Signatures:   make([][]byte, len(changes)),
-		PublicKeys:   make([]bls.PublicKey, len(changes)),
-		Messages:     make([][32]byte, len(changes)),
-		Descriptions: make([]string, len(changes)),
-	}
+// blsChangesSigningDomain returns the signing domain to check  BLSToExecutionChange messages against.
+func blsChangesSigningDomain(st state.ReadOnlyBeaconState) ([]byte, error) {
 	var epoch types.Epoch
 	var fork *ethpb.Fork
 	if st.Version() < version.Capella {
@@ -190,7 +178,24 @@ func BLSChangesSignatureBatch(
 		epoch = slots.ToEpoch(st.Slot())
 		fork = st.Fork()
 	}
-	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	return signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+}
+
+func BLSChangesSignatureBatch(
+	st state.ReadOnlyBeaconState,
+	changes []*ethpb.SignedBLSToExecutionChange,
+) (*bls.SignatureBatch, error) {
+	// Return early if no changes
+	if len(changes) == 0 {
+		return bls.NewSet(), nil
+	}
+	batch := &bls.SignatureBatch{
+		Signatures:   make([][]byte, len(changes)),
+		PublicKeys:   make([]bls.PublicKey, len(changes)),
+		Messages:     make([][32]byte, len(changes)),
+		Descriptions: make([]string, len(changes)),
+	}
+	domain, err := blsChangesSigningDomain(st)
 	if err != nil {
 		return nil, err
 	}
@@ -218,21 +223,7 @@ func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
-	var epoch types.Epoch
-	var fork *ethpb.Fork
-	if st.Version() < version.Capella {
-		epoch = params.BeaconConfig().CapellaForkEpoch
-		fork = &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           epoch,
-		}
-
-	} else {
-		epoch = slots.ToEpoch(st.Slot())
-		fork = st.Fork()
-	}
-	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	domain, err := blsChangesSigningDomain(st)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing domain")
 	}
