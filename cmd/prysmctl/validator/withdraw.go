@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -20,7 +19,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
+func setWithdrawalAddresses(c *cli.Context) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
 	defer span.End()
 	au := aurora.NewAurora(true)

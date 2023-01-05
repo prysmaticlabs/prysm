@@ -73,7 +73,7 @@ var Commands = []*cli.Command{
 
 				},
 				Action: func(cliCtx *cli.Context) error {
-					if err := setWithdrawalAddresses(cliCtx, os.Stdin); err != nil {
+					if err := setWithdrawalAddresses(cliCtx); err != nil {
 						log.WithError(err).Fatal("Could not set withdrawal address")
 					}
 					return nil
