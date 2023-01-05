@@ -3,6 +3,8 @@ package beacon_api
 import (
 	"bytes"
 	"encoding/json"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
@@ -11,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 	test_helpers "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/test-helpers"
-	"testing"
 )
 
 func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
