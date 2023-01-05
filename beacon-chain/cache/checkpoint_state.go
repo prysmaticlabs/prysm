@@ -1,8 +1,6 @@
 package cache
 
 import (
-	"sync"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
