@@ -59,7 +59,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		stringRetrievedPubKeys := make(map[string]struct{})
 
 		// Contains all keys in targetPubKeys but not in retrievedPubKeys
-		missingPubKeys := [][]byte{}
+		var missingPubKeys [][]byte
 
 		statuses := []*ethpb.ValidatorActivationResponse_Status{}
 
@@ -69,7 +69,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := c.beaconApiValidatorClient.getStateValidators(stringTargetPubKeys, nil)
+		stateValidators, err := c.stateValidatorsProvider.GetStateValidators(stringTargetPubKeys, nil, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get state validators")
 		}

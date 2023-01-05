@@ -147,7 +147,11 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -245,7 +249,11 @@ func TestActivation_InvalidData(t *testing.T) {
 					},
 				).Times(1)
 
-				validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+				validatorClient := beaconApiValidatorClient{
+					stateValidatorsProvider: beaconApiStateValidatorsProvider{
+						jsonRestHandler: jsonRestHandler,
+					},
+				}
 
 				waitForActivation, err := validatorClient.WaitForActivation(
 					context.Background(),
@@ -274,7 +282,11 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	waitForActivation, err := validatorClient.WaitForActivation(
 		context.Background(),

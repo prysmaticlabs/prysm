@@ -88,7 +88,7 @@ func TestSerialize(t *testing.T) {
 
 func TestZeroKey(t *testing.T) {
 	// Is Zero
-	zKey := [32]byte{}
+	var zKey [32]byte
 	assert.Equal(t, true, blst.IsZero(zKey[:]))
 
 	// Is Not Zero

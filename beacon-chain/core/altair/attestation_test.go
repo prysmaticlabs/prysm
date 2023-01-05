@@ -256,7 +256,7 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 		},
 		AggregationBits: aggBits,
 	}
-	zeroSig := [96]byte{}
+	var zeroSig [96]byte
 	att.Signature = zeroSig[:]
 
 	ckp := beaconState.CurrentJustifiedCheckpoint()

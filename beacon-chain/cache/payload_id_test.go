@@ -9,7 +9,7 @@ import (
 
 func TestValidatorPayloadIDsCache_GetAndSaveValidatorPayloadIDs(t *testing.T) {
 	cache := NewProposerPayloadIDsCache()
-	r := [32]byte{}
+	var r [32]byte
 	i, p, ok := cache.GetProposerPayloadIDs(0, r)
 	require.Equal(t, false, ok)
 	require.Equal(t, types.ValidatorIndex(0), i)
