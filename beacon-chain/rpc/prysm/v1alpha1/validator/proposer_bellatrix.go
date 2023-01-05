@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -33,6 +34,38 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
+
+// Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlock, headState state.BeaconState) error {
+	idx := blk.ProposerIndex()
+	slot := blk.Slot()
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+
+	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
+	if err != nil {
+		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
+	} else if canUseBuilder {
+		h, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
+		} else {
+			blk.SetBlinded(true)
+			if err := blk.Body().SetExecution(h); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set execution payload")
+			} else {
+				return nil
+			}
+		}
+	}
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+	if err != nil {
+		return errors.Wrap(err, "failed to get execution payload")
+	}
+	return blk.Body().SetExecution(executionData)
+}
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.

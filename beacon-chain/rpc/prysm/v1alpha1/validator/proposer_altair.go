@@ -3,14 +3,40 @@ package validator
 import (
 	"context"
 
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	synccontribution "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
+
+func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlock) {
+	slot := blk.Slot()
+	if slot == 0 || slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+		return
+	}
+
+	syncAggregate, err := vs.getSyncAggregate(ctx, slot-1, blk.ParentRoot())
+	if err != nil {
+		log.WithError(err).Error("Could not get sync aggregate")
+	} else {
+		if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
+			log.WithError(err).Error("Could not set sync aggregate")
+			if err := blk.Body().SetSyncAggregate(&ethpb.SyncAggregate{
+				SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+			}); err != nil {
+				log.WithError(err).Error("Could not set sync aggregate")
+			}
+		}
+	}
+	return
+}
 
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
 // The contributions are filtered based on matching of the input root and slot then profitability.

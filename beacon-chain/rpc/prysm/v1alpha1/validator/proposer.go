@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -96,80 +95,32 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
-	// Set proposer index
+	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
 	blk.SetProposerIndex(idx)
 
-	// Set slashings
+	// Set slashings.
 	validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
 	blk.Body().SetProposerSlashings(validProposerSlashings)
 	blk.Body().SetAttesterSlashings(validAttSlashings)
 
-	// Set exits
+	// Set exits.
 	blk.Body().SetVoluntaryExits(vs.getExits(head, req.Slot))
 
 	// Set sync aggregate. New in Altair.
-	if req.Slot > 0 && slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
-		syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(parentRoot))
-		if err != nil {
-			log.WithError(err).Error("Could not get sync aggregate")
-		} else {
-			if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
-				log.WithError(err).Error("Could not set sync aggregate")
-				if err := blk.Body().SetSyncAggregate(&ethpb.SyncAggregate{
-					SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
-					SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-				}); err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not set default sync aggregate: %v", err)
-				}
-			}
-		}
+	vs.setSyncAggregate(ctx, blk)
+
+	// Set execution data. New in Bellatrix.
+	if err := vs.setExecutionData(ctx, blk, head); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
-	// Set execution data. New in Bellatrix
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		fallBackToLocal := true
-		canUseBuilder, err := vs.canUseBuilder(ctx, req.Slot, idx)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: failed to check if builder can be used")
-		} else if canUseBuilder {
-			h, err := vs.getPayloadHeaderFromBuilder(ctx, req.Slot, idx)
-			if err != nil {
-				builderGetPayloadMissCount.Inc()
-				log.WithError(err).Warn("Proposer: failed to get payload header from builder")
-			} else {
-				blk.SetBlinded(true)
-				if err := blk.Body().SetExecution(h); err != nil {
-					log.WithError(err).Warn("Proposer: failed to set execution payload")
-				} else {
-					fallBackToLocal = false
-				}
-			}
-		}
-		if fallBackToLocal {
-			executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get execution payload: %v", err)
-			}
-			if err := blk.Body().SetExecution(executionData); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not set execution payload: %v", err)
-			}
-		}
-	}
-
-	// Set bls to execution change. New in Capella
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-		changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion(head)
-		if err != nil {
-			log.WithError(err).Error("Could not get bls to execution changes")
-		} else {
-			if err := blk.Body().SetBLSToExecutionChanges(changes); err != nil {
-				log.WithError(err).Error("Could not set bls to execution changes")
-			}
-		}
+	// Set bls to execution change. New in Capella.
+	if err := vs.setBlsToExecData(blk, head); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not set bls to execution data: %v", err)
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
