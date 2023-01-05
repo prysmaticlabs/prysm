@@ -46,36 +46,21 @@ func TestCallWithdrawalEndpoint(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("beacon-node-host", baseurl, "")
 	set.String("path", file, "")
-	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
 	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	content := []byte("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
-	tmpfile, err := os.CreateTemp("", "content")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Remove(tmpfile.Name())
-		require.NoError(t, err)
-	}()
-
-	_, err = tmpfile.Write(content)
-	require.NoError(t, err)
-
-	_, err = tmpfile.Seek(0, 0)
-	require.NoError(t, err)
-	oldStdin := os.Stdin
-	defer func() { os.Stdin = oldStdin }() // Restore original Stdin
-
-	os.Stdin = tmpfile
-	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	err = setWithdrawalAddresses(cliCtx)
 	require.NoError(t, err)
 
 	assert.LogsContain(t, hook, "Successfully published")
 }
 
-func TestCallWithdrawalEndpointMutiple(t *testing.T) {
+func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
 	file := "./testdata/change-operations-multiple.json"
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
@@ -104,14 +89,15 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("beacon-node-host", baseurl, "")
 	set.String("path", file, "")
 	set.Bool("confirm", true, "")
-	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
 	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	err = setWithdrawalAddresses(cliCtx)
 	require.NoError(t, err)
 	assert.LogsContain(t, hook, "Successfully published")
 	assert.LogsContain(t, hook, "to update 2 withdrawal")
@@ -132,12 +118,14 @@ func TestCallWithdrawalEndpoint_Empty(t *testing.T) {
 	}()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("beacon-node-host", baseurl, "")
 	set.String("path", tmpfile.Name(), "")
-	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
 	assert.NoError(t, set.Set("path", tmpfile.Name()))
 	cliCtx := cli.NewContext(&app, set, nil)
-	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	err = setWithdrawalAddresses(cliCtx)
 	assert.ErrorContains(t, "the list of signed requests is empty", err)
 }
 
@@ -165,30 +153,15 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String("beacon-node-host", "http://"+baseurl, "")
+	set.String("beacon-node-host", baseurl, "")
 	set.String("path", file, "")
-	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
 	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	content := []byte("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
-	tmpfile, err := os.CreateTemp("", "content")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Remove(tmpfile.Name())
-		require.NoError(t, err)
-	}()
-
-	_, err = tmpfile.Write(content)
-	require.NoError(t, err)
-
-	_, err = tmpfile.Seek(0, 0)
-	require.NoError(t, err)
-	oldStdin := os.Stdin
-	defer func() { os.Stdin = oldStdin }() // Restore original Stdin
-
-	os.Stdin = tmpfile
-	err = setWithdrawalAddresses(cliCtx, os.Stdin)
+	err = setWithdrawalAddresses(cliCtx)
 	assert.ErrorContains(t, "POST error", err)
 
 	assert.LogsContain(t, hook, "Could not validate SignedBLSToExecutionChange")
