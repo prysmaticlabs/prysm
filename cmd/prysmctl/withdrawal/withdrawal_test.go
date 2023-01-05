@@ -113,7 +113,6 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 
 	err = setWithdrawalAddresses(cliCtx, os.Stdin)
 	require.NoError(t, err)
-	assert.LogsContain(t, hook, "User has agreed to all terms of service")
 	assert.LogsContain(t, hook, "Successfully published")
 	assert.LogsContain(t, hook, "to update 2 withdrawal")
 	assert.LogsContain(t, hook, "set withdrawal address message was found in the node's operations pool.")

@@ -53,6 +53,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	return nil
 }
 
+// PromptTos prompts the user to accept or decline the terms of service.
 func PromptTos() error {
 	input, err := prompt.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
 	if err != nil {

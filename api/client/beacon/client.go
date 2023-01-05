@@ -28,13 +28,14 @@ import (
 )
 
 const (
-	getSignedBlockPath      = "/eth/v2/beacon/blocks"
-	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
-	getForkForStatePath     = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath = "/eth/v1/beacon/weak_subjectivity"
-	getForkSchedulePath     = "/eth/v1/config/fork_schedule"
-	getStatePath            = "/eth/v2/debug/beacon/states"
-	getNodeVersionPath      = "/eth/v1/node/version"
+	getSignedBlockPath       = "/eth/v2/beacon/blocks"
+	getBlockRootPath         = "/eth/v1/beacon/blocks/{{.Id}}/root"
+	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
+	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
+	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
+	getStatePath             = "/eth/v2/debug/beacon/states"
+	getNodeVersionPath       = "/eth/v1/node/version"
+	changeBLStoExecutionPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
 )
 
 // StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
@@ -140,6 +141,12 @@ type reqOption func(*http.Request)
 func withSSZEncoding() reqOption {
 	return func(req *http.Request) {
 		req.Header.Set("Accept", "application/octet-stream")
+	}
+}
+
+func withJSONEncoding() reqOption {
+	return func(req *http.Request) {
+		req.Header.Set("Content-Type", "application/json")
 	}
 }
 
@@ -341,6 +348,61 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 		BlockRoot: bytesutil.ToBytes32(blockRoot),
 		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
+}
+
+// SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
+// if the API responds with something other than OK there will be failure messages associated to the corresponding request message.
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+	u := c.baseURL.ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
+	log.Printf("requesting %s", u.String())
+	body, err := json.Marshal(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal json")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		if err := decoder.Decode(errorJson); err != nil {
+			return errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+		}
+		for _, failure := range errorJson.Failures {
+			w := request[failure.Index].Message
+			log.WithFields(log.Fields{
+				"validator_index":    w.ValidatorIndex,
+				"withdrawal_address": w.ToExecutionAddress,
+			}).Error(failure.Message)
+		}
+		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
+	}
+	return nil
+}
+
+// GetBLStoExecutionChanges get all the set withdrawal messages in the node's operation pool.
+// returns a struct representation of json response.
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
+	body, err := c.get(ctx, changeBLStoExecutionPath)
+	if err != nil {
+		return nil, err
+	}
+	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
+	err = json.Unmarshal(body, poolResponse)
+	if err != nil {
+		return nil, err
+	}
+	return poolResponse, nil
 }
 
 func non200Err(response *http.Response) error {

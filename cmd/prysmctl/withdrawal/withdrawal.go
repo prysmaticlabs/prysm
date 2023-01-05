@@ -1,13 +1,11 @@
 package withdrawal
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,15 +14,12 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
-)
-
-const (
-	apiPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
 )
 
 func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
@@ -100,75 +95,22 @@ func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToEx
 }
 
 func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
-	fullpath := host + apiPath
-	client := &http.Client{}
-	if err := changeBLStoExecutionCall(ctx, client, fullpath, request); err != nil {
-		return err
-	}
-	return checkIfWithdrawsAreInPool(ctx, client, fullpath, request)
-}
-
-func changeBLStoExecutionCall(ctx context.Context, client *http.Client, fullpath string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
-	body, err := json.Marshal(request)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal json")
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(body))
-	if err != nil {
-		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
+	client, err := beacon.NewClient(host)
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		decoder := json.NewDecoder(resp.Body)
-		decoder.DisallowUnknownFields()
-		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
-		if err := decoder.Decode(errorJson); err != nil {
-			return errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
-		}
-		for _, failure := range errorJson.Failures {
-			w := request[failure.Index].Message
-			log.WithFields(log.Fields{
-				"validator_index":    w.ValidatorIndex,
-				"withdrawal_address": w.ToExecutionAddress,
-			}).Error(failure.Message)
-		}
-		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
+	if err := client.SubmitChangeBLStoExecution(ctx, request); err != nil {
+		return err
 	}
 	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
-	return nil
+	return checkIfWithdrawsAreInPool(ctx, client, request)
 }
 
-func checkIfWithdrawsAreInPool(ctx context.Context, client *http.Client, fullpath string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	log.Info("verifying requested withdrawal messages known to node...")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
+	poolResponse, err := client.GetBLStoExecutionChanges(ctx)
 	if err != nil {
 		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request to %s responded with a status other than OK - status %v, body %v", fullpath, resp.Status, resp.Body)
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.WithError(err).Error("could not close response body")
-		}
-	}(resp.Body)
-	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
-	if err := json.NewDecoder(resp.Body).Decode(poolResponse); err != nil {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "failed to read response body")
-		}
-		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
 	}
 	for _, w := range request {
 		index := sort.Search(len(poolResponse.Data), func(i int) bool {
