@@ -46,16 +46,20 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 		return errors.Wrap(err, "failed to find withdrawal files")
 	}
 	au := aurora.NewAurora(true)
-	fmt.Println(au.Red("===============IMPORTANT==============="))
-	if !c.Bool(SkipPromptsFlag.Name) {
+	if c.Bool(SkipPromptsFlag.Name) {
+		fmt.Println(au.Red("===============IMPORTANT==============="))
+		fmt.Println(au.Red("All prompts have been skipped by providing the skip-prompt flag."))
+		fmt.Println(au.Red("User has agreed to all terms of service and will accept data as is without prompt verification."))
+	} else {
+		fmt.Println(au.Red("===============IMPORTANT==============="))
 		fmt.Println(au.Red("Please read the following carefully"))
+		fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
+			"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
+			"The partial and full withdrawal . \n" +
+			"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
+		fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
+		fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
 	}
-	fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
-		"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
-		"The partial and full withdrawal . \n" +
-		"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
-	fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
-	fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
 
 	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	for _, foundFilePath := range foundFilePaths {
