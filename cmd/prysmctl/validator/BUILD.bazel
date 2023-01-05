@@ -4,14 +4,17 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cmd.go",
-        "withdrawal.go",
+        "withdraw.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/withdrawal",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/validator",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/beacon:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//cmd:go_default_library",
+        "//cmd/validator/accounts:go_default_library",
+        "//cmd/validator/flags:go_default_library",
+        "//config/features:go_default_library",
         "//io/prompt:go_default_library",
         "//runtime/tos:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
@@ -24,7 +27,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["withdrawal_test.go"],
+    srcs = ["withdraw_test.go"],
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [

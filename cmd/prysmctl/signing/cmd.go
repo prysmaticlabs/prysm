@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// TODO: move this to validator/exit
 var Commands = []*cli.Command{
 	{
 		Name:  "sign",

@@ -1,4 +1,4 @@
-package withdrawal
+package validator
 
 import (
 	"encoding/json"
@@ -106,7 +106,7 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-node-host", "http://"+baseurl, "")
 	set.String("path", file, "")
-	set.Bool("skip-prompts", true, "")
+	set.Bool("confirm", true, "")
 	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
 	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)

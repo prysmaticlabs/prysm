@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/p2p"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/signing"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/validator"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/weaksubjectivity"
-	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/withdrawal"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -38,5 +38,5 @@ func init() {
 	prysmctlCommands = append(prysmctlCommands, testnet.Commands...)
 	prysmctlCommands = append(prysmctlCommands, weaksubjectivity.Commands...)
 	prysmctlCommands = append(prysmctlCommands, signing.Commands...)
-	prysmctlCommands = append(prysmctlCommands, withdrawal.Commands...)
+	prysmctlCommands = append(prysmctlCommands, validator.Commands...)
 }

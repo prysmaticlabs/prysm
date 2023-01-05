@@ -147,7 +147,6 @@ func withSSZEncoding() reqOption {
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
-	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -348,7 +347,6 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 // if the API responds with something other than OK there will be failure messages associated to the corresponding request message.
 func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	u := c.baseURL.ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
-	log.Printf("requesting %s", u.String())
 	body, err := json.Marshal(request)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal json")

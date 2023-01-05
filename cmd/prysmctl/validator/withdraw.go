@@ -1,4 +1,4 @@
-package withdrawal
+package validator
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,37 +24,15 @@ import (
 func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
 	defer span.End()
-	beaconNodeHost := "127.0.0.1:3500"
-	if c.String(BeaconHostFlag.Name) != "" {
-		beaconNodeHost = c.String(BeaconHostFlag.Name)
-	}
-	u, err := url.ParseRequestURI(beaconNodeHost)
-	if err != nil {
-		return errors.Wrap(err, "invalid format, unable to parse url")
-	}
-	if u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("provided url %s is not in the format of http(s)://host:port", beaconNodeHost)
+	au := aurora.NewAurora(true)
+	beaconNodeHost := c.String(BeaconHostFlag.Name)
+	if !c.IsSet(PathFlag.Name) {
+		return fmt.Errorf("no --%s flag value was provided", PathFlag.Name)
 	}
 	foundFilePaths, err := findWithdrawalFiles(c.String(PathFlag.Name))
 	if err != nil {
 		return errors.Wrap(err, "failed to find withdrawal files")
 	}
-	au := aurora.NewAurora(true)
-	if c.Bool(SkipPromptsFlag.Name) {
-		fmt.Println(au.Red("===============IMPORTANT==============="))
-		fmt.Println(au.Red("All prompts have been skipped by providing the skip-prompt flag."))
-		fmt.Println(au.Red("User has agreed to all terms of service and will accept data as is without prompt verification."))
-	} else {
-		fmt.Println(au.Red("===============IMPORTANT==============="))
-		fmt.Println(au.Red("Please read the following carefully"))
-		fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
-			"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
-			"The partial and full withdrawal . \n" +
-			"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
-		fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
-		fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
-	}
-
 	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	for _, foundFilePath := range foundFilePaths {
 		b, err := os.ReadFile(filepath.Clean(foundFilePath))
@@ -72,26 +49,10 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	if len(setWithdrawalAddressJsons) == 0 {
 		return errors.New("the list of signed requests is empty")
 	}
-	if !c.Bool(SkipPromptsFlag.Name) {
-		for _, jsonOb := range setWithdrawalAddressJsons {
-			if err := verifyWithdrawalCertainty(r, jsonOb); err != nil {
-				return err
-			}
-		}
+	for _, request := range setWithdrawalAddressJsons {
+		fmt.Println("SETTING VALIDATOR INDEX " + au.Red(request.Message.ValidatorIndex).String() + " TO WITHDRAWAL ADDRESS " + au.Red(request.Message.ToExecutionAddress).String())
 	}
 	return callWithdrawalEndpoints(ctx, beaconNodeHost, setWithdrawalAddressJsons)
-}
-
-func verifyWithdrawalCertainty(r io.Reader, request *apimiddleware.SignedBLSToExecutionChangeJson) error {
-	au := aurora.NewAurora(true)
-	withdrawalConfirmation := request.Message.ToExecutionAddress
-	fmt.Println(au.Red("===================================="))
-	fmt.Println("YOU ARE ATTEMPTING TO SET A WITHDRAWAL ADDRESS TO  " + au.Red(request.Message.ToExecutionAddress).String() + " FOR VALIDATOR INDEX" + au.Red(request.Message.ValidatorIndex).String() + ". ")
-	_, err := withdrawalPrompt(withdrawalConfirmation, r)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
@@ -112,6 +73,7 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 	if err != nil {
 		return err
 	}
+	missingInPool := false
 	for _, w := range request {
 		index := sort.Search(len(poolResponse.Data), func(i int) bool {
 			return poolResponse.Data[i].Message.ValidatorIndex == w.Message.ValidatorIndex &&
@@ -122,12 +84,16 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 				"validator_index":    w.Message.ValidatorIndex,
 				"execution_address:": w.Message.ToExecutionAddress,
 			}).Warn("set withdrawal address message not found in the node's operations pool.")
+			missingInPool = true
 		} else {
 			log.WithFields(log.Fields{
 				"validator_index":    w.Message.ValidatorIndex,
 				"execution_address:": w.Message.ToExecutionAddress,
 			}).Info("set withdrawal address message was found in the node's operations pool.")
 		}
+	}
+	if missingInPool {
+		log.Info("set withdrawal address messages that were not found in the pool may have been included into a block. please check before resubmitting.")
 	}
 	return nil
 }
