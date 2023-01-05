@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "genesis_mock.go",
         "json_rest_handler_mock.go",
+        "state_validators_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock",
     visibility = ["//visibility:public"],

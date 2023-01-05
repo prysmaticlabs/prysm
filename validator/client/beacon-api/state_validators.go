@@ -2,19 +2,42 @@ package beacon_api
 
 import (
 	neturl "net/url"
+	"strconv"
 
 	"github.com/pkg/errors"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 )
 
-func (c *beaconApiValidatorClient) getStateValidators(
+type stateValidatorsProvider interface {
+	GetStateValidators([]string, []int64, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
+}
+
+type beaconApiStateValidatorsProvider struct {
+	jsonRestHandler jsonRestHandler
+}
+
+func (c beaconApiStateValidatorsProvider) GetStateValidators(
 	stringPubkeys []string,
+	indexes []int64,
 	statuses []string,
 ) (*rpcmiddleware.StateValidatorsResponseJson, error) {
 	params := neturl.Values{}
 
+	stringPubKeysSet := make(map[string]struct{}, len(stringPubkeys))
+	indexesSet := make(map[int64]struct{}, len(indexes))
+
 	for _, stringPubkey := range stringPubkeys {
-		params.Add("id", stringPubkey)
+		if _, ok := stringPubKeysSet[stringPubkey]; !ok {
+			stringPubKeysSet[stringPubkey] = struct{}{}
+			params.Add("id", stringPubkey)
+		}
+	}
+
+	for _, index := range indexes {
+		if _, ok := indexesSet[index]; !ok {
+			indexesSet[index] = struct{}{}
+			params.Add("id", strconv.FormatInt(index, 10))
+		}
 	}
 
 	for _, status := range statuses {
@@ -30,11 +53,11 @@ func (c *beaconApiValidatorClient) getStateValidators(
 
 	_, err := c.jsonRestHandler.GetRestJsonResponse(url, stateValidatorsJson)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get json response")
+		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.Wrap(err, "failed to get json response")
 	}
 
 	if stateValidatorsJson.Data == nil {
-		return nil, errors.New("stateValidatorsJson.Data is nil")
+		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.New("stateValidatorsJson.Data is nil")
 	}
 
 	return stateValidatorsJson, nil
