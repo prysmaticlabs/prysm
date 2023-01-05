@@ -144,12 +144,6 @@ func withSSZEncoding() reqOption {
 	}
 }
 
-func withJSONEncoding() reqOption {
-	return func(req *http.Request) {
-		req.Header.Set("Content-Type", "application/json")
-	}
-}
-
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
