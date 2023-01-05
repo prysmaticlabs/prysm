@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -122,11 +121,4 @@ func findWithdrawalFiles(path string) ([]string, error) {
 	}
 	log.Infof("found JSON files for setting withdrawals: %v", foundpaths)
 	return foundpaths, nil
-}
-
-func withdrawalPrompt(confirmationMessage string, r io.Reader) (string, error) {
-	promptQuestion := "If you still want to continue with changing the bls withdrawal address, please reenter the address you'd like to withdraw to"
-	return prompt.ValidatePrompt(r, promptQuestion, func(input string) error {
-		return prompt.ValidatePhrase(strings.ToLower(input), strings.ToLower(confirmationMessage))
-	})
 }
