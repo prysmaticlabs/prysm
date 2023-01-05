@@ -35,7 +35,6 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlo
 			}
 		}
 	}
-	return
 }
 
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
