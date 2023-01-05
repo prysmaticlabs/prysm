@@ -14,9 +14,10 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	genesisProvider genesisProvider
-	jsonRestHandler jsonRestHandler
-	fallbackClient  iface.ValidatorClient
+	genesisProvider         genesisProvider
+	stateValidatorsProvider stateValidatorsProvider
+	jsonRestHandler         jsonRestHandler
+	fallbackClient          iface.ValidatorClient
 }
 
 func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
@@ -30,9 +31,10 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 	}
 
 	return &beaconApiValidatorClient{
-		genesisProvider: beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
-		jsonRestHandler: jsonRestHandler,
-		fallbackClient:  fallbackClient,
+		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
+		jsonRestHandler:         jsonRestHandler,
+		fallbackClient:          fallbackClient,
 	}
 }
 
@@ -111,13 +113,8 @@ func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context,
 	panic("beaconApiValidatorClient.GetSyncSubcommitteeIndex is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.MultipleValidatorStatus(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.MultipleValidatorStatus is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+func (c *beaconApiValidatorClient) MultipleValidatorStatus(_ context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	return c.multipleValidatorStatus(in)
 }
 
 func (c *beaconApiValidatorClient) PrepareBeaconProposer(_ context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
