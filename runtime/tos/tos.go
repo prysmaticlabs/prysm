@@ -45,16 +45,6 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 		return nil
 	}
 
-	if err := PromptTos(); err != nil {
-		return err
-	}
-
-	saveTosAccepted(ctx)
-	return nil
-}
-
-// PromptTos prompts the user to accept or decline the terms of service.
-func PromptTos() error {
 	input, err := prompt.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
@@ -62,6 +52,8 @@ func PromptTos() error {
 	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}
+
+	saveTosAccepted(ctx)
 	return nil
 }
 
