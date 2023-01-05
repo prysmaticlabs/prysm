@@ -58,7 +58,11 @@ func TestIndex_Nominal(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	validatorIndex, err := validatorClient.ValidatorIndex(
 		context.Background(),
@@ -93,7 +97,11 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	_, err := validatorClient.ValidatorIndex(
 		context.Background(),
@@ -136,7 +144,11 @@ func TestIndex_BadIndexError(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	_, err := validatorClient.ValidatorIndex(
 		context.Background(),
@@ -165,7 +177,11 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	_, err := validatorClient.ValidatorIndex(
 		context.Background(),
