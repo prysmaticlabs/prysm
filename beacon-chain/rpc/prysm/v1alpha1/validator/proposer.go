@@ -48,9 +48,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
+		}
 	}
 
 	sBlk, err := getEmptyBlock(req.Slot)
@@ -135,8 +137,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
-	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && !blk.IsBlinded() {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
+	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && blk.IsBlinded() {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
 	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
 	}

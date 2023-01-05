@@ -2109,6 +2109,14 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
+		copied := beaconState.Copy()
+		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		idx, err := helpers.BeaconProposerIndex(ctx, copied)
+		require.NoError(t, err)
+		require.NoError(t,
+			db.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{idx},
+				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
+
 		req := &ethpbv1.ProduceBlockRequest{
 			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
 			RandaoReveal: randaoReveal,
