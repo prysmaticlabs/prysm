@@ -116,8 +116,8 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 
 	assert.LogsContain(t, hook, "Successfully published")
 	assert.LogsContain(t, hook, "to update 2 withdrawal")
-	assert.LogsContain(t, hook, "validator index: 0 with set withdrawal address: 0x0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
-	assert.LogsContain(t, hook, "validator index: 1 with set withdrawal address: 0x0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+	assert.LogsContain(t, hook, "set withdrawal address message was found in the node's operations pool.")
+	assert.LogsDoNotContain(t, hook, "set withdrawal address message not found in the node's operations pool.")
 }
 
 func TestCallWithdrawalEndpoint_Empty(t *testing.T) {

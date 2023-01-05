@@ -22,7 +22,7 @@ var (
 	}
 	SkipPromptsFlag = &cli.BoolFlag{
 		Name:  "skip-prompts",
-		Usage: "skips all prompts for verifying each provided signed withdrawal message to for setting the withdrawal address",
+		Usage: "DANGER:User accepts responsibility of all input data without prompt verification! skips all prompts for verifying each provided signed withdrawal message to for setting the withdrawal address",
 	}
 )
 
@@ -41,7 +41,10 @@ var Commands = []*cli.Command{
 			if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 				return err
 			}
-			return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+			if !cliCtx.Bool(cmd.AcceptTosFlag.Name) || cliCtx.Bool(SkipPromptsFlag.Name) {
+				return tos.PromptTos()
+			}
+			return nil
 		},
 		Action: func(cliCtx *cli.Context) error {
 			if err := setWithdrawalAddresses(cliCtx, os.Stdin); err != nil {

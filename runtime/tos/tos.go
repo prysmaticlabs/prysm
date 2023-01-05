@@ -45,6 +45,15 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 		return nil
 	}
 
+	if err := PromptTos(); err != nil {
+		return err
+	}
+
+	saveTosAccepted(ctx)
+	return nil
+}
+
+func PromptTos() error {
 	input, err := prompt.DefaultPrompt(au.Bold(acceptTosPromptText).String(), "decline")
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
@@ -52,8 +61,6 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}
-
-	saveTosAccepted(ctx)
 	return nil
 }
 

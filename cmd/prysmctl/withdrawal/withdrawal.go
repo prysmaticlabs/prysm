@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -127,8 +128,8 @@ func changeBLStoExecutionCall(ctx context.Context, client *http.Client, fullpath
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
 			log.WithFields(log.Fields{
-				"validator index":    w.ValidatorIndex,
-				"withdrawal address": w.ToExecutionAddress,
+				"validator_index":    w.ValidatorIndex,
+				"withdrawal_address": w.ToExecutionAddress,
 			}).Error(failure.Message)
 		}
 		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
@@ -138,7 +139,7 @@ func changeBLStoExecutionCall(ctx context.Context, client *http.Client, fullpath
 }
 
 func checkIfWithdrawsAreInPool(ctx context.Context, client *http.Client, fullpath string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
-	log.Info("retrieving list of withdrawal messages known to node...")
+	log.Info("verifying requested withdrawal messages known to node...")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullpath, nil)
 	if err != nil {
 		return err
@@ -165,9 +166,22 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *http.Client, fullpat
 		}
 		return errors.Wrap(err, fmt.Sprintf("invalid format, unable to read response body: %v", string(body)))
 	}
-	log.Infoln("withdrawal messages in the node's operations pool:  ")
-	for _, signedMessage := range poolResponse.Data {
-		log.Infof("validator index: %s with set withdrawal address: 0x%s", signedMessage.Message.ValidatorIndex, signedMessage.Message.ToExecutionAddress)
+	for _, w := range request {
+		index := sort.Search(len(poolResponse.Data), func(i int) bool {
+			return poolResponse.Data[i].Message.ValidatorIndex == w.Message.ValidatorIndex &&
+				poolResponse.Data[i].Message.ToExecutionAddress == w.Message.ToExecutionAddress
+		})
+		if index == -1 {
+			log.WithFields(log.Fields{
+				"validator_index":    w.Message.ValidatorIndex,
+				"execution_address:": w.Message.ToExecutionAddress,
+			}).Warn("set withdrawal address message not found in the node's operations pool.")
+		} else {
+			log.WithFields(log.Fields{
+				"validator_index":    w.Message.ValidatorIndex,
+				"execution_address:": w.Message.ToExecutionAddress,
+			}).Info("set withdrawal address message was found in the node's operations pool.")
+		}
 	}
 	return nil
 }
