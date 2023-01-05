@@ -13,11 +13,12 @@ var (
 	BeaconHostFlag = &cli.StringFlag{
 		Name:  "beacon-node-host",
 		Usage: "host:port for beacon node to query",
-		Value: "http://localhost:3500",
+		Value: "127.0.0.1:3500",
 	}
-	FileFlag = &cli.StringFlag{
-		Name:  "file",
-		Usage: "file location for for the BLSToExecutionChange JSON",
+	PathFlag = &cli.StringFlag{
+		Name:    "path",
+		Aliases: []string{"p"},
+		Usage:   "path to the signed withdrawal messages JSON",
 	}
 	SkipPromptsFlag = &cli.BoolFlag{
 		Name:  "skip-prompts",
@@ -32,7 +33,7 @@ var Commands = []*cli.Command{
 		Usage:   "command for setting the withdrawal ethereum addresses to their associated validator keys. WARN: once set values are included they can no longer be updated.",
 		Flags: []cli.Flag{
 			BeaconHostFlag,
-			FileFlag,
+			PathFlag,
 			cmd.ConfigFileFlag,
 			cmd.AcceptTosFlag,
 		},

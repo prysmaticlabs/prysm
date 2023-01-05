@@ -29,7 +29,7 @@ const (
 func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
 	defer span.End()
-	beaconNodeHost := "http://localhost:3500"
+	beaconNodeHost := "127.0.0.1:3500"
 	if c.String(BeaconHostFlag.Name) != "" {
 		beaconNodeHost = c.String(BeaconHostFlag.Name)
 	}
@@ -40,12 +40,9 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	if u.Scheme == "" || u.Host == "" {
 		return fmt.Errorf("provided url %s is not in the format of http(s)://host:port", beaconNodeHost)
 	}
-	foundFilePaths, err := findWithdrawalFiles(c.String(FileFlag.Name))
+	foundFilePaths, err := findWithdrawalFiles(c.String(PathFlag.Name))
 	if err != nil {
 		return errors.Wrap(err, "failed to find withdrawal files")
-	}
-	if len(foundFilePaths) == 0 {
-		return errors.New("no compatible files were found")
 	}
 	au := aurora.NewAurora(true)
 	fmt.Println(au.Red("===============IMPORTANT==============="))
@@ -54,7 +51,7 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 	}
 	fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
 		"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
-		"The partial or full withdrawal of the validator balance may require several days of processing. \n" +
+		"The partial and full withdrawal . \n" +
 		"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
 	fmt.Println(au.Red("THIS ACTION WILL NOT BE REVERSIBLE ONCE INCLUDED. "))
 	fmt.Println(au.Red("You will NOT be able to change the address again once changed. "))
@@ -65,13 +62,10 @@ func setWithdrawalAddresses(c *cli.Context, r io.Reader) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to open file")
 		}
-		if string(b)[0:1] != "[" {
-			log.Warnf("provided file: %s, is not a list \n", foundFilePath)
-			continue
-		}
 		var to []*apimiddleware.SignedBLSToExecutionChangeJson
 		if err := json.Unmarshal(b, &to); err != nil {
-			return errors.Wrap(err, "failed to unmarshal file")
+			log.Warnf("provided file: %s, is not a list of signed withdrawal messages", foundFilePath)
+			continue
 		}
 		setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, to...)
 	}
@@ -197,7 +191,10 @@ func findWithdrawalFiles(path string) ([]string, error) {
 	}); err != nil {
 		return nil, errors.Wrap(err, "unable to find compatible files")
 	}
-
+	if len(foundpaths) == 0 {
+		return nil, errors.New("no compatible files were found")
+	}
+	log.Infof("found JSON files for setting withdrawals: %v", foundpaths)
 	return foundpaths, nil
 }
 

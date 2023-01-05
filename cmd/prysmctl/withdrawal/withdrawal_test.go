@@ -47,9 +47,9 @@ func TestCallWithdrawalEndpoint(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-node-host", "http://"+baseurl, "")
-	set.String("file", file, "")
+	set.String("path", file, "")
 	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
-	assert.NoError(t, set.Set("file", file))
+	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	content := []byte("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
@@ -105,10 +105,10 @@ func TestCallWithdrawalEndpointMutiple(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-node-host", "http://"+baseurl, "")
-	set.String("file", file, "")
+	set.String("path", file, "")
 	set.Bool("skip-prompts", true, "")
 	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
-	assert.NoError(t, set.Set("file", file))
+	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	err = setWithdrawalAddresses(cliCtx, os.Stdin)
@@ -134,9 +134,9 @@ func TestCallWithdrawalEndpoint_Empty(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-node-host", "http://"+baseurl, "")
-	set.String("file", tmpfile.Name(), "")
+	set.String("path", tmpfile.Name(), "")
 	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
-	assert.NoError(t, set.Set("file", tmpfile.Name()))
+	assert.NoError(t, set.Set("path", tmpfile.Name()))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err = setWithdrawalAddresses(cliCtx, os.Stdin)
 	assert.ErrorContains(t, "the list of signed requests is empty", err)
@@ -167,9 +167,9 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String("beacon-node-host", "http://"+baseurl, "")
-	set.String("file", file, "")
+	set.String("path", file, "")
 	assert.NoError(t, set.Set("beacon-node-host", "http://"+baseurl))
-	assert.NoError(t, set.Set("file", file))
+	assert.NoError(t, set.Set("path", file))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	content := []byte("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
