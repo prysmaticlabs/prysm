@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
