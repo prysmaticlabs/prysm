@@ -12,7 +12,7 @@ import (
 func (c beaconApiValidatorClient) validatorIndex(in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
 	stringPubKey := hexutil.Encode(in.PublicKey)
 
-	stateValidator, err := c.getStateValidators([]string{stringPubKey}, nil)
+	stateValidator, err := c.stateValidatorsProvider.GetStateValidators([]string{stringPubKey}, nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get state validator")
 	}
