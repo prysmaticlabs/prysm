@@ -49,7 +49,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	emptySig := [96]byte{}
+	var emptySig [96]byte
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID
@@ -898,7 +898,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
-	emptySig := [96]byte{}
+	var emptySig [96]byte
 	pid := peer.ID("random")
 	msg := &ethpb.SignedContributionAndProof{
 		Message: &ethpb.ContributionAndProof{
@@ -1036,7 +1036,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	assert.NoError(t, beaconDB.SaveGenesisData(context.Background(), gs))
 
 	testState := gs.Copy()
-	hRoot := [32]byte{}
+	var hRoot [32]byte
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		blk, err := util.GenerateFullBlockAltair(testState, keys, util.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)

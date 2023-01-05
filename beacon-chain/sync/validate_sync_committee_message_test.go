@@ -40,7 +40,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	emptySig := [96]byte{}
+	var emptySig [96]byte
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID

@@ -360,7 +360,7 @@ func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store
-	b := [32]byte{}
+	var b [32]byte
 
 	// Make sure it doesn't underflow
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())

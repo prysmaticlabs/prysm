@@ -573,7 +573,7 @@ func mockBlocks(n int, iter func(int, chan uint32)) []interfaces.SignedBeaconBlo
 	go iter(n, bchan)
 	mb := make([]interfaces.SignedBeaconBlock, 0)
 	for i := range bchan {
-		h := [32]byte{}
+		var h [32]byte
 		binary.LittleEndian.PutUint32(h[:], i)
 		b := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: h}}
 		mb = append(mb, b)

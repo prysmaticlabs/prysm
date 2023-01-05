@@ -12,14 +12,11 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
-	blocks2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -112,7 +109,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	blk.Body().SetAttesterSlashings(validAttSlashings)
 
 	// Set exits
-	blk.Body().SetVoluntaryExits(vs.getExits(head, req))
+	blk.Body().SetVoluntaryExits(vs.getExits(head, req.Slot))
 
 	// Set sync aggregate. New in Altair.
 	if req.Slot > 0 && slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
@@ -192,48 +189,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
 	}
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
-}
-
-func (vs *Server) getExits(head state.BeaconState, req *ethpb.BlockRequest) []*ethpb.SignedVoluntaryExit {
-	exits := vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/)
-	validExits := make([]*ethpb.SignedVoluntaryExit, 0, len(exits))
-	for _, exit := range exits {
-		val, err := head.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid exit")
-			continue
-		}
-		if err := blocks2.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
-			log.WithError(err).Warn("Proposer: invalid exit")
-			continue
-		}
-		validExits = append(validExits, exit)
-	}
-	return validExits
-}
-
-func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*ethpb.ProposerSlashing, []*ethpb.AttesterSlashing) {
-	proposerSlashings := vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/)
-	validProposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposerSlashings))
-	for _, slashing := range proposerSlashings {
-		_, err := blocks2.ProcessProposerSlashing(ctx, head, slashing, v.SlashValidator)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid proposer slashing")
-			continue
-		}
-		validProposerSlashings = append(validProposerSlashings, slashing)
-	}
-	attSlashings := vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/)
-	validAttSlashings := make([]*ethpb.AttesterSlashing, 0, len(attSlashings))
-	for _, slashing := range attSlashings {
-		_, err := blocks2.ProcessAttesterSlashing(ctx, head, slashing, v.SlashValidator)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid attester slashing")
-			continue
-		}
-		validAttSlashings = append(validAttSlashings, slashing)
-	}
-	return validProposerSlashings, validAttSlashings
 }
 
 func emptyBlockToSign(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
