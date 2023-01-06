@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,16 +37,16 @@ func (m *MockdutiesProvider) EXPECT() *MockdutiesProviderMockRecorder {
 }
 
 // GetAttesterDuties mocks base method.
-func (m *MockdutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
+func (m *MockdutiesProvider) GetAttesterDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAttesterDuties", epoch, validatorIndices)
+	ret := m.ctrl.Call(m, "GetAttesterDuties", ctx, epoch, validatorIndices)
 	ret0, _ := ret[0].([]*apimiddleware.AttesterDutyJson)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAttesterDuties indicates an expected call of GetAttesterDuties.
-func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(epoch, validatorIndices interface{}) *gomock.Call {
+func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(ctx, epoch, validatorIndices interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttesterDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetAttesterDuties), epoch, validatorIndices)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttesterDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetAttesterDuties), ctx, epoch, validatorIndices)
 }

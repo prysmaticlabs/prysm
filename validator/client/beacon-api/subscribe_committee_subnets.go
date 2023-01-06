@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strconv"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) error {
+func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) error {
 	if in == nil {
 		return errors.New("committee subnets subscribe request is nil")
 	}
@@ -33,7 +34,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeS
 		if !foundSlot {
 			// Lazily fetch the committeesAtSlot from the beacon node if they are not already in the map
 			epoch := slots.ToEpoch(subscribeSlot)
-			duties, err := c.dutiesProvider.GetAttesterDuties(epoch, validatorIndices)
+			duties, err := c.dutiesProvider.GetAttesterDuties(ctx, epoch, validatorIndices)
 			if err != nil {
 				return errors.Wrapf(err, "failed to get duties for epoch `%d`", epoch)
 			}
@@ -72,7 +73,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(in *ethpb.CommitteeS
 		return errors.Wrap(err, "failed to marshal committees subscriptions")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson("/eth/v1/validator/beacon_committee_subscriptions", nil, bytes.NewBuffer(committeeSubscriptionsBytes), nil); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, "/eth/v1/validator/beacon_committee_subscriptions", nil, bytes.NewBuffer(committeeSubscriptionsBytes), nil); err != nil {
 		return errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 

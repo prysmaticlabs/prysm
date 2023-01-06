@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -43,8 +44,11 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	committeeSubscriptionsBytes, err := json.Marshal(jsonCommitteeSubscriptions)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		subscrimeCommitteeSubnetsTestEndpoint,
 		nil,
 		bytes.NewBuffer(committeeSubscriptionsBytes),
@@ -67,6 +71,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	// Even though we have 3 distinct slots, the first 2 ones are in the same epoch so we should only send 2 requests to the beacon node
 	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 	dutiesProvider.EXPECT().GetAttesterDuties(
+		ctx,
 		slots.ToEpoch(subscribeSlots[0]),
 		validatorIndices,
 	).Return(
@@ -84,6 +89,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider.EXPECT().GetAttesterDuties(
+		ctx,
 		slots.ToEpoch(subscribeSlots[2]),
 		validatorIndices,
 	).Return(
@@ -101,6 +107,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 		dutiesProvider:  dutiesProvider,
 	}
 	err = validatorClient.subscribeCommitteeSubnets(
+		ctx,
 		&ethpb.CommitteeSubnetsSubscribeRequest{
 			Slots:        subscribeSlots,
 			CommitteeIds: committeeIndices,
@@ -249,9 +256,12 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 			if testCase.expectGetDutiesQuery {
 				dutiesProvider.EXPECT().GetAttesterDuties(
+					ctx,
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
@@ -263,6 +273,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			if testCase.expectSubscribeRestCall {
 				jsonRestHandler.EXPECT().PostRestJson(
+					ctx,
 					subscrimeCommitteeSubnetsTestEndpoint,
 					gomock.Any(),
 					gomock.Any(),
@@ -277,7 +288,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				jsonRestHandler: jsonRestHandler,
 				dutiesProvider:  dutiesProvider,
 			}
-			err := validatorClient.subscribeCommitteeSubnets(testCase.subscribeRequest, testCase.validatorIndices)
+			err := validatorClient.subscribeCommitteeSubnets(ctx, testCase.subscribeRequest, testCase.validatorIndices)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}

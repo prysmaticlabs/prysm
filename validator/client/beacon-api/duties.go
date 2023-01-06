@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -12,14 +13,14 @@ import (
 )
 
 type dutiesProvider interface {
-	GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
+	GetAttesterDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
 }
 
 type beaconApiDutiesProvider struct {
 	jsonRestHandler jsonRestHandler
 }
 
-func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
+func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
 
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
@@ -32,7 +33,7 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorI
 	}
 
 	attesterDuties := &apimiddleware.AttesterDutiesResponseJson{}
-	if _, err := c.jsonRestHandler.PostRestJson(fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), attesterDuties); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), attesterDuties); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 

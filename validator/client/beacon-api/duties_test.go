@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,9 +52,12 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	validatorIndices := []types.ValidatorIndex{2, 9}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
@@ -62,12 +66,12 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		expectedAttesterDuties,
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	attesterDuties, err := dutiesProvider.GetAttesterDuties(epoch, validatorIndices)
+	attesterDuties, err := dutiesProvider.GetAttesterDuties(ctx, epoch, validatorIndices)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedAttesterDuties.Data, attesterDuties)
 }
@@ -78,8 +82,11 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -90,7 +97,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(epoch, nil)
+	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 }
@@ -101,8 +108,11 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -111,13 +121,13 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		apimiddleware.AttesterDutiesResponseJson{
 			Data: []*apimiddleware.AttesterDutyJson{nil},
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(epoch, nil)
+	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "attester duty at index `0` is nil", err)
 }

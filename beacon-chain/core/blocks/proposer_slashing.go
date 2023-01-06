@@ -82,7 +82,7 @@ func ProcessProposerSlashing(
 		slashingQuotient = cfg.MinSlashingPenaltyQuotient
 	case beaconState.Version() == version.Altair:
 		slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-	case beaconState.Version() == version.Bellatrix, beaconState.Version() == version.Capella:
+	case beaconState.Version() >= version.Bellatrix:
 		slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
 	default:
 		return nil, errors.New("unknown state version")

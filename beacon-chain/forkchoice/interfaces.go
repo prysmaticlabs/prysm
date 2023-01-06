@@ -69,6 +69,7 @@ type Getter interface {
 	HighestReceivedBlockRoot() [32]byte
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
+	Weight(root [32]byte) (uint64, error)
 	VotedFraction(root [32]byte) (uint64, error)
 }
 
