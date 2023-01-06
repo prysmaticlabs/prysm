@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -28,12 +29,15 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 	randaoReveal := []byte{2}
 	graffiti := []byte{3}
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v2/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&abstractProduceBlockResponseJson{},
 	).SetArg(
-		1,
+		2,
 		abstractProduceBlockResponseJson{
 			Version: "capella",
 			Data:    capellaBeaconBlockBytes,
@@ -46,7 +50,7 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 	expectedBeaconBlock := generateProtoCapellaBlock(capellaProtoBeaconBlock)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
 }
@@ -114,10 +118,11 @@ func TestGetBeaconBlock_CapellaError(t *testing.T) {
 
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				context.Background(),
 				gomock.Any(),
 				&abstractProduceBlockResponseJson{},
 			).SetArg(
-				1,
+				2,
 				abstractProduceBlockResponseJson{
 					Version: "capella",
 					Data:    dataBytes,
@@ -128,7 +133,7 @@ func TestGetBeaconBlock_CapellaError(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err = validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+			_, err = validatorClient.getBeaconBlock(context.Background(), 1, []byte{1}, []byte{2})
 			assert.ErrorContains(t, "failed to get capella block", err)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
