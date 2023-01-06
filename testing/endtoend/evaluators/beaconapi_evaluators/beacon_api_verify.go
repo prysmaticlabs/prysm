@@ -20,7 +20,7 @@ const (
 
 type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
 
-func beaconAPIVerify(_ e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconAPIs,
 	}
