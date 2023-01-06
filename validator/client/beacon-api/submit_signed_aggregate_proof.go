@@ -2,9 +2,8 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-
-	"golang.org/x/net/context"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
