@@ -58,7 +58,7 @@ var Commands = []*cli.Command{
 					if !cliCtx.Bool(cmd.AcceptTosFlag.Name) || !cliCtx.Bool(ConfirmFlag.Name) {
 						fmt.Println(au.Red("===============IMPORTANT==============="))
 						fmt.Println(au.Red("Please read the following carefully"))
-						fmt.Print("This action will allow the partial withdraw of amounts over the 32 staked eth in your active validator balance. \n" +
+						fmt.Print("This action will allow the partial withdrawal of amounts over the 32 staked ETH in your active validator balance. \n" +
 							"You will also be entitled to the full withdrawal of the entire validator balance if your validator has exited. \n" +
 							"The partial and full withdrawal . \n" +
 							"Please navigate to our website and make sure you understand the full implications of setting your withdrawal address. \n")
