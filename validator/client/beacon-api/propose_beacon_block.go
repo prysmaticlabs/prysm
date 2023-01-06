@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -12,7 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	var consensusVersion string
 	var beaconBlockRoot [32]byte
 
@@ -93,7 +94,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	}
 
 	headers := map[string]string{"Eth-Consensus-Version": consensusVersion}
-	if httpError, err := c.jsonRestHandler.PostRestJson(endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
+	if httpError, err := c.jsonRestHandler.PostRestJson(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
 		if httpError != nil && httpError.Code == http.StatusAccepted {
 			// Error 202 means that the block was successfully broadcasted, but validation failed
 			return nil, errors.Wrap(err, "block was successfully broadcasted but failed validation")
