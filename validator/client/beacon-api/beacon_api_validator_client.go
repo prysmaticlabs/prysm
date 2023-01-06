@@ -121,8 +121,8 @@ func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in
 	return new(empty.Empty), c.prepareBeaconProposer(ctx, in.Recipients)
 }
 
-func (c *beaconApiValidatorClient) ProposeAttestation(_ context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	return c.proposeAttestation(in)
+func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+	return c.proposeAttestation(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {

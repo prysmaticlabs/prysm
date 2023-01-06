@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/golang/mock/gomock"
@@ -77,7 +78,10 @@ func TestProposeAttestation_Valid(t *testing.T) {
 				marshalledAttestations = b
 			}
 
+			ctx := context.Background()
+
 			jsonRestHandler.EXPECT().PostRestJson(
+				ctx,
 				"/eth/v1/beacon/pool/attestations",
 				nil,
 				bytes.NewBuffer(marshalledAttestations),
@@ -88,7 +92,7 @@ func TestProposeAttestation_Valid(t *testing.T) {
 			).Times(test.endpointCall)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			proposeResponse, err := validatorClient.proposeAttestation(test.attestation)
+			proposeResponse, err := validatorClient.proposeAttestation(ctx, test.attestation)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return

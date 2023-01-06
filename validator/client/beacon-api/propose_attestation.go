@@ -2,12 +2,13 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeAttestation(attestation *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attestation *ethpb.Attestation) (*ethpb.AttestResponse, error) {
 	if err := checkNilAttestation(attestation); err != nil {
 		return nil, err
 	}
@@ -17,7 +18,7 @@ func (c beaconApiValidatorClient) proposeAttestation(attestation *ethpb.Attestat
 		return nil, err
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson("/eth/v1/beacon/pool/attestations", nil, bytes.NewBuffer(marshalledAttestation), nil); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, "/eth/v1/beacon/pool/attestations", nil, bytes.NewBuffer(marshalledAttestation), nil); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 
