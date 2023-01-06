@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -41,8 +42,11 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 	marshalledContributionAndProofs, err := json.Marshal(jsonContributionAndProofs)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		submitSignedContributionAndProofTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledContributionAndProofs),
@@ -68,7 +72,7 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 	}
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	err = validatorClient.submitSignedContributionAndProof(contributionAndProof)
+	err = validatorClient.submitSignedContributionAndProof(ctx, contributionAndProof)
 	require.NoError(t, err)
 }
 
@@ -113,9 +117,12 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			if testCase.httpRequestExpected {
 				jsonRestHandler.EXPECT().PostRestJson(
+					ctx,
 					submitSignedContributionAndProofTestEndpoint,
 					gomock.Any(),
 					gomock.Any(),
@@ -127,7 +134,7 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 			}
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			err := validatorClient.submitSignedContributionAndProof(testCase.data)
+			err := validatorClient.submitSignedContributionAndProof(ctx, testCase.data)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
