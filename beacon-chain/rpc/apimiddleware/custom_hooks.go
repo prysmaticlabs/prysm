@@ -17,6 +17,29 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/submitPoolBLSToExecutionChange
+// expects posting a top-level array. We make it more proto-friendly by wrapping it in a struct.
+func wrapBLSChangesArray(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*SubmitBLSToExecutionChangesRequest); !ok {
+		return true, nil
+	}
+	changes := make([]*SignedBLSToExecutionChangeJson, 0)
+	if err := json.NewDecoder(req.Body).Decode(&changes); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
+	}
+	j := &SubmitBLSToExecutionChangesRequest{Changes: changes}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+	}
+	req.Body = io.NopCloser(bytes.NewReader(b))
+	return true, nil
+}
+
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconProposer expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct.
 func wrapFeeRecipientsArray(
