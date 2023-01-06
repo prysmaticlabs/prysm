@@ -123,10 +123,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// Set bls to execution change. New in Capella.
-	if err := vs.setBlsToExecData(blk, head); err != nil {
-		// Empty bls to exec array is set within `setBlsToExecData`.
-		log.WithError(err).Error("Could not set bls to execution data")
-	}
+	vs.setBlsToExecData(blk, head)
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
