@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	neturl "net/url"
 	"strconv"
 
@@ -9,7 +10,7 @@ import (
 )
 
 type stateValidatorsProvider interface {
-	GetStateValidators([]string, []int64, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
+	GetStateValidators(context.Context, []string, []int64, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
 }
 
 type beaconApiStateValidatorsProvider struct {
@@ -17,6 +18,7 @@ type beaconApiStateValidatorsProvider struct {
 }
 
 func (c beaconApiStateValidatorsProvider) GetStateValidators(
+	ctx context.Context,
 	stringPubkeys []string,
 	indexes []int64,
 	statuses []string,
@@ -51,7 +53,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidators(
 
 	stateValidatorsJson := &rpcmiddleware.StateValidatorsResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(url, stateValidatorsJson)
+	_, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, stateValidatorsJson)
 	if err != nil {
 		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.Wrap(err, "failed to get json response")
 	}
