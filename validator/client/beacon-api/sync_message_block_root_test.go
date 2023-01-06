@@ -1,13 +1,15 @@
 package beacon_api
 
 import (
+	"context"
 	"errors"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
-	"testing"
 )
 
 func TestGetSyncMessageBlockRoot(t *testing.T) {
@@ -57,8 +59,10 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
 				"/eth/v1/beacon/blocks/head/root",
 				&apimiddleware.BlockRootResponseJson{},
 			).SetArg(
@@ -70,7 +74,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			actualResponse, err := validatorClient.getSyncMessageBlockRoot()
+			actualResponse, err := validatorClient.getSyncMessageBlockRoot(ctx)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
 				return

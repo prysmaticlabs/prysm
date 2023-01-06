@@ -1,16 +1,18 @@
 package beacon_api
 
 import (
+	"context"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) getSyncMessageBlockRoot() (*ethpb.SyncMessageBlockRootResponse, error) {
+func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
 	var resp apimiddleware.BlockRootResponseJson
-	if _, err := c.jsonRestHandler.GetRestJsonResponse("/eth/v1/beacon/blocks/head/root", &resp); err != nil {
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/blocks/head/root", &resp); err != nil {
 		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	}
 
