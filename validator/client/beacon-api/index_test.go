@@ -33,18 +33,20 @@ func TestIndex_Nominal(t *testing.T) {
 	defer ctrl.Finish()
 
 	pubKey, url := getPubKeyAndURL(t)
+	ctx := context.Background()
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		url,
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
@@ -65,7 +67,7 @@ func TestIndex_Nominal(t *testing.T) {
 	}
 
 	validatorIndex, err := validatorClient.ValidatorIndex(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubKey,
 		},
@@ -80,18 +82,20 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	defer ctrl.Finish()
 
 	pubKey, url := getPubKeyAndURL(t)
+	ctx := context.Background()
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		url,
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{},
 		},
@@ -104,7 +108,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	}
 
 	_, err := validatorClient.ValidatorIndex(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubKey,
 		},
@@ -119,18 +123,20 @@ func TestIndex_BadIndexError(t *testing.T) {
 	defer ctrl.Finish()
 
 	pubKey, url := getPubKeyAndURL(t)
+	ctx := context.Background()
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		url,
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
@@ -151,7 +157,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 	}
 
 	_, err := validatorClient.ValidatorIndex(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubKey,
 		},
@@ -165,11 +171,13 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	pubKey, url := getPubKeyAndURL(t)
+	ctx := context.Background()
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		url,
 		&stateValidatorsResponseJson,
 	).Return(
@@ -184,7 +192,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	}
 
 	_, err := validatorClient.ValidatorIndex(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorIndexRequest{
 			PublicKey: pubKey,
 		},
