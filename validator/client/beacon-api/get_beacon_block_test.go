@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -16,8 +17,11 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
@@ -26,7 +30,7 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 	assert.ErrorContains(t, "failed to query GET REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }
@@ -95,12 +99,15 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
 				gomock.Any(),
 				&abstractProduceBlockResponseJson{},
 			).SetArg(
-				1,
+				2,
 				abstractProduceBlockResponseJson{
 					Version: testCase.consensusVersion,
 					Data:    testCase.data,
@@ -111,7 +118,7 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+			_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}

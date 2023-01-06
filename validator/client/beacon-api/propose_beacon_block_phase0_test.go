@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -48,9 +49,12 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	marshalledBlock, err := json.Marshal(jsonPhase0Block)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "phase0"}
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		"/eth/v1/beacon/blocks",
 		headers,
 		bytes.NewBuffer(marshalledBlock),
@@ -58,7 +62,7 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	proposeResponse, err := validatorClient.proposeBeaconBlock(genericSignedBlock)
+	proposeResponse, err := validatorClient.proposeBeaconBlock(ctx, genericSignedBlock)
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)
 

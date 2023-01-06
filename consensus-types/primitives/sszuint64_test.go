@@ -10,7 +10,7 @@ import (
 
 func TestSSZUint64_Limit(t *testing.T) {
 	sszType := types.SSZUint64(0)
-	serializedObj := [7]byte{}
+	var serializedObj [7]byte
 	err := sszType.UnmarshalSSZ(serializedObj[:])
 	if err == nil || !strings.Contains(err.Error(), "expected buffer of length") {
 		t.Errorf("Expected Error = %s, got: %v", "expected buffer of length", err)

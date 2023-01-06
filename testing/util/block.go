@@ -36,6 +36,7 @@ type BlockGenConfig struct {
 	NumVoluntaryExits    uint64
 	NumTransactions      uint64 // Only for post Bellatrix blocks
 	FullSyncAggregate    bool
+	NumBLSChanges        uint64 // Only for post Capella blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -48,6 +49,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
 		NumTransactions:      0,
+		NumBLSChanges:        0,
 	}
 }
 
@@ -357,6 +359,22 @@ func generateDepositsAndEth1Data(
 		return nil, nil, errors.Wrap(err, "could not get eth1data")
 	}
 	return currentDeposits[previousDepsLen:], eth1Data, nil
+}
+
+func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx types.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+	currentEpoch := time.CurrentEpoch(bState)
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          time.PrevEpoch(bState),
+			ValidatorIndex: idx,
+		},
+	}
+	var err error
+	exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
+	if err != nil {
+		return nil, err
+	}
+	return exit, nil
 }
 
 func generateVoluntaryExits(

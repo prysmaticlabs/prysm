@@ -14,6 +14,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
@@ -23,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -283,24 +285,16 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stdout.log", index)))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stderr.log", index)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
@@ -348,4 +342,15 @@ func (node *BeaconNode) Stop() error {
 
 func (node *BeaconNode) UnderlyingProcess() *os.Process {
 	return node.cmd.Process
+}
+
+func generateGenesis(ctx context.Context) (state.BeaconState, error) {
+	if e2e.TestParams.Eth1GenesisBlock == nil {
+		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
+	}
+	gb := e2e.TestParams.Eth1GenesisBlock
+	t := e2e.TestParams.CLGenesisTime
+	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
+	version := e2etypes.GenesisFork()
+	return util.NewPreminedGenesis(ctx, t, nvals, version, gb)
 }

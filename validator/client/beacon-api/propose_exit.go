@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strconv"
 
@@ -11,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeExit(signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
+func (c beaconApiValidatorClient) proposeExit(ctx context.Context, signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
 	if signedVoluntaryExit == nil {
 		return nil, errors.New("signed voluntary exit is nil")
 	}
@@ -33,7 +34,7 @@ func (c beaconApiValidatorClient) proposeExit(signedVoluntaryExit *ethpb.SignedV
 		return nil, errors.Wrap(err, "failed to marshal signed voluntary exit")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson("/eth/v1/beacon/pool/voluntary_exits", nil, bytes.NewBuffer(marshalledSignedVoluntaryExit), nil); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, "/eth/v1/beacon/pool/voluntary_exits", nil, bytes.NewBuffer(marshalledSignedVoluntaryExit), nil); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 

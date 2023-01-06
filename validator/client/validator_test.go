@@ -85,7 +85,7 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
 	if !ok {
@@ -306,7 +306,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -344,7 +344,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	beaconClient := mock2.NewMockBeaconChainClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -467,7 +467,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -505,7 +505,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], privKey.PublicKey().Marshal())
 	km := &mockKeymanager{
 		keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -567,7 +567,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	for i := 0; i < numValidators; i++ {
 		priv, err := bls.RandKey()
 		require.NoError(t, err)
-		pubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var pubKey [fieldparams.BLSPubkeyLength]byte
 		copy(pubKey[:], priv.PublicKey().Marshal())
 		keysMap[pubKey] = priv
 		blacklistedPublicKeys[pubKey] = true
