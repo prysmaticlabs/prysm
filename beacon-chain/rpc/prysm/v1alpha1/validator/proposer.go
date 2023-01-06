@@ -137,11 +137,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
-	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && !blk.IsBlinded() {
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && !blk.IsBlinded() {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
-	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && blk.IsBlinded() {
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && blk.IsBlinded() {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
-	} else if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
 	}
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
