@@ -192,8 +192,8 @@ func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *et
 	panic("beaconApiValidatorClient.SubmitSyncMessage is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(_ context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
-	return new(empty.Empty), c.submitValidatorRegistrations(in.Messages)
+func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
+	return new(empty.Empty), c.submitValidatorRegistrations(ctx, in.Messages)
 }
 
 func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest) (*empty.Empty, error) {
