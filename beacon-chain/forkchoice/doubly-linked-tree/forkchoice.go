@@ -669,3 +669,14 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
 	f.balancesByRoot = handler
 }
+
+// Weight returns the weight of the given root if found on the store
+func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.weight, nil
+}

@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,9 +37,9 @@ func (m *MockgenesisProvider) EXPECT() *MockgenesisProviderMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockgenesisProvider) GetGenesis() (*apimiddleware0.GenesisResponse_GenesisJson, *apimiddleware.DefaultErrorJson, error) {
+func (m *MockgenesisProvider) GetGenesis(ctx context.Context) (*apimiddleware0.GenesisResponse_GenesisJson, *apimiddleware.DefaultErrorJson, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGenesis")
+	ret := m.ctrl.Call(m, "GetGenesis", ctx)
 	ret0, _ := ret[0].(*apimiddleware0.GenesisResponse_GenesisJson)
 	ret1, _ := ret[1].(*apimiddleware.DefaultErrorJson)
 	ret2, _ := ret[2].(error)
@@ -46,7 +47,7 @@ func (m *MockgenesisProvider) GetGenesis() (*apimiddleware0.GenesisResponse_Gene
 }
 
 // GetGenesis indicates an expected call of GetGenesis.
-func (mr *MockgenesisProviderMockRecorder) GetGenesis() *gomock.Call {
+func (mr *MockgenesisProviderMockRecorder) GetGenesis(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockgenesisProvider)(nil).GetGenesis))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGenesis", reflect.TypeOf((*MockgenesisProvider)(nil).GetGenesis), ctx)
 }
