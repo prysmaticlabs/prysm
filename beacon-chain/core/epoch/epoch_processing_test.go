@@ -519,7 +519,7 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := epoch.ProcessHistoricalRootsUpdate(tt.st())
+			got, err := epoch.ProcessHistoricalDataUpdate(tt.st())
 			require.NoError(t, err)
 			tt.verifier(got)
 		})

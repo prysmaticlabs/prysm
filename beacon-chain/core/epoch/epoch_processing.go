@@ -352,17 +352,9 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	return state, nil
 }
 
-// ProcessHistoricalRootsUpdate processes the updates to historical root accumulator during epoch processing.
-//
-// Spec pseudocode definition:
-//
-//	def process_historical_roots_update(state: BeaconState) -> None:
-//	  # Set historical root accumulator
-//	  next_epoch = Epoch(get_current_epoch(state) + 1)
-//	  if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//	      historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
-//	      state.historical_roots.append(hash_tree_root(historical_batch))
-func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, error) {
+// ProcessHistoricalDataUpdate processes the updates to historical data during epoch processing.
+// For Capella state, per spec, historical summaries is updated instead of historical roots.
+func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, error) {
 	currentEpoch := time.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
 
@@ -443,7 +435,7 @@ func ProcessFinalUpdates(state state.BeaconState) (state.BeaconState, error) {
 	}
 
 	// Set historical root accumulator.
-	state, err = ProcessHistoricalRootsUpdate(state)
+	state, err = ProcessHistoricalDataUpdate(state)
 	if err != nil {
 		return nil, err
 	}
