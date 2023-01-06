@@ -25,9 +25,12 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		[]string{stringValidatorPubKey},
 		nil,
 		nil,
@@ -50,7 +53,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 	actualValidatorStatusResponse, err := validatorClient.ValidatorStatus(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorStatusRequest{
 			PublicKey: validatorPubKey,
 		},
@@ -69,9 +72,12 @@ func TestValidatorStatus_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		gomock.Any(),
 		nil,
 		nil,
@@ -83,7 +89,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 	_, err := validatorClient.ValidatorStatus(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorStatusRequest{
 			PublicKey: []byte{},
 		},
@@ -98,6 +104,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		"0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463", // existing
 	}
 
+	ctx := context.Background()
 	validatorsPubKey := make([][]byte, len(stringValidatorsPubKey))
 
 	for i, stringValidatorPubKey := range stringValidatorsPubKey {
@@ -112,6 +119,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		stringValidatorsPubKey,
 		nil,
 		nil,
@@ -160,7 +168,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	}
 
 	actualValidatorStatusResponse, err := validatorClient.MultipleValidatorStatus(
-		context.Background(),
+		ctx,
 		&ethpb.MultipleValidatorStatusRequest{
 			PublicKeys: validatorsPubKey,
 		},
@@ -173,9 +181,11 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		gomock.Any(),
 		nil,
 		nil,
@@ -187,7 +197,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 	_, err := validatorClient.MultipleValidatorStatus(
-		context.Background(),
+		ctx,
 		&ethpb.MultipleValidatorStatusRequest{
 			PublicKeys: [][]byte{},
 		},
@@ -199,6 +209,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
 	stringValidatorsPubKey := []string{
 		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // existing
 		"0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463", // existing
@@ -226,6 +237,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		stringValidatorsPubKey,
 		validatorsIndex,
 		nil,
@@ -278,6 +290,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	).Times(1)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		nil,
 		nil,
 		[]string{"active"},
@@ -367,7 +380,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	}
 
 	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
-	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(validatorsPubKey, validatorsIndex)
+	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, validatorsPubKey, validatorsIndex)
 
 	require.NoError(t, err)
 	assert.DeepEqual(t, wantedValidatorsPubKey, actualValidatorsPubKey)
@@ -383,9 +396,11 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	validatorPubKey, err := hexutil.Decode(stringValidatorPubKey)
 	require.NoError(t, err)
 
+	ctx := context.Background()
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		[]string{stringValidatorPubKey},
 		nil,
 		nil,
@@ -406,6 +421,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	).Times(1)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		nil,
 		nil,
 		[]string{"active"},
@@ -427,7 +443,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	}
 
 	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
-	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(wantedValidatorsPubKey, nil)
+	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, wantedValidatorsPubKey, nil)
 
 	require.NoError(t, err)
 	require.NoError(t, err)
@@ -672,10 +688,12 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
+				ctx := context.Background()
 				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
 				for _, aa := range testCase.inputGetStateValidatorsInterfaces {
 					stateValidatorsProvider.EXPECT().GetStateValidators(
+						ctx,
 						aa.inputStringPubKeys,
 						aa.inputIndexes,
 						aa.inputStatuses,
@@ -688,6 +706,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 				_, _, _, err := validatorClient.getValidatorsStatusResponse(
+					ctx,
 					testCase.inputPubKeys,
 					testCase.inputIndexes,
 				)

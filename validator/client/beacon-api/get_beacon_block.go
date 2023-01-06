@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -22,7 +23,7 @@ type abstractProduceBlockResponseJson struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (c beaconApiValidatorClient) getBeaconBlock(slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
+func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
 	queryParams := neturl.Values{}
 	queryParams.Add("randao_reveal", hexutil.Encode(randaoReveal))
 
@@ -35,7 +36,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(slot types.Slot, randaoReveal [
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
 	produceBlockResponseJson := abstractProduceBlockResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(queryUrl, &produceBlockResponseJson); err != nil {
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlockResponseJson); err != nil {
 		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	}
 

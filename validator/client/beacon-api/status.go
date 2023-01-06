@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -10,8 +11,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) validatorStatus(in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	_, _, validatorsStatusResponse, err := c.getValidatorsStatusResponse([][]byte{in.PublicKey}, nil)
+func (c *beaconApiValidatorClient) validatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
+	_, _, validatorsStatusResponse, err := c.getValidatorsStatusResponse(ctx, [][]byte{in.PublicKey}, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator status response")
 	}
@@ -25,8 +26,8 @@ func (c *beaconApiValidatorClient) validatorStatus(in *ethpb.ValidatorStatusRequ
 	return validatorStatusResponse, nil
 }
 
-func (c *beaconApiValidatorClient) multipleValidatorStatus(in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(in.PublicKeys, in.Indices)
+func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(ctx, in.PublicKeys, in.Indices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validators status response")
 	}
@@ -38,7 +39,7 @@ func (c *beaconApiValidatorClient) multipleValidatorStatus(in *ethpb.MultipleVal
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byte, inIndexes []int64) (
+func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []int64) (
 	[][]byte,
 	[]types.ValidatorIndex,
 	[]*ethpb.ValidatorStatusResponse,
@@ -67,7 +68,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 	}
 
 	// Get state for the current validator
-	stateValidatorsResponse, err := c.stateValidatorsProvider.GetStateValidators(stringTargetPubKeys, inIndexes, nil)
+	stateValidatorsResponse, err := c.stateValidatorsProvider.GetStateValidators(ctx, stringTargetPubKeys, inIndexes, nil)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
 	}
@@ -121,7 +122,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(inPubKeys [][]byt
 			if !isLastActivatedValidatorIndexRetrieved {
 				isLastActivatedValidatorIndexRetrieved = true
 
-				activeStateValidators, err := c.stateValidatorsProvider.GetStateValidators(nil, nil, []string{"active"})
+				activeStateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, nil, nil, []string{"active"})
 				if err != nil {
 					return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
 				}

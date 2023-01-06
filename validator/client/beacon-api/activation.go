@@ -69,7 +69,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 			stringTargetPubKeys[index] = stringPubKey
 		}
 
-		stateValidators, err := c.stateValidatorsProvider.GetStateValidators(stringTargetPubKeys, nil, nil)
+		stateValidators, err := c.stateValidatorsProvider.GetStateValidators(c.ctx, stringTargetPubKeys, nil, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get state validators")
 		}
