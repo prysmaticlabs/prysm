@@ -43,6 +43,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		context.Background(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		bytes.NewBuffer(marshalledJsonRegistrations),
@@ -72,6 +73,7 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		context.Background(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		gomock.Any(),

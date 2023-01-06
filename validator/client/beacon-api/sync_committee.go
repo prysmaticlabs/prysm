@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strconv"
 
@@ -11,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) submitSyncMessage(syncMessage *ethpb.SyncCommitteeMessage) error {
+func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
 	const endpoint = "/eth/v1/beacon/pool/sync_committees"
 
 	jsonSyncCommitteeMessage := &apimiddleware.SyncCommitteeMessageJson{
@@ -26,7 +27,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(syncMessage *ethpb.SyncComm
 		return errors.Wrap(err, "failed to marshal sync committee message")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil); err != nil {
 		return errors.Wrapf(err, "failed to send POST data to `%s` REST endpoint", endpoint)
 	}
 
