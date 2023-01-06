@@ -109,17 +109,22 @@ func TestActivation_Nominal(t *testing.T) {
 	}
 
 	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
+
+	// Instantiate a cancellable context.
+	ctx, cancel := context.WithCancel(context.Background())
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	// GetRestJsonResponse does not return any result for non existing key
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		url,
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.StateValidatorsResponseJson{
 			Data: []*rpcmiddleware.ValidatorContainerJson{
 				{
@@ -147,10 +152,11 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	waitForActivation, err := validatorClient.WaitForActivation(
 		ctx,
@@ -230,25 +236,31 @@ func TestActivation_InvalidData(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+				ctx := context.Background()
 
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
 					nil,
 					nil,
 				).SetArg(
-					1,
+					2,
 					rpcmiddleware.StateValidatorsResponseJson{
 						Data: testCase.data,
 					},
 				).Times(1)
 
-				validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+				validatorClient := beaconApiValidatorClient{
+					stateValidatorsProvider: beaconApiStateValidatorsProvider{
+						jsonRestHandler: jsonRestHandler,
+					},
+				}
 
 				waitForActivation, err := validatorClient.WaitForActivation(
-					context.Background(),
+					ctx,
 					&ethpb.ValidatorActivationRequest{},
 				)
 				assert.NoError(t, err)
@@ -264,9 +276,11 @@ func TestActivation_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	ctx := context.Background()
 
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
@@ -274,10 +288,14 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 
 	waitForActivation, err := validatorClient.WaitForActivation(
-		context.Background(),
+		ctx,
 		&ethpb.ValidatorActivationRequest{},
 	)
 	assert.NoError(t, err)
