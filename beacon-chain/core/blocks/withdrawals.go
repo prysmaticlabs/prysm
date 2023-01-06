@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -161,6 +162,25 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	return st, nil
 }
 
+// blsChangesSigningDomain returns the signing domain to check  BLSToExecutionChange messages against.
+func blsChangesSigningDomain(st state.ReadOnlyBeaconState) ([]byte, error) {
+	var epoch types.Epoch
+	var fork *ethpb.Fork
+	if st.Version() < version.Capella {
+		epoch = params.BeaconConfig().CapellaForkEpoch
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           epoch,
+		}
+
+	} else {
+		epoch = slots.ToEpoch(st.Slot())
+		fork = st.Fork()
+	}
+	return signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+}
+
 func BLSChangesSignatureBatch(
 	st state.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
@@ -175,18 +195,7 @@ func BLSChangesSignatureBatch(
 		Messages:     make([][32]byte, len(changes)),
 		Descriptions: make([]string, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
-	var fork *ethpb.Fork
-	if st.Version() < version.Capella {
-		fork = &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           params.BeaconConfig().CapellaForkEpoch,
-		}
-	} else {
-		fork = st.Fork()
-	}
-	domain, err := signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	domain, err := blsChangesSigningDomain(st)
 	if err != nil {
 		return nil, err
 	}
@@ -205,4 +214,19 @@ func BLSChangesSignatureBatch(
 		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
+}
+
+// VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+// It validates the signature with the Capella fork version if the passed state
+// is from a previous fork.
+func VerifyBLSChangeSignature(
+	st state.BeaconState,
+	change *ethpbv2.SignedBLSToExecutionChange,
+) error {
+	domain, err := blsChangesSigningDomain(st)
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing domain")
+	}
+	publicKey := change.Message.FromBlsPubkey
+	return signing.VerifySigningRoot(change.Message, publicKey, change.Signature, domain)
 }

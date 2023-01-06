@@ -1,6 +1,8 @@
 package beacon_api
 
 import (
+	"context"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -9,7 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) getDomainData(epoch types.Epoch, domainType [4]byte) (*ethpb.DomainResponse, error) {
+func (c beaconApiValidatorClient) getDomainData(ctx context.Context, epoch types.Epoch, domainType [4]byte) (*ethpb.DomainResponse, error) {
 	// Get the fork version from the given epoch
 	fork, err := forks.Fork(epoch)
 	if err != nil {
@@ -17,7 +19,7 @@ func (c beaconApiValidatorClient) getDomainData(epoch types.Epoch, domainType [4
 	}
 
 	// Get the genesis validator root
-	genesis, _, err := c.genesisProvider.GetGenesis()
+	genesis, _, err := c.genesisProvider.GetGenesis(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis info")
 	}
