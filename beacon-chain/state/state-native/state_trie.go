@@ -89,7 +89,7 @@ const (
 	phase0SharedFieldRefCount    = 10
 	altairSharedFieldRefCount    = 11
 	bellatrixSharedFieldRefCount = 12
-	capellaSharedFieldRefCount   = 13
+	capellaSharedFieldRefCount   = 14
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -468,6 +468,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
+	b.sharedFieldReferences[nativetypes.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.

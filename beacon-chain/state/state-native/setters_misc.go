@@ -1,6 +1,8 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
@@ -9,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -111,6 +114,10 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.version > version.Bellatrix {
+		return fmt.Errorf("AppendHistoricalRoots is not supported for version %d", b.version)
+	}
+
 	roots := b.historicalRoots
 	if b.sharedFieldReferences[nativetypes.HistoricalRoots].Refs() > 1 {
 		roots = make([][32]byte, len(b.historicalRoots))
@@ -129,6 +136,10 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 func (b *BeaconState) AppendHistoricalSummariesUpdate(summary *ethpb.HistoricalSummary) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version < version.Capella {
+		return fmt.Errorf("AppendHistoricalSummariesUpdate is not supported for version %d", b.version)
+	}
 
 	summaries := b.historicalSummaries
 	if b.sharedFieldReferences[nativetypes.HistoricalSummaries].Refs() > 1 {
