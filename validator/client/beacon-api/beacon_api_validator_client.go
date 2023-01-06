@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	iface "github.com/prysmaticlabs/prysm/v3/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
 )
 
 type beaconApiValidatorClient struct {
@@ -56,25 +56,25 @@ func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *et
 	panic("beaconApiValidatorClient.CheckDoppelGanger is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) DomainData(_ context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	if len(in.Domain) != 4 {
 		return nil, errors.Errorf("invalid domain type: %s", hexutil.Encode(in.Domain))
 	}
 
 	domainType := bytesutil.ToBytes4(in.Domain)
-	return c.getDomainData(in.Epoch, domainType)
+	return c.getDomainData(ctx, in.Epoch, domainType)
 }
 
-func (c *beaconApiValidatorClient) GetAttestationData(_ context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
+func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
 	if in == nil {
 		return nil, errors.New("GetAttestationData received nil argument `in`")
 	}
 
-	return c.getAttestationData(in.Slot, in.CommitteeIndex)
+	return c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
 }
 
-func (c *beaconApiValidatorClient) GetBeaconBlock(_ context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	return c.getBeaconBlock(in.Slot, in.RandaoReveal, in.Graffiti)
+func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
 }
 
 func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
@@ -113,12 +113,12 @@ func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context,
 	panic("beaconApiValidatorClient.GetSyncSubcommitteeIndex is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) MultipleValidatorStatus(_ context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	return c.multipleValidatorStatus(in)
+func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
+	return c.multipleValidatorStatus(ctx, in)
 }
 
-func (c *beaconApiValidatorClient) PrepareBeaconProposer(_ context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	return new(empty.Empty), c.prepareBeaconProposer(in.Recipients)
+func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
+	return new(empty.Empty), c.prepareBeaconProposer(ctx, in.Recipients)
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
@@ -130,12 +130,12 @@ func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *e
 	panic("beaconApiValidatorClient.ProposeAttestation is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) ProposeBeaconBlock(_ context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	return c.proposeBeaconBlock(in)
+func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	return c.proposeBeaconBlock(ctx, in)
 }
 
-func (c *beaconApiValidatorClient) ProposeExit(_ context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
-	return c.proposeExit(in)
+func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
+	return c.proposeExit(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
@@ -210,12 +210,12 @@ func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context
 	panic("beaconApiValidatorClient.SubscribeCommitteeSubnets is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) ValidatorIndex(_ context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	return c.validatorIndex(in)
+func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
+	return c.validatorIndex(ctx, in)
 }
 
-func (c *beaconApiValidatorClient) ValidatorStatus(_ context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	return c.validatorStatus(in)
+func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
+	return c.validatorStatus(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
