@@ -502,7 +502,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	}
 	b, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		return nil, status.Error(codes.Unavailable, "Builder is not available due to miss-config or circuit breaker")
+		return nil, status.Error(codes.Unavailable, "Could not get block from prysm API")
 	}
 	blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.GetBlindedBellatrix())
 	if err != nil {
