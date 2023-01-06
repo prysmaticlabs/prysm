@@ -48,8 +48,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 		if err := vs.optimisticStatus(ctx); err != nil {
 			return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
 		}
@@ -59,7 +59,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head root: %v", err)
@@ -83,6 +82,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set eth1 data.
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
+		blk.Body().SetEth1Data(&ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]})
 		log.WithError(err).Error("Could not get eth1data")
 	} else {
 		blk.Body().SetEth1Data(eth1Data)
@@ -90,6 +90,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		// Set deposit and attestation.
 		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
 		if err != nil {
+			blk.Body().SetDeposits([]*ethpb.Deposit{})
+			blk.Body().SetAttestations([]*ethpb.Attestation{})
 			log.WithError(err).Error("Could not pack deposits and attestations")
 		} else {
 			blk.Body().SetDeposits(deposits)
@@ -122,7 +124,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	// Set bls to execution change. New in Capella.
 	if err := vs.setBlsToExecData(blk, head); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set bls to execution data: %v", err)
+		// Empty bls to exec array is set within `setBlsToExecData`.
+		log.WithError(err).Error("Could not set bls to execution data")
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
