@@ -47,8 +47,8 @@ func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.Duti
 	panic("beaconApiValidatorClient.GetDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
 }
 
-func (c *beaconApiValidatorClient) CheckDoppelGanger(_ context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
-	return c.checkDoppelGanger(in)
+func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
+	return c.checkDoppelGanger(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {

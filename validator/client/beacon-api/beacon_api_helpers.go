@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	neturl "net/url"
@@ -47,12 +48,13 @@ func buildURL(path string, queryParams ...neturl.Values) string {
 	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
 
-func (c *beaconApiValidatorClient) getFork() (*apimiddleware.StateForkResponseJson, error) {
+func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*apimiddleware.StateForkResponseJson, error) {
 	const endpoint = "/eth/v1/beacon/states/head/fork"
 
 	stateForkResponseJson := &apimiddleware.StateForkResponseJson{}
 
 	_, err := c.jsonRestHandler.GetRestJsonResponse(
+		ctx,
 		endpoint,
 		stateForkResponseJson,
 	)
@@ -63,12 +65,13 @@ func (c *beaconApiValidatorClient) getFork() (*apimiddleware.StateForkResponseJs
 	return stateForkResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getHeaders() (*apimiddleware.BlockHeadersResponseJson, error) {
+func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*apimiddleware.BlockHeadersResponseJson, error) {
 	const endpoint = "/eth/v1/beacon/headers"
 
 	blockHeadersResponseJson := &apimiddleware.BlockHeadersResponseJson{}
 
 	_, err := c.jsonRestHandler.GetRestJsonResponse(
+		ctx,
 		endpoint,
 		blockHeadersResponseJson,
 	)
@@ -79,7 +82,7 @@ func (c *beaconApiValidatorClient) getHeaders() (*apimiddleware.BlockHeadersResp
 	return blockHeadersResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getLiveness(epoch types.Epoch, validatorIndexes []string) (*apimiddleware.LivenessResponseJson, error) {
+func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch types.Epoch, validatorIndexes []string) (*apimiddleware.LivenessResponseJson, error) {
 	const endpoint = "/eth/v1/validator/liveness/"
 	url := endpoint + strconv.FormatUint(uint64(epoch), 10)
 
@@ -90,7 +93,7 @@ func (c *beaconApiValidatorClient) getLiveness(epoch types.Epoch, validatorIndex
 		return nil, errors.Wrapf(err, "failed to marshal validator indexes")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson); err != nil {
 		return nil, errors.Wrapf(err, "failed to send POST data to `%s` REST URL", url)
 	}
 

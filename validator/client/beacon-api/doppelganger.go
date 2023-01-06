@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"strconv"
@@ -19,7 +20,7 @@ type DoppelGangerHelper struct {
 	response       *ethpb.DoppelGangerResponse_ValidatorResponse
 }
 
-func (c *beaconApiValidatorClient) checkDoppelGanger(in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
+func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
 	// Check if there is any doppelganger validator for the last 2 epochs.
 	// - If we are in Phase0, we consider there is no doppelganger.
 	// - If all validators we want to check doppelganger existence were live in local antislashing
@@ -61,7 +62,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(in *ethpb.DoppelGangerReque
 	}
 
 	// Retrieve fork version -- Return early if we are in phase0
-	forkResponse, err := c.getFork()
+	forkResponse, err := c.getFork(ctx)
 	if err != nil || forkResponse == nil || forkResponse.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get fork")
 	}
@@ -79,7 +80,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(in *ethpb.DoppelGangerReque
 	}
 
 	// Retrieve current epoch
-	headers, err := c.getHeaders()
+	headers, err := c.getHeaders(ctx)
 	if err != nil || headers == nil || headers.Data == nil || len(headers.Data) == 0 ||
 		headers.Data[0].Header == nil || headers.Data[0].Header.Message == nil {
 		return nil, errors.Wrapf(err, "failed to get headers")
@@ -116,7 +117,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(in *ethpb.DoppelGangerReque
 	}
 
 	// Retrieve correspondance between validator pubkey and index
-	stateValidators, err := c.stateValidatorsProvider.GetStateValidators(notRecentStringPubKeys, nil, nil)
+	stateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, notRecentStringPubKeys, nil, nil)
 	if err != nil || stateValidators == nil || stateValidators.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get state validators")
 	}
@@ -145,13 +146,13 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(in *ethpb.DoppelGangerReque
 	// since we assume that we are not in phase0.
 	previousEpoch := currentEpoch - 1
 
-	indexToPreviousLiveness, err := c.getIndexToLiveness(previousEpoch, indexes)
+	indexToPreviousLiveness, err := c.getIndexToLiveness(ctx, previousEpoch, indexes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for previous epoch (%d)", previousEpoch)
 	}
 
 	// Get validators liveness for the current epoch
-	indexToCurrentLiveness, err := c.getIndexToLiveness(currentEpoch, indexes)
+	indexToCurrentLiveness, err := c.getIndexToLiveness(ctx, currentEpoch, indexes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for current epoch (%d)", currentEpoch)
 	}
@@ -208,8 +209,8 @@ func buildResponse(
 	}
 }
 
-func (c *beaconApiValidatorClient) getIndexToLiveness(epoch types.Epoch, indexes []string) (map[string]bool, error) {
-	livenessResponse, err := c.getLiveness(epoch, indexes)
+func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch types.Epoch, indexes []string) (map[string]bool, error) {
+	livenessResponse, err := c.getLiveness(ctx, epoch, indexes)
 	if err != nil || livenessResponse.Data == nil {
 		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch (%d)", epoch))
 	}

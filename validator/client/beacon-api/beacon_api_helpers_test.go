@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -105,14 +106,17 @@ func TestGetFork_Nominal(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		forkEndpoint,
 		&stateForkResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		expected,
 	).Times(1)
 
@@ -120,7 +124,7 @@ func TestGetFork_Nominal(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	fork, err := validatorClient.getFork()
+	fork, err := validatorClient.getFork(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, fork)
 }
@@ -131,7 +135,10 @@ func TestGetFork_Invalid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
+	ctx := context.Background()
+
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		forkEndpoint,
 		gomock.Any(),
 	).Return(
@@ -143,7 +150,7 @@ func TestGetFork_Invalid(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	_, err := validatorClient.getFork()
+	_, err := validatorClient.getFork(ctx)
 	require.ErrorContains(t, "failed to get json response from `/eth/v1/beacon/states/head/fork` REST endpoint", err)
 }
 
@@ -168,14 +175,17 @@ func TestGetHeaders_Nominal(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		headersEndpoint,
 		&blockHeadersResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		expected,
 	).Times(1)
 
@@ -183,7 +193,7 @@ func TestGetHeaders_Nominal(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	headers, err := validatorClient.getHeaders()
+	headers, err := validatorClient.getHeaders(ctx)
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, headers)
 }
@@ -194,7 +204,10 @@ func TestGetHeaders_Invalid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
+	ctx := context.Background()
+
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		headersEndpoint,
 		gomock.Any(),
 	).Return(
@@ -206,7 +219,7 @@ func TestGetHeaders_Invalid(t *testing.T) {
 		jsonRestHandler: jsonRestHandler,
 	}
 
-	_, err := validatorClient.getHeaders()
+	_, err := validatorClient.getHeaders(ctx)
 	require.ErrorContains(t, "failed to get json response from `/eth/v1/beacon/headers` REST endpoint", err)
 }
 
@@ -238,14 +251,17 @@ func TestGetLiveness_Nominal(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		livenessEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledIndexes),
 		&livenessResponseJson,
 	).SetArg(
-		3,
+		4,
 		expected,
 	).Return(
 		nil,
@@ -253,7 +269,7 @@ func TestGetLiveness_Nominal(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	liveness, err := validatorClient.getLiveness(42, indexes)
+	liveness, err := validatorClient.getLiveness(ctx, 42, indexes)
 
 	require.NoError(t, err)
 	assert.DeepEqual(t, &expected, liveness)
@@ -263,8 +279,11 @@ func TestGetLiveness_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		livenessEndpoint,
 		nil,
 		gomock.Any(),
@@ -275,7 +294,7 @@ func TestGetLiveness_Invalid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getLiveness(42, nil)
+	_, err := validatorClient.getLiveness(ctx, 42, nil)
 
 	require.ErrorContains(t, "failed to send POST data to `/eth/v1/validator/liveness/42` REST URL", err)
 }

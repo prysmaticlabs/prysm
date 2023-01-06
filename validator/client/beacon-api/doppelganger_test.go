@@ -281,17 +281,20 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
+			ctx := context.Background()
+
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
 					nil,
 					nil,
 				).SetArg(
-					1,
+					2,
 					*testCase.getForkOutput,
 				).Times(1)
 			}
@@ -300,13 +303,14 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
 					nil,
 					nil,
 				).SetArg(
-					1,
+					2,
 					*testCase.getHeadersOutput,
 				).Times(1)
 			}
@@ -319,12 +323,13 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					require.NoError(t, err)
 
 					jsonRestHandler.EXPECT().PostRestJson(
+						ctx,
 						iface.inputUrl,
 						nil,
 						bytes.NewBuffer(marshalledIndexes),
 						&livenessResponseJson,
 					).SetArg(
-						3,
+						4,
 						*iface.output,
 					).Return(
 						nil,
@@ -337,6 +342,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
+					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,
 					nil,
@@ -678,17 +684,20 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
+			ctx := context.Background()
+
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
 					nil,
 					testCase.getForkError,
 				).SetArg(
-					1,
+					2,
 					*testCase.getForkOutput,
 				).Times(1)
 			}
@@ -697,13 +706,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
 					nil,
 					testCase.getHeadersError,
 				).SetArg(
-					1,
+					2,
 					*testCase.getHeadersOutput,
 				).Times(1)
 			}
@@ -712,6 +722,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
+					ctx,
 					testCase.getStateValidatorsInterface.input,
 					nil,
 					nil,
@@ -729,12 +740,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					require.NoError(t, err)
 
 					jsonRestHandler.EXPECT().PostRestJson(
+						ctx,
 						iface.inputUrl,
 						nil,
 						bytes.NewBuffer(marshalledIndexes),
 						&livenessResponseJson,
 					).SetArg(
-						3,
+						4,
 						*iface.output,
 					).Return(
 						nil,
