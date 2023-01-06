@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -23,8 +24,11 @@ func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
 	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		"/eth/v1/validator/aggregate_and_proofs",
 		nil,
 		bytes.NewBuffer(marshalledSignedAggregateSignedAndProof),
@@ -38,7 +42,7 @@ func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
 	require.NoError(t, err)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, err := validatorClient.submitSignedAggregateSelectionProof(&ethpb.SignedAggregateSubmitRequest{
+	resp, err := validatorClient.submitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: signedAggregateAndProof,
 	})
 	require.NoError(t, err)
@@ -53,8 +57,10 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
+	ctx := context.Background()
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		"/eth/v1/validator/aggregate_and_proofs",
 		nil,
 		bytes.NewBuffer(marshalledSignedAggregateSignedAndProof),
@@ -65,7 +71,7 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err = validatorClient.submitSignedAggregateSelectionProof(&ethpb.SignedAggregateSubmitRequest{
+	_, err = validatorClient.submitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: signedAggregateAndProof,
 	})
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
