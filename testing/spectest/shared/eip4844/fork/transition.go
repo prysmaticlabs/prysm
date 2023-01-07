@@ -3,7 +3,6 @@ package fork
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/golang/snappy"
@@ -120,9 +119,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 
 			pbState, err := state_native.ProtobufBeaconState4844(beaconState.ToProto())
 			require.NoError(t, err)
-			if !reflect.DeepEqual(pbState, postBeaconState) {
-				t.Error("Did not get expected state")
-			}
+			require.DeepEqual(t, postBeaconState, pbState, "Did not get expected post state")
 		})
 	}
 }
