@@ -251,22 +251,14 @@ func emptyBlockToSign(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().EIP4844ForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	default:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock4844{Body: &ethpb.BeaconBlockBody4844{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock4844{Block: &ethpb.BeaconBlock4844{Body: &ethpb.BeaconBlockBody4844{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	}
 	return sBlk, err

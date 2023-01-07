@@ -1088,15 +1088,6 @@ func (b *BeaconBlockBody) SetBlobKzgCommitments(c [][]byte) error {
 	}
 }
 
-// SetBLSToExecutionChanges sets the BLS to execution changes in the block.
-func (b *BeaconBlockBody) SetBLSToExecutionChanges(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) error {
-	if b.version < version.Capella {
-		return ErrNotSupported("BLSToExecutionChanges", b.version)
-	}
-	b.blsToExecutionChanges = eth.CopyBLSToExecutionChanges(blsToExecutionChanges)
-	return nil
-}
-
 // HashTreeRoot returns the ssz root of the block body.
 func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	pb, err := b.Proto()

@@ -160,7 +160,7 @@ func (e executionPayload) ExcessiveDataGas() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV1 --
+// PbBellatrix --
 func (e executionPayload) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return e.p, nil
 }
@@ -947,13 +947,13 @@ func (e executionPayloadHeaderEIP4844) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
-// PbV1 --
-func (e executionPayloadHeaderEIP4844) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (e executionPayloadHeaderEIP4844) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV2 --
-func (e executionPayloadHeaderEIP4844) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (e executionPayloadHeaderEIP4844) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
@@ -1102,12 +1102,12 @@ func (e executionPayloadEIP4844) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
-// PbV1 --
-func (e executionPayloadEIP4844) PbV1() (*enginev1.ExecutionPayload, error) {
+// PbBellatrix --
+func (e executionPayloadEIP4844) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// PbV2 --
-func (e executionPayloadEIP4844) PbV2() (*enginev1.ExecutionPayloadCapella, error) {
+// PbCapella --
+func (e executionPayloadEIP4844) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }

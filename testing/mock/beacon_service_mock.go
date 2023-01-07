@@ -478,6 +478,26 @@ func (mr *MockBeaconChainClientMockRecorder) SubmitAttesterSlashing(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitAttesterSlashing), varargs...)
 }
 
+// SubmitBLSToExecutionChange mocks base method.
+func (m *MockBeaconChainClient) SubmitBLSToExecutionChange(arg0 context.Context, arg1 *eth.SignedBLSToExecutionChange, arg2 ...grpc.CallOption) (*eth.BLSToExecutionChangeResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitBLSToExecutionChange", varargs...)
+	ret0, _ := ret[0].(*eth.BLSToExecutionChangeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitBLSToExecutionChange indicates an expected call of SubmitBLSToExecutionChange.
+func (mr *MockBeaconChainClientMockRecorder) SubmitBLSToExecutionChange(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitBLSToExecutionChange", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitBLSToExecutionChange), varargs...)
+}
+
 // SubmitProposerSlashing mocks base method.
 func (m *MockBeaconChainClient) SubmitProposerSlashing(arg0 context.Context, arg1 *eth.ProposerSlashing, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
 	m.ctrl.T.Helper()

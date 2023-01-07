@@ -70,6 +70,14 @@ func (SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockC
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) Pb4844Block() (*eth.SignedBeaconBlock4844, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbBlinded4844Block() (*eth.SignedBlindedBeaconBlock4844, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) MarshalSSZTo(_ []byte) ([]byte, error) {
 	panic("implement me")
 }
@@ -198,6 +206,10 @@ func (BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
 }
 
 type BeaconBlockBody struct{}
+
+func (b BeaconBlockBody) SetBlobKzgCommitments(c [][]byte) error {
+	panic("implement me")
+}
 
 func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	panic("implement me")

@@ -105,27 +105,31 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	defer cancel()
 	result := &pb.PayloadStatus{}
 
-
 	switch payload.Proto().(type) {
 	case *pb.ExecutionPayload:
 		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
 		if !ok {
 			return nil, errors.New("execution data must be a Bellatrix or Capella execution payload")
 		}
-	}
-	v2Pb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
-	if ok {
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, v2Pb)
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-
 	case *pb.ExecutionPayloadCapella:
 		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadCapella)
 		if !ok {
 			return nil, errors.New("execution data must be a Capella execution payload")
 		}
 		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV2, payloadPb)
+		if err != nil {
+			return nil, handleRPCError(err)
+		}
+	case *pb.ExecutionPayload4844:
+		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload4844)
+		if !ok {
+			return nil, errors.New("execution data must be a 4844 execution payload")
+		}
+		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb)
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
