@@ -90,6 +90,7 @@ var eip4844Fields = append(
 	nativetypes.LatestExecutionPayloadHeader4844,
 	nativetypes.NextWithdrawalIndex,
 	nativetypes.NextWithdrawalValidatorIndex,
+	nativetypes.HistoricalSummaries,
 )
 
 const (
@@ -543,6 +544,7 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 		latestExecutionPayloadHeader4844: st.LatestExecutionPayloadHeader,
 		nextWithdrawalIndex:              st.NextWithdrawalIndex,
 		nextWithdrawalValidatorIndex:     st.NextWithdrawalValidatorIndex,
+		historicalSummaries:              st.HistoricalSummaries,
 
 		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -576,6 +578,7 @@ func InitializeFromProtoUnsafe4844(st *ethpb.BeaconState4844) (state.BeaconState
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
 	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeader4844] = stateutil.NewRef(1) // New in EIP4844.
+	b.sharedFieldReferences[nativetypes.HistoricalSummaries] = stateutil.NewRef(1)              // New in Capella.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.

@@ -133,6 +133,8 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.PowBlock{}
 	case "Withdrawal":
 		obj = &enginev1.Withdrawal{}
+	case "HistoricalSummary":
+		obj = &ethpb.HistoricalSummary{}
 	case "BLSToExecutionChange":
 		obj = &ethpb.BLSToExecutionChange{}
 	case "SignedBLSToExecutionChange":

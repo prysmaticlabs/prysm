@@ -6,7 +6,7 @@ go_test(
     srcs = [
         "effective_balance_updates_test.go",
         "eth1_data_reset_test.go",
-        "historical_roots_update_test.go",
+        "historical_summaries_update_test.go",
         "inactivity_updates_test.go",
         "justification_and_finalization_test.go",
         "participation_flag_updates_test.go",
