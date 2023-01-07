@@ -129,7 +129,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errNilBlockHeader
 	}
 	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
-	payloadHash := [32]byte{}
+	var payloadHash [32]byte
 	if state.Version() >= version.Bellatrix {
 		ph, err := state.LatestExecutionPayloadHeader()
 		if err != nil {
@@ -668,4 +668,15 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 // SetBalancesByRooter sets the balanceByRoot handler in forkchoice
 func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
 	f.balancesByRoot = handler
+}
+
+// Weight returns the weight of the given root if found on the store
+func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.weight, nil
 }

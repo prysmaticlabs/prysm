@@ -137,6 +137,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 			},
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, blkRoot),
 	}, nil
 }
 
@@ -172,6 +173,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 	}
 
 	isOptimistic := false
+	isFinalized := true
 	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
 	for i, bl := range blks {
 		v1alpha1Header, err := bl.Header()
@@ -193,6 +195,9 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 			}
 		}
+		if isFinalized {
+			isFinalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
+		}
 		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
 			Root:      headerRoot[:],
 			Canonical: canonical,
@@ -203,7 +208,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		}
 	}
 
-	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic}, nil
+	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
@@ -239,6 +244,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+
 	return &emptypb.Empty{}, nil
 }
 
@@ -336,9 +342,14 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	if err != nil {
 		return nil, err
 	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
 
 	result, err := getBlockPhase0(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -347,6 +358,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = getBlockAltair(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -355,6 +367,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = bs.getBlockBellatrix(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -363,6 +376,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	}
 	result, err = bs.getBlockCapella(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -390,9 +404,14 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	if err != nil {
 		return nil, err
 	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get block root")
+	}
 
 	result, err := getSSZBlockPhase0(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -401,6 +420,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = getSSZBlockAltair(blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -409,6 +429,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = bs.getSSZBlockBellatrix(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -417,6 +438,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 	result, err = bs.getSSZBlockCapella(ctx, blk)
 	if result != nil {
+		result.Finalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 		return result, nil
 	}
 	// ErrUnsupportedGetter means that we have another block type
@@ -507,7 +529,8 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
-	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
+	b32Root := bytesutil.ToBytes32(root)
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, b32Root)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -517,6 +540,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			Root: root,
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
 	}, nil
 }
 
@@ -548,6 +572,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	return &ethpbv1.BlockAttestationsResponse{
 		Data:                v1Attestations,
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, root),
 	}, nil
 }
 

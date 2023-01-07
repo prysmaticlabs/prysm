@@ -7,8 +7,8 @@ PRESET_BASE: 'minimal'
 
 # Transition
 # ---------------------------------------------------------------
-# TBD, 2**256-2**10 is a placeholder, e2e is 616
-TERMINAL_TOTAL_DIFFICULTY: 616
+# TBD, 2**256-2**10 is a placeholder, e2e is 480
+TERMINAL_TOTAL_DIFFICULTY: 480
 # By default, don't use these params
 #TERMINAL_BLOCK_HASH: 0x0000000000000000000000000000000000000000000000000000000000000000
 #TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: 18446744073709551615
@@ -83,7 +83,7 @@ PROPOSER_SCORE_BOOST: 40
 DEPOSIT_CHAIN_ID: 1337 # Override for e2e tests
 DEPOSIT_NETWORK_ID: 1337 # Override for e2e tests
 # Configured on a per testnet basis
-DEPOSIT_CONTRACT_ADDRESS: 0x1234567890123456789012345678901234567890
+DEPOSIT_CONTRACT_ADDRESS: 0x4242424242424242424242424242424242424242
 
 # Updated penalty values
 # ---------------------------------------------------------------

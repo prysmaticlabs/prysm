@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,6 +16,29 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
+
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/submitPoolBLSToExecutionChange
+// expects posting a top-level array. We make it more proto-friendly by wrapping it in a struct.
+func wrapBLSChangesArray(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*SubmitBLSToExecutionChangesRequest); !ok {
+		return true, nil
+	}
+	changes := make([]*SignedBLSToExecutionChangeJson, 0)
+	if err := json.NewDecoder(req.Body).Decode(&changes); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
+	}
+	j := &SubmitBLSToExecutionChangesRequest{Changes: changes}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+	}
+	req.Body = io.NopCloser(bytes.NewReader(b))
+	return true, nil
+}
 
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconProposer expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct.
@@ -347,7 +369,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 	}{}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
@@ -368,7 +390,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	} else {
 		endpoint.PostRequest = &SignedBlindedBeaconBlockCapellaContainerJson{}
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
 }
 
@@ -454,27 +476,31 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 }
 
 type phase0BlockResponseJson struct {
-	Version             string                          `json:"version"`
+	Version             string                          `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                            `json:"execution_optimistic"`
+	Finalized           bool                            `json:"finalized"`
 }
 
 type altairBlockResponseJson struct {
-	Version             string                                `json:"version"`
+	Version             string                                `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockAltairContainerJson `json:"data"`
 	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
+	Finalized           bool                                  `json:"finalized"`
 }
 
 type bellatrixBlockResponseJson struct {
-	Version             string                                   `json:"version"`
+	Version             string                                   `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
+	Finalized           bool                                     `json:"finalized"`
 }
 
 type capellaBlockResponseJson struct {
 	Version             string                                 `json:"version"`
 	Data                *SignedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+	Finalized           bool                                   `json:"finalized"`
 }
 
 type eip4844BlockResponseJson struct {
@@ -484,15 +510,17 @@ type eip4844BlockResponseJson struct {
 }
 
 type bellatrixBlindedBlockResponseJson struct {
-	Version             string                                          `json:"version"`
+	Version             string                                          `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockBellatrixContainerJson `json:"data"`
 	ExecutionOptimistic bool                                            `json:"execution_optimistic"`
+	Finalized           bool                                            `json:"finalized"`
 }
 
 type capellaBlindedBlockResponseJson struct {
-	Version             string                                        `json:"version"`
+	Version             string                                        `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockCapellaContainerJson `json:"data"`
 	ExecutionOptimistic bool                                          `json:"execution_optimistic"`
+	Finalized           bool                                          `json:"finalized"`
 }
 
 type eip4844BlindedBlockResponseJson struct {
@@ -517,6 +545,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
@@ -526,6 +555,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
@@ -535,6 +565,17 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaBlockResponseJson{
+			Version: respContainer.Version,
+			Data: &SignedBeaconBlockCapellaContainerJson{
+				Message:   respContainer.Data.CapellaBlock,
+				Signature: respContainer.Data.Signature,
+			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
 		actualRespContainer = &capellaBlockResponseJson{
@@ -581,6 +622,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
@@ -590,6 +632,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlindedBlockResponseJson{
@@ -599,6 +642,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
 		actualRespContainer = &capellaBlindedBlockResponseJson{
@@ -608,6 +652,7 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 				Signature: respContainer.Data.Signature,
 			},
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
+			Finalized:           respContainer.Finalized,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_EIP4844.String())):
 		actualRespContainer = &eip4844BlindedBlockResponseJson{
@@ -630,22 +675,22 @@ func serializeBlindedBlock(response interface{}) (apimiddleware.RunDefault, []by
 }
 
 type phase0StateResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconStateJson `json:"data"`
 }
 
 type altairStateResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconStateAltairJson `json:"data"`
 }
 
 type bellatrixStateResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconStateBellatrixJson `json:"data"`
 }
 
 type capellaStateResponseJson struct {
-	Version string                  `json:"version"`
+	Version string                  `json:"version" enum:"true"`
 	Data    *BeaconStateCapellaJson `json:"data"`
 }
 
@@ -699,22 +744,22 @@ func serializeV2State(response interface{}) (apimiddleware.RunDefault, []byte, a
 }
 
 type phase0ProduceBlockResponseJson struct {
-	Version string           `json:"version"`
+	Version string           `json:"version" enum:"true"`
 	Data    *BeaconBlockJson `json:"data"`
 }
 
 type altairProduceBlockResponseJson struct {
-	Version string                 `json:"version"`
+	Version string                 `json:"version" enum:"true"`
 	Data    *BeaconBlockAltairJson `json:"data"`
 }
 
 type bellatrixProduceBlockResponseJson struct {
-	Version string                    `json:"version"`
+	Version string                    `json:"version" enum:"true"`
 	Data    *BeaconBlockBellatrixJson `json:"data"`
 }
 
 type bellatrixProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
 }
 

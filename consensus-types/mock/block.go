@@ -22,7 +22,15 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
+func (SignedBeaconBlock) SetBlock(interfaces.BeaconBlock) error {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) SetSignature([]byte) {
 	panic("implement me")
 }
 
@@ -91,14 +99,6 @@ func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 }
 
 func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) SetBlock(_ interfaces.BeaconBlock) error {
-	panic("implement me")
-}
-
-func (SignedBeaconBlock) SetSignature(_ []byte) {
 	panic("implement me")
 }
 

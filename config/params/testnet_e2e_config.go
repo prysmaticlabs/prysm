@@ -10,6 +10,8 @@ const (
 // WARNING: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
+	e2eConfig.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	e2eConfig.Eth1FollowDistance = 8
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
@@ -21,7 +23,6 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
@@ -35,7 +36,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "616"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
@@ -51,6 +52,8 @@ func E2ETestConfig() *BeaconChainConfig {
 
 func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig := MainnetConfig().Copy()
+	e2eConfig.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	e2eConfig.Eth1FollowDistance = 8
 
 	// Misc.
 	e2eConfig.MinGenesisActiveValidatorCount = 256
@@ -61,7 +64,6 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SecondsPerSlot = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.ShardCommitteePeriod = 4
 
 	// PoW parameters.
@@ -73,7 +75,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "616"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName
@@ -85,14 +87,4 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
-}
-
-// E2EMainnetConfigYaml returns the e2e config in yaml format.
-func E2EMainnetConfigYaml() []byte {
-	return ConfigToYaml(E2EMainnetTestConfig())
-}
-
-// E2ETestConfigYaml returns the e2e config in yaml format.
-func E2ETestConfigYaml() []byte {
-	return ConfigToYaml(E2ETestConfig())
 }

@@ -13,14 +13,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
-	blocks2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
@@ -61,7 +58,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
 	}
 
-	blk, sBlk, err := emptyBlockToSign(req.Slot)
+	sBlk, err := emptyBlockToSign(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
@@ -79,6 +76,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
+	blk := sBlk.Block()
 	// Set slot, graffiti, randao reveal, and parent root.
 	blk.SetSlot(req.Slot)
 	blk.Body().SetGraffiti(req.Graffiti)
@@ -115,7 +113,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	blk.Body().SetAttesterSlashings(validAttSlashings)
 
 	// Set exits
-	blk.Body().SetVoluntaryExits(vs.getExits(head, req))
+	blk.Body().SetVoluntaryExits(vs.getExits(head, req.Slot))
 
 	// Set sync aggregate. New in Altair.
 	if req.Slot > 0 && slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
@@ -194,9 +192,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
-	if err := sBlk.SetBlock(blk); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not set block: %v", err)
-	}
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
@@ -236,79 +231,24 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}}, nil
 }
 
-func (vs *Server) getExits(head state.BeaconState, req *ethpb.BlockRequest) []*ethpb.SignedVoluntaryExit {
-	exits := vs.ExitPool.PendingExits(head, req.Slot, false /*noLimit*/)
-	validExits := make([]*ethpb.SignedVoluntaryExit, 0, len(exits))
-	for _, exit := range exits {
-		val, err := head.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid exit")
-			continue
-		}
-		if err := blocks2.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
-			log.WithError(err).Warn("Proposer: invalid exit")
-			continue
-		}
-		validExits = append(validExits, exit)
-	}
-	return validExits
-}
-
-func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*ethpb.ProposerSlashing, []*ethpb.AttesterSlashing) {
-	proposerSlashings := vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/)
-	validProposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposerSlashings))
-	for _, slashing := range proposerSlashings {
-		_, err := blocks2.ProcessProposerSlashing(ctx, head, slashing, v.SlashValidator)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid proposer slashing")
-			continue
-		}
-		validProposerSlashings = append(validProposerSlashings, slashing)
-	}
-	attSlashings := vs.SlashingsPool.PendingAttesterSlashings(ctx, head, false /*noLimit*/)
-	validAttSlashings := make([]*ethpb.AttesterSlashing, 0, len(attSlashings))
-	for _, slashing := range attSlashings {
-		_, err := blocks2.ProcessAttesterSlashing(ctx, head, slashing, v.SlashValidator)
-		if err != nil {
-			log.WithError(err).Warn("Proposer: invalid attester slashing")
-			continue
-		}
-		validAttSlashings = append(validAttSlashings, slashing)
-	}
-	return validProposerSlashings, validAttSlashings
-}
-
-func emptyBlockToSign(slot types.Slot) (interfaces.BeaconBlock, interfaces.SignedBeaconBlock, error) {
-	var blk interfaces.BeaconBlock
+func emptyBlockToSign(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	var sBlk interfaces.SignedBeaconBlock
 	var err error
 	switch {
 	case slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().CapellaForkEpoch:
-		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}})
-		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
-		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	case slots.ToEpoch(slot) < params.BeaconConfig().EIP4844ForkEpoch:
 		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}})
@@ -317,7 +257,7 @@ func emptyBlockToSign(slot types.Slot) (interfaces.BeaconBlock, interfaces.Signe
 		}
 		sBlk, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}})
 		if err != nil {
-			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	default:
 		blk, err = blocks.NewBeaconBlock(&ethpb.BeaconBlock4844{Body: &ethpb.BeaconBlockBody4844{}})
@@ -329,7 +269,7 @@ func emptyBlockToSign(slot types.Slot) (interfaces.BeaconBlock, interfaces.Signe
 			return nil, nil, status.Errorf(codes.Internal, "Could not initialize block for proposal: %v", err)
 		}
 	}
-	return blk, sBlk, err
+	return sBlk, err
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt

@@ -95,11 +95,13 @@ type RandaoResponseJson struct {
 type BlockHeadersResponseJson struct {
 	Data                []*BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
 }
 
 type BlockHeaderResponseJson struct {
 	Data                *BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
+	Finalized           bool                      `json:"finalized"`
 }
 
 type BlockResponseJson struct {
@@ -110,22 +112,26 @@ type BlockV2ResponseJson struct {
 	Version             string                            `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockContainerV2Json `json:"data"`
 	ExecutionOptimistic bool                              `json:"execution_optimistic"`
+	Finalized           bool                              `json:"finalized"`
 }
 
 type BlindedBlockResponseJson struct {
 	Version             string                                 `json:"version" enum:"true"`
 	Data                *SignedBlindedBeaconBlockContainerJson `json:"data"`
 	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
+	Finalized           bool                                   `json:"finalized"`
 }
 
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
+	Finalized           bool                    `json:"finalized"`
 }
 
 type BlockAttestationsResponseJson struct {
 	Data                []*AttestationJson `json:"data"`
 	ExecutionOptimistic bool               `json:"execution_optimistic"`
+	Finalized           bool               `json:"finalized"`
 }
 
 type AttestationsPoolResponseJson struct {
@@ -150,6 +156,10 @@ type VoluntaryExitsPoolResponseJson struct {
 
 type SubmitSyncCommitteeSignaturesRequestJson struct {
 	Data []*SyncCommitteeMessageJson `json:"data"`
+}
+
+type BLSToExecutionChangesPoolResponseJson struct {
+	Data []*SignedBLSToExecutionChangeJson `json:"data"`
 }
 
 type IdentityResponseJson struct {
@@ -239,12 +249,12 @@ type ProduceBlockResponseJson struct {
 }
 
 type ProduceBlockResponseV2Json struct {
-	Version string                      `json:"version"`
+	Version string                      `json:"version" enum:"true"`
 	Data    *BeaconBlockContainerV2Json `json:"data"`
 }
 
 type ProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version"`
+	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
@@ -780,6 +790,10 @@ type BLSToExecutionChangeJson struct {
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
+type SubmitBLSToExecutionChangesRequest struct {
+	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
+}
+
 type DepositJson struct {
 	Proof []string          `json:"proof" hex:"true"`
 	Data  *Deposit_DataJson `json:"data"`
@@ -831,7 +845,7 @@ type PeerJson struct {
 }
 
 type VersionJson struct {
-	Version string `json:"version"`
+	Version string `json:"version" enum:"true"`
 }
 
 type WithdrawalJson struct {
@@ -1165,6 +1179,7 @@ type SszResponse interface {
 	SSZVersion() string
 	SSZOptimistic() bool
 	SSZData() string
+	SSZFinalized() bool
 }
 
 type SszResponseJson struct {
@@ -1183,9 +1198,14 @@ func (*SszResponseJson) SSZOptimistic() bool {
 	return false
 }
 
+func (*SszResponseJson) SSZFinalized() bool {
+	return true
+}
+
 type VersionedSSZResponseJson struct {
-	Version             string `json:"version"`
+	Version             string `json:"version" enum:"true"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	Finalized           bool   `json:"finalized"`
 	Data                string `json:"data"`
 }
 
@@ -1199,6 +1219,10 @@ func (ssz *VersionedSSZResponseJson) SSZVersion() string {
 
 func (ssz *VersionedSSZResponseJson) SSZOptimistic() bool {
 	return ssz.ExecutionOptimistic
+}
+
+func (ssz *VersionedSSZResponseJson) SSZFinalized() bool {
+	return ssz.Finalized
 }
 
 // ---------------

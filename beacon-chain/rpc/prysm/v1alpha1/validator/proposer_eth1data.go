@@ -45,9 +45,18 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	}
 	eth1DataNotification = false
 
-	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	latestValidTime := votingPeriodStartTime - followDistanceSeconds
+	earliestValidTime := votingPeriodStartTime - 2*followDistanceSeconds
+
+	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
+	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
+	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
+	if latestValidTime < genesisTime+followDistanceSeconds {
+		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Warn("voting period before genesis + follow distance, using eth1data from head")
+		return vs.HeadFetcher.HeadETH1Data(), nil
+	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
