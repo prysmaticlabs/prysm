@@ -27,6 +27,7 @@ type BeaconState struct {
 	blockRoots                          *customtypes.BlockRoots
 	stateRoots                          *customtypes.StateRoots
 	historicalRoots                     customtypes.HistoricalRoots
+	historicalSummaries                 []*ethpb.HistoricalSummary
 	eth1Data                            *ethpb.Eth1Data
 	eth1DataVotes                       []*ethpb.Eth1Data
 	eth1DepositIndex                    uint64

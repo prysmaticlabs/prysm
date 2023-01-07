@@ -126,6 +126,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
+			HistoricalSummaries:          b.historicalSummaries,
 		}
 	case version.EIP4844:
 		return &ethpb.BeaconState4844{
@@ -282,6 +283,7 @@ func (b *BeaconState) ToProto() interface{} {
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapellaVal(),
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
+			HistoricalSummaries:          b.historicalSummariesVal(),
 		}
 	case version.EIP4844:
 		return &ethpb.BeaconState4844{

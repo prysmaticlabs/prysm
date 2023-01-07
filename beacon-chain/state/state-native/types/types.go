@@ -71,6 +71,8 @@ func (f FieldIndex) String(_ int) string {
 		return "NextWithdrawalIndex"
 	case NextWithdrawalValidatorIndex:
 		return "NextWithdrawalValidatorIndex"
+	case HistoricalSummaries:
+		return "HistoricalSummaries"
 	default:
 		return ""
 	}
@@ -134,6 +136,8 @@ func (f FieldIndex) RealPosition() int {
 		return 25
 	case NextWithdrawalValidatorIndex:
 		return 26
+	case HistoricalSummaries:
+		return 27
 	default:
 		return -1
 	}
@@ -192,4 +196,5 @@ const (
 	LatestExecutionPayloadHeader4844
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
+	HistoricalSummaries
 )
