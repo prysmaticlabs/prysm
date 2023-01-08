@@ -5,6 +5,7 @@
 package mock
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,16 +36,16 @@ func (m *MockstateValidatorsProvider) EXPECT() *MockstateValidatorsProviderMockR
 }
 
 // GetStateValidators mocks base method.
-func (m *MockstateValidatorsProvider) GetStateValidators(arg0 []string, arg1 []int64, arg2 []string) (*apimiddleware.StateValidatorsResponseJson, error) {
+func (m *MockstateValidatorsProvider) GetStateValidators(arg0 context.Context, arg1 []string, arg2 []int64, arg3 []string) (*apimiddleware.StateValidatorsResponseJson, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStateValidators", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetStateValidators", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*apimiddleware.StateValidatorsResponseJson)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetStateValidators indicates an expected call of GetStateValidators.
-func (mr *MockstateValidatorsProviderMockRecorder) GetStateValidators(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockstateValidatorsProviderMockRecorder) GetStateValidators(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateValidators", reflect.TypeOf((*MockstateValidatorsProvider)(nil).GetStateValidators), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateValidators", reflect.TypeOf((*MockstateValidatorsProvider)(nil).GetStateValidators), arg0, arg1, arg2, arg3)
 }

@@ -1,8 +1,6 @@
 package cache
 
 import (
-	"sync"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -32,7 +30,6 @@ var (
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
 type CheckpointStateCache struct {
 	cache *lru.Cache
-	lock  sync.RWMutex
 }
 
 // NewCheckpointStateCache creates a new checkpoint state cache for storing/accessing processed state.
@@ -45,8 +42,6 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
 func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.BeaconState, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 	h, err := hash.HashProto(cp)
 	if err != nil {
 		return nil, err
@@ -67,8 +62,6 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.Be
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
 // recently added CheckpointState object if the cache size has ready the max cache size limit.
 func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s state.ReadOnlyBeaconState) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	h, err := hash.HashProto(cp)
 	if err != nil {
 		return err
