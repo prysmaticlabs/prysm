@@ -49,11 +49,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		if err := vs.optimisticStatus(ctx); err != nil {
-			return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
-		}
-	}
+	//if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+	//	if err := vs.optimisticStatus(ctx); err != nil {
+	//		return nil, status.Errorf(codes.Unavailable, "Validator is not ready to propose: %v", err)
+	//	}
+	//}
 
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {

@@ -473,7 +473,7 @@ func (s *Service) ReconstructFullBlock(
 	if executionBlock == nil {
 		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
 	}
-	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
+	if bytes.Equal(executionBlock.Hash.Bytes(), params.BeaconConfig().ZeroHash[:]) {
 		return nil, EmptyBlockHash
 	}
 
@@ -536,6 +536,9 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		b := execBlocks[sliceIdx]
 		if b == nil {
 			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
+		}
+		if bytes.Equal(b.Hash.Bytes(), params.BeaconConfig().ZeroHash[:]) {
+			return nil, EmptyBlockHash
 		}
 		header, err := blindedBlocks[realIdx].Block().Body().Execution()
 		if err != nil {
