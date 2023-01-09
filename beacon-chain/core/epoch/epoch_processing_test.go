@@ -10,8 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -454,4 +456,72 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 	require.NoError(t, err)
 	_, err = epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 	require.ErrorContains(t, "addition overflows", err)
+}
+
+func TestProcessHistoricalRootsUpdate(t *testing.T) {
+	tests := []struct {
+		name     string
+		st       func() state.BeaconState
+		verifier func(state.BeaconState)
+	}{
+		{
+			name: "no change",
+			st: func() state.BeaconState {
+				st, _ := util.DeterministicGenesisState(t, 1)
+				return st
+			},
+			verifier: func(st state.BeaconState) {
+				require.Equal(t, 0, len(st.HistoricalRoots()))
+			},
+		},
+		{
+			name: "before capella can process and get historical root",
+			st: func() state.BeaconState {
+				st, _ := util.DeterministicGenesisState(t, 1)
+				st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerHistoricalRoot-1)
+				require.NoError(t, err)
+				return st
+			},
+			verifier: func(st state.BeaconState) {
+				require.Equal(t, 1, len(st.HistoricalRoots()))
+
+				b := &ethpb.HistoricalBatch{
+					BlockRoots: st.BlockRoots(),
+					StateRoots: st.StateRoots(),
+				}
+				r, err := b.HashTreeRoot()
+				require.NoError(t, err)
+				require.DeepEqual(t, r[:], st.HistoricalRoots()[0])
+			},
+		},
+		{
+			name: "after capella can process and get historical summary",
+			st: func() state.BeaconState {
+				st, _ := util.DeterministicGenesisStateCapella(t, 1)
+				st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerHistoricalRoot-1)
+				require.NoError(t, err)
+				return st
+			},
+			verifier: func(st state.BeaconState) {
+				require.Equal(t, 1, len(st.HistoricalSummaries()))
+
+				br, err := stateutil.ArraysRoot(st.BlockRoots(), fieldparams.BlockRootsLength)
+				require.NoError(t, err)
+				sr, err := stateutil.ArraysRoot(st.StateRoots(), fieldparams.StateRootsLength)
+				require.NoError(t, err)
+				b := &ethpb.HistoricalSummary{
+					BlockSummaryRoot: br[:],
+					StateSummaryRoot: sr[:],
+				}
+				require.DeepEqual(t, b, st.HistoricalSummaries()[0])
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := epoch.ProcessHistoricalDataUpdate(tt.st())
+			require.NoError(t, err)
+			tt.verifier(got)
+		})
+	}
 }

@@ -87,3 +87,21 @@ func (b *BeaconState) balancesLength() int {
 
 	return len(b.balances)
 }
+
+// HistoricalSummaries of the beacon state.
+func (b *BeaconState) HistoricalSummaries() []*ethpb.HistoricalSummary {
+	if b.historicalSummaries == nil {
+		return nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.historicalSummariesVal()
+}
+
+// historicalSummariesVal of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) historicalSummariesVal() []*ethpb.HistoricalSummary {
+	return ethpb.CopyHistoricalSummaries(b.historicalSummaries)
+}
