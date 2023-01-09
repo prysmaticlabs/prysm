@@ -82,13 +82,10 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 	for _, w := range request {
 		requestMap[w.Message.ValidatorIndex] = w.Message.ToExecutionAddress
 	}
+	totalMessages := len(requestMap)
 	for _, resp := range poolResponse.Data {
 		value, found := requestMap[resp.Message.ValidatorIndex]
 		if found && value == resp.Message.ToExecutionAddress {
-			log.WithFields(log.Fields{
-				"validator_index":    resp.Message.ValidatorIndex,
-				"execution_address:": resp.Message.ToExecutionAddress,
-			}).Info("Set withdrawal address message was found in the node's operations pool.")
 			delete(requestMap, resp.Message.ValidatorIndex)
 		}
 	}
@@ -100,6 +97,8 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 			}).Warn("Set withdrawal address message not found in the node's operations pool.")
 		}
 		log.Warn("Please check before resubmitting. Set withdrawal address messages that were not found in the pool may have been already included into a block.")
+	} else {
+		log.Infof("All (total:%d) signed withdrawal messages were found in the pool.", totalMessages)
 	}
 	return nil
 }

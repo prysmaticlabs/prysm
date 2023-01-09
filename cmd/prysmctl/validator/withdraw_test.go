@@ -101,7 +101,7 @@ func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
 	require.NoError(t, err)
 	assert.LogsContain(t, hook, "Successfully published")
 	assert.LogsContain(t, hook, "to update 2 withdrawal")
-	assert.LogsContain(t, hook, "set withdrawal address message was found in the node's operations pool.")
+	assert.LogsContain(t, hook, "All (total:2) signed withdrawal messages were found in the pool.")
 	assert.LogsDoNotContain(t, hook, "set withdrawal address message not found in the node's operations pool.")
 }
 
@@ -254,6 +254,6 @@ func TestVerifyWithdrawal_Mutiple(t *testing.T) {
 
 	err = verifyWithdrawalsInPool(cliCtx)
 	require.NoError(t, err)
-	assert.LogsContain(t, hook, "set withdrawal address message was found in the node's operations pool.")
+	assert.LogsContain(t, hook, "All (total:2) signed withdrawal messages were found in the pool.")
 	assert.LogsDoNotContain(t, hook, "set withdrawal address message not found in the node's operations pool.")
 }
