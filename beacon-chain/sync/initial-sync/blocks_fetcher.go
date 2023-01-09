@@ -372,8 +372,8 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	}
 	tillEmpty := f.rateLimiter.TillEmpty(pid.String())
 	blocksNeeded := int64(count - uint64(rem))
-	capacity := f.rateLimiter.Capacity()
-	expectedTime := int64(tillEmpty) * blocksNeeded / capacity
+	currentNumBlks := f.rateLimiter.Capacity() - rem
+	expectedTime := int64(tillEmpty) * blocksNeeded / currentNumBlks
 	timer := time.NewTimer(time.Duration(expectedTime))
 	defer timer.Stop()
 	select {
