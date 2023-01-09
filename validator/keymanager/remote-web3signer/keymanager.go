@@ -44,7 +44,7 @@ type SetupConfig struct {
 	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
 	ProvidedPublicKeys [][48]byte
 
-	requireTLS     bool
+	RequireTLS     bool
 	ClientCertPath string
 	ClientKeyPath  string
 	CACertPath     string
@@ -89,19 +89,25 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
-	if cfg.requireTLS {
-		if cfg.ClientCertPath == "" {
-			return nil, errors.New("client certificate is required")
+	if cfg.RequireTLS {
+		tlsConfig := &tls.Config{
+			MinVersion: tls.VersionTLS13,
 		}
-		if cfg.ClientKeyPath == "" {
-			return nil, errors.New("client key is required")
+		if cfg.ClientCertPath != "" || cfg.ClientKeyPath != "" {
+			if cfg.ClientCertPath == "" {
+				return nil, errors.New("client certificate is required")
+			}
+			if cfg.ClientKeyPath == "" {
+				return nil, errors.New("client key is required")
+			}
+			clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
+			}
+			tlsConfig.Certificates = []tls.Certificate{clientPair}
 		}
-		clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
-		}
-		// Load the CA for the server certificate if present.
 		cp := x509.NewCertPool()
+		// Load the CA for the server certificate if present.
 		if cfg.CACertPath != "" {
 			serverCA, err := os.ReadFile(cfg.CACertPath)
 			if err != nil {
@@ -111,11 +117,8 @@ func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
 				return nil, errors.Wrap(err, "failed to add server's CA certificate to pool")
 			}
 		}
-		return internal.WithTls(&tls.Config{
-			Certificates: []tls.Certificate{clientPair},
-			RootCAs:      cp,
-			MinVersion:   tls.VersionTLS13,
-		}), nil
+		tlsConfig.RootCAs = cp
+		return internal.WithTls(tlsConfig), nil
 	}
 	return nil, nil
 }

@@ -51,6 +51,7 @@ var (
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
+
 	// EnableRPCFlag enables controlling the validator client via gRPC (without web UI).
 	EnableRPCFlag = &cli.BoolFlag{
 		Name:  "rpc",
@@ -264,6 +265,14 @@ var (
 		Usage: "Disables TLS when connecting to a remote signer. (WARNING! This will result in insecure requests!)",
 		Value: false,
 	}
+
+	// EnableRemoteSignerTlsFlag enables TLS for web3signer which is by default off.
+	EnableRemoteSignerTlsFlag = &cli.BoolFlag{
+		Name:  "enable-remote-signer-tls",
+		Usage: "Enables TLS when connecting to a remote web3signer.",
+		Value: true,
+	}
+	
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{
