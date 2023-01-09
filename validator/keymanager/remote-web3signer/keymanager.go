@@ -3,8 +3,11 @@ package remote_web3signer
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -40,6 +43,11 @@ type SetupConfig struct {
 	// a static list of public keys to be passed by the user to determine what accounts should sign.
 	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
 	ProvidedPublicKeys [][48]byte
+
+	requireTLS     bool
+	ClientCertPath string
+	ClientKeyPath  string
+	CACertPath     string
 }
 
 // Keymanager defines the web3signer keymanager.
@@ -58,7 +66,14 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
 	}
-	client, err := internal.NewApiClient(cfg.BaseEndpoint)
+	options := make([]internal.ApiClientOpt, 0)
+	tlsOpt, err := configureTLSOpt(cfg)
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, tlsOpt)
+
+	client, err := internal.NewApiClient(cfg.BaseEndpoint, options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create apiClient")
 	}
@@ -71,6 +86,38 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		validator:             validator.New(),
 		publicKeysUrlCalled:   false,
 	}, nil
+}
+
+func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
+	if cfg.requireTLS {
+		if cfg.ClientCertPath == "" {
+			return nil, errors.New("client certificate is required")
+		}
+		if cfg.ClientKeyPath == "" {
+			return nil, errors.New("client key is required")
+		}
+		clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
+		}
+		// Load the CA for the server certificate if present.
+		cp := x509.NewCertPool()
+		if cfg.CACertPath != "" {
+			serverCA, err := os.ReadFile(cfg.CACertPath)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
+			}
+			if !cp.AppendCertsFromPEM(serverCA) {
+				return nil, errors.Wrap(err, "failed to add server's CA certificate to pool")
+			}
+		}
+		return internal.WithTls(&tls.Config{
+			Certificates: []tls.Certificate{clientPair},
+			RootCAs:      cp,
+			MinVersion:   tls.VersionTLS13,
+		}), nil
+	}
+	return nil, nil
 }
 
 // FetchValidatingPublicKeys fetches the validating public keys

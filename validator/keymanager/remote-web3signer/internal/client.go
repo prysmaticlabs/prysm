@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,8 +47,20 @@ type ApiClient struct {
 	RestClient *http.Client
 }
 
+// ApiClientOpt is a functional option for the Client type (http.Client wrapper)
+type ApiClientOpt func(*ApiClient)
+
+// WithTls Enables two-way TLS on the API using the provided cert information.
+func WithTls(config *tls.Config) ApiClientOpt {
+	return func(c *ApiClient) {
+		if tpt, ok := c.RestClient.Transport.(*http.Transport); ok {
+			tpt.TLSClientConfig = config
+		}
+	}
+}
+
 // NewApiClient method instantiates a new ApiClient object.
-func NewApiClient(baseEndpoint string) (*ApiClient, error) {
+func NewApiClient(baseEndpoint string, opts ...ApiClientOpt) (*ApiClient, error) {
 	u, err := url.ParseRequestURI(baseEndpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid format, unable to parse url")
@@ -55,10 +68,14 @@ func NewApiClient(baseEndpoint string) (*ApiClient, error) {
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", baseEndpoint)
 	}
-	return &ApiClient{
+	c := &ApiClient{
 		BaseURL:    u,
 		RestClient: &http.Client{},
-	}, nil
+	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c, nil
 }
 
 // Sign is a wrapper method around the web3signer sign api.
