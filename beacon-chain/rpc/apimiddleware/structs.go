@@ -400,12 +400,14 @@ type BeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
 	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type SignedBeaconBlockAltairContainerJson struct {
