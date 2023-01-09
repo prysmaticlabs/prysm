@@ -458,8 +458,8 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
 	t.Run("Capella", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
 		cfg := params.BeaconConfig()
-		saved := cfg.Copy()
 		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch.Add(2)
 		params.OverrideBeaconConfig(cfg)
 
@@ -476,7 +476,6 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockCapellaContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
-		params.OverrideBeaconConfig(saved)
 	})
 }
 
