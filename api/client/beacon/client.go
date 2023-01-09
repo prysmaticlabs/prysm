@@ -353,7 +353,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apim
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
 	if err != nil {
-		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
+		return errors.Wrap(err, "invalid format, failed to create new POST request object")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.hc.Do(req)
