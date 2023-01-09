@@ -36,6 +36,7 @@ type BlockGenConfig struct {
 	NumVoluntaryExits    uint64
 	NumTransactions      uint64 // Only for post Bellatrix blocks
 	FullSyncAggregate    bool
+	NumBLSChanges        uint64 // Only for post Capella blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -48,6 +49,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
 		NumTransactions:      0,
+		NumBLSChanges:        0,
 	}
 }
 
@@ -357,6 +359,22 @@ func generateDepositsAndEth1Data(
 		return nil, nil, errors.Wrap(err, "could not get eth1data")
 	}
 	return currentDeposits[previousDepsLen:], eth1Data, nil
+}
+
+func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx types.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+	currentEpoch := time.CurrentEpoch(bState)
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          time.PrevEpoch(bState),
+			ValidatorIndex: idx,
+		},
+	}
+	var err error
+	exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
+	if err != nil {
+		return nil, err
+	}
+	return exit, nil
 }
 
 func generateVoluntaryExits(
@@ -1018,6 +1036,73 @@ func HydrateBlindedBeaconBlockBodyCapella(b *ethpb.BlindedBeaconBlockBodyCapella
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			ExtraData:        make([]byte, 0),
+			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+		}
+	}
+	return b
+}
+
+// HydrateV2SignedBlindedBeaconBlockCapella hydrates a signed blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2SignedBlindedBeaconBlockCapella(b *v2.SignedBlindedBeaconBlockCapella) *v2.SignedBlindedBeaconBlockCapella {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateV2BlindedBeaconBlockCapella(b.Message)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockCapella hydrates a blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockCapella(b *v2.BlindedBeaconBlockCapella) *v2.BlindedBeaconBlockCapella {
+	if b == nil {
+		b = &v2.BlindedBeaconBlockCapella{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateV2BlindedBeaconBlockBodyCapella(b.Body)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockBodyCapella hydrates a blinded beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockBodyCapella(b *v2.BlindedBeaconBlockBodyCapella) *v2.BlindedBeaconBlockBodyCapella {
+	if b == nil {
+		b = &v2.BlindedBeaconBlockBodyCapella{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &v1.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayloadHeader == nil {
+		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       make([]byte, 32),
+			FeeRecipient:     make([]byte, 20),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, 256),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 		}
 	}

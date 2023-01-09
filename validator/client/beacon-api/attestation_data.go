@@ -1,9 +1,7 @@
-//go:build use_beacon_api
-// +build use_beacon_api
-
 package beacon_api
 
 import (
+	"context"
 	"net/url"
 	"strconv"
 
@@ -15,6 +13,7 @@ import (
 )
 
 func (c beaconApiValidatorClient) getAttestationData(
+	ctx context.Context,
 	reqSlot types.Slot,
 	reqCommitteeIndex types.CommitteeIndex,
 ) (*ethpb.AttestationData, error) {
@@ -24,7 +23,7 @@ func (c beaconApiValidatorClient) getAttestationData(
 
 	query := buildURL("/eth/v1/validator/attestation_data", params)
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
-	_, err := c.jsonRestHandler.GetRestJsonResponse(query, &produceAttestationDataResponseJson)
+	_, err := c.jsonRestHandler.GetRestJsonResponse(ctx, query, &produceAttestationDataResponseJson)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get json response")
 	}

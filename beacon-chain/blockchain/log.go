@@ -38,14 +38,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
+	if b.Version() >= version.Altair {
 		agg, err := b.Body().SyncAggregate()
 		if err != nil {
 			return err
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() >= version.Bellatrix {
 		p, err := b.Body().Execution()
 		if err != nil {
 			return err
@@ -87,6 +87,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
+			"deposits":                  len(block.Body().Deposits()),
 		}).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{

@@ -25,7 +25,7 @@ func TestE2EConfigParity(t *testing.T) {
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2EMainnetTestConfig()
-	yamlObj := params.E2EMainnetConfigYaml()
+	yamlObj := params.ConfigToYaml(params.E2EMainnetTestConfig())
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
 	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.MainnetConfig().Copy()))

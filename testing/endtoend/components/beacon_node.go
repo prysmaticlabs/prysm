@@ -14,13 +14,17 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -166,6 +170,49 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
+func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
+	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
+	g, err := generateGenesis(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	root, err := g.HashTreeRoot(ctx)
+	if err != nil {
+		return "", err
+	}
+	lbhr, err := g.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return "", err
+	}
+	log.WithField("fork_version", g.Fork().CurrentVersion).
+		WithField("latest_block_header.root", fmt.Sprintf("%#x", lbhr)).
+		WithField("state_root", fmt.Sprintf("%#x", root)).
+		Infof("BeaconState info")
+
+	genesisBytes, err := g.MarshalSSZ()
+	if err != nil {
+		return "", err
+	}
+	genesisDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("genesis/%d", node.index))
+	if err := file.MkdirAll(genesisDir); err != nil {
+		return "", err
+	}
+	genesisPath := path.Join(genesisDir, "genesis.ssz")
+	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
+}
+
+func (node *BeaconNode) saveConfig() (string, error) {
+	cfg := params.BeaconConfig().Copy()
+	cfgBytes := params.ConfigToYaml(cfg)
+	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
+	if err := file.MkdirAll(cfgDir); err != nil {
+		return "", err
+	}
+	cfgPath := path.Join(cfgDir, "beacon-config.yaml")
+	return cfgPath, file.WriteFile(cfgPath, cfgBytes)
+}
+
 // Start starts a fresh beacon node, connecting to all passed in beacon nodes.
 func (node *BeaconNode) Start(ctx context.Context) error {
 	binaryPath, found := bazel.FindBinary("cmd/beacon-chain", "beacon-chain")
@@ -191,10 +238,20 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
 	}
 	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
+
+	genesisPath, err := node.saveGenesis(ctx)
+	if err != nil {
+		return err
+	}
+	cfgPath, err := node.saveConfig()
+	if err != nil {
+		return err
+	}
 	args := []string{
+		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
-		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
+		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, params.BeaconConfig().DepositContractAddress),
 		fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index),
 		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.ExecutionEngineEndpoint.Name, e2e.TestParams.Ports.Eth1ProxyPort+index),
 		fmt.Sprintf("--%s=%s", flags.ExecutionJWTSecretFlag.Name, jwtPath),
@@ -210,8 +267,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
+		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ForceClearDB.Name,
-		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}
@@ -228,24 +285,16 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stdout.log", index)))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stderr.log", index)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
@@ -289,4 +338,19 @@ func (node *BeaconNode) Resume() error {
 // Stop stops the component and its underlying process.
 func (node *BeaconNode) Stop() error {
 	return node.cmd.Process.Kill()
+}
+
+func (node *BeaconNode) UnderlyingProcess() *os.Process {
+	return node.cmd.Process
+}
+
+func generateGenesis(ctx context.Context) (state.BeaconState, error) {
+	if e2e.TestParams.Eth1GenesisBlock == nil {
+		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
+	}
+	gb := e2e.TestParams.Eth1GenesisBlock
+	t := e2e.TestParams.CLGenesisTime
+	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
+	version := e2etypes.GenesisFork()
+	return util.NewPreminedGenesis(ctx, t, nvals, version, gb)
 }

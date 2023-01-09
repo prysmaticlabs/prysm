@@ -98,10 +98,10 @@ func TestWrapExecutionPayloadCapella(t *testing.T) {
 		BlockHash:     []byte("blockhash"),
 		Transactions:  [][]byte{[]byte("transaction")},
 		Withdrawals: []*enginev1.Withdrawal{{
-			WithdrawalIndex:  55,
-			ValidatorIndex:   66,
-			ExecutionAddress: []byte("executionaddress"),
-			Amount:           77,
+			Index:          55,
+			ValidatorIndex: 66,
+			Address:        []byte("executionaddress"),
+			Amount:         77,
 		}},
 	}
 	payload, err := blocks.WrappedExecutionPayloadCapella(data)
@@ -194,6 +194,44 @@ func TestWrapExecutionPayloadHeaderCapella_SSZ(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, payload.SizeSSZ())
 	assert.NoError(t, payload.UnmarshalSSZ(encoded))
+}
+
+func Test_executionPayload_Pb(t *testing.T) {
+	payload := createWrappedPayload(t)
+	pb, err := payload.PbBellatrix()
+	require.NoError(t, err)
+	assert.DeepEqual(t, payload.Proto(), pb)
+
+	_, err = payload.PbCapella()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+}
+
+func Test_executionPayloadHeader_Pb(t *testing.T) {
+	payload := createWrappedPayloadHeader(t)
+	_, err := payload.PbBellatrix()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+
+	_, err = payload.PbCapella()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+}
+
+func Test_executionPayloadCapella_Pb(t *testing.T) {
+	payload := createWrappedPayloadCapella(t)
+	pb, err := payload.PbCapella()
+	require.NoError(t, err)
+	assert.DeepEqual(t, payload.Proto(), pb)
+
+	_, err = payload.PbBellatrix()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+}
+
+func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
+	payload := createWrappedPayloadHeaderCapella(t)
+	_, err := payload.PbBellatrix()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
+
+	_, err = payload.PbCapella()
+	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {

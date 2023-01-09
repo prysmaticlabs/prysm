@@ -8,7 +8,7 @@ var (
 	// ErrInvalidBlockHashPayloadStatus is returned when the payload has invalid block hash.
 	ErrInvalidBlockHashPayloadStatus = invalidBlock{error: errors.New("received an INVALID_BLOCK_HASH payload from execution engine")}
 	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
-	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+	ErrUndefinedExecutionEngineError = errors.New("received an undefined execution engine error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
 	// errNilFinalizedCheckpoint is returned when a nil finalized checkpt is returned from a state.
@@ -19,8 +19,6 @@ var (
 	errInvalidNilSummary = errors.New("nil summary returned from the DB")
 	// errWrongBlockCount is returned when the wrong number of blocks or block roots is used
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
-	// block is not a valid optimistic candidate block
-	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
 	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
 	errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
 	// errNilStateFromStategen is returned when a nil state is returned from the state generator.

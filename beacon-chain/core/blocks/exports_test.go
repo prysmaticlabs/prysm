@@ -1,3 +1,4 @@
 package blocks
 
 var ProcessBLSToExecutionChange = processBLSToExecutionChange
+var BLSChangesSigningDomain = blsChangesSigningDomain
