@@ -31,6 +31,11 @@ var (
 		Usage: "WARNING:User confirms and accepts responsibility of all input data provided and actions for setting setting their withdrawal address for their validator key. " +
 			"This action is not reversible and withdrawal addresses can not be changed once set. ",
 	}
+	VerifyOnlyFlag = &cli.BoolFlag{
+		Name:    "verify-only",
+		Aliases: []string{"vo"},
+		Usage:   "override withdrawal command to only verify whether requests are in the pool and does not submit withdrawal requests.",
+	}
 )
 
 var Commands = []*cli.Command{
@@ -47,6 +52,7 @@ var Commands = []*cli.Command{
 					BeaconHostFlag,
 					PathFlag,
 					ConfirmFlag,
+					VerifyOnlyFlag,
 					cmd.ConfigFileFlag,
 					cmd.AcceptTosFlag,
 				},
@@ -72,8 +78,14 @@ var Commands = []*cli.Command{
 
 				},
 				Action: func(cliCtx *cli.Context) error {
-					if err := setWithdrawalAddresses(cliCtx); err != nil {
-						log.WithError(err).Fatal("Could not set withdrawal address")
+					if cliCtx.Bool(VerifyOnlyFlag.Name) {
+						if err := verifyWithdrawalsInPool(cliCtx); err != nil {
+							log.WithError(err).Fatal("Could not verify withdrawal addresses")
+						}
+					} else {
+						if err := setWithdrawalAddresses(cliCtx); err != nil {
+							log.WithError(err).Fatal("Could not set withdrawal addresses")
+						}
 					}
 					return nil
 				},

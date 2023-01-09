@@ -26,15 +26,26 @@ func setWithdrawalAddresses(c *cli.Context) error {
 	if !c.IsSet(PathFlag.Name) {
 		return fmt.Errorf("no --%s flag value was provided", PathFlag.Name)
 	}
+	setWithdrawalAddressJsons, err := getWithdrawalMessagesFromPathFlag(c)
+	if err != nil {
+		return err
+	}
+	for _, request := range setWithdrawalAddressJsons {
+		fmt.Println("SETTING VALIDATOR INDEX " + au.Red(request.Message.ValidatorIndex).String() + " TO WITHDRAWAL ADDRESS " + au.Red(request.Message.ToExecutionAddress).String())
+	}
+	return callWithdrawalEndpoints(ctx, beaconNodeHost, setWithdrawalAddressJsons)
+}
+
+func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedBLSToExecutionChangeJson, error) {
+	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	foundFilePaths, err := findWithdrawalFiles(c.String(PathFlag.Name))
 	if err != nil {
-		return errors.Wrap(err, "failed to find withdrawal files")
+		return setWithdrawalAddressJsons, errors.Wrap(err, "failed to find withdrawal files")
 	}
-	setWithdrawalAddressJsons := make([]*apimiddleware.SignedBLSToExecutionChangeJson, 0)
 	for _, foundFilePath := range foundFilePaths {
 		b, err := os.ReadFile(filepath.Clean(foundFilePath))
 		if err != nil {
-			return errors.Wrap(err, "failed to open file")
+			return setWithdrawalAddressJsons, errors.Wrap(err, "failed to open file")
 		}
 		var to []*apimiddleware.SignedBLSToExecutionChangeJson
 		if err := json.Unmarshal(b, &to); err != nil {
@@ -44,12 +55,9 @@ func setWithdrawalAddresses(c *cli.Context) error {
 		setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, to...)
 	}
 	if len(setWithdrawalAddressJsons) == 0 {
-		return errors.New("the list of signed requests is empty")
+		return setWithdrawalAddressJsons, errors.New("the list of signed requests is empty")
 	}
-	for _, request := range setWithdrawalAddressJsons {
-		fmt.Println("SETTING VALIDATOR INDEX " + au.Red(request.Message.ValidatorIndex).String() + " TO WITHDRAWAL ADDRESS " + au.Red(request.Message.ToExecutionAddress).String())
-	}
-	return callWithdrawalEndpoints(ctx, beaconNodeHost, setWithdrawalAddressJsons)
+	return setWithdrawalAddressJsons, nil
 }
 
 func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
@@ -120,4 +128,23 @@ func findWithdrawalFiles(path string) ([]string, error) {
 	}
 	log.Infof("found JSON files for setting withdrawals: %v", foundpaths)
 	return foundpaths, nil
+}
+
+func verifyWithdrawalsInPool(c *cli.Context) error {
+	ctx, span := trace.StartSpan(c.Context, "withdrawal.verifyWithdrawalsInPool")
+	defer span.End()
+	beaconNodeHost := c.String(BeaconHostFlag.Name)
+	if !c.IsSet(PathFlag.Name) {
+		return fmt.Errorf("no --%s flag value was provided", PathFlag.Name)
+	}
+	client, err := beacon.NewClient(beaconNodeHost)
+	if err != nil {
+		return err
+	}
+
+	request, err := getWithdrawalMessagesFromPathFlag(c)
+	if err != nil {
+		return err
+	}
+	return checkIfWithdrawsAreInPool(ctx, client, request)
 }

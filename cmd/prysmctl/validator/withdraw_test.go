@@ -213,3 +213,47 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 
 	assert.LogsContain(t, hook, "Could not validate SignedBLSToExecutionChange")
 }
+
+func TestVerifyWithdrawal_Mutiple(t *testing.T) {
+	file := "./testdata/change-operations-multiple.json"
+	baseurl := "127.0.0.1:3500"
+	l, err := net.Listen("tcp", baseurl)
+	require.NoError(t, err)
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			b, err := os.ReadFile(filepath.Clean(file))
+			require.NoError(t, err)
+			var to []*apimiddleware.SignedBLSToExecutionChangeJson
+			err = json.Unmarshal(b, &to)
+			require.NoError(t, err)
+			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
+				Data: to,
+			})
+			require.NoError(t, err)
+		}
+	}))
+	err = srv.Listener.Close()
+	require.NoError(t, err)
+	srv.Listener = l
+	srv.Start()
+	defer srv.Close()
+	hook := logtest.NewGlobal()
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("beacon-node-host", baseurl, "")
+	set.String("path", file, "")
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	set.Bool("verify-only", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
+	assert.NoError(t, set.Set("path", file))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	err = verifyWithdrawalsInPool(cliCtx)
+	require.NoError(t, err)
+	assert.LogsContain(t, hook, "set withdrawal address message was found in the node's operations pool.")
+	assert.LogsDoNotContain(t, hook, "set withdrawal address message not found in the node's operations pool.")
+}
