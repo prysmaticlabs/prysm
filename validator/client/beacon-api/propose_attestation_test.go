@@ -59,6 +59,50 @@ func TestProposeAttestation_Valid(t *testing.T) {
 			expectedErrorMessage: "attestation data is nil",
 		},
 		{
+			name: "nil source checkpoint",
+			attestation: &ethpb.Attestation{
+				AggregationBits: test_helpers.FillByteSlice(4, 74),
+				Data: &ethpb.AttestationData{
+					Target: &ethpb.Checkpoint{},
+				},
+				Signature: test_helpers.FillByteSlice(96, 82),
+			},
+			expectedErrorMessage: "source/target in attestation data is nil",
+		},
+		{
+			name: "nil target checkpoint",
+			attestation: &ethpb.Attestation{
+				AggregationBits: test_helpers.FillByteSlice(4, 74),
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{},
+				},
+				Signature: test_helpers.FillByteSlice(96, 82),
+			},
+			expectedErrorMessage: "source/target in attestation data is nil",
+		},
+		{
+			name: "nil aggregation bits",
+			attestation: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
+				},
+				Signature: test_helpers.FillByteSlice(96, 82),
+			},
+			expectedErrorMessage: "attestation aggregation bits is empty",
+		},
+		{
+			name: "nil signature",
+			attestation: &ethpb.Attestation{
+				AggregationBits: test_helpers.FillByteSlice(4, 74),
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{},
+					Target: &ethpb.Checkpoint{},
+				},
+			},
+			expectedErrorMessage: "attestation signature is empty",
+		},
+		{
 			name:                 "bad request",
 			attestation:          attestation,
 			expectedErrorMessage: "bad request",
