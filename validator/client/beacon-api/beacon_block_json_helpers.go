@@ -43,12 +43,7 @@ func jsonifyEth1Data(eth1Data *ethpb.Eth1Data) *apimiddleware.Eth1DataJson {
 func jsonifyAttestations(attestations []*ethpb.Attestation) []*apimiddleware.AttestationJson {
 	jsonAttestations := make([]*apimiddleware.AttestationJson, len(attestations))
 	for index, attestation := range attestations {
-		jsonAttestation := &apimiddleware.AttestationJson{
-			AggregationBits: hexutil.Encode(attestation.AggregationBits),
-			Data:            jsonifyAttestationData(attestation.Data),
-			Signature:       hexutil.Encode(attestation.Signature),
-		}
-		jsonAttestations[index] = jsonAttestation
+		jsonAttestations[index] = jsonifyAttestation(attestation)
 	}
 	return jsonAttestations
 }
@@ -154,5 +149,24 @@ func jsonifyAttestationData(attestationData *ethpb.AttestationData) *apimiddlewa
 			Epoch: uint64ToString(attestationData.Target.Epoch),
 			Root:  hexutil.Encode(attestationData.Target.Root),
 		},
+	}
+}
+
+func jsonifyAttestation(attestation *ethpb.Attestation) *apimiddleware.AttestationJson {
+	return &apimiddleware.AttestationJson{
+		AggregationBits: hexutil.Encode(attestation.AggregationBits),
+		Data:            jsonifyAttestationData(attestation.Data),
+		Signature:       hexutil.Encode(attestation.Signature),
+	}
+}
+
+func jsonifySignedAggregateAndProof(signedAggregateAndProof *ethpb.SignedAggregateAttestationAndProof) *apimiddleware.SignedAggregateAttestationAndProofJson {
+	return &apimiddleware.SignedAggregateAttestationAndProofJson{
+		Message: &apimiddleware.AggregateAttestationAndProofJson{
+			AggregatorIndex: uint64ToString(signedAggregateAndProof.Message.AggregatorIndex),
+			Aggregate:       jsonifyAttestation(signedAggregateAndProof.Message.Aggregate),
+			SelectionProof:  hexutil.Encode(signedAggregateAndProof.Message.SelectionProof),
+		},
+		Signature: hexutil.Encode(signedAggregateAndProof.Signature),
 	}
 }
