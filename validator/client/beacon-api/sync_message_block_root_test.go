@@ -66,7 +66,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 				"/eth/v1/beacon/blocks/head/root",
 				&apimiddleware.BlockRootResponseJson{},
 			).SetArg(
-				1,
+				2,
 				test.expectedResponse,
 			).Return(
 				nil,
