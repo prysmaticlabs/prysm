@@ -15,7 +15,7 @@ import (
 	test_helpers "github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/test-helpers"
 )
 
-func TestProposeAttestation_Valid(t *testing.T) {
+func TestProposeAttestation(t *testing.T) {
 	attestation := &ethpb.Attestation{
 		AggregationBits: test_helpers.FillByteSlice(4, 74),
 		Data: &ethpb.AttestationData{
