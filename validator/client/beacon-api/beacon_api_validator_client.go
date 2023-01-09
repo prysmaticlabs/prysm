@@ -184,12 +184,7 @@ func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.
 }
 
 func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubmitSyncMessage(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitSyncMessage is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return new(empty.Empty), c.submitSyncMessage(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
