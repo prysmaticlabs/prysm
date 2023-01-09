@@ -38,7 +38,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 		Signature:       signature,
 	}
 
-	marshalledJsonRegistrations, err := json.Marshal(jsonSyncCommitteeMessage)
+	marshalledJsonRegistrations, err := json.Marshal([]*apimiddleware.SyncCommitteeMessageJson{jsonSyncCommitteeMessage})
 	require.NoError(t, err)
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
