@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "blinded_blocks.go",
+        "blobs.go",
         "blocks.go",
         "config.go",
         "log.go",

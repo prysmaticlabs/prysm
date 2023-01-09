@@ -763,6 +763,40 @@ type bellatrixProduceBlindedBlockResponseJson struct {
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
 }
 
+type tempBlobJson struct {
+	Data string `json:"data"`
+}
+
+type tempBlobsSidecarJson struct {
+	BeaconBlockRoot string         `json:"beacon_block_root"`
+	BeaconBlockSlot string         `json:"beacon_block_slot"`
+	Blobs           []tempBlobJson `json:"blobs"`
+	AggregatedProof string         `json:"kzg_aggregated_proof"`
+}
+
+// This takes the blobs list and exposes the data field of each blob as the blob content itself in the json
+func prepareBlobsResponse(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	tempContainer := &tempBlobsSidecarJson{}
+	if err := json.Unmarshal(body, tempContainer); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
+	}
+	container, ok := responseContainer.(*blobsSidecarResponseJson)
+	if !ok {
+		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	container.Data = &blobsSidecarJson{
+		BeaconBlockRoot: tempContainer.BeaconBlockRoot,
+		BeaconBlockSlot: tempContainer.BeaconBlockSlot,
+		Blobs:           make([]string, len(tempContainer.Blobs)),
+		AggregatedProof: tempContainer.AggregatedProof,
+	}
+	for i, blob := range tempContainer.Blobs {
+		container.Data.Blobs[i] = blob.Data
+	}
+	return false, nil
+}
+
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*ProduceBlockResponseV2Json)
 	if !ok {

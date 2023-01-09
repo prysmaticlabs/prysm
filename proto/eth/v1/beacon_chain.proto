@@ -358,3 +358,20 @@ enum ForkChoiceNodeValidity {
     INVALID = 1;
     OPTIMISTIC = 2;
 }
+
+message BlobsRequest {
+    // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
+    // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
+    bytes block_id = 1;
+}
+
+message Blob {
+    bytes data = 1;
+}
+
+message BlobsResponse {
+    bytes beacon_block_root = 1;
+    uint64 beacon_block_slot = 2;
+    repeated Blob blobs = 3;
+    bytes aggregated_proof = 4;
+}

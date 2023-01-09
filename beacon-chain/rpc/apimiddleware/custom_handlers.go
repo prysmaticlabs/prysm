@@ -211,6 +211,14 @@ func handlePostSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.E
 	return true
 }
 
+func handleGetBlobsSidecarSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		fileName:     "blobs_sidecar.ssz",
+		responseJson: &SszResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
 func sszRequested(req *http.Request) (bool, error) {
 	accept := req.Header.Values("Accept")
 	if len(accept) == 0 {
