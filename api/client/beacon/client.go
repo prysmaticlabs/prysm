@@ -344,7 +344,7 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 }
 
 // SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
-// if the API responds with something other than OK there will be failure messages associated to the corresponding request message.
+// If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
 func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
 	u := c.baseURL.ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
 	body, err := json.Marshal(request)
