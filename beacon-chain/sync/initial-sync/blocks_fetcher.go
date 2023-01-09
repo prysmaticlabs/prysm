@@ -370,6 +370,11 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 		// Exit early if we have sufficient capacity
 		return nil
 	}
+	// Determine how long it will take for us to have the
+	// required number of blocks allowed by our rate limiter.
+	// We do this by calculating the duration till the rate limiter
+	// can request these blocks without exceeding the provided
+	// bandwidth limits per peer.
 	tillEmpty := f.rateLimiter.TillEmpty(pid.String())
 	blocksNeeded := int64(count - uint64(rem))
 	currentNumBlks := f.rateLimiter.Capacity() - rem
