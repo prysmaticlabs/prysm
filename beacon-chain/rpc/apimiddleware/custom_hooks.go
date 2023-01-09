@@ -565,15 +565,6 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 			Finalized:           respContainer.Finalized,
 		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
-		actualRespContainer = &capellaBlockResponseJson{
-			Version: respContainer.Version,
-			Data: &SignedBeaconBlockCapellaContainerJson{
-				Message:   respContainer.Data.CapellaBlock,
-				Signature: respContainer.Data.Signature,
-			},
-			ExecutionOptimistic: respContainer.ExecutionOptimistic,
-		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
