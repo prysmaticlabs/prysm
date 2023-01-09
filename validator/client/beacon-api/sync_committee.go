@@ -22,7 +22,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 		Signature:       hexutil.Encode(syncMessage.Signature),
 	}
 
-	marshalledJsonSyncCommitteeMessage, err := json.Marshal(jsonSyncCommitteeMessage)
+	marshalledJsonSyncCommitteeMessage, err := json.Marshal([]*apimiddleware.SyncCommitteeMessageJson{jsonSyncCommitteeMessage})
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal sync committee message")
 	}
