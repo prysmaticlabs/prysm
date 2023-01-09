@@ -450,12 +450,14 @@ type BeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
 	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type SignedBeaconBlockAltairContainerJson struct {
@@ -738,6 +740,10 @@ type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
+}
+
+type SubmitBLSToExecutionChangesRequest struct {
+	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
 }
 
 type DepositJson struct {

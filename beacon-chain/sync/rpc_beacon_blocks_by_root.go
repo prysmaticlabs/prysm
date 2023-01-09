@@ -6,6 +6,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -77,7 +78,11 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk.Block().IsBlinded() {
 			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 			if err != nil {
-				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
+				if errors.Is(err, execution.EmptyBlockHash) {
+					log.WithError(err).Warn("Could not reconstruct block from header with syncing execution client. Waiting to complete syncing")
+				} else {
+					log.WithError(err).Error("Could not get reconstruct full block from blinded body")
+				}
 				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 				return err
 			}
