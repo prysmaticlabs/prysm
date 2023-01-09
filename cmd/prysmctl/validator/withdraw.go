@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -71,27 +70,28 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 	if err != nil {
 		return err
 	}
-	missingInPool := false
+	requestMap := make(map[string]string)
 	for _, w := range request {
-		index := sort.Search(len(poolResponse.Data), func(i int) bool {
-			return poolResponse.Data[i].Message.ValidatorIndex == w.Message.ValidatorIndex &&
-				poolResponse.Data[i].Message.ToExecutionAddress == w.Message.ToExecutionAddress
-		})
-		if index == -1 {
+		requestMap[w.Message.ValidatorIndex] = w.Message.ToExecutionAddress
+	}
+	for _, resp := range poolResponse.Data {
+		value, found := requestMap[resp.Message.ValidatorIndex]
+		if found && value == resp.Message.ToExecutionAddress {
 			log.WithFields(log.Fields{
-				"validator_index":    w.Message.ValidatorIndex,
-				"execution_address:": w.Message.ToExecutionAddress,
-			}).Warn("set withdrawal address message not found in the node's operations pool.")
-			missingInPool = true
-		} else {
-			log.WithFields(log.Fields{
-				"validator_index":    w.Message.ValidatorIndex,
-				"execution_address:": w.Message.ToExecutionAddress,
+				"validator_index":    resp.Message.ValidatorIndex,
+				"execution_address:": resp.Message.ToExecutionAddress,
 			}).Info("set withdrawal address message was found in the node's operations pool.")
+			delete(requestMap, resp.Message.ValidatorIndex)
 		}
 	}
-	if missingInPool {
-		log.Info("set withdrawal address messages that were not found in the pool may have been included into a block. please check before resubmitting.")
+	if len(requestMap) != 0 {
+		for key, address := range requestMap {
+			log.WithFields(log.Fields{
+				"validator_index":    key,
+				"execution_address:": address,
+			}).Warn("set withdrawal address message not found in the node's operations pool.")
+		}
+		log.Warn("please check before resubmitting. set withdrawal address messages that were not found in the pool may have been included into a block.")
 	}
 	return nil
 }
