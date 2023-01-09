@@ -382,7 +382,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apim
 	return nil
 }
 
-// GetBLStoExecutionChanges get all the set withdrawal messages in the node's operation pool.
+// GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
 // Returns a struct representation of json response.
 func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
 	body, err := c.get(ctx, changeBLStoExecutionPath)
