@@ -73,7 +73,7 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 }
 
 func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
-	log.Info("verifying requested withdrawal messages known to node...")
+	log.Info("Verifying requested withdrawal messages known to node...")
 	poolResponse, err := client.GetBLStoExecutionChanges(ctx)
 	if err != nil {
 		return err
