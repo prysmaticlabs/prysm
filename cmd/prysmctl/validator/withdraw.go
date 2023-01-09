@@ -19,7 +19,7 @@ import (
 )
 
 func setWithdrawalAddresses(c *cli.Context) error {
-	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddress")
+	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddresses")
 	defer span.End()
 	au := aurora.NewAurora(true)
 	beaconNodeHost := c.String(BeaconHostFlag.Name)
