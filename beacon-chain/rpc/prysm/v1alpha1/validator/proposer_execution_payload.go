@@ -171,6 +171,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 }
 
 // This returns the execution payload of a given slot after the Capella upgrade
+// TOOD(4844): Avoid duplicated code with `getExecutionPayload`.
 func (vs *Server) getExecutionPayloadV2AndBlobsBundleV1(ctx context.Context,
 	slot types.Slot,
 	vIdx types.ValidatorIndex,

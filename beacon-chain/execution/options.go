@@ -1,8 +1,6 @@
 package execution
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
@@ -31,7 +29,6 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 		// Overwrite authorization type for all endpoints to be of a bearer type.
 		hEndpoint := HttpEndpoint(endpointString)
 		hEndpoint.Auth.Method = authorization.Bearer
-		fmt.Println(string(secret))
 		hEndpoint.Auth.Value = string(secret)
 
 		s.cfg.currHttpEndpoint = hEndpoint

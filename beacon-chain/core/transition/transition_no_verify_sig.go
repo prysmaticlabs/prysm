@@ -77,7 +77,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	// State root validation.
 	postStateRoot, err := st.HashTreeRoot(ctx)
 	if err != nil {
-		fmt.Println("Error hashing state root")
 		return nil, nil, err
 	}
 	stateRoot := signed.Block().StateRoot()
