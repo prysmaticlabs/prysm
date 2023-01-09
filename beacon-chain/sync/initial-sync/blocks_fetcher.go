@@ -77,7 +77,7 @@ type blocksFetcher struct {
 	chain           blockchainService
 	p2p             p2p.P2P
 	db              db.ReadOnlyDatabase
-	blocksPerSecond uint64
+	blocksPerPeriod uint64
 	rateLimiter     *leakybucket.Collector
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
@@ -112,11 +112,11 @@ type fetchRequestResponse struct {
 
 // newBlocksFetcher creates ready to use fetcher.
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
-	blocksPerSecond := flags.Get().BlockBatchLimit
+	blocksPerPeriod := flags.Get().BlockBatchLimit
 	allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit
 	// Allow fetcher to go almost to the full burst capacity (less a single batch).
 	rateLimiter := leakybucket.NewCollector(
-		float64(blocksPerSecond), int64(allowedBlocksBurst-blocksPerSecond),
+		float64(blocksPerPeriod), int64(allowedBlocksBurst-blocksPerPeriod),
 		blockLimiterPeriod, false /* deleteEmptyBuckets */)
 
 	capacityWeight := cfg.peerFilterCapacityWeight
@@ -132,7 +132,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		chain:           cfg.chain,
 		p2p:             cfg.p2p,
 		db:              cfg.db,
-		blocksPerSecond: uint64(blocksPerSecond),
+		blocksPerPeriod: uint64(blocksPerPeriod),
 		rateLimiter:     rateLimiter,
 		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
@@ -323,7 +323,7 @@ func (f *blocksFetcher) requestBlocks(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, req.Count); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -351,7 +351,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, uint64(len(*req))); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -363,9 +363,18 @@ func (f *blocksFetcher) requestBlocksByRoot(
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
-func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
+func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	log.WithField("peer", pid).Debug("Slowing down for rate limit")
-	timer := time.NewTimer(f.rateLimiter.TillEmpty(pid.String()))
+	rem := f.rateLimiter.Remaining(pid.String())
+	if uint64(rem) >= count {
+		// Exit early if we have sufficient capacity
+		return nil
+	}
+	tillEmpty := f.rateLimiter.TillEmpty(pid.String())
+	blocksNeeded := int64(count - uint64(rem))
+	capacity := f.rateLimiter.Capacity()
+	expectedTime := int64(tillEmpty) * blocksNeeded / capacity
+	timer := time.NewTimer(time.Duration(expectedTime))
 	defer timer.Stop()
 	select {
 	case <-f.ctx.Done():

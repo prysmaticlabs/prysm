@@ -590,6 +590,42 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" peer=%s", p2.PeerID()))
 }
 
+func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
+	p1 := p2pt.NewTestP2P(t)
+	p2 := p2pt.NewTestP2P(t)
+	p1.Connect(p2)
+	require.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	req := &ethpb.BeaconBlocksByRangeRequest{
+		StartSlot: 100,
+		Step:      1,
+		Count:     64,
+	}
+
+	topic := p2pm.RPCBlocksByRangeTopicV1
+	protocol := libp2pcore.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
+	streamHandlerFn := func(stream network.Stream) {
+		assert.NoError(t, stream.Close())
+	}
+	p2.BHost.SetStreamHandler(protocol, streamHandlerFn)
+
+	burstFactor := uint64(flags.Get().BlockBatchLimitBurstFactor)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
+	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 5*time.Second, false)
+	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	start := time.Now()
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10))
+	dur := time.Since(start)
+	assert.Equal(t, true, dur < time.Millisecond, "waited excessively for bandwidth")
+	fetcher.rateLimiter.Add(p2.PeerID().String(), int64(req.Count*burstFactor))
+	start = time.Now()
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), req.Count))
+	dur = time.Since(start)
+	assert.Equal(t, float64(5), dur.Truncate(1*time.Second).Seconds(), "waited excessively for bandwidth")
+}
+
 func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
 	p1 := p2pt.NewTestP2P(t)
 	tests := []struct {
