@@ -27,7 +27,7 @@ const (
 
 // Store implements LightClientStore from the spec.
 type Store struct {
-	Config *Config `json:"config"`
+	Config *Config `json:"config,omitempty"`
 	// FinalizedHeader is a header that is finalized
 	FinalizedHeader *ethpbv1.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	// CurrentSyncCommittee is the sync committees corresponding to the finalized header
@@ -127,6 +127,19 @@ func NewStore(config *Config, trustedBlockRoot [32]byte,
 		NextSyncCommittee:    nil,
 		OptimisticHeader:     bootstrap.Header,
 	}, nil
+}
+
+func (s *Store) Clone() *Store {
+	return &Store{
+		Config:                        s.Config,
+		FinalizedHeader:               s.FinalizedHeader,
+		CurrentSyncCommittee:          s.CurrentSyncCommittee,
+		NextSyncCommittee:             s.NextSyncCommittee,
+		BestValidUpdate:               s.BestValidUpdate,
+		OptimisticHeader:              s.OptimisticHeader,
+		PreviousMaxActiveParticipants: s.PreviousMaxActiveParticipants,
+		CurrentMaxActiveParticipants:  s.CurrentMaxActiveParticipants,
+	}
 }
 
 // isNextSyncCommitteeKnown implements is_next_sync_committee_known from the spec.
