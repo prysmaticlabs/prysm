@@ -31,7 +31,9 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 	if err != nil {
 		return err
 	}
-
+	if httpResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
+	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
@@ -96,6 +98,9 @@ func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNode
 	)
 	if err != nil {
 		return err
+	}
+	if httpResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with response code: %d", httpResp.StatusCode)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
