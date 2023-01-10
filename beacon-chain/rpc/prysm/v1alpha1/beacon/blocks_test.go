@@ -541,6 +541,20 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 			Block: &ethpb.BeaconBlockContainer_BlindedBellatrixBlock{BlindedBellatrixBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
 	})
+	t.Run("capella block", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlockCapella()
+		blk.Block.ParentRoot = parentRoot[:]
+		wrapped, err := blocks.NewSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		blinded, err := wrapped.ToBlinded()
+		assert.NoError(t, err)
+		blindedProto, err := blinded.PbBlindedCapellaBlock()
+		assert.NoError(t, err)
+		blkContainer := &ethpb.BeaconBlockContainer{
+			Block: &ethpb.BeaconBlockContainer_BlindedCapellaBlock{BlindedCapellaBlock: blindedProto}}
+		runListBlocksGenesis(t, wrapped, blkContainer)
+	})
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
@@ -623,6 +637,21 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
+			b.Block.Slot = i
+			wrappedB, err := blocks.NewSignedBeaconBlock(b)
+			assert.NoError(t, err)
+			return wrappedB
+		}
+		gBlock, err := blocks.NewSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
+	})
+	t.Run("capella block", func(t *testing.T) {
+		parentRoot := [32]byte{1, 2, 3}
+		blk := util.NewBeaconBlockCapella()
+		blk.Block.ParentRoot = parentRoot[:]
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = i
 			wrappedB, err := blocks.NewSignedBeaconBlock(b)
 			assert.NoError(t, err)
@@ -731,6 +760,30 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 			ctr := &ethpb.BeaconBlockContainer{
 				Block: &ethpb.BeaconBlockContainer_BellatrixBlock{
 					BellatrixBlock: util.HydrateSignedBeaconBlockBellatrix(b)},
+				BlockRoot: root,
+				Canonical: canonical}
+			return ctr
+		}
+		orphanedB, err := blocks.NewSignedBeaconBlock(blk)
+		assert.NoError(t, err)
+		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
+	})
+	t.Run("capella block", func(t *testing.T) {
+		blk := util.NewBeaconBlockCapella()
+		blk.Block.Slot = 300
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
+			b := util.NewBeaconBlockCapella()
+			b.Block.Slot = i
+			wrappedB, err := blocks.NewSignedBeaconBlock(b)
+			assert.NoError(t, err)
+			return wrappedB
+		}
+		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
+			b := util.NewBeaconBlockCapella()
+			b.Block.Slot = i
+			ctr := &ethpb.BeaconBlockContainer{
+				Block: &ethpb.BeaconBlockContainer_CapellaBlock{
+					CapellaBlock: util.HydrateSignedBeaconBlockCapella(b)},
 				BlockRoot: root,
 				Canonical: canonical}
 			return ctr
@@ -852,4 +905,24 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBe
 			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
+}
+
+func TestServer_ConvertToBlockContainer(t *testing.T) {
+	b := util.NewBeaconBlockCapella()
+	root, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	wrapped, err := blocks.NewSignedBeaconBlock(b)
+	assert.NoError(t, err)
+	container, err := convertToBlockContainer(wrapped, root, true)
+	require.NoError(t, err)
+	require.NotNil(t, container.GetCapellaBlock())
+
+	bb := util.NewBlindedBeaconBlockCapella()
+	root, err = b.HashTreeRoot()
+	require.NoError(t, err)
+	wrapped, err = blocks.NewSignedBeaconBlock(bb)
+	assert.NoError(t, err)
+	container, err = convertToBlockContainer(wrapped, root, true)
+	require.NoError(t, err)
+	require.NotNil(t, container.GetBlindedCapellaBlock())
 }

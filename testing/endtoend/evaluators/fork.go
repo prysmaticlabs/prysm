@@ -47,7 +47,7 @@ var CapellaForkTransition = types.Evaluator{
 	Evaluation: capellaForkOccurs,
 }
 
-func altairForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func altairForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
@@ -89,7 +89,7 @@ func altairForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) erro
 	return nil
 }
 
-func bellatrixForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func bellatrixForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)
@@ -134,7 +134,7 @@ func bellatrixForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) e
 	return nil
 }
 
-func capellaForkOccurs(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func capellaForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), streamDeadline)

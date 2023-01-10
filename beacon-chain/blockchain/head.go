@@ -109,11 +109,21 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 		}
 		dis := headSlot + newHeadSlot - 2*forkSlot
 		dep := math.Max(uint64(headSlot-forkSlot), uint64(newHeadSlot-forkSlot))
+		oldWeight, err := s.ForkChoicer().Weight(oldHeadRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", oldHeadRoot)).Warn("could not determine node weight")
+		}
+		newWeight, err := s.ForkChoicer().Weight(newHeadRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", newHeadRoot)).Warn("could not determine node weight")
+		}
 		log.WithFields(logrus.Fields{
 			"newSlot":            fmt.Sprintf("%d", newHeadSlot),
 			"newRoot":            fmt.Sprintf("%#x", newHeadRoot),
+			"newWeight":          newWeight,
 			"oldSlot":            fmt.Sprintf("%d", headSlot),
 			"oldRoot":            fmt.Sprintf("%#x", oldHeadRoot),
+			"oldWeight":          oldWeight,
 			"commonAncestorRoot": fmt.Sprintf("%#x", commonRoot),
 			"distance":           dis,
 			"depth":              dep,
