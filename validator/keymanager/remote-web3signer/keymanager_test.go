@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -401,130 +403,116 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	}
 }
 
-//func TestNewRemoteKeymanager(t *testing.T) {
-//	tests := []struct {
-//		name       string
-//		opts       *KeymanagerOpts
-//		clientCert string
-//		clientKey  string
-//		caCert     string
-//		err        string
-//	}{
-//		{
-//			name: "NoCertificates",
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: nil,
-//			},
-//			err: "certificate configuration is missing",
-//		},
-//		{
-//			name: "NoClientCertificate",
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls: true,
-//				},
-//			},
-//			err: "client certificate is required",
-//		},
-//		{
-//			name: "NoClientKey",
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls:     true,
-//					ClientCertPath: "/foo/client.crt",
-//					ClientKeyPath:  "",
-//				},
-//			},
-//			err: "client key is required",
-//		},
-//		{
-//			name: "MissingClientKey",
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls:     true,
-//					ClientCertPath: "/foo/client.crt",
-//					ClientKeyPath:  "/foo/client.key",
-//					CACertPath:     "",
-//				},
-//			},
-//			err: "failed to obtain client's certificate and/or key",
-//		},
-//		{
-//			name:       "BadClientCert",
-//			clientCert: `bad`,
-//			clientKey:  validClientKey,
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls: true,
-//				},
-//			},
-//			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in certificate input",
-//		},
-//		{
-//			name:       "BadClientKey",
-//			clientCert: validClientCert,
-//			clientKey:  `bad`,
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls: true,
-//				},
-//			},
-//			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in key input",
-//		},
-//		{
-//			name:       "MissingCACert",
-//			clientCert: validClientCert,
-//			clientKey:  validClientKey,
-//			opts: &KeymanagerOpts{
-//				RemoteCertificate: &CertificateConfig{
-//					RequireTls: true,
-//					CACertPath: `bad`,
-//				},
-//			},
-//			err: "failed to obtain server's CA certificate: open bad: no such file or directory",
-//		},
-//	}
-//
-//	for _, test := range tests {
-//		t.Run(test.name, func(t *testing.T) {
-//			if test.caCert != "" || test.clientCert != "" || test.clientKey != "" {
-//				dir := fmt.Sprintf("%s/%s", t.TempDir(), test.name)
-//				require.NoError(t, os.MkdirAll(dir, 0777))
-//				if test.caCert != "" {
-//					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-//					err := os.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
-//					require.NoError(t, err, "Failed to write CA certificate")
-//					test.opts.RemoteCertificate.CACertPath = caCertPath
-//				}
-//				if test.clientCert != "" {
-//					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-//					err := os.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
-//					require.NoError(t, err, "Failed to write client certificate")
-//					test.opts.RemoteCertificate.ClientCertPath = clientCertPath
-//				}
-//				if test.clientKey != "" {
-//					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-//					err := os.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
-//					require.NoError(t, err, "Failed to write client key")
-//					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
-//				}
-//			}
-//			_, err := NewKeymanager(context.Background(), &SetupConfig{Opts: test.opts, MaxMessageSize: 1})
-//			if test.err == "" {
-//				require.NoError(t, err)
-//			} else {
-//				require.ErrorContains(t, test.err, err)
-//			}
-//		})
-//	}
-//}
-//
-//func TestNewRemoteKeymanager_TlsDisabled(t *testing.T) {
-//	opts := &KeymanagerOpts{
-//		RemoteCertificate: &CertificateConfig{
-//			RequireTls: false,
-//		},
-//	}
-//	_, err := NewKeymanager(context.Background(), &SetupConfig{Opts: opts, MaxMessageSize: 1})
-//	assert.NoError(t, err)
-//}
+func TestNewKeymanager_Certificates(t *testing.T) {
+	tests := []struct {
+		name       string
+		opts       *SetupConfig
+		clientCert string
+		clientKey  string
+		caCert     string
+		err        string
+	}{
+		{
+			name: "NoClientCertificate",
+			opts: &SetupConfig{
+
+				RequireTLS: true,
+			},
+			err: "client certificate is required",
+		},
+		{
+			name: "NoClientKey",
+			opts: &SetupConfig{
+
+				RequireTLS:     true,
+				ClientCertPath: "/foo/client.crt",
+				ClientKeyPath:  "",
+			},
+			err: "client key is required",
+		},
+		{
+			name: "MissingClientKey",
+			opts: &SetupConfig{
+				RequireTLS:     true,
+				ClientCertPath: "/foo/client.crt",
+				ClientKeyPath:  "/foo/client.key",
+				CACertPath:     "",
+			},
+			err: "failed to obtain client's certificate and/or key",
+		},
+		{
+			name:       "BadClientCert",
+			clientCert: `bad`,
+			clientKey:  validClientKey,
+			opts: &SetupConfig{
+				RequireTLS: true,
+			},
+			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name:       "BadClientKey",
+			clientCert: validClientCert,
+			clientKey:  `bad`,
+			opts: &SetupConfig{
+				RequireTLS: true,
+			},
+			err: "failed to obtain client's certificate and/or key: tls: failed to find any PEM data in key input",
+		},
+		{
+			name:       "MissingCACert",
+			clientCert: validClientCert,
+			clientKey:  validClientKey,
+			opts: &SetupConfig{
+
+				RequireTLS: true,
+				CACertPath: `bad`,
+			},
+			err: "failed to obtain server's CA certificate: open bad: no such file or directory",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+			if err != nil {
+				fmt.Printf("error: %v", err)
+			}
+			if test.caCert != "" || test.clientCert != "" || test.clientKey != "" {
+				dir := fmt.Sprintf("%s/%s", t.TempDir(), test.name)
+				require.NoError(t, os.MkdirAll(dir, 0777))
+				if test.caCert != "" {
+					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
+					err := os.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write CA certificate")
+					test.opts.CACertPath = caCertPath
+				}
+				if test.clientCert != "" {
+					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
+					err := os.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write client certificate")
+					test.opts.ClientCertPath = clientCertPath
+				}
+				if test.clientKey != "" {
+					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
+					err := os.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
+					require.NoError(t, err, "Failed to write client key")
+					test.opts.ClientKeyPath = clientKeyPath
+				}
+			}
+			_, err = NewKeymanager(context.Background(), &SetupConfig{
+				BaseEndpoint:          "http://example.com",
+				GenesisValidatorsRoot: root,
+				PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
+				RequireTLS:            test.opts.RequireTLS,
+				ClientCertPath:        test.opts.ClientCertPath,
+				ClientKeyPath:         test.opts.ClientKeyPath,
+				CACertPath:            test.opts.CACertPath,
+			})
+			if test.err == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, test.err, err)
+			}
+		})
+	}
+}

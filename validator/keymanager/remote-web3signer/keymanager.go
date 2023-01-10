@@ -93,19 +93,19 @@ func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
 		tlsConfig := &tls.Config{
 			MinVersion: tls.VersionTLS13,
 		}
-		if cfg.ClientCertPath != "" || cfg.ClientKeyPath != "" {
-			if cfg.ClientCertPath == "" {
-				return nil, errors.New("client certificate is required")
-			}
-			if cfg.ClientKeyPath == "" {
-				return nil, errors.New("client key is required")
-			}
-			clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
-			}
-			tlsConfig.Certificates = []tls.Certificate{clientPair}
+
+		if cfg.ClientCertPath == "" {
+			return nil, errors.New("client certificate is required")
 		}
+		if cfg.ClientKeyPath == "" {
+			return nil, errors.New("client key is required")
+		}
+		clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
+		}
+		tlsConfig.Certificates = []tls.Certificate{clientPair}
+
 		cp := x509.NewCertPool()
 		// Load the CA for the server certificate if present.
 		if cfg.CACertPath != "" {
