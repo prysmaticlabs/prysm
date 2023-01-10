@@ -18,6 +18,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/math"
 	p2ppb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -370,16 +371,12 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 		// Exit early if we have sufficient capacity
 		return nil
 	}
-	// Determine how long it will take for us to have the
-	// required number of blocks allowed by our rate limiter.
-	// We do this by calculating the duration till the rate limiter
-	// can request these blocks without exceeding the provided
-	// bandwidth limits per peer.
-	tillEmpty := f.rateLimiter.TillEmpty(pid.String())
-	blocksNeeded := int64(count - uint64(rem))
-	currentNumBlks := f.rateLimiter.Capacity() - rem
-	expectedTime := int64(tillEmpty) * blocksNeeded / currentNumBlks
-	timer := time.NewTimer(time.Duration(expectedTime))
+	intCount, err := math.Int(count)
+	if err != nil {
+		return err
+	}
+	toWait := timeToWait(int64(intCount), rem, f.rateLimiter.Capacity(), f.rateLimiter.TillEmpty(pid.String()))
+	timer := time.NewTimer(toWait)
 	defer timer.Stop()
 	select {
 	case <-f.ctx.Done():
@@ -388,4 +385,14 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 		// Peer has gathered enough capacity to be polled again.
 	}
 	return nil
+}
+
+// Determine how long it will take for us to have the required number of blocks allowed by our rate limiter.
+// We do this by calculating the duration till the rate limiter can request these blocks without exceeding
+// the provided bandwidth limits per peer.
+func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.Duration {
+	blocksNeeded := wanted - rem
+	currentNumBlks := capacity - rem
+	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
+	return time.Duration(expectedTime)
 }

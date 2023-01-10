@@ -896,3 +896,46 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 		})
 	}
 }
+
+func TestTimeToWait(t *testing.T) {
+	tests := []struct {
+		name          string
+		wanted        int64
+		rem           int64
+		capacity      int64
+		timeTillEmpty time.Duration
+		want          time.Duration
+	}{
+		{
+			name:          "Limiter has sufficient blocks",
+			wanted:        64,
+			rem:           64,
+			capacity:      320,
+			timeTillEmpty: 200 * time.Second,
+			want:          0 * time.Second,
+		},
+		{
+			name:          "Limiter has reached full capacity",
+			wanted:        64,
+			rem:           0,
+			capacity:      640,
+			timeTillEmpty: 60 * time.Second,
+			want:          6 * time.Second,
+		},
+		{
+			name:          "Requesting full capacity from peer",
+			wanted:        640,
+			rem:           0,
+			capacity:      640,
+			timeTillEmpty: 60 * time.Second,
+			want:          60 * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := timeToWait(tt.wanted, tt.rem, tt.capacity, tt.timeTillEmpty); got != tt.want {
+				t.Errorf("timeToWait() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
