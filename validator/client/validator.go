@@ -45,6 +45,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -604,8 +605,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	v.logDuties(slot, v.duties.CurrentEpochDuties)
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
+	// Make sure to copy metadata into a new context
+	md, exists := metadata.FromOutgoingContext(ctx)
+	ctx = context.Background()
+	if exists {
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
 	go func() {
-		if err := v.subscribeToSubnets(context.Background(), resp); err != nil {
+		if err := v.subscribeToSubnets(ctx, resp); err != nil {
 			log.WithError(err).Error("Failed to subscribe to subnets")
 		}
 	}()
