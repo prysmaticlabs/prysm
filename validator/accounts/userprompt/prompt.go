@@ -1,17 +1,12 @@
 package userprompt
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/io/prompt"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"github.com/urfave/cli/v2"
 )
 
@@ -60,98 +55,6 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 		return directory, nil
 	}
 	return file.ExpandPath(inputtedDir)
-}
-
-// InputRemoteKeymanagerConfig via the cli.
-func InputRemoteKeymanagerConfig(cliCtx *cli.Context) (*remote.KeymanagerOpts, error) {
-	addr := cliCtx.String(flags.GrpcRemoteAddressFlag.Name)
-	requireTls := !cliCtx.Bool(flags.DisableRemoteSignerTlsFlag.Name)
-	crt := cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
-	key := cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
-	ca := cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
-	log.Info("Input desired configuration")
-	var err error
-	if addr == "" {
-		addr, err = prompt.ValidatePrompt(
-			os.Stdin,
-			"Remote gRPC address (such as host.example.com:4000)",
-			prompt.NotEmpty)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if requireTls && crt == "" {
-		crt, err = prompt.ValidatePrompt(
-			os.Stdin,
-			"Path to TLS crt (such as /path/to/client.crt)",
-			validateCertPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if requireTls && key == "" {
-		key, err = prompt.ValidatePrompt(
-			os.Stdin,
-			"Path to TLS key (such as /path/to/client.key)",
-			validateCertPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if requireTls && ca == "" {
-		ca, err = prompt.ValidatePrompt(
-			os.Stdin,
-			"Path to certificate authority (CA) crt (such as /path/to/ca.crt)",
-			validateCertPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	crtPath, keyPath, caPath := "", "", ""
-	if crt != "" {
-		crtPath, err = file.ExpandPath(strings.TrimRight(crt, "\r\n"))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
-		}
-	}
-	if key != "" {
-		keyPath, err = file.ExpandPath(strings.TrimRight(key, "\r\n"))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
-		}
-	}
-	if ca != "" {
-		caPath, err = file.ExpandPath(strings.TrimRight(ca, "\r\n"))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not determine absolute path for %s", crt)
-		}
-	}
-
-	newCfg := &remote.KeymanagerOpts{
-		RemoteCertificate: &remote.CertificateConfig{
-			RequireTls:     requireTls,
-			ClientCertPath: crtPath,
-			ClientKeyPath:  keyPath,
-			CACertPath:     caPath,
-		},
-		RemoteAddr: addr,
-	}
-	fmt.Printf("%s\n", newCfg)
-	return newCfg, nil
-}
-
-func validateCertPath(input string) error {
-	if input == "" {
-		return errors.New("crt path cannot be empty")
-	}
-	if !prompt.IsValidUnicode(input) {
-		return errors.New("not valid unicode")
-	}
-	if !file.FileExists(input) {
-		return fmt.Errorf("no crt found at path: %s", input)
-	}
-	return nil
 }
 
 // FormatPromptError for the user.

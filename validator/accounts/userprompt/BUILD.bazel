@@ -15,7 +15,6 @@ go_library(
         "//cmd/validator/flags:go_default_library",
         "//io/file:go_default_library",
         "//io/prompt:go_default_library",
-        "//validator/keymanager/remote:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_manifoldco_promptui//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

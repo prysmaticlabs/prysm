@@ -27,8 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
@@ -460,127 +458,6 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keyString := fmt.Sprintf("%#x", key)
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Validating Private Key %s not found on line number %d", keyString, lineNumber)
-	}
-}
-
-func TestListAccounts_RemoteKeymanager(t *testing.T) {
-	walletDir, _, _ := setupWalletAndPasswordsDir(t)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:      walletDir,
-		keymanagerKind: keymanager.Remote,
-	})
-	opts := []Option{
-		WithWalletDir(walletDir),
-		WithKeymanagerType(keymanager.Remote),
-		WithWalletPassword(password),
-	}
-	acc, err := NewCLIManager(opts...)
-	require.NoError(t, err)
-	w, err := acc.WalletCreate(cliCtx.Context)
-	require.NoError(t, err)
-
-	rescueStdout := os.Stdout
-	r, writer, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = writer
-
-	numAccounts := 3
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
-	for i := 0; i < numAccounts; i++ {
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
-	}
-	km := &mockRemoteKeymanager{
-		publicKeys: pubKeys,
-		opts: &remote.KeymanagerOpts{
-			RemoteCertificate: &remote.CertificateConfig{
-				RequireTls:     true,
-				ClientCertPath: "/tmp/client.crt",
-				ClientKeyPath:  "/tmp/client.key",
-				CACertPath:     "/tmp/ca.crt",
-			},
-			RemoteAddr: "localhost:4000",
-		},
-	}
-	// We call the list remote keymanager accounts function.
-	require.NoError(t,
-		km.ListKeymanagerAccounts(context.Background(),
-			keymanager.ListKeymanagerAccountConfig{
-				KeymanagerConfigFileName: wallet.KeymanagerConfigFileName,
-			}))
-
-	require.NoError(t, writer.Close())
-	out, err := io.ReadAll(r)
-	require.NoError(t, err)
-	os.Stdout = rescueStdout
-
-	// Get stdout content and split to lines
-	newLine := fmt.Sprintln()
-	lines := strings.Split(string(out), newLine)
-
-	// Expected output example:
-	/*
-		(keymanager kind) remote signer
-		(configuration file path) /tmp/79336/wallet/remote/keymanageropts.json
-
-		Configuration options
-		Remote gRPC address: localhost:4000
-		Require TLS: true
-		Client cert path: /tmp/client.crt
-		Client key path: /tmp/client.key
-		CA cert path: /tmp/ca.crt
-
-		Showing 3 validator accounts
-
-		equally-primary-foal
-		[validating public key] 0x300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-
-
-		rationally-charmed-werewolf
-		[validating public key] 0x310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-
-
-	*/
-
-	// Expected output format definition
-	const prologLength = 11
-	const configOffset = 4
-	const configLength = 5
-	const accountLength = 4
-	const nameOffset = 1
-	const keyOffset = 2
-	const epilogLength = 1
-
-	// Require the output has correct number of lines
-	lineCount := prologLength + accountLength*numAccounts + epilogLength
-	require.Equal(t, lineCount, len(lines))
-
-	// Assert the keymanager kind is printed on the first line.
-	kindString := w.KeymanagerKind().String()
-	kindFound := strings.Contains(lines[0], kindString)
-	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
-
-	// Assert that Configuration is printed in the right position
-	configLines := lines[configOffset:(configOffset + configLength)]
-	configExpected := km.opts.String()
-	configActual := fmt.Sprintln(strings.Join(configLines, newLine))
-	assert.Equal(t, configExpected, configActual, "Configuration not found at the expected position")
-
-	// Assert that account names are printed on the correct lines
-	for i := 0; i < numAccounts; i++ {
-		lineNumber := prologLength + accountLength*i + nameOffset
-		accountName := petnames.DeterministicName(pubKeys[i][:], "-")
-		accountNameFound := strings.Contains(lines[lineNumber], accountName)
-		assert.Equal(t, true, accountNameFound, "Account Name %s not found on line number %d", accountName, lineNumber)
-	}
-
-	// Assert that public keys are printed on the correct lines
-	for i, key := range pubKeys {
-		lineNumber := prologLength + accountLength*i + keyOffset
-		keyString := fmt.Sprintf("%#x", key)
-		keyFound := strings.Contains(lines[lineNumber], keyString)
-		assert.Equal(t, true, keyFound, "Public Key %s not found on line number %d", keyString, lineNumber)
 	}
 }
 

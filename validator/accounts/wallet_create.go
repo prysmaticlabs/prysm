@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 )
 
 // WalletCreate creates wallet specified by configuration options.
@@ -64,13 +63,6 @@ func (acm *AccountsCLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet
 		log.WithField("--wallet-dir", acm.walletDir).Info(
 			"Successfully created HD wallet from mnemonic and regenerated accounts",
 		)
-	case keymanager.Remote:
-		if err = createRemoteKeymanagerWallet(ctx, w, acm.keymanagerOpts); err != nil {
-			return nil, errors.Wrap(err, "could not initialize wallet")
-		}
-		log.WithField("--wallet-dir", acm.walletDir).Info(
-			"Successfully created wallet with remote keymanager configuration",
-		)
 	case keymanager.Web3Signer:
 		return nil, errors.New("web3signer keymanager does not require persistent wallets.")
 	default:
@@ -116,20 +108,6 @@ func createDerivedKeymanagerWallet(
 	}
 	if err := km.RecoverAccountsFromMnemonic(ctx, mnemonic, mnemonicLanguage, mnemonicPassphrase, numAccounts); err != nil {
 		return errors.Wrap(err, "could not recover accounts from mnemonic")
-	}
-	return nil
-}
-
-func createRemoteKeymanagerWallet(ctx context.Context, wallet *wallet.Wallet, opts *remote.KeymanagerOpts) error {
-	keymanagerConfig, err := remote.MarshalOptionsFile(ctx, opts)
-	if err != nil {
-		return errors.Wrap(err, "could not marshal config file")
-	}
-	if err := wallet.SaveWallet(); err != nil {
-		return errors.Wrap(err, "could not save wallet to disk")
-	}
-	if err := wallet.WriteKeymanagerConfigToDisk(ctx, keymanagerConfig); err != nil {
-		return errors.Wrap(err, "could not write keymanager config to disk")
 	}
 	return nil
 }
