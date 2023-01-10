@@ -391,6 +391,11 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 // We do this by calculating the duration till the rate limiter can request these blocks without exceeding
 // the provided bandwidth limits per peer.
 func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.Duration {
+	// Defensive check if we have more than enough blocks
+	// to request from the peer.
+	if rem >= wanted {
+		return 0
+	}
 	blocksNeeded := wanted - rem
 	currentNumBlks := capacity - rem
 	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
