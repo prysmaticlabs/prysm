@@ -8,6 +8,6 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	r := e2eMinimal(t, version.Phase0, types.WithCheckpointSync())
+	r := e2eMinimal(t, version.Bellatrix, types.WithCheckpointSync())
 	r.run()
 }
