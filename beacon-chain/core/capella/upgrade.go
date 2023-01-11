@@ -94,6 +94,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		},
 		NextWithdrawalIndex:          0,
 		NextWithdrawalValidatorIndex: 0,
+		HistoricalSummaries:          make([]*ethpb.HistoricalSummary, 0),
 	}
 
 	return state_native.InitializeFromProtoUnsafeCapella(s)
