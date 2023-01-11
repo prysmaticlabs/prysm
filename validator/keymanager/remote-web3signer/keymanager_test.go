@@ -479,7 +479,7 @@ func TestNewKeymanager_Certificates(t *testing.T) {
 			}
 			if test.caCert != "" || test.clientCert != "" || test.clientKey != "" {
 				dir := fmt.Sprintf("%s/%s", t.TempDir(), test.name)
-				require.NoError(t, os.MkdirAll(dir, 0777))
+				require.NoError(t, os.MkdirAll(dir, 0750))
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
 					err := os.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
