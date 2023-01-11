@@ -203,9 +203,6 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 	if target > p.GenesisTimeFetcher.CurrentSlot() {
 		return nil, errors.New("requested slot is in the future")
 	}
-	if target > p.ChainInfoFetcher.HeadSlot() {
-		return nil, errors.New("requested slot number is higher than head slot number")
-	}
 
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
