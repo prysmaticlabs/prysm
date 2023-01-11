@@ -499,9 +499,8 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 				require.NoError(t, err)
 				require.DeepEqual(t, r[:], roots[0])
 
-				summaries, err := st.HistoricalSummaries()
-				require.NoError(t, err)
-				require.Equal(t, 0, len(summaries))
+				_, err = st.HistoricalSummaries()
+				require.ErrorContains(t, "HistoricalSummaries is not supported for phase0", err)
 			},
 		},
 		{
@@ -526,9 +525,8 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 					StateSummaryRoot: sr[:],
 				}
 				require.DeepEqual(t, b, summaries[0])
-				roots, err := st.HistoricalRoots()
-				require.NoError(t, err)
-				require.Equal(t, 0, len(roots))
+				_, err = st.HistoricalRoots()
+				require.ErrorContains(t, "HistoricalRoots is not supported for capella", err)
 			},
 		},
 	}
