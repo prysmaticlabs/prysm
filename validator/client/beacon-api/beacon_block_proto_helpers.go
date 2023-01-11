@@ -410,7 +410,7 @@ func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*apim
 
 		fromBlsPubkey, err := hexutil.Decode(jsonBlsToExecutionChange.Message.FromBLSPubkey)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode from bls pubkey `%s`", jsonBlsToExecutionChange.Message.FromBLSPubkey)
+			return nil, errors.Wrapf(err, "failed to decode bls pubkey `%s`", jsonBlsToExecutionChange.Message.FromBLSPubkey)
 		}
 
 		toExecutionAddress, err := hexutil.Decode(jsonBlsToExecutionChange.Message.ToExecutionAddress)
