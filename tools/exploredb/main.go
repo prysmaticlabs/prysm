@@ -339,7 +339,6 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		roots, err := st.HistoricalRoots()
 		if err != nil {
 			log.WithError(err).Error("could not get historical roots")
-			return
 		}
 		size, count = sizeAndCountOfByteList(roots)
 		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
