@@ -82,11 +82,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set eth1 data.
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
 	if err != nil {
-		blk.Body().SetEth1Data(&ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]})
+		eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
 		log.WithError(err).Error("Could not get eth1data")
-	} else {
-		blk.Body().SetEth1Data(eth1Data)
 	}
+	blk.Body().SetEth1Data(eth1Data)
 
 	// Set deposit and attestation.
 	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
@@ -94,10 +93,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		blk.Body().SetDeposits([]*ethpb.Deposit{})
 		blk.Body().SetAttestations([]*ethpb.Attestation{})
 		log.WithError(err).Error("Could not pack deposits and attestations")
-	} else {
-		blk.Body().SetDeposits(deposits)
-		blk.Body().SetAttestations(atts)
 	}
+	blk.Body().SetDeposits(deposits)
+	blk.Body().SetAttestations(atts)
 
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
