@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -917,6 +918,169 @@ func TestBeaconBlockProtoHelpers_ConvertTransactionsToProto(t *testing.T) {
 	}
 }
 
+func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		generateInput        func() []*apimiddleware.WithdrawalJson
+		expectedResult       []*enginev1.Withdrawal
+		expectedErrorMessage string
+	}{
+		{
+			name:                 "nil withdrawal",
+			expectedErrorMessage: "withdrawal at index `0` is nil",
+			generateInput: func() []*apimiddleware.WithdrawalJson {
+				input := generateWithdrawals()
+				input[0] = nil
+				return input
+			},
+		},
+		{
+			name:                 "bad withdrawal index",
+			expectedErrorMessage: "failed to parse withdrawal index `foo`",
+			generateInput: func() []*apimiddleware.WithdrawalJson {
+				input := generateWithdrawals()
+				input[0].WithdrawalIndex = "foo"
+				return input
+			},
+		},
+		{
+			name:                 "bad validator index",
+			expectedErrorMessage: "failed to parse validator index `bar`",
+			generateInput: func() []*apimiddleware.WithdrawalJson {
+				input := generateWithdrawals()
+				input[0].ValidatorIndex = "bar"
+				return input
+			},
+		},
+		{
+			name:                 "bad execution address",
+			expectedErrorMessage: "failed to decode execution address `foo`",
+			generateInput: func() []*apimiddleware.WithdrawalJson {
+				input := generateWithdrawals()
+				input[0].ExecutionAddress = "foo"
+				return input
+			},
+		},
+		{
+			name:                 "bad amount",
+			expectedErrorMessage: "failed to parse withdrawal amount `bar`",
+			generateInput: func() []*apimiddleware.WithdrawalJson {
+				input := generateWithdrawals()
+				input[0].Amount = "bar"
+				return input
+			},
+		},
+		{
+			name:          "valid",
+			generateInput: generateWithdrawals,
+			expectedResult: []*enginev1.Withdrawal{
+				{
+					Index:          1,
+					ValidatorIndex: 2,
+					Address:        []byte{3},
+					Amount:         4,
+				},
+				{
+					Index:          5,
+					ValidatorIndex: 6,
+					Address:        []byte{7},
+					Amount:         8,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := convertWithdrawalsToProto(testCase.generateInput())
+
+			if testCase.expectedResult != nil {
+				require.NoError(t, err)
+				assert.DeepEqual(t, testCase.expectedResult, result)
+			} else if testCase.expectedErrorMessage != "" {
+				assert.ErrorContains(t, testCase.expectedErrorMessage, err)
+			}
+		})
+	}
+}
+
+func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		generateInput        func() []*apimiddleware.SignedBLSToExecutionChangeJson
+		expectedResult       []*ethpb.SignedBLSToExecutionChange
+		expectedErrorMessage string
+	}{
+		{
+			name:                 "nil bls to execution change",
+			expectedErrorMessage: "bls to execution change at index `0` is nil",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0] = nil
+				return input
+			},
+		},
+		{
+			name:                 "nil bls to execution change message",
+			expectedErrorMessage: "bls to execution change message at index `0` is nil",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0].Message = nil
+				return input
+			},
+		},
+		{
+			name:                 "bad validator index",
+			expectedErrorMessage: "failed to decode validator index `foo`",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0].Message.ValidatorIndex = "foo"
+				return input
+			},
+		},
+		{
+			name:                 "bad from bls pubkey",
+			expectedErrorMessage: "failed to decode bls pubkey `bar`",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0].Message.FromBLSPubkey = "bar"
+				return input
+			},
+		},
+		{
+			name:                 "bad to execution address",
+			expectedErrorMessage: "failed to decode execution address `foo`",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0].Message.ToExecutionAddress = "foo"
+				return input
+			},
+		},
+		{
+			name:                 "bad signature",
+			expectedErrorMessage: "failed to decode signature `bar`",
+			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
+				input := generateBlsToExecutionChanges()
+				input[0].Signature = "bar"
+				return input
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := convertBlsToExecutionChangesToProto(testCase.generateInput())
+
+			if testCase.expectedResult != nil {
+				require.NoError(t, err)
+				assert.DeepEqual(t, testCase.expectedResult, result)
+			} else if testCase.expectedErrorMessage != "" {
+				assert.ErrorContains(t, testCase.expectedErrorMessage, err)
+			}
+		})
+	}
+}
+
 func generateProposerSlashings() []*apimiddleware.ProposerSlashingJson {
 	return []*apimiddleware.ProposerSlashingJson{
 		{
@@ -1182,6 +1346,44 @@ func generateSignedVoluntaryExits() []*apimiddleware.SignedVoluntaryExitJson {
 				ValidatorIndex: "5",
 			},
 			Signature: hexutil.Encode([]byte{6}),
+		},
+	}
+}
+
+func generateWithdrawals() []*apimiddleware.WithdrawalJson {
+	return []*apimiddleware.WithdrawalJson{
+		{
+			WithdrawalIndex:  "1",
+			ValidatorIndex:   "2",
+			ExecutionAddress: hexutil.Encode([]byte{3}),
+			Amount:           "4",
+		},
+		{
+			WithdrawalIndex:  "5",
+			ValidatorIndex:   "6",
+			ExecutionAddress: hexutil.Encode([]byte{7}),
+			Amount:           "8",
+		},
+	}
+}
+
+func generateBlsToExecutionChanges() []*apimiddleware.SignedBLSToExecutionChangeJson {
+	return []*apimiddleware.SignedBLSToExecutionChangeJson{
+		{
+			Message: &apimiddleware.BLSToExecutionChangeJson{
+				ValidatorIndex:     "1",
+				FromBLSPubkey:      hexutil.Encode([]byte{2}),
+				ToExecutionAddress: hexutil.Encode([]byte{3}),
+			},
+			Signature: hexutil.Encode([]byte{4}),
+		},
+		{
+			Message: &apimiddleware.BLSToExecutionChangeJson{
+				ValidatorIndex:     "5",
+				FromBLSPubkey:      hexutil.Encode([]byte{6}),
+				ToExecutionAddress: hexutil.Encode([]byte{7}),
+			},
+			Signature: hexutil.Encode([]byte{8}),
 		},
 	}
 }
