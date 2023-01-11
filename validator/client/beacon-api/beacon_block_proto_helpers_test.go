@@ -1049,7 +1049,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		},
 		{
 			name:                 "bad to execution address",
-			expectedErrorMessage: "failed to decode to execution address `foo`",
+			expectedErrorMessage: "failed to decode execution address `foo`",
 			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
 				input := generateBlsToExecutionChanges()
 				input[0].Message.ToExecutionAddress = "foo"
