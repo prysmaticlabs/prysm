@@ -353,7 +353,7 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 }
 
 // ProcessHistoricalDataUpdate processes the updates to historical data during epoch processing.
-// For Capella state, per spec, historical summaries is updated instead of historical roots.
+// From Capella onward, per spec,state's historical summaries are updated instead of historical roots.
 func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, error) {
 	currentEpoch := time.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
