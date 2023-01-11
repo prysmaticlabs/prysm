@@ -415,7 +415,7 @@ func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*apim
 
 		toExecutionAddress, err := hexutil.Decode(jsonBlsToExecutionChange.Message.ToExecutionAddress)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode to execution address `%s`", jsonBlsToExecutionChange.Message.ToExecutionAddress)
+			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonBlsToExecutionChange.Message.ToExecutionAddress)
 		}
 
 		signature, err := hexutil.Decode(jsonBlsToExecutionChange.Signature)
