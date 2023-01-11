@@ -473,7 +473,7 @@ func (s *Service) ReconstructFullBlock(
 	if executionBlock == nil {
 		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
 	}
-	if bytes.Equal(executionBlock.Hash.Bytes(), params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
 		return nil, EmptyBlockHash
 	}
 
