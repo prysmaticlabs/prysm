@@ -458,7 +458,7 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 	require.ErrorContains(t, "addition overflows", err)
 }
 
-func TestProcessHistoricalRootsUpdate(t *testing.T) {
+func TestProcessHistoricalDataUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
 		st       func() state.BeaconState
