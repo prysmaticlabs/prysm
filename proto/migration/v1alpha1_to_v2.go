@@ -568,6 +568,11 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
+	hrs, err := altairState.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconState{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorsRoot()),
@@ -586,7 +591,7 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hrs),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -690,6 +695,11 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		return nil, errors.New("execution payload header has incorrect type")
 	}
 
+	hRoots, err := st.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconStateBellatrix{
 		GenesisTime:           st.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
@@ -708,7 +718,7 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoots),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -852,9 +862,8 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		BlockRoots: bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots: bytesutil.SafeCopy2dBytes(st.StateRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
