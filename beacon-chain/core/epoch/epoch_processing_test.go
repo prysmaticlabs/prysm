@@ -276,7 +276,9 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	assert.DeepNotEqual(t, params.BeaconConfig().ZeroHash[:], mix, "latest RANDAO still zero hashes")
 
 	// Verify historical root accumulator was appended.
-	assert.Equal(t, 1, len(newS.HistoricalRoots()), "Unexpected slashed balance")
+	roots, err := newS.HistoricalRoots()
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(roots), "Unexpected slashed balance")
 	currAtt, err := newS.CurrentEpochAttestations()
 	require.NoError(t, err)
 	assert.NotNil(t, currAtt, "Nil value stored in current epoch attestations instead of empty slice")
@@ -458,7 +460,7 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 	require.ErrorContains(t, "addition overflows", err)
 }
 
-func TestProcessHistoricalRootsUpdate(t *testing.T) {
+func TestProcessHistoricalDataUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
 		st       func() state.BeaconState
@@ -471,7 +473,9 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 				return st
 			},
 			verifier: func(st state.BeaconState) {
-				require.Equal(t, 0, len(st.HistoricalRoots()))
+				roots, err := st.HistoricalRoots()
+				require.NoError(t, err)
+				require.Equal(t, 0, len(roots))
 			},
 		},
 		{
@@ -483,7 +487,9 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 				return st
 			},
 			verifier: func(st state.BeaconState) {
-				require.Equal(t, 1, len(st.HistoricalRoots()))
+				roots, err := st.HistoricalRoots()
+				require.NoError(t, err)
+				require.Equal(t, 1, len(roots))
 
 				b := &ethpb.HistoricalBatch{
 					BlockRoots: st.BlockRoots(),
@@ -491,7 +497,10 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 				}
 				r, err := b.HashTreeRoot()
 				require.NoError(t, err)
-				require.DeepEqual(t, r[:], st.HistoricalRoots()[0])
+				require.DeepEqual(t, r[:], roots[0])
+
+				_, err = st.HistoricalSummaries()
+				require.ErrorContains(t, "HistoricalSummaries is not supported for phase0", err)
 			},
 		},
 		{
@@ -503,7 +512,9 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 				return st
 			},
 			verifier: func(st state.BeaconState) {
-				require.Equal(t, 1, len(st.HistoricalSummaries()))
+				summaries, err := st.HistoricalSummaries()
+				require.NoError(t, err)
+				require.Equal(t, 1, len(summaries))
 
 				br, err := stateutil.ArraysRoot(st.BlockRoots(), fieldparams.BlockRootsLength)
 				require.NoError(t, err)
@@ -513,7 +524,9 @@ func TestProcessHistoricalRootsUpdate(t *testing.T) {
 					BlockSummaryRoot: br[:],
 					StateSummaryRoot: sr[:],
 				}
-				require.DeepEqual(t, b, st.HistoricalSummaries()[0])
+				require.DeepEqual(t, b, summaries[0])
+				_, err = st.HistoricalRoots()
+				require.ErrorContains(t, "HistoricalRoots is not supported for capella", err)
 			},
 		},
 	}

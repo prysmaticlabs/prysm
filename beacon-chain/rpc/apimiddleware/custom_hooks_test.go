@@ -457,6 +457,26 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
+	t.Run("Capella", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig()
+		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch.Add(2)
+		params.OverrideBeaconConfig(cfg)
+
+		slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(SignedBeaconBlockCapellaContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
 }
 
 func TestPreparePublishedBlock(t *testing.T) {
@@ -1100,7 +1120,7 @@ func TestSerializeProducedV2Block(t *testing.T) {
 		require.Equal(t, nil, errJson)
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
-		resp := &bellatrixProduceBlockResponseJson{}
+		resp := &capellaProduceBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		require.NotNil(t, resp.Data)
@@ -1111,7 +1131,34 @@ func TestSerializeProducedV2Block(t *testing.T) {
 		assert.Equal(t, "root", beaconBlock.StateRoot)
 		require.NotNil(t, beaconBlock.Body)
 	})
-
+	t.Run("Capella", func(t *testing.T) {
+		response := &ProduceBlockResponseV2Json{
+			Version: ethpbv2.Version_CAPELLA.String(),
+			Data: &BeaconBlockContainerV2Json{
+				CapellaBlock: &BeaconBlockCapellaJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &BeaconBlockBodyCapellaJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &capellaProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
 	t.Run("incorrect response type", func(t *testing.T) {
 		response := &types.Empty{}
 		runDefault, j, errJson := serializeProducedV2Block(response)
@@ -1213,6 +1260,34 @@ func TestSerializeProduceBlindedBlock(t *testing.T) {
 		resp := &bellatrixProduceBlindedBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		response := &ProduceBlindedBlockResponseJson{
+			Version: ethpbv2.Version_CAPELLA.String(),
+			Data: &BlindedBeaconBlockContainerJson{
+				CapellaBlock: &BlindedBeaconBlockCapellaJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &BlindedBeaconBlockBodyCapellaJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &capellaProduceBlindedBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		beaconBlock := resp.Data
 		assert.Equal(t, "1", beaconBlock.Slot)

@@ -285,7 +285,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				tracing.AnnotateError(span, err)
 				return nil, err
 			}
-			log.Info("Upgraded to Altair!")
 		}
 
 		if time.CanUpgradeToBellatrix(state.Slot()) {
@@ -294,7 +293,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				tracing.AnnotateError(span, err)
 				return nil, err
 			}
-			log.Info("Upgraded to Bellatrix!")
 		}
 
 		if time.CanUpgradeToCapella(state.Slot()) {
@@ -303,7 +301,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				tracing.AnnotateError(span, err)
 				return nil, err
 			}
-			log.Info("Upgraded to Capella!")
 		}
 
 		if time.CanUpgradeToEIP4844(state.Slot()) {
@@ -312,7 +309,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				tracing.AnnotateError(span, err)
 				return nil, err
 			}
-			log.Info("Upgraded to EIP4844 hard fork!")
 		}
 	}
 

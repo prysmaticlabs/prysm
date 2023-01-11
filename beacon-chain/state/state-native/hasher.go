@@ -321,7 +321,7 @@ func historicalSummaryRoot(summaries []*ethpb.HistoricalSummary) ([32]byte, erro
 		fieldparams.HistoricalRootsLength,
 	)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
+		return [32]byte{}, errors.Wrap(err, "could not compute historical summaries merkleization")
 	}
 	summariesLenBuf := new(bytes.Buffer)
 	if err := binary.Write(summariesLenBuf, binary.LittleEndian, uint64(len(summaries))); err != nil {
