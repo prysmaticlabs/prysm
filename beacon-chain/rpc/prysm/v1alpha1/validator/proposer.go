@@ -155,28 +155,18 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			}
 		}
 		if fallBackToLocal {
-			switch {
-			case slots.ToEpoch(req.Slot) < params.BeaconConfig().EIP4844ForkEpoch:
-				executionData, err := vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload")
-				}
-				if err := blk.Body().SetExecution(executionData); err != nil {
-					return nil, errors.Wrap(err, "could not set execution payload")
-				}
-			default:
-				executionData, bundle, err = vs.getExecutionPayloadV2AndBlobsBundleV1(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload")
-				}
-				if err := blk.Body().SetExecution(executionData); err != nil {
-					return nil, errors.Wrap(err, "could not set execution payload")
-				}
+			executionData, bundle, err = vs.getExecutionPayload(ctx, req.Slot, idx, bytesutil.ToBytes32(parentRoot), head)
+			if err != nil {
+				log.WithError(err).Error("Could not get execution payload")
+			}
+			if err := blk.Body().SetExecution(executionData); err != nil {
+				return nil, errors.Wrap(err, "could not set execution payload")
+			}
+			if slots.ToEpoch(req.Slot) >= params.BeaconConfig().EIP4844ForkEpoch {
 				if err := blk.Body().SetBlobKzgCommitments(bundle.KzgCommitments); err != nil {
 					return nil, errors.Wrap(err, "could not set blob kzg commitments")
 				}
 			}
-
 		}
 	}
 

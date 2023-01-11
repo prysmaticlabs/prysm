@@ -175,6 +175,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 				return
 			}
 			log = log.WithField("withdrawalCount", len(withdrawals))
+
+			if blk.Version() >= version.EIP4844 {
+				bs, err := blk.Block().Body().BlobKzgCommitments()
+				if err != nil {
+					log.WithError(err).Error("Failed to get blob kzg commitments")
+				} else {
+					log = log.WithField("blobCount", len(bs))
+				}
+			}
 		}
 	}
 

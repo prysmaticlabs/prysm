@@ -73,7 +73,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		if err != nil {
 			return err
 		}
-		log = log.WithField("blobKzgCount", len(k))
+		log = log.WithField("blobCount", len(k))
 	}
 	log.Info("Finished applying state transition")
 	return nil
