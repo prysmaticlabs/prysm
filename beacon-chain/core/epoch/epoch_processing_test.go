@@ -492,6 +492,7 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 				r, err := b.HashTreeRoot()
 				require.NoError(t, err)
 				require.DeepEqual(t, r[:], st.HistoricalRoots()[0])
+				require.Equal(t, 0, len(st.HistoricalSummaries()))
 			},
 		},
 		{
@@ -514,6 +515,7 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 					StateSummaryRoot: sr[:],
 				}
 				require.DeepEqual(t, b, st.HistoricalSummaries()[0])
+				require.Equal(t, 0, len(st.HistoricalRoots()))
 			},
 		},
 	}

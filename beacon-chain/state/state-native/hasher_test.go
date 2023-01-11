@@ -258,7 +258,7 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 	require.NoError(t, beaconState.SetNextWithdrawalIndex(123))
 	require.NoError(t, beaconState.SetNextWithdrawalValidatorIndex(123))
-	require.NoError(t, beaconState.AppendHistoricalSummariesUpdate(&ethpb.HistoricalSummary{
+	require.NoError(t, beaconState.AppendHistoricalSummaries(&ethpb.HistoricalSummary{
 		BlockSummaryRoot: bytesutil.PadTo([]byte("block summary root"), 32),
 		StateSummaryRoot: bytesutil.PadTo([]byte("state summary root"), 32),
 	}))

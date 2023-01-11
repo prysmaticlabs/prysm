@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
@@ -115,7 +113,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	defer b.lock.Unlock()
 
 	if b.version > version.Bellatrix {
-		return fmt.Errorf("AppendHistoricalRoots is not supported for version %d", b.version)
+		return errNotSupported("AppendHistoricalRoots", b.version)
 	}
 
 	roots := b.historicalRoots
@@ -131,14 +129,14 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	return nil
 }
 
-// AppendHistoricalSummariesUpdate AppendHistoricalSummary for the beacon state. Appends the new value
+// AppendHistoricalSummaries for the beacon state. Appends the new value
 // to the end of list.
-func (b *BeaconState) AppendHistoricalSummariesUpdate(summary *ethpb.HistoricalSummary) error {
+func (b *BeaconState) AppendHistoricalSummaries(summary *ethpb.HistoricalSummary) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.version < version.Capella {
-		return fmt.Errorf("AppendHistoricalSummariesUpdate is not supported for version %d", b.version)
+		return errNotSupported("AppendHistoricalSummaries", b.version)
 	}
 
 	summaries := b.historicalSummaries

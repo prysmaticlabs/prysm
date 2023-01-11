@@ -370,7 +370,7 @@ func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, er
 			if err != nil {
 				return nil, err
 			}
-			if err := state.AppendHistoricalSummariesUpdate(&ethpb.HistoricalSummary{BlockSummaryRoot: br[:], StateSummaryRoot: sr[:]}); err != nil {
+			if err := state.AppendHistoricalSummaries(&ethpb.HistoricalSummary{BlockSummaryRoot: br[:], StateSummaryRoot: sr[:]}); err != nil {
 				return nil, err
 			}
 		} else {
