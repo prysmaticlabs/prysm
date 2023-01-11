@@ -339,9 +339,11 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		roots, err := st.HistoricalRoots()
 		if err != nil {
 			log.WithError(err).Error("could not get historical roots")
+		} else {
+			size, count = sizeAndCountOfByteList(roots)
+			log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
 		}
-		size, count = sizeAndCountOfByteList(roots)
-		log.Infof("historical_roots              : size = %s, count = %d", humanize.Bytes(size), count)
+
 		log.Infof("eth1_data                     : sizeSSZ = %s", humanize.Bytes(uint64(st.Eth1Data().SizeSSZ())))
 		size, count = sizeAndCountGeneric(st.Eth1DataVotes(), nil)
 		log.Infof("eth1_data_votes               : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
