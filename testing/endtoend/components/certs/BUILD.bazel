@@ -1,0 +1,10 @@
+filegroup(
+    name = "web3signer-certs",
+    srcs = [
+        "client-identity.p12",
+        "pass.txt",
+        "server.cert",
+        "server.key",
+    ],
+    visibility = ["//testing/endtoend:__subpackages__"],
+)

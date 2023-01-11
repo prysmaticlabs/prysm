@@ -458,10 +458,9 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		}
 
 		// set up TLS if required
-		web3signerConfig.RequireTLS = cliCtx.Bool(flags.EnableRemoteSignerTlsFlag.Name)
-		web3signerConfig.ClientCertPath = cliCtx.String(flags.RemoteSignerCertPathFlag.Name)
-		web3signerConfig.ClientKeyPath = cliCtx.String(flags.RemoteSignerKeyPathFlag.Name)
-		web3signerConfig.CACertPath = cliCtx.String(flags.RemoteSignerCACertPathFlag.Name)
+		web3signerConfig.ClientCertPath = cliCtx.String(flags.Web3SignerClientCertFLag.Name)
+		web3signerConfig.ClientCertPasswordPath = cliCtx.String(flags.Web3SignerClientCertPasswordFlag.Name)
+		web3signerConfig.CACertPath = cliCtx.String(flags.Web3SignerCACertFLag.Name)
 
 		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)

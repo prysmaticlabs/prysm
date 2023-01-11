@@ -257,6 +257,22 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		// Write the pubkeys as comma separated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
+		baseCertPath := "/testing/endtoend/components/certs/"
+		clientCertPath, err := bazel.Runfile(baseCertPath + "client.cert.pem")
+		if err != nil {
+			return err
+		}
+		clientKeyPath, err := bazel.Runfile(baseCertPath + "client.key.pem")
+		if err != nil {
+			return err
+		}
+		caCertPath, err := bazel.Runfile(baseCertPath + "server.cert")
+		if err != nil {
+			return err
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, clientCertPath))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, clientKeyPath))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerCACertFLag.Name, caCertPath))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,

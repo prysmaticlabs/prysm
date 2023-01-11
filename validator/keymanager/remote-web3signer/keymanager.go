@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/pkcs12"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -44,10 +46,9 @@ type SetupConfig struct {
 	// This will provide a layer of safety against slashing if the web3signer is shared across validators.
 	ProvidedPublicKeys [][48]byte
 
-	RequireTLS     bool
-	ClientCertPath string
-	ClientKeyPath  string
-	CACertPath     string
+	ClientCertPath         string
+	ClientCertPasswordPath string
+	CACertPath             string
 }
 
 // Keymanager defines the web3signer keymanager.
@@ -71,7 +72,9 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if err != nil {
 		return nil, err
 	}
-	options = append(options, tlsOpt)
+	if tlsOpt != nil {
+		options = append(options, tlsOpt)
+	}
 
 	client, err := internal.NewApiClient(cfg.BaseEndpoint, options...)
 	if err != nil {
@@ -89,18 +92,36 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 }
 
 func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
-	if cfg.RequireTLS {
+	if cfg.ClientCertPath != "" || cfg.ClientCertPasswordPath != "" || cfg.CACertPath != "" {
 		tlsConfig := &tls.Config{
 			MinVersion: tls.VersionTLS13,
 		}
 
 		if cfg.ClientCertPath == "" {
-			return nil, errors.New("client certificate is required")
+			return nil, errors.New("PKCS12 client certificate is required")
 		}
-		if cfg.ClientKeyPath == "" {
-			return nil, errors.New("client key is required")
+		if cfg.ClientCertPasswordPath == "" {
+			return nil, errors.New("PKCS12 client certificate password is required")
 		}
-		clientPair, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
+		p12, err := os.ReadFile(filepath.Clean(cfg.ClientCertPath))
+		if err != nil {
+			return nil, err
+		}
+		p12pass, err := os.ReadFile(filepath.Clean(cfg.ClientCertPasswordPath))
+		if err != nil {
+			return nil, err
+		}
+
+		blocks, err := pkcs12.ToPEM(p12, string(p12pass))
+		if err != nil {
+			return nil, errors.Wrap(err, "pkcs12 to PEM conversion failed")
+		}
+		var pemData []byte
+		for _, b := range blocks {
+			pemData = append(pemData, pem.EncodeToMemory(b)...)
+		}
+
+		clientPair, err := tls.X509KeyPair(pemData, pemData)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
 		}

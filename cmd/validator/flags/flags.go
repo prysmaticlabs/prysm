@@ -266,13 +266,6 @@ var (
 		Value: false,
 	}
 
-	// EnableRemoteSignerTlsFlag enables TLS for web3signer which is by default off.
-	EnableRemoteSignerTlsFlag = &cli.BoolFlag{
-		Name:  "enable-remote-signer-tls",
-		Usage: "Enables TLS when connecting to a remote web3signer.",
-		Value: true,
-	}
-	
 	// RemoteSignerCertPathFlag defines the path to a client.crt file for a wallet to connect to
 	// a secure signer via TLS and gRPC.
 	RemoteSignerCertPathFlag = &cli.StringFlag{
@@ -310,6 +303,21 @@ var (
 	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
 		Name:  "validators-external-signer-public-keys",
 		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
+	}
+
+	Web3SignerClientCertFLag = &cli.StringFlag{
+		Name:  "validators-external-signer-client-cert",
+		Usage: "PKCS12 client cert and key in PFX (.p12 format. web3signer only supports PKCS12 ",
+	}
+
+	Web3SignerClientCertPasswordFlag = &cli.StringFlag{
+		Name:  "validators-external-signer-client-cert-password",
+		Usage: "path to password for the provided PKCS12 client cert from --validators-external-signer-client-cert",
+	}
+
+	Web3SignerCACertFLag = &cli.StringFlag{
+		Name:  "validators-external-signer-ca-cert",
+		Usage: "CA cert used in .pem format",
 	}
 
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.

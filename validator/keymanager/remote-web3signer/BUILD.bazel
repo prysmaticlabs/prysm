@@ -36,6 +36,9 @@ go_test(
     name = "go_default_test",
     srcs = ["keymanager_test.go"],
     embed = [":go_default_library"],
+    data = [
+        "//testing/endtoend/components/certs:web3signer-certs",
+    ],
     deps = [
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
