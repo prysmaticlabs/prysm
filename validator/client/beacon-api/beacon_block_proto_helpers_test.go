@@ -1040,7 +1040,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		},
 		{
 			name:                 "bad from bls pubkey",
-			expectedErrorMessage: "failed to decode from bls pubkey `bar`",
+			expectedErrorMessage: "failed to decode bls pubkey `bar`",
 			generateInput: func() []*apimiddleware.SignedBLSToExecutionChangeJson {
 				input := generateBlsToExecutionChanges()
 				input[0].Message.FromBLSPubkey = "bar"
