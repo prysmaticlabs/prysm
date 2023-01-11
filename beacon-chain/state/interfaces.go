@@ -57,8 +57,8 @@ type ReadOnlyBeaconState interface {
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][]byte
-	HistoricalSummaries() []*ethpb.HistoricalSummary
+	HistoricalRoots() ([][]byte, error)
+	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
