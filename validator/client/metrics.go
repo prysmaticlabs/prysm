@@ -190,6 +190,17 @@ var (
 			"pubkey",
 		},
 	)
+	// ValidatorInSyncCommitteeGaugeVec used to track validator statuses by public key.
+	ValidatorInSyncCommitteeGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "in_sync_committee",
+			Help:      "validator sync committee.New in Altair hardfork",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
 	// ValidatorInactivityScoreGaugeVec used to track validator inactivity scores.
 	ValidatorInactivityScoreGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
