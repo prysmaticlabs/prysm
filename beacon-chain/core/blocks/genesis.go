@@ -139,7 +139,7 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 						BaseFeePerGas: make([]byte, 32),
 						BlockHash:     make([]byte, 32),
 						Transactions:  make([][]byte, 0),
-						Withdrawals: make([]*enginev1.Withdrawal, 0),
+						Withdrawals:   make([]*enginev1.Withdrawal, 0),
 					},
 				},
 			},
