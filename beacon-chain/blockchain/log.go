@@ -65,7 +65,7 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 			if err != nil {
 				return err
 			}
-			log = log.WithField("blobKzgCount", len(k))
+			log = log.WithField("blobCount", len(k))
 		}
 	}
 	if b.Version() == version.EIP4844 {
