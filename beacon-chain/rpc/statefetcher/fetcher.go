@@ -114,7 +114,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		}
 	case "finalized":
 		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
-		startSlot, err := slots.EpochStart(checkpoint.Epoch)
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get start slot")
 		}
@@ -122,13 +122,13 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		// replay it to the start slot of our checkpoint's epoch. The replayer
 		// only ever accesses our canonical history, so the state retrieved will
 		// always be the finalized state at that epoch.
-		s, err = p.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayToSlot(ctx, startSlot)
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
 		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		startSlot, err := slots.EpochStart(checkpoint.Epoch)
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get start slot")
 		}
@@ -136,7 +136,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		// replay it to the start slot of our checkpoint's epoch. The replayer
 		// only ever accesses our canonical history, so the state retrieved will
 		// always be the justified state at that epoch.
-		s, err = p.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayToSlot(ctx, startSlot)
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
