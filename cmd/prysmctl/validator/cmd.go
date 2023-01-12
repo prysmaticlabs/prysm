@@ -34,7 +34,7 @@ var (
 	VerifyOnlyFlag = &cli.BoolFlag{
 		Name:    "verify-only",
 		Aliases: []string{"vo"},
-		Usage:   "override withdrawal command to only verify whether requests are in the pool and does not submit withdrawal requests.",
+		Usage:   "overrides withdrawal command to only verify whether requests are in the pool and does not submit withdrawal requests",
 	}
 )
 
