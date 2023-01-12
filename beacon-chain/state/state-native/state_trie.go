@@ -505,6 +505,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
+		historicalSummaries:       b.historicalSummaries,
 		stateRoots:                b.stateRoots,
 		randaoMixes:               b.randaoMixes,
 		previousEpochAttestations: b.previousEpochAttestations,
@@ -533,7 +534,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 		nextSyncCommittee:                   b.nextSyncCommitteeVal(),
 		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
-		historicalSummaries:                 b.historicalSummariesVal(),
 
 		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),
