@@ -9,14 +9,24 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
 )
+
+type cliStakingWithdrawalMessage struct {
+	apimiddleware.SignedBLSToExecutionChangeJson
+	ForkVersion           string `json:"fork_version"`
+	NetworkName           string `json:"network_name"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root"`
+	DepositCliVersion     string `json:"deposit_cli_version"`
+}
 
 func setWithdrawalAddresses(c *cli.Context) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddresses")
@@ -47,12 +57,32 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		if err != nil {
 			return setWithdrawalAddressJsons, errors.Wrap(err, "failed to open file")
 		}
-		var to []*apimiddleware.SignedBLSToExecutionChangeJson
+		var to []*cliStakingWithdrawalMessage
 		if err := json.Unmarshal(b, &to); err != nil {
 			log.Warnf("provided file: %s, is not a list of signed withdrawal messages", foundFilePath)
 			continue
 		}
-		setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, to...)
+		// verify 0x from file and add if needed
+		for i, obj := range to {
+			if len(obj.Message.FromBLSPubkey) < fieldparams.BLSPubkeyLength*2 {
+				to[i].Message.FromBLSPubkey = fmt.Sprintf("0x%s", obj.Signature)
+			}
+			if len(obj.Message.ToExecutionAddress) < common.AddressLength*2 {
+				to[i].Message.ToExecutionAddress = fmt.Sprintf("0x%s", obj.Signature)
+			}
+			if len(obj.Signature) < fieldparams.BLSSignatureLength*2 {
+				to[i].Signature = fmt.Sprintf("0x%s", obj.Signature)
+			}
+			setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, &apimiddleware.SignedBLSToExecutionChangeJson{
+				Message: &apimiddleware.BLSToExecutionChangeJson{
+					ValidatorIndex:     to[i].Message.ValidatorIndex,
+					FromBLSPubkey:      to[i].Message.FromBLSPubkey,
+					ToExecutionAddress: to[i].Message.ToExecutionAddress,
+				},
+				Signature: to[i].Signature,
+			})
+		}
+
 	}
 	if len(setWithdrawalAddressJsons) == 0 {
 		return setWithdrawalAddressJsons, errors.New("the list of signed requests is empty")
