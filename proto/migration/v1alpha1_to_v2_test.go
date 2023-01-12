@@ -663,6 +663,15 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 		}
 		state.NextWithdrawalIndex = 123
 		state.NextWithdrawalValidatorIndex = 123
+		state.HistoricalSummaries = []*ethpbalpha.HistoricalSummary{
+			{
+				BlockSummaryRoot: bytesutil.PadTo([]byte("blocksummaryroot"), 32),
+				StateSummaryRoot: bytesutil.PadTo([]byte("statesummaryroot"), 32),
+			},
+			{
+				BlockSummaryRoot: bytesutil.PadTo([]byte("blocksummaryroot2"), 32),
+				StateSummaryRoot: bytesutil.PadTo([]byte("statesummaryroot2"), 32),
+			}}
 		return nil
 	})
 	require.NoError(t, err)
@@ -757,6 +766,10 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalsroot"), 32), resultLatestExecutionPayloadHeader.WithdrawalsRoot)
 	assert.Equal(t, uint64(123), result.NextWithdrawalIndex)
 	assert.Equal(t, types.ValidatorIndex(123), result.NextWithdrawalValidatorIndex)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blocksummaryroot"), 32), result.HistoricalSummaries[0].BlockSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("statesummaryroot"), 32), result.HistoricalSummaries[0].StateSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blocksummaryroot2"), 32), result.HistoricalSummaries[1].BlockSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("statesummaryroot2"), 32), result.HistoricalSummaries[1].StateSummaryRoot)
 }
 
 func TestV1Alpha1SignedBLSToExecChangeToV2(t *testing.T) {
