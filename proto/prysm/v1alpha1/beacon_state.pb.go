@@ -1340,6 +1340,7 @@ type BeaconStateCapella struct {
 	LatestExecutionPayloadHeader *v1.ExecutionPayloadHeaderCapella                                           `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
 	NextWithdrawalIndex          uint64                                                                      `protobuf:"varint,11001,opt,name=next_withdrawal_index,json=nextWithdrawalIndex,proto3" json:"next_withdrawal_index,omitempty"`
 	NextWithdrawalValidatorIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,11002,opt,name=next_withdrawal_validator_index,json=nextWithdrawalValidatorIndex,proto3" json:"next_withdrawal_validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
+	HistoricalSummaries          []*HistoricalSummary                                                        `protobuf:"bytes,11003,rep,name=historical_summaries,json=historicalSummaries,proto3" json:"historical_summaries,omitempty" ssz-max:"16777216"`
 }
 
 func (x *BeaconStateCapella) Reset() {
@@ -1563,6 +1564,13 @@ func (x *BeaconStateCapella) GetNextWithdrawalValidatorIndex() github_com_prysma
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex(0)
 }
 
+func (x *BeaconStateCapella) GetHistoricalSummaries() []*HistoricalSummary {
+	if x != nil {
+		return x.HistoricalSummaries
+	}
+	return nil
+}
+
 type PowBlock struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1622,6 +1630,61 @@ func (x *PowBlock) GetParentHash() []byte {
 func (x *PowBlock) GetTotalDifficulty() []byte {
 	if x != nil {
 		return x.TotalDifficulty
+	}
+	return nil
+}
+
+type HistoricalSummary struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	BlockSummaryRoot []byte `protobuf:"bytes,1,opt,name=block_summary_root,json=blockSummaryRoot,proto3" json:"block_summary_root,omitempty" ssz-size:"32"`
+	StateSummaryRoot []byte `protobuf:"bytes,2,opt,name=state_summary_root,json=stateSummaryRoot,proto3" json:"state_summary_root,omitempty" ssz-size:"32"`
+}
+
+func (x *HistoricalSummary) Reset() {
+	*x = HistoricalSummary{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *HistoricalSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HistoricalSummary) ProtoMessage() {}
+
+func (x *HistoricalSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HistoricalSummary.ProtoReflect.Descriptor instead.
+func (*HistoricalSummary) Descriptor() ([]byte, []int) {
+	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *HistoricalSummary) GetBlockSummaryRoot() []byte {
+	if x != nil {
+		return x.BlockSummaryRoot
+	}
+	return nil
+}
+
+func (x *HistoricalSummary) GetStateSummaryRoot() []byte {
+	if x != nil {
+		return x.StateSummaryRoot
 	}
 	return nil
 }
@@ -2073,7 +2136,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_rawDesc = []byte{
 	0x69, 0x6e, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e,
 	0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x52, 0x1c, 0x6c,
 	0x61, 0x74, 0x65, 0x73, 0x74, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x61,
-	0x79, 0x6c, 0x6f, 0x61, 0x64, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x22, 0x9d, 0x10, 0x0a, 0x12,
+	0x79, 0x6c, 0x6f, 0x61, 0x64, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x22, 0x89, 0x11, 0x0a, 0x12,
 	0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x43, 0x61, 0x70, 0x65, 0x6c,
 	0x6c, 0x61, 0x12, 0x22, 0x0a, 0x0c, 0x67, 0x65, 0x6e, 0x65, 0x73, 0x69, 0x73, 0x5f, 0x74, 0x69,
 	0x6d, 0x65, 0x18, 0xe9, 0x07, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0b, 0x67, 0x65, 0x6e, 0x65, 0x73,
@@ -2203,27 +2266,41 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_rawDesc = []byte{
 	0x70, 0x65, 0x73, 0x2f, 0x70, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65, 0x73, 0x2e, 0x56,
 	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x52, 0x1c, 0x6e,
 	0x65, 0x78, 0x74, 0x57, 0x69, 0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x61, 0x6c, 0x56, 0x61, 0x6c,
-	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x22, 0x8d, 0x01, 0x0a, 0x08,
-	0x50, 0x6f, 0x77, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x25, 0x0a, 0x0a, 0x62, 0x6c, 0x6f, 0x63,
-	0x6b, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5,
-	0x18, 0x02, 0x33, 0x32, 0x52, 0x09, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x12,
-	0x27, 0x0a, 0x0b, 0x70, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x0a, 0x70, 0x61,
-	0x72, 0x65, 0x6e, 0x74, 0x48, 0x61, 0x73, 0x68, 0x12, 0x31, 0x0a, 0x10, 0x74, 0x6f, 0x74, 0x61,
-	0x6c, 0x5f, 0x64, 0x69, 0x66, 0x66, 0x69, 0x63, 0x75, 0x6c, 0x74, 0x79, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x0f, 0x74, 0x6f, 0x74, 0x61,
-	0x6c, 0x44, 0x69, 0x66, 0x66, 0x69, 0x63, 0x75, 0x6c, 0x74, 0x79, 0x42, 0x9b, 0x01, 0x0a, 0x19,
-	0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x10, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x3a, 0x67,
-	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61,
-	0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x33,
-	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x15, 0x45, 0x74, 0x68, 0x65,
-	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x31, 0x41, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0xca, 0x02, 0x15, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68,
-	0x5c, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x6e, 0x64, 0x65, 0x78, 0x12, 0x6a, 0x0a, 0x14, 0x68,
+	0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x63, 0x61, 0x6c, 0x5f, 0x73, 0x75, 0x6d, 0x6d, 0x61, 0x72,
+	0x69, 0x65, 0x73, 0x18, 0xfb, 0x55, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x28, 0x2e, 0x65, 0x74, 0x68,
+	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x48, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x63, 0x61, 0x6c, 0x53, 0x75, 0x6d,
+	0x6d, 0x61, 0x72, 0x79, 0x42, 0x0c, 0x92, 0xb5, 0x18, 0x08, 0x31, 0x36, 0x37, 0x37, 0x37, 0x32,
+	0x31, 0x36, 0x52, 0x13, 0x68, 0x69, 0x73, 0x74, 0x6f, 0x72, 0x69, 0x63, 0x61, 0x6c, 0x53, 0x75,
+	0x6d, 0x6d, 0x61, 0x72, 0x69, 0x65, 0x73, 0x22, 0x8d, 0x01, 0x0a, 0x08, 0x50, 0x6f, 0x77, 0x42,
+	0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x25, 0x0a, 0x0a, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x68, 0x61,
+	0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32,
+	0x52, 0x09, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x61, 0x73, 0x68, 0x12, 0x27, 0x0a, 0x0b, 0x70,
+	0x61, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
+	0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x0a, 0x70, 0x61, 0x72, 0x65, 0x6e, 0x74,
+	0x48, 0x61, 0x73, 0x68, 0x12, 0x31, 0x0a, 0x10, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x5f, 0x64, 0x69,
+	0x66, 0x66, 0x69, 0x63, 0x75, 0x6c, 0x74, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06,
+	0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x0f, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x44, 0x69, 0x66,
+	0x66, 0x69, 0x63, 0x75, 0x6c, 0x74, 0x79, 0x22, 0x7f, 0x0a, 0x11, 0x48, 0x69, 0x73, 0x74, 0x6f,
+	0x72, 0x69, 0x63, 0x61, 0x6c, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x12, 0x34, 0x0a, 0x12,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x5f, 0x73, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x5f, 0x72, 0x6f,
+	0x6f, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32,
+	0x52, 0x10, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x52, 0x6f,
+	0x6f, 0x74, 0x12, 0x34, 0x0a, 0x12, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x73, 0x75, 0x6d, 0x6d,
+	0x61, 0x72, 0x79, 0x5f, 0x72, 0x6f, 0x6f, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06,
+	0x8a, 0xb5, 0x18, 0x02, 0x33, 0x32, 0x52, 0x10, 0x73, 0x74, 0x61, 0x74, 0x65, 0x53, 0x75, 0x6d,
+	0x6d, 0x61, 0x72, 0x79, 0x52, 0x6f, 0x6f, 0x74, 0x42, 0x9b, 0x01, 0x0a, 0x19, 0x6f, 0x72, 0x67,
+	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x10, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74,
+	0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x3a, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63,
+	0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x33, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x15, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
+	0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x31, 0x41, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02,
+	0x15, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2238,7 +2315,7 @@ func file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP() []byte {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescData
 }
 
-var file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconState)(nil),                      // 0: ethereum.eth.v1alpha1.BeaconState
 	(*BeaconStateAltair)(nil),                // 1: ethereum.eth.v1alpha1.BeaconStateAltair
@@ -2255,64 +2332,66 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconStateBellatrix)(nil),             // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
 	(*BeaconStateCapella)(nil),               // 13: ethereum.eth.v1alpha1.BeaconStateCapella
 	(*PowBlock)(nil),                         // 14: ethereum.eth.v1alpha1.PowBlock
-	(*BeaconBlockHeader)(nil),                // 15: ethereum.eth.v1alpha1.BeaconBlockHeader
-	(*Eth1Data)(nil),                         // 16: ethereum.eth.v1alpha1.Eth1Data
-	(*Validator)(nil),                        // 17: ethereum.eth.v1alpha1.Validator
-	(*Checkpoint)(nil),                       // 18: ethereum.eth.v1alpha1.Checkpoint
-	(*AttestationData)(nil),                  // 19: ethereum.eth.v1alpha1.AttestationData
-	(*v1.ExecutionPayloadHeader)(nil),        // 20: ethereum.engine.v1.ExecutionPayloadHeader
-	(*v1.ExecutionPayloadHeaderCapella)(nil), // 21: ethereum.engine.v1.ExecutionPayloadHeaderCapella
+	(*HistoricalSummary)(nil),                // 15: ethereum.eth.v1alpha1.HistoricalSummary
+	(*BeaconBlockHeader)(nil),                // 16: ethereum.eth.v1alpha1.BeaconBlockHeader
+	(*Eth1Data)(nil),                         // 17: ethereum.eth.v1alpha1.Eth1Data
+	(*Validator)(nil),                        // 18: ethereum.eth.v1alpha1.Validator
+	(*Checkpoint)(nil),                       // 19: ethereum.eth.v1alpha1.Checkpoint
+	(*AttestationData)(nil),                  // 20: ethereum.eth.v1alpha1.AttestationData
+	(*v1.ExecutionPayloadHeader)(nil),        // 21: ethereum.engine.v1.ExecutionPayloadHeader
+	(*v1.ExecutionPayloadHeaderCapella)(nil), // 22: ethereum.engine.v1.ExecutionPayloadHeaderCapella
 }
 var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	2,  // 0: ethereum.eth.v1alpha1.BeaconState.fork:type_name -> ethereum.eth.v1alpha1.Fork
-	15, // 1: ethereum.eth.v1alpha1.BeaconState.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	16, // 2: ethereum.eth.v1alpha1.BeaconState.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	16, // 3: ethereum.eth.v1alpha1.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	17, // 4: ethereum.eth.v1alpha1.BeaconState.validators:type_name -> ethereum.eth.v1alpha1.Validator
+	16, // 1: ethereum.eth.v1alpha1.BeaconState.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	17, // 2: ethereum.eth.v1alpha1.BeaconState.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	17, // 3: ethereum.eth.v1alpha1.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	18, // 4: ethereum.eth.v1alpha1.BeaconState.validators:type_name -> ethereum.eth.v1alpha1.Validator
 	3,  // 5: ethereum.eth.v1alpha1.BeaconState.previous_epoch_attestations:type_name -> ethereum.eth.v1alpha1.PendingAttestation
 	3,  // 6: ethereum.eth.v1alpha1.BeaconState.current_epoch_attestations:type_name -> ethereum.eth.v1alpha1.PendingAttestation
-	18, // 7: ethereum.eth.v1alpha1.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 8: ethereum.eth.v1alpha1.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 9: ethereum.eth.v1alpha1.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 7: ethereum.eth.v1alpha1.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 8: ethereum.eth.v1alpha1.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 9: ethereum.eth.v1alpha1.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	2,  // 10: ethereum.eth.v1alpha1.BeaconStateAltair.fork:type_name -> ethereum.eth.v1alpha1.Fork
-	15, // 11: ethereum.eth.v1alpha1.BeaconStateAltair.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	16, // 12: ethereum.eth.v1alpha1.BeaconStateAltair.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	16, // 13: ethereum.eth.v1alpha1.BeaconStateAltair.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	17, // 14: ethereum.eth.v1alpha1.BeaconStateAltair.validators:type_name -> ethereum.eth.v1alpha1.Validator
-	18, // 15: ethereum.eth.v1alpha1.BeaconStateAltair.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 16: ethereum.eth.v1alpha1.BeaconStateAltair.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 17: ethereum.eth.v1alpha1.BeaconStateAltair.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	16, // 11: ethereum.eth.v1alpha1.BeaconStateAltair.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	17, // 12: ethereum.eth.v1alpha1.BeaconStateAltair.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	17, // 13: ethereum.eth.v1alpha1.BeaconStateAltair.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	18, // 14: ethereum.eth.v1alpha1.BeaconStateAltair.validators:type_name -> ethereum.eth.v1alpha1.Validator
+	19, // 15: ethereum.eth.v1alpha1.BeaconStateAltair.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 16: ethereum.eth.v1alpha1.BeaconStateAltair.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 17: ethereum.eth.v1alpha1.BeaconStateAltair.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	10, // 18: ethereum.eth.v1alpha1.BeaconStateAltair.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	10, // 19: ethereum.eth.v1alpha1.BeaconStateAltair.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	19, // 20: ethereum.eth.v1alpha1.PendingAttestation.data:type_name -> ethereum.eth.v1alpha1.AttestationData
+	20, // 20: ethereum.eth.v1alpha1.PendingAttestation.data:type_name -> ethereum.eth.v1alpha1.AttestationData
 	2,  // 21: ethereum.eth.v1alpha1.CheckPtInfo.fork:type_name -> ethereum.eth.v1alpha1.Fork
 	2,  // 22: ethereum.eth.v1alpha1.BeaconStateBellatrix.fork:type_name -> ethereum.eth.v1alpha1.Fork
-	15, // 23: ethereum.eth.v1alpha1.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	16, // 24: ethereum.eth.v1alpha1.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	16, // 25: ethereum.eth.v1alpha1.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	17, // 26: ethereum.eth.v1alpha1.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1alpha1.Validator
-	18, // 27: ethereum.eth.v1alpha1.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 28: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 29: ethereum.eth.v1alpha1.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	16, // 23: ethereum.eth.v1alpha1.BeaconStateBellatrix.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	17, // 24: ethereum.eth.v1alpha1.BeaconStateBellatrix.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	17, // 25: ethereum.eth.v1alpha1.BeaconStateBellatrix.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	18, // 26: ethereum.eth.v1alpha1.BeaconStateBellatrix.validators:type_name -> ethereum.eth.v1alpha1.Validator
+	19, // 27: ethereum.eth.v1alpha1.BeaconStateBellatrix.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 28: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 29: ethereum.eth.v1alpha1.BeaconStateBellatrix.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	10, // 30: ethereum.eth.v1alpha1.BeaconStateBellatrix.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	10, // 31: ethereum.eth.v1alpha1.BeaconStateBellatrix.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	20, // 32: ethereum.eth.v1alpha1.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader
+	21, // 32: ethereum.eth.v1alpha1.BeaconStateBellatrix.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader
 	2,  // 33: ethereum.eth.v1alpha1.BeaconStateCapella.fork:type_name -> ethereum.eth.v1alpha1.Fork
-	15, // 34: ethereum.eth.v1alpha1.BeaconStateCapella.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	16, // 35: ethereum.eth.v1alpha1.BeaconStateCapella.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	16, // 36: ethereum.eth.v1alpha1.BeaconStateCapella.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	17, // 37: ethereum.eth.v1alpha1.BeaconStateCapella.validators:type_name -> ethereum.eth.v1alpha1.Validator
-	18, // 38: ethereum.eth.v1alpha1.BeaconStateCapella.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 39: ethereum.eth.v1alpha1.BeaconStateCapella.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	18, // 40: ethereum.eth.v1alpha1.BeaconStateCapella.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	16, // 34: ethereum.eth.v1alpha1.BeaconStateCapella.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	17, // 35: ethereum.eth.v1alpha1.BeaconStateCapella.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	17, // 36: ethereum.eth.v1alpha1.BeaconStateCapella.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	18, // 37: ethereum.eth.v1alpha1.BeaconStateCapella.validators:type_name -> ethereum.eth.v1alpha1.Validator
+	19, // 38: ethereum.eth.v1alpha1.BeaconStateCapella.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 39: ethereum.eth.v1alpha1.BeaconStateCapella.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	19, // 40: ethereum.eth.v1alpha1.BeaconStateCapella.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
 	10, // 41: ethereum.eth.v1alpha1.BeaconStateCapella.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	10, // 42: ethereum.eth.v1alpha1.BeaconStateCapella.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	21, // 43: ethereum.eth.v1alpha1.BeaconStateCapella.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	44, // [44:44] is the sub-list for method output_type
-	44, // [44:44] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	22, // 43: ethereum.eth.v1alpha1.BeaconStateCapella.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
+	15, // 44: ethereum.eth.v1alpha1.BeaconStateCapella.historical_summaries:type_name -> ethereum.eth.v1alpha1.HistoricalSummary
+	45, // [45:45] is the sub-list for method output_type
+	45, // [45:45] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_proto_prysm_v1alpha1_beacon_state_proto_init() }
@@ -2504,6 +2583,18 @@ func file_proto_prysm_v1alpha1_beacon_state_proto_init() {
 				return nil
 			}
 		}
+		file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*HistoricalSummary); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2511,7 +2602,7 @@ func file_proto_prysm_v1alpha1_beacon_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_prysm_v1alpha1_beacon_state_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

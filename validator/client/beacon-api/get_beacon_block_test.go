@@ -42,6 +42,8 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 	require.NoError(t, err)
 	bellatrixBeaconBlockBytes, err := json.Marshal(apimiddleware.BeaconBlockBellatrixJson{})
 	require.NoError(t, err)
+	capellaBeaconBlockBytes, err := json.Marshal(apimiddleware.BeaconBlockCapellaJson{})
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name                 string
@@ -86,6 +88,19 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			expectedErrorMessage: "failed to get bellatrix block",
 			consensusVersion:     "bellatrix",
 			data:                 bellatrixBeaconBlockBytes,
+		},
+		{
+			name:                 "capella block decoding failed",
+			expectedErrorMessage: "failed to decode capella block response json",
+			beaconBlock:          "foo",
+			consensusVersion:     "capella",
+			data:                 []byte{},
+		},
+		{
+			name:                 "capella block conversion failed",
+			expectedErrorMessage: "failed to get capella block",
+			consensusVersion:     "capella",
+			data:                 capellaBeaconBlockBytes,
 		},
 		{
 			name:                 "unsupported consensus version",

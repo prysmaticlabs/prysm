@@ -492,6 +492,18 @@ func TestCopyBLSToExecutionChanges(t *testing.T) {
 	}
 }
 
+func TestCopyHistoricalSummaries(t *testing.T) {
+	summaries := []*v1alpha1.HistoricalSummary{
+		{BlockSummaryRoot: []byte("block summary root 0"), StateSummaryRoot: []byte("state summary root 0")},
+		{BlockSummaryRoot: []byte("block summary root 1"), StateSummaryRoot: []byte("state summary root 1")},
+	}
+
+	got := v1alpha1.CopyHistoricalSummaries(summaries)
+	if !reflect.DeepEqual(got, summaries) {
+		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
+	}
+}
+
 func genAttestation() *v1alpha1.Attestation {
 	return &v1alpha1.Attestation{
 		AggregationBits: bytes(32),
