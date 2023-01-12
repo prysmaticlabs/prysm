@@ -1,8 +1,11 @@
 package beacon_api
 
 import (
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -43,12 +46,7 @@ func jsonifyEth1Data(eth1Data *ethpb.Eth1Data) *apimiddleware.Eth1DataJson {
 func jsonifyAttestations(attestations []*ethpb.Attestation) []*apimiddleware.AttestationJson {
 	jsonAttestations := make([]*apimiddleware.AttestationJson, len(attestations))
 	for index, attestation := range attestations {
-		jsonAttestation := &apimiddleware.AttestationJson{
-			AggregationBits: hexutil.Encode(attestation.AggregationBits),
-			Data:            jsonifyAttestationData(attestation.Data),
-			Signature:       hexutil.Encode(attestation.Signature),
-		}
-		jsonAttestations[index] = jsonAttestation
+		jsonAttestations[index] = jsonifyAttestation(attestation)
 	}
 	return jsonAttestations
 }
@@ -155,4 +153,36 @@ func jsonifyAttestationData(attestationData *ethpb.AttestationData) *apimiddlewa
 			Root:  hexutil.Encode(attestationData.Target.Root),
 		},
 	}
+}
+
+func jsonifyAttestation(attestation *ethpb.Attestation) *apimiddleware.AttestationJson {
+	return &apimiddleware.AttestationJson{
+		AggregationBits: hexutil.Encode(attestation.AggregationBits),
+		Data:            jsonifyAttestationData(attestation.Data),
+		Signature:       hexutil.Encode(attestation.Signature),
+	}
+}
+
+func jsonifySignedAggregateAndProof(signedAggregateAndProof *ethpb.SignedAggregateAttestationAndProof) *apimiddleware.SignedAggregateAttestationAndProofJson {
+	return &apimiddleware.SignedAggregateAttestationAndProofJson{
+		Message: &apimiddleware.AggregateAttestationAndProofJson{
+			AggregatorIndex: uint64ToString(signedAggregateAndProof.Message.AggregatorIndex),
+			Aggregate:       jsonifyAttestation(signedAggregateAndProof.Message.Aggregate),
+			SelectionProof:  hexutil.Encode(signedAggregateAndProof.Message.SelectionProof),
+		},
+		Signature: hexutil.Encode(signedAggregateAndProof.Signature),
+	}
+}
+
+func jsonifyWithdrawals(withdrawals []*enginev1.Withdrawal) []*apimiddleware.WithdrawalJson {
+	jsonWithdrawals := make([]*apimiddleware.WithdrawalJson, len(withdrawals))
+	for index, withdrawal := range withdrawals {
+		jsonWithdrawals[index] = &apimiddleware.WithdrawalJson{
+			WithdrawalIndex:  strconv.FormatUint(withdrawal.Index, 10),
+			ValidatorIndex:   strconv.FormatUint(uint64(withdrawal.ValidatorIndex), 10),
+			ExecutionAddress: hexutil.Encode(withdrawal.Address),
+			Amount:           strconv.FormatUint(withdrawal.Amount, 10),
+		}
+	}
+	return jsonWithdrawals
 }

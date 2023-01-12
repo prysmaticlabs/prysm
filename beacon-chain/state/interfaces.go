@@ -18,11 +18,9 @@ import (
 type BeaconState interface {
 	SpecParametersProvider
 	ReadOnlyBeaconState
-	ReadOnlyWithdrawals
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	FutureForkStub
 	StateProver
 }
 
@@ -50,6 +48,10 @@ type ReadOnlyBeaconState interface {
 	ReadOnlyBalances
 	ReadOnlyCheckpoint
 	ReadOnlyAttestations
+	ReadOnlyWithdrawals
+	ReadOnlyParticipation
+	ReadOnlyInactivity
+	ReadOnlySyncCommittee
 	ToProtoUnsafe() interface{}
 	ToProto() interface{}
 	GenesisTime() uint64
@@ -57,7 +59,8 @@ type ReadOnlyBeaconState interface {
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
-	HistoricalRoots() [][]byte
+	HistoricalRoots() ([][]byte, error)
+	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
 	MarshalSSZ() ([]byte, error)
@@ -76,6 +79,9 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyBalances
 	WriteOnlyCheckpoint
 	WriteOnlyAttestations
+	WriteOnlyParticipation
+	WriteOnlyInactivity
+	WriteOnlySyncCommittee
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val types.Slot) error
@@ -85,6 +91,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
+	AppendHistoricalSummaries(*ethpb.HistoricalSummary) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 	SetNextWithdrawalIndex(i uint64) error
 	SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error
@@ -133,6 +140,7 @@ type ReadOnlyCheckpoint interface {
 	FinalizedCheckpoint() *ethpb.Checkpoint
 	FinalizedCheckpointEpoch() types.Epoch
 	JustificationBits() bitfield.Bitvector4
+	UnrealizedCheckpointBalances() (uint64, uint64, uint64, error)
 }
 
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.
@@ -172,6 +180,23 @@ type ReadOnlyWithdrawals interface {
 	ExpectedWithdrawals() ([]*enginev1.Withdrawal, error)
 	NextWithdrawalValidatorIndex() (types.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
+}
+
+// ReadOnlyParticipation defines a struct which only has read access to participation methods.
+type ReadOnlyParticipation interface {
+	CurrentEpochParticipation() ([]byte, error)
+	PreviousEpochParticipation() ([]byte, error)
+}
+
+// ReadOnlyInactivity defines a struct which only has read access to inactivity methods.
+type ReadOnlyInactivity interface {
+	InactivityScores() ([]uint64, error)
+}
+
+// ReadOnlySyncCommittee defines a struct which only has read access to sync committee methods.
+type ReadOnlySyncCommittee interface {
+	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
+	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 }
 
 // WriteOnlyBlockRoots defines a struct which only has write access to block roots methods.
@@ -232,23 +257,24 @@ type WriteOnlyAttestations interface {
 	RotateAttestations() error
 }
 
-// FutureForkStub defines methods that are used for future forks. This is a low cost solution to enable
-// various state casting of interface to work.
-type FutureForkStub interface {
+// WriteOnlyParticipation defines a struct which only has write access to participation methods.
+type WriteOnlyParticipation interface {
 	AppendCurrentParticipationBits(val byte) error
 	AppendPreviousParticipationBits(val byte) error
-	AppendInactivityScore(s uint64) error
-	CurrentEpochParticipation() ([]byte, error)
-	PreviousEpochParticipation() ([]byte, error)
-	UnrealizedCheckpointBalances() (uint64, uint64, uint64, error)
-	InactivityScores() ([]uint64, error)
-	SetInactivityScores(val []uint64) error
-	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
-	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetPreviousParticipationBits(val []byte) error
 	SetCurrentParticipationBits(val []byte) error
 	ModifyCurrentParticipationBits(func(val []byte) ([]byte, error)) error
 	ModifyPreviousParticipationBits(func(val []byte) ([]byte, error)) error
-	NextSyncCommittee() (*ethpb.SyncCommittee, error)
+}
+
+// WriteOnlyInactivity defines a struct which only has write access to inactivity methods.
+type WriteOnlyInactivity interface {
+	AppendInactivityScore(s uint64) error
+	SetInactivityScores(val []uint64) error
+}
+
+// WriteOnlySyncCommittee defines a struct which only has write access to sync committee methods.
+type WriteOnlySyncCommittee interface {
+	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 }

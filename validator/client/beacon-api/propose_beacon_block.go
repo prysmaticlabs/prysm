@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -12,7 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	var consensusVersion string
 	var beaconBlockRoot [32]byte
 
@@ -66,6 +67,17 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshall blinded bellatrix beacon block")
 		}
+	case *ethpb.GenericSignedBeaconBlock_Capella:
+		consensusVersion = "capella"
+		beaconBlockRoot, err = blockType.Capella.Block.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for capella beacon block")
+		}
+
+		marshalledSignedBeaconBlockJson, err = marshallBeaconBlockCapella(blockType.Capella)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall capella beacon block")
+		}
 	case *ethpb.GenericSignedBeaconBlock_BlindedCapella:
 		blinded = true
 		consensusVersion = "capella"
@@ -78,8 +90,6 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshall blinded capella beacon block")
 		}
-	case *ethpb.GenericSignedBeaconBlock_Capella:
-		return nil, errors.Errorf("Capella blocks are not supported yet")
 	default:
 		return nil, errors.Errorf("unsupported block type %T", in.Block)
 	}
@@ -93,7 +103,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(in *ethpb.GenericSignedBeac
 	}
 
 	headers := map[string]string{"Eth-Consensus-Version": consensusVersion}
-	if httpError, err := c.jsonRestHandler.PostRestJson(endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
+	if httpError, err := c.jsonRestHandler.PostRestJson(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
 		if httpError != nil && httpError.Code == http.StatusAccepted {
 			// Error 202 means that the block was successfully broadcasted, but validation failed
 			return nil, errors.Wrap(err, "block was successfully broadcasted but failed validation")
@@ -243,6 +253,52 @@ func marshallBeaconBlockBlindedBellatrix(block *ethpb.SignedBlindedBeaconBlockBe
 	}
 
 	return json.Marshal(signedBeaconBlockBellatrixJson)
+}
+
+func marshallBeaconBlockCapella(block *ethpb.SignedBeaconBlockCapella) ([]byte, error) {
+	signedBeaconBlockCapellaJson := &apimiddleware.SignedBeaconBlockCapellaContainerJson{
+		Signature: hexutil.Encode(block.Signature),
+		Message: &apimiddleware.BeaconBlockCapellaJson{
+			ParentRoot:    hexutil.Encode(block.Block.ParentRoot),
+			ProposerIndex: uint64ToString(block.Block.ProposerIndex),
+			Slot:          uint64ToString(block.Block.Slot),
+			StateRoot:     hexutil.Encode(block.Block.StateRoot),
+			Body: &apimiddleware.BeaconBlockBodyCapellaJson{
+				Attestations:      jsonifyAttestations(block.Block.Body.Attestations),
+				AttesterSlashings: jsonifyAttesterSlashings(block.Block.Body.AttesterSlashings),
+				Deposits:          jsonifyDeposits(block.Block.Body.Deposits),
+				Eth1Data:          jsonifyEth1Data(block.Block.Body.Eth1Data),
+				Graffiti:          hexutil.Encode(block.Block.Body.Graffiti),
+				ProposerSlashings: jsonifyProposerSlashings(block.Block.Body.ProposerSlashings),
+				RandaoReveal:      hexutil.Encode(block.Block.Body.RandaoReveal),
+				VoluntaryExits:    jsonifySignedVoluntaryExits(block.Block.Body.VoluntaryExits),
+				SyncAggregate: &apimiddleware.SyncAggregateJson{
+					SyncCommitteeBits:      hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(block.Block.Body.SyncAggregate.SyncCommitteeSignature),
+				},
+				ExecutionPayload: &apimiddleware.ExecutionPayloadCapellaJson{
+					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(block.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
+					BlockHash:     hexutil.Encode(block.Block.Body.ExecutionPayload.BlockHash),
+					BlockNumber:   uint64ToString(block.Block.Body.ExecutionPayload.BlockNumber),
+					ExtraData:     hexutil.Encode(block.Block.Body.ExecutionPayload.ExtraData),
+					FeeRecipient:  hexutil.Encode(block.Block.Body.ExecutionPayload.FeeRecipient),
+					GasLimit:      uint64ToString(block.Block.Body.ExecutionPayload.GasLimit),
+					GasUsed:       uint64ToString(block.Block.Body.ExecutionPayload.GasUsed),
+					LogsBloom:     hexutil.Encode(block.Block.Body.ExecutionPayload.LogsBloom),
+					ParentHash:    hexutil.Encode(block.Block.Body.ExecutionPayload.ParentHash),
+					PrevRandao:    hexutil.Encode(block.Block.Body.ExecutionPayload.PrevRandao),
+					ReceiptsRoot:  hexutil.Encode(block.Block.Body.ExecutionPayload.ReceiptsRoot),
+					StateRoot:     hexutil.Encode(block.Block.Body.ExecutionPayload.StateRoot),
+					TimeStamp:     uint64ToString(block.Block.Body.ExecutionPayload.Timestamp),
+					Transactions:  jsonifyTransactions(block.Block.Body.ExecutionPayload.Transactions),
+					Withdrawals:   jsonifyWithdrawals(block.Block.Body.ExecutionPayload.Withdrawals),
+				},
+				BLSToExecutionChanges: jsonifyBlsToExecutionChanges(block.Block.Body.BlsToExecutionChanges),
+			},
+		},
+	}
+
+	return json.Marshal(signedBeaconBlockCapellaJson)
 }
 
 func marshallBeaconBlockBlindedCapella(block *ethpb.SignedBlindedBeaconBlockCapella) ([]byte, error) {
