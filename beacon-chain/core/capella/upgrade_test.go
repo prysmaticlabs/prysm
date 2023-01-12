@@ -25,7 +25,6 @@ func TestUpgradeToCapella(t *testing.T) {
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), mSt.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), mSt.BlockRoots())
 	require.DeepSSZEqual(t, preForkState.StateRoots(), mSt.StateRoots())
-	require.DeepSSZEqual(t, preForkState.HistoricalRoots(), mSt.HistoricalRoots())
 	require.DeepSSZEqual(t, preForkState.Eth1Data(), mSt.Eth1Data())
 	require.DeepSSZEqual(t, preForkState.Eth1DataVotes(), mSt.Eth1DataVotes())
 	require.DeepSSZEqual(t, preForkState.Eth1DepositIndex(), mSt.Eth1DepositIndex())
@@ -98,4 +97,8 @@ func TestUpgradeToCapella(t *testing.T) {
 	lwvi, err := mSt.NextWithdrawalValidatorIndex()
 	require.NoError(t, err)
 	require.Equal(t, types.ValidatorIndex(0), lwvi)
+
+	summaries, err := mSt.HistoricalSummaries()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(summaries))
 }
