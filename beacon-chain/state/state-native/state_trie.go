@@ -838,7 +838,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 	case nativetypes.NextWithdrawalValidatorIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	case nativetypes.HistoricalSummaries:
-		return historicalSummaryRoot(b.historicalSummaries)
+		return stateutil.HistoricalSummariesRoot(b.historicalSummaries)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
