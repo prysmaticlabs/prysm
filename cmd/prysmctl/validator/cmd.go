@@ -29,7 +29,7 @@ var (
 		Name:    "confirm",
 		Aliases: []string{"c"},
 		Usage: "WARNING: User confirms and accepts responsibility of all input data provided and actions for setting their withdrawal address for their validator key. " +
-			"This action is not reversible and withdrawal addresses can not be changed once set. ",
+			"This action is not reversible and withdrawal addresses can not be changed once set.",
 	}
 	VerifyOnlyFlag = &cli.BoolFlag{
 		Name:    "verify-only",
