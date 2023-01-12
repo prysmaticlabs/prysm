@@ -348,7 +348,7 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 
 func TestNewKeymanager_Certificates(t *testing.T) {
 	// web3signer only supports PKCS12
-	base := "../../../testing/endtoend/components/certs/"
+	base := "../../../testing/endtoend/components/testdata/certs/"
 	tests := []struct {
 		name string
 		opts *SetupConfig
@@ -361,7 +361,7 @@ func TestNewKeymanager_Certificates(t *testing.T) {
 		{
 			name: "NoClientPass",
 			opts: &SetupConfig{
-				ClientCertPath: "/testing/endtoend/components/certs/client-identity.p12",
+				ClientCertPath: base + "client-identity.p12",
 			},
 			err: "PKCS12 client certificate password is required",
 		},
