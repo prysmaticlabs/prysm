@@ -88,7 +88,7 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ForkFetcher, p2
 	return readResponseChunk(stream, chain, p2p)
 }
 
-// WriteBlobsChunk writes blobs chunk object to stream.
+// WriteBlobsSidecarChunk writes blobs chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
 func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blobs *ethpb.BlobsSidecar) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {

@@ -1047,6 +1047,11 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 	}
 
+	hr, err := st.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconState4844{
 		GenesisTime:           st.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
@@ -1065,7 +1070,7 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hr),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
