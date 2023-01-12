@@ -349,7 +349,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apim
 	u := c.baseURL.ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
 	body, err := json.Marshal(request)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal json")
+		return errors.Wrap(err, "failed to marshal JSON")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
 	if err != nil {
@@ -368,7 +368,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apim
 		decoder.DisallowUnknownFields()
 		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
 		if err := decoder.Decode(errorJson); err != nil {
-			return errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+			return errors.Wrapf(err, "failed to decode error JSON for %s", resp.Request.URL)
 		}
 		for _, failure := range errorJson.Failures {
 			w := request[failure.Index].Message
