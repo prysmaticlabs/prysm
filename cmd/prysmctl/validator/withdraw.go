@@ -22,10 +22,10 @@ import (
 
 type cliStakingWithdrawalMessage struct {
 	apimiddleware.SignedBLSToExecutionChangeJson
-	ForkVersion           string `json:"fork_version"`
-	NetworkName           string `json:"network_name"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root"`
-	DepositCliVersion     string `json:"deposit_cli_version"`
+	ForkVersion           string `json:"fork_version,omitempty"`
+	NetworkName           string `json:"network_name,omitempty"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root,omitempty"`
+	DepositCliVersion     string `json:"deposit_cli_version,omitempty"`
 }
 
 func setWithdrawalAddresses(c *cli.Context) error {
