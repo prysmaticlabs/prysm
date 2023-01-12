@@ -14,6 +14,7 @@ go_library(
         "web3remotesigner.go",
     ],
     data = [
+        "//testing/endtoend/components/testdata/certs:web3signer-certs",
         "//testing/endtoend/static-files/eth1:eth1data",
         "@lighthouse//:lighthouse_bin",
     ],

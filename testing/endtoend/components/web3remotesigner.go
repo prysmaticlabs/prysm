@@ -80,6 +80,20 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// A file path to yaml config file is acceptable network argument.
 		network = testDir
 	}
+	baseCertPath := "./testdata/certs"
+	clientCertPath, err := bazel.Runfile(path.Join(baseCertPath, "client-identity.p12"))
+	if err != nil {
+		return err
+	}
+	clientCertPasswordPath, err := bazel.Runfile(baseCertPath + "pass.txt")
+	if err != nil {
+		return err
+	}
+
+	knownClientsPath, err := bazel.Runfile(baseCertPath + "knownClients.txt")
+	if err != nil {
+		return err
+	}
 
 	args := []string{
 		// Global flags
@@ -93,6 +107,9 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		"--network=" + network,
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
 		"--key-manager-api-enabled=true",
+		fmt.Sprintf("--tls-keystore-file=%s", clientCertPath),
+		fmt.Sprintf("--tls-keystore-password-file=%s", clientCertPasswordPath),
+		fmt.Sprintf("--tls-known-clients-file=%s", knownClientsPath),
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.

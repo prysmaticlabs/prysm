@@ -2,6 +2,7 @@ filegroup(
     name = "web3signer-certs",
     srcs = [
         "client-identity.p12",
+        "knownClients.txt",
         "pass.txt",
         "server.cert",
         "server.key",
