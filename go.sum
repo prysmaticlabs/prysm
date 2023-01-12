@@ -64,6 +64,8 @@ github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220901111237-4348e62e228d h1:ll28mmvFEFWzyXuG/HiFCUMlf2xncN9Yo6c3jCMmA8s=
 github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20220901111237-4348e62e228d/go.mod h1:XvVmBbqqoysq4RiCYdi9rrUdPmTcSMXWu8pxLT01Vs8=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20221222110633-9c4a92b284d9 h1:LatycRL6CJpg3pJExyDVRfS2lNzWXsrprTpuYyAmb8I=
+github.com/MariusVanDerWijden/go-ethereum v1.8.22-0.20221222110633-9c4a92b284d9/go.mod h1:n7VlOgCwYheLB/mi+V8ni2yf8K2qM3N9WAmalxkhk+c=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
@@ -686,8 +688,6 @@ github.com/libp2p/go-reuseport v0.2.0/go.mod h1:bvVho6eLMm6Bz5hmU0LYN3ixd3nPPvtI
 github.com/libp2p/go-sockaddr v0.0.2/go.mod h1:syPvOmNs24S3dFVGJA1/mrqdeijPxLV2Le3BRLKd68k=
 github.com/libp2p/go-yamux/v4 v4.0.0 h1:+Y80dV2Yx/kv7Y7JKu0LECyVdMXm1VUoko+VQ9rBfZQ=
 github.com/libp2p/go-yamux/v4 v4.0.0/go.mod h1:NWjl8ZTLOGlozrXSOZ/HlfG++39iKNnM5wwmtQP1YB4=
-github.com/lightclient/go-ethereum v1.10.10-0.20221214113223-8d6f9650e5c4 h1:9U2OK4n8XJ8lwoMxJR8sHrb/wDmhLuUljcDTyKKeuZo=
-github.com/lightclient/go-ethereum v1.10.10-0.20221214113223-8d6f9650e5c4/go.mod h1:n7VlOgCwYheLB/mi+V8ni2yf8K2qM3N9WAmalxkhk+c=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
 github.com/logrusorgru/aurora v2.0.3+incompatible h1:tOpm7WcpBTn4fjmVfgpQq0EfczGlG91VSDkswnjF5A8=
