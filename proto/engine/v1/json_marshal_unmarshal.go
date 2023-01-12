@@ -832,7 +832,8 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	e.BlockHash = bytesutil.PadTo(dec.BlockHash.Bytes(), fieldparams.RootLength)
 	kzgs := make([][]byte, len(dec.Kzgs))
 	for i, kzg := range dec.Kzgs {
-		kzgs[i] = bytesutil.PadTo(kzg[:], fieldparams.BLSPubkeyLength)
+		k := kzg
+		kzgs[i] = bytesutil.PadTo(k[:], fieldparams.BLSPubkeyLength)
 	}
 	e.KzgCommitments = kzgs
 	blobs := make([]*Blob, len(dec.Blobs))
