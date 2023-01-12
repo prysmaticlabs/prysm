@@ -75,7 +75,6 @@ var Commands = []*cli.Command{
 					} else {
 						return nil
 					}
-
 				},
 				Action: func(cliCtx *cli.Context) error {
 					if cliCtx.Bool(VerifyOnlyFlag.Name) {
