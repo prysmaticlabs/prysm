@@ -374,6 +374,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 
 	t.Run("no diverging blocks", func(t *testing.T) {
 		p2 := connectPeerHavingBlocks(t, p1, knownBlocks, 64, p1.Peers())
+		time.Sleep(100 * time.Millisecond)
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2))
 		}()
@@ -385,6 +386,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		forkedSlot := types.Slot(24)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		time.Sleep(100 * time.Millisecond)
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2))
 		}()
@@ -397,6 +399,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	t.Run("first block is diverging - no common ancestor", func(t *testing.T) {
 		altBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		time.Sleep(100 * time.Millisecond)
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2))
 		}()
@@ -408,6 +411,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 		forkedSlot := types.Slot(60)
 		altBlocks := extendBlockSequence(t, knownBlocks[:forkedSlot], 128)
 		p2 := connectPeerHavingBlocks(t, p1, altBlocks, 128, p1.Peers())
+		time.Sleep(100 * time.Millisecond)
 		defer func() {
 			assert.NoError(t, p1.Disconnect(p2))
 		}()

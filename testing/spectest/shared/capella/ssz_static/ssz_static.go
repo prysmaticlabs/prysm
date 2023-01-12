@@ -107,6 +107,8 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.SyncAggregatorSelectionData{}
 	case "SyncCommittee":
 		obj = &ethpb.SyncCommittee{}
+	case "HistoricalSummary":
+		obj = &ethpb.HistoricalSummary{}
 	case "LightClientOptimisticUpdate":
 		t.Skip("not a beacon node type, this is a light node type")
 		return nil, nil

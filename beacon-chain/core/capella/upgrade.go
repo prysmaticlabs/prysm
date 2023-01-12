@@ -42,6 +42,10 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		return nil, err
 	}
 
+	hrs, err := state.HistoricalRoots()
+	if err != nil {
+		return nil, err
+	}
 	s := &ethpb.BeaconStateCapella{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
@@ -54,7 +58,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		LatestBlockHeader:           state.LatestBlockHeader(),
 		BlockRoots:                  state.BlockRoots(),
 		StateRoots:                  state.StateRoots(),
-		HistoricalRoots:             state.HistoricalRoots(),
+		HistoricalRoots:             hrs,
 		Eth1Data:                    state.Eth1Data(),
 		Eth1DataVotes:               state.Eth1DataVotes(),
 		Eth1DepositIndex:            state.Eth1DepositIndex(),
@@ -90,6 +94,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 		},
 		NextWithdrawalIndex:          0,
 		NextWithdrawalValidatorIndex: 0,
+		HistoricalSummaries:          make([]*ethpb.HistoricalSummary, 0),
 	}
 
 	return state_native.InitializeFromProtoUnsafeCapella(s)
