@@ -163,6 +163,7 @@ func (c *componentHandler) setup() {
 		return nil
 	})
 	c.beaconNodes = beaconNodes
+
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
@@ -177,6 +178,7 @@ func (c *componentHandler) setup() {
 		})
 		c.lighthouseBeaconNodes = lighthouseNodes
 	}
+	// Validator nodes.
 	validatorNodes := components.NewValidatorNodeSet(config)
 	g.Go(func() error {
 		comps := []e2etypes.ComponentRunner{beaconNodes}
