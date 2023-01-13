@@ -175,6 +175,7 @@ go_test(
         "attester_test.go",
         "blocks_test.go",
         "exit_test.go",
+        "proposer_altair_test.go",
         "proposer_attestations_test.go",
         "proposer_bellatrix_test.go",
         "proposer_builder_test.go",

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -18,20 +19,23 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlo
 	if blk.Version() < version.Altair {
 		return
 	}
+
+	// Set empty sync aggregate in case subsequent calls fail. Empty sync aggregate is better than failing.
+	emptySig := [96]byte{0xC0}
+	if err := blk.Body().SetSyncAggregate(&ethpb.SyncAggregate{
+		SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+		SyncCommitteeSignature: emptySig[:],
+	}); err != nil {
+		log.WithError(err).Error("Could not set empty sync aggregate")
+	}
+
 	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
-	} else {
-		if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
-			log.WithError(err).Error("Could not set sync aggregate")
-			emptySig := [96]byte{0xC0}
-			if err := blk.Body().SetSyncAggregate(&ethpb.SyncAggregate{
-				SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
-				SyncCommitteeSignature: emptySig[:],
-			}); err != nil {
-				log.WithError(err).Error("Could not set sync aggregate")
-			}
-		}
+		return
+	}
+	if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
+		log.WithError(err).Error("Could not set sync aggregate")
 	}
 }
 
@@ -41,6 +45,9 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")
 	defer span.End()
 
+	if vs.SyncCommitteePool == nil {
+		return nil, errors.New("sync committee pool is nil")
+	}
 	// Contributions have to match the input root
 	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(slot)
 	if err != nil {
