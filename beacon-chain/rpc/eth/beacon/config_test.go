@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -425,6 +426,6 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// Genesis and Altair.
-	assert.Equal(t, 3, len(resp.Data))
+	os := forks.NewOrderedSchedule(params.BeaconConfig())
+	assert.Equal(t, os.Len(), len(resp.Data))
 }

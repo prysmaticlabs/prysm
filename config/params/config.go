@@ -221,22 +221,18 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 
 func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
 	fvs := map[[fieldparams.VersionLength]byte]types.Epoch{}
-	// Set Genesis fork data.
 	fvs[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
-	// Set Altair fork data.
 	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
-	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	return fvs
 }
 
 func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
 	fvn := map[[fieldparams.VersionLength]byte]string{}
-	// Set Genesis fork data.
 	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
-	// Set Altair fork data.
 	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
-	// Set Bellatrix fork data.
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
 }
