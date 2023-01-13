@@ -726,6 +726,7 @@ func TestProcessBLSToExecutionChanges(t *testing.T) {
 		require.Equal(t, params.BeaconConfig().ETH1AddressWithdrawalPrefixByte, val.WithdrawalCredentials[0])
 	}
 }
+
 func TestBLSChangesSignatureBatch(t *testing.T) {
 	spb := &ethpb.BeaconStateCapella{
 		Fork: &ethpb.Fork{
