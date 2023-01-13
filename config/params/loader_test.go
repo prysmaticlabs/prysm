@@ -115,7 +115,6 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: BellatrixForkVersion", name)
-	// We can't test this until the upstream consensus-spects repo adds it to their configs
 	assert.DeepEqual(t, expected.CapellaForkVersion, actual.CapellaForkVersion, "%s: CapellaForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
