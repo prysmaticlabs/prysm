@@ -648,6 +648,17 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 	}
+	summaries, err := st.HistoricalSummaries()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical summaries")
+	}
+	sourceHistoricalSummaries := make([]*ethpbv2.HistoricalSummary, len(summaries))
+	for i, summary := range summaries {
+		sourceHistoricalSummaries[i] = &ethpbv2.HistoricalSummary{
+			BlockSummaryRoot: summary.BlockSummaryRoot,
+			StateSummaryRoot: summary.StateSummaryRoot,
+		}
+	}
 
 	result := &ethpbv2.BeaconStateCapella{
 		GenesisTime:           st.GenesisTime(),
@@ -721,6 +732,7 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 		},
 		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
 		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
+		HistoricalSummaries:          sourceHistoricalSummaries,
 	}
 
 	return result, nil
