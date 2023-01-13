@@ -2305,7 +2305,7 @@ func TestFillMissingBlockPayloadId_DiffSlotExitEarly(t *testing.T) {
 	require.NoError(t, service.fillMissingBlockPayloadId(ctx, time.Unix(int64(params.BeaconConfig().SecondsPerSlot/2), 0)))
 }
 
-func TestHandleBBlockBLSToExecutionChanges(t *testing.T) {
+func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	fc := doublylinkedtree.New()
@@ -2361,6 +2361,65 @@ func TestHandleBBlockBLSToExecutionChanges(t *testing.T) {
 		require.Equal(t, true, pool.ValidatorExists(idx))
 		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
 		require.Equal(t, false, pool.ValidatorExists(idx))
+	})
+
+	t.Run("Do not cycle the pool below threshold", func(t *testing.T) {
+		pool = blstoexec.NewPool()
+		service.cfg.BLSToExecPool = pool
+
+		changes := make([]*ethpb.SignedBLSToExecutionChange, blsChangesPoolThreshold+5)
+		for idx := 0; idx < blsChangesPoolThreshold+5; idx++ {
+			change := &ethpb.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(idx),
+			}
+			signedChange := &ethpb.SignedBLSToExecutionChange{
+				Message: change,
+			}
+			pool.InsertBLSToExecChange(signedChange)
+			changes[idx] = signedChange
+		}
+		body := &ethpb.BeaconBlockBodyCapella{
+			BlsToExecutionChanges: changes[:1],
+		}
+		pbb := &ethpb.BeaconBlockCapella{
+			Body: body,
+		}
+		blk, err := consensusblocks.NewBeaconBlock(pbb)
+		require.NoError(t, err)
+
+		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		newPool := service.cfg.BLSToExecPool
+		require.Equal(t, pool, newPool)
+		require.Equal(t, blsChangesPoolThreshold+4, newPool.NumPending())
+	})
+	t.Run("Cycle the pool at threshold", func(t *testing.T) {
+		pool = blstoexec.NewPool()
+		service.cfg.BLSToExecPool = pool
+
+		changes := make([]*ethpb.SignedBLSToExecutionChange, blsChangesPoolThreshold+5)
+		for idx := 0; idx < blsChangesPoolThreshold+5; idx++ {
+			change := &ethpb.BLSToExecutionChange{
+				ValidatorIndex: types.ValidatorIndex(idx),
+			}
+			signedChange := &ethpb.SignedBLSToExecutionChange{
+				Message: change,
+			}
+			pool.InsertBLSToExecChange(signedChange)
+			changes[idx] = signedChange
+		}
+		body := &ethpb.BeaconBlockBodyCapella{
+			BlsToExecutionChanges: changes[:6],
+		}
+		pbb := &ethpb.BeaconBlockCapella{
+			Body: body,
+		}
+		blk, err := consensusblocks.NewBeaconBlock(pbb)
+		require.NoError(t, err)
+
+		require.NoError(t, service.handleBlockBLSToExecChanges(blk))
+		newPool := service.cfg.BLSToExecPool
+		require.NotEqual(t, pool, newPool)
+		require.Equal(t, blsChangesPoolThreshold-1, newPool.NumPending())
 	})
 }
 

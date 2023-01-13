@@ -31,6 +31,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// This defines the lower size at which we recycle the BLS changes pool to avoid
+// memory leaks
+const blsChangesPoolThreshold = 200
+
 // A custom slot deadline for processing state slots in our cache.
 const slotDeadline = 5 * time.Second
 
@@ -565,10 +569,15 @@ func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error 
 	if err != nil {
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
+	pool := s.cfg.BLSToExecPool
+	excessPending := pool.NumPending() - blsChangesPoolThreshold
 	for _, change := range changes {
 		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
 			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
 		}
+	}
+	if excessPending > 0 && len(changes) > excessPending {
+		s.cfg.BLSToExecPool = pool.Copy()
 	}
 	return nil
 }

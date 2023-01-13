@@ -407,3 +407,34 @@ func TestValidatorExists(t *testing.T) {
 		assert.Equal(t, false, pool.ValidatorExists(30))
 	})
 }
+
+func TestPoolCopy(t *testing.T) {
+	pool := NewPool()
+	firstChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: types.ValidatorIndex(0),
+		}}
+	pool.InsertBLSToExecChange(firstChange)
+	secondChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: types.ValidatorIndex(10),
+		}}
+	pool.InsertBLSToExecChange(secondChange)
+	thirdChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: types.ValidatorIndex(30),
+		}}
+	pool.InsertBLSToExecChange(thirdChange)
+
+	newPool := pool.Copy()
+	newChanges, err := newPool.PendingBLSToExecChanges()
+	require.NoError(t, err)
+	oldChanges, err := pool.PendingBLSToExecChanges()
+	require.NoError(t, err)
+	require.Equal(t, len(oldChanges), len(newChanges))
+	require.Equal(t, len(oldChanges), pool.NumPending())
+
+	for i, change := range newChanges {
+		require.DeepEqual(t, oldChanges[i], change)
+	}
+}

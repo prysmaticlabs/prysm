@@ -23,6 +23,8 @@ type PoolManager interface {
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
 	ValidatorExists(idx types.ValidatorIndex) bool
+	Copy() PoolManager
+	NumPending() int
 }
 
 // Pool is a concrete implementation of PoolManager.
@@ -37,6 +39,18 @@ func NewPool() *Pool {
 	return &Pool{
 		pending: doublylinkedlist.List[*ethpb.SignedBLSToExecutionChange]{},
 		m:       make(map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange]),
+	}
+}
+
+// Copies the pool and returns a new one.
+func (p *Pool) Copy() PoolManager {
+	newMap := make(map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange])
+	for k, v := range p.m {
+		newMap[k] = v
+	}
+	return &Pool{
+		pending: *p.pending.Copy(),
+		m:       newMap,
 	}
 }
 
@@ -167,4 +181,9 @@ func (p *Pool) ValidatorExists(idx types.ValidatorIndex) bool {
 	node := p.m[idx]
 
 	return node != nil
+}
+
+// NumPending returns the number of pending bls to execution changes in the pool
+func (p *Pool) NumPending() int {
+	return p.pending.Len()
 }
