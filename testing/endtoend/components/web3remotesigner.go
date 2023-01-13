@@ -80,36 +80,25 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		// A file path to yaml config file is acceptable network argument.
 		network = testDir
 	}
-	baseCertPath := "./testdata/certs"
-	clientCertPath, err := bazel.Runfile(path.Join(baseCertPath, "client-identity.p12"))
+	pa, err := bazel.RunfilesPath()
 	if err != nil {
 		return err
 	}
-	clientCertPasswordPath, err := bazel.Runfile(baseCertPath + "pass.txt")
-	if err != nil {
-		return err
-	}
-
-	knownClientsPath, err := bazel.Runfile(baseCertPath + "knownClients.txt")
-	if err != nil {
-		return err
-	}
-
 	args := []string{
 		// Global flags
 		fmt.Sprintf("--key-store-path=%s", keystorePath),
 		fmt.Sprintf("--data-path=%s", websignerDataDir),
 		fmt.Sprintf("--http-listen-port=%d", Web3RemoteSignerPort),
 		"--logging=ALL",
+		fmt.Sprintf("--tls-keystore-file=%s", pa+"/testing/endtoend/static-files/certs/client-identity.p12"),
+		fmt.Sprintf("--tls-keystore-password-file=%s", pa+"/testing/endtoend/static-files/certs/pass.txt"),
+		fmt.Sprintf("--tls-known-clients-file=%s", pa+"/testing/endtoend/static-files/certs/knownClients.txt"),
 		// Command
 		"eth2",
 		// Command flags
 		"--network=" + network,
 		"--slashing-protection-enabled=false", // Otherwise, a postgres DB is required.
 		"--key-manager-api-enabled=true",
-		fmt.Sprintf("--tls-keystore-file=%s", clientCertPath),
-		fmt.Sprintf("--tls-keystore-password-file=%s", clientCertPasswordPath),
-		fmt.Sprintf("--tls-known-clients-file=%s", knownClientsPath),
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.

@@ -257,22 +257,13 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		// Write the pubkeys as comma separated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
-		baseCertPath := "./testdata/certs/"
-		clientCertPath, err := bazel.Runfile(baseCertPath + "client-identity.p12")
+		pa, err := bazel.RunfilesPath()
 		if err != nil {
 			return err
 		}
-		clientCertPasswordPath, err := bazel.Runfile(baseCertPath + "pass.txt")
-		if err != nil {
-			return err
-		}
-		caCertPath, err := bazel.Runfile(baseCertPath + "server.cert")
-		if err != nil {
-			return err
-		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, clientCertPath))
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, clientCertPasswordPath))
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerCACertFLag.Name, caCertPath))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, pa+"/testing/endtoend/static-files/certs/client-identity.p12"))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, pa+"/testing/endtoend/static-files/certs/pass.txt"))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerCACertFLag.Name, pa+"/testing/endtoend/static-files/certs/server.cert"))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
