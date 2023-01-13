@@ -43,11 +43,7 @@ var (
 // This returns the execution payload of a given slot.
 // The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context,
-	slot types.Slot,
-	vIdx types.ValidatorIndex,
-	headRoot [32]byte,
-	st state.BeaconState) (interfaces.ExecutionData, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -77,7 +73,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+			warnIfFeeRecipientDiffers(payload, feeRecipient)
 			return payload, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
@@ -166,18 +162,18 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	return payload, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payloadRecipient []byte, feeRecipient common.Address) {
+func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
-	if !bytes.Equal(payloadRecipient, feeRecipient[:]) {
+	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
 			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payloadRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
