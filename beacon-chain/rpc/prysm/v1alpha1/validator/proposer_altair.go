@@ -22,17 +22,15 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlo
 
 	// Set empty sync aggregate in case subsequent calls fail. Empty sync aggregate is better than failing.
 	emptySig := [96]byte{0xC0}
-	if err := blk.Body().SetSyncAggregate(&ethpb.SyncAggregate{
+	syncAggregate := &ethpb.SyncAggregate{
 		SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
 		SyncCommitteeSignature: emptySig[:],
-	}); err != nil {
-		log.WithError(err).Error("Could not set empty sync aggregate")
 	}
 
-	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
+	var err error
+	syncAggregate, err = vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
-		return
 	}
 	if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
 		log.WithError(err).Error("Could not set sync aggregate")
