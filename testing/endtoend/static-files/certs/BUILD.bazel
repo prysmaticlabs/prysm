@@ -2,10 +2,14 @@ filegroup(
     name = "web3signer-certs",
     srcs = [
         "client-identity.p12",
+        "prysm_client_identity.p12",
+        "clientpass.txt",
         "knownClients.txt",
         "pass.txt",
         "server.cert",
         "server.key",
+        "web3signer_keystore.p12",
+        "web3signer.pem",
     ],
     visibility = ["//testing/endtoend:__subpackages__"],
 )

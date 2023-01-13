@@ -312,7 +312,6 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		}
 		node.peerID = peerId
 	}
-
 	// Mark node as ready.
 	close(node.started)
 

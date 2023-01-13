@@ -2,9 +2,13 @@ package components
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"golang.org/x/crypto/pkcs12"
 	"io"
 	"net/http"
 	"os"
@@ -90,9 +94,11 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		fmt.Sprintf("--data-path=%s", websignerDataDir),
 		fmt.Sprintf("--http-listen-port=%d", Web3RemoteSignerPort),
 		"--logging=ALL",
-		fmt.Sprintf("--tls-keystore-file=%s", pa+"/testing/endtoend/static-files/certs/client-identity.p12"),
+		fmt.Sprintf("--tls-keystore-file=%s", pa+"/testing/endtoend/static-files/certs/web3signer_keystore.p12"),
 		fmt.Sprintf("--tls-keystore-password-file=%s", pa+"/testing/endtoend/static-files/certs/pass.txt"),
-		fmt.Sprintf("--tls-known-clients-file=%s", pa+"/testing/endtoend/static-files/certs/knownClients.txt"),
+		"--tls-allow-any-client=true",
+		//"--tls-allow-ca-clients=true",
+		//fmt.Sprintf("--tls-known-clients-file=%s", pa+"/testing/endtoend/static-files/certs/knownClients.txt"),
 		// Command
 		"eth2",
 		// Command flags
@@ -104,7 +110,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
 	w.cmd = cmd
 	// Write stderr to log files.
-	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stderr.log"))
+	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
 	if err != nil {
 		return err
 	}
@@ -113,14 +119,49 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stderr = stderr
+	cmd.Stdout = stderr
 
 	log.Infof("Starting web3signer with flags: %s %s", binaryPath, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
 		return err
 	}
 
-	go w.monitorStart()
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	p12, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
+	if err != nil {
+		return err
+	}
+	p12pass, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/pass.txt"))
+	if err != nil {
+		return err
+	}
+
+	blocks, err := pkcs12.ToPEM(p12, string(p12pass))
+	if err != nil {
+		return errors.Wrap(err, "pkcs12 to PEM conversion failed")
+	}
+	var pemData []byte
+	for _, b := range blocks {
+		pemData = append(pemData, pem.EncodeToMemory(b)...)
+	}
+
+	clientPair, err := tls.X509KeyPair(pemData, pemData)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain client's certificate and/or key")
+	}
+	tlsConfig.Certificates = []tls.Certificate{clientPair}
+	cp := x509.NewCertPool()
+	pemc, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/web3signer.pem"))
+	if err != nil {
+		return err
+	}
+	cp.AppendCertsFromPEM(pemc)
+	tlsConfig.RootCAs = cp
+	//tlsConfig.ClientCAs = cp
+	go w.monitorStart(tlsConfig)
 
 	return cmd.Wait()
 }
@@ -145,10 +186,12 @@ func (w *Web3RemoteSigner) Stop() error {
 }
 
 // monitorStart by polling server until it returns a 200 at /upcheck.
-func (w *Web3RemoteSigner) monitorStart() {
+func (w *Web3RemoteSigner) monitorStart(config *tls.Config) {
 	client := &http.Client{}
+	tr := &http.Transport{TLSClientConfig: config}
+	client.Transport = tr
 	for {
-		req, err := http.NewRequestWithContext(w.ctx, "GET", fmt.Sprintf("http://localhost:%d/upcheck", Web3RemoteSignerPort), nil)
+		req, err := http.NewRequestWithContext(w.ctx, "GET", fmt.Sprintf("https://localhost:%d/upcheck", Web3RemoteSignerPort), nil)
 		if err != nil {
 			panic(err)
 		}

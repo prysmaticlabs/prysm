@@ -177,6 +177,7 @@ func (node *ValidatorNode) saveConfig() (string, error) {
 
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
+	fmt.Println("trying to start a validator node")
 	validatorHexPubKeys := make([]string, 0)
 	var pkg, target string
 	if v.config.UsePrysmShValidator {
@@ -253,7 +254,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
-		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
+		args = append(args, fmt.Sprintf("--%s=https://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma separated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
@@ -262,7 +263,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 			return err
 		}
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, pa+"/testing/endtoend/static-files/certs/client-identity.p12"))
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, pa+"/testing/endtoend/static-files/certs/pass.txt"))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, pa+"/testing/endtoend/static-files/certs/clientpass.txt"))
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerCACertFLag.Name, pa+"/testing/endtoend/static-files/certs/server.cert"))
 	} else {
 		// When not using remote key signer, use interop keys.
