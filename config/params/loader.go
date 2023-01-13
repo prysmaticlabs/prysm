@@ -196,6 +196,7 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("DEPOSIT_NETWORK_ID: %d", cfg.DepositNetworkID),
 		fmt.Sprintf("ALTAIR_FORK_EPOCH: %d", cfg.AltairForkEpoch),
 		fmt.Sprintf("ALTAIR_FORK_VERSION: %#x", cfg.AltairForkVersion),
+		fmt.Sprintf("CAPELLA_FORK_VERSION: %#x", cfg.CapellaForkVersion),
 		fmt.Sprintf("BELLATRIX_FORK_EPOCH: %d", cfg.BellatrixForkEpoch),
 		fmt.Sprintf("BELLATRIX_FORK_VERSION: %#x", cfg.BellatrixForkVersion),
 		fmt.Sprintf("SHARDING_FORK_EPOCH: %d", cfg.ShardingForkEpoch),
