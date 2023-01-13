@@ -64,13 +64,13 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		}
 		// verify 0x from file and add if needed
 		for i, obj := range to {
-			if len(obj.Message.FromBLSPubkey) < fieldparams.BLSPubkeyLength*2 {
-				to[i].Message.FromBLSPubkey = fmt.Sprintf("0x%s", obj.Signature)
+			if len(obj.Message.FromBLSPubkey) == fieldparams.BLSPubkeyLength*2 {
+				to[i].Message.FromBLSPubkey = fmt.Sprintf("0x%s", obj.Message.FromBLSPubkey)
 			}
-			if len(obj.Message.ToExecutionAddress) < common.AddressLength*2 {
-				to[i].Message.ToExecutionAddress = fmt.Sprintf("0x%s", obj.Signature)
+			if len(obj.Message.ToExecutionAddress) == common.AddressLength*2 {
+				to[i].Message.ToExecutionAddress = fmt.Sprintf("0x%s", obj.Message.ToExecutionAddress)
 			}
-			if len(obj.Signature) < fieldparams.BLSSignatureLength*2 {
+			if len(obj.Signature) == fieldparams.BLSSignatureLength*2 {
 				to[i].Signature = fmt.Sprintf("0x%s", obj.Signature)
 			}
 			setWithdrawalAddressJsons = append(setWithdrawalAddressJsons, &apimiddleware.SignedBLSToExecutionChangeJson{

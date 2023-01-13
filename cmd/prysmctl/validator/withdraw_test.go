@@ -105,6 +105,52 @@ func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
 	assert.LogsDoNotContain(t, hook, "Set withdrawal address message not found in the node's operations pool.")
 }
 
+func TestCallWithdrawalEndpoint_Mutiple_stakingcli(t *testing.T) {
+	stakingcliFile := "./testdata/staking-cli-change-operations-multiple.json"
+	file := "./testdata/change-operations-multiple.json"
+	baseurl := "127.0.0.1:3500"
+	l, err := net.Listen("tcp", baseurl)
+	require.NoError(t, err)
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			b, err := os.ReadFile(filepath.Clean(file))
+			require.NoError(t, err)
+			var to []*apimiddleware.SignedBLSToExecutionChangeJson
+			err = json.Unmarshal(b, &to)
+			require.NoError(t, err)
+			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
+				Data: to,
+			})
+			require.NoError(t, err)
+		}
+	}))
+	err = srv.Listener.Close()
+	require.NoError(t, err)
+	srv.Listener = l
+	srv.Start()
+	defer srv.Close()
+	hook := logtest.NewGlobal()
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String("beacon-node-host", baseurl, "")
+	set.String("path", stakingcliFile, "")
+	set.Bool("confirm", true, "")
+	set.Bool("accept-terms-of-use", true, "")
+	assert.NoError(t, set.Set("beacon-node-host", baseurl))
+	assert.NoError(t, set.Set("path", stakingcliFile))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	err = setWithdrawalAddresses(cliCtx)
+	require.NoError(t, err)
+	assert.LogsContain(t, hook, "Successfully published")
+	assert.LogsContain(t, hook, "to update 2 withdrawal")
+	assert.LogsContain(t, hook, "All (total:2) signed withdrawal messages were found in the pool.")
+	assert.LogsDoNotContain(t, hook, "Set withdrawal address message not found in the node's operations pool.")
+}
+
 func TestCallWithdrawalEndpoint_Mutiple_notfound(t *testing.T) {
 	respFile := "./testdata/change-operations-multiple_notfound.json"
 	file := "./testdata/change-operations-multiple.json"
