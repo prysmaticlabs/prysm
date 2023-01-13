@@ -74,7 +74,6 @@ type Server struct {
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
-	BLSChangesPool         blstoexec.PoolManager
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
