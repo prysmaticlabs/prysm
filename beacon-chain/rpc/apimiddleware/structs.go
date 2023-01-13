@@ -692,6 +692,10 @@ type BLSToExecutionChangeJson struct {
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
+type BroadcastBLSToExecutionChangesRequest struct {
+	Data string `json:"data"`
+}
+
 type SubmitBLSToExecutionChangesRequest struct {
 	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
 }

@@ -39,6 +39,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
+		"/eth/v1/beacon/pool/broadcast_bls_to_execution_changes",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
@@ -163,6 +164,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/pool/voluntary_exits":
 		endpoint.PostRequest = &SignedVoluntaryExitJson{}
 		endpoint.GetResponse = &VoluntaryExitsPoolResponseJson{}
+	case "/eth/v1/beacon/pool/broadcast_bls_to_execution_changes":
+		endpoint.PostRequest = &BroadcastBLSToExecutionChangesRequest{}
 	case "/eth/v1/beacon/pool/bls_to_execution_changes":
 		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
 		endpoint.GetResponse = &BLSToExecutionChangesPoolResponseJson{}

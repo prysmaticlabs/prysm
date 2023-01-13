@@ -1195,6 +1195,37 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 	assert.DeepEqual(t, migration.V1Alpha1SignedBLSToExecChangeToV2(change2), resp.Data[1])
 }
 
+func TestBroadcastBLSToExecutionChanges(t *testing.T) {
+	change1 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     1,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey1"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address1"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	change2 := &ethpbv1alpha1.SignedBLSToExecutionChange{
+		Message: &ethpbv1alpha1.BLSToExecutionChange{
+			ValidatorIndex:     2,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("pubkey2"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("address2"), 20),
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		Broadcaster:    broadcaster,
+		BLSChangesPool: &blstoexecmock.PoolMock{Changes: []*ethpbv1alpha1.SignedBLSToExecutionChange{change1, change2}},
+	}
+
+	resp, err := s.BroadcastBLSToExecutionChanges(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	require.DeepEqual(t, &emptypb.Empty{}, resp)
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+}
+
 func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)

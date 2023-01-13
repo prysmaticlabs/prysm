@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -304,6 +305,25 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
 
+	return &emptypb.Empty{}, nil
+}
+
+// BroadcastBLSToExecutionChanges broadcasts all existing BLS changes in the
+// operations pool.
+func (bs *Server) BroadcastBLSToExecutionChanges(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.BroadcastBLSToExecutionChanges")
+	defer span.End()
+
+	changes, err := bs.BLSChangesPool.PendingBLSToExecChanges()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get BLS to execution changes: %v", err)
+	}
+
+	for _, ch := range changes {
+		if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
+			return &emptypb.Empty{}, errors.Wrap(err, "could not broadcast message")
+		}
+	}
 	return &emptypb.Empty{}, nil
 }
 
