@@ -116,7 +116,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: BellatrixForkVersion", name)
 	// We can't test this until the upstream consensus-spects repo adds it to their configs
-	// assert.DeepEqual(t, expected.CapellaForkEpoch, actual.CapellaForkVersion, "%s: CapellaForkEpoch", name)
+	assert.DeepEqual(t, expected.CapellaForkVersion, actual.CapellaForkVersion, "%s: CapellaForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
@@ -354,9 +354,6 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 				found = true
 				v1 := reflect.ValueOf(*c1).Field(i).Interface()
 				v2 := reflect.ValueOf(*c2).Field(i).Interface()
-				if field == "SHARDING_FORK_VERSION" {
-					continue
-				}
 				if reflect.ValueOf(v1).Kind() == reflect.Slice {
 					assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
 				} else {
