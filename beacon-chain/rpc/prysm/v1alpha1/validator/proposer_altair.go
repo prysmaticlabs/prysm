@@ -20,18 +20,21 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlo
 		return
 	}
 
-	// Set empty sync aggregate in case subsequent calls fail. Empty sync aggregate is better than failing.
-	emptySig := [96]byte{0xC0}
-	syncAggregate := &ethpb.SyncAggregate{
-		SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
-		SyncCommitteeSignature: emptySig[:],
-	}
-
-	var err error
-	syncAggregate, err = vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
+	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
+		emptySig := [96]byte{0xC0}
+		emptyAggregate := &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+			SyncCommitteeSignature: emptySig[:],
+		}
+		if err := blk.Body().SetSyncAggregate(emptyAggregate); err != nil {
+			log.WithError(err).Error("Could not set sync aggregate")
+		}
+		return
 	}
+
+	// Can not error. We already filter block versioning at the top. Phase 0 is impossible.
 	if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
 		log.WithError(err).Error("Could not set sync aggregate")
 	}
