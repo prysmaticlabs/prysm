@@ -94,7 +94,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 func configureTLSOpt(cfg *SetupConfig) (internal.ApiClientOpt, error) {
 	if cfg.ClientCertPath != "" || cfg.ClientCertPasswordPath != "" || cfg.CACertPath != "" {
 		tlsConfig := &tls.Config{
-			MinVersion: tls.VersionTLS13,
+			MinVersion: tls.VersionTLS12,
 		}
 
 		if cfg.ClientCertPath == "" {
