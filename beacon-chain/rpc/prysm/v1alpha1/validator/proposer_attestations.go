@@ -80,7 +80,7 @@ func (vs *Server) packAttestations(ctx context.Context, latestState state.Beacon
 // filter separates attestation list into two groups: valid and invalid attestations.
 // The first group passes the all the required checks for attestation to be considered for proposing.
 // And attestations from the second group should be deleted.
-func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts, error) {
+func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (proposerAtts, proposerAtts) {
 	validAtts := make([]*ethpb.Attestation, 0, len(a))
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
@@ -98,7 +98,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 		}
 	} else {
 		// Exit early if there is an unknown state type.
-		return validAtts, invalidAtts, errors.Errorf("unknown state type: %v", st.Version())
+		return validAtts, invalidAtts
 	}
 
 	for _, att := range a {
@@ -108,7 +108,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 		}
 		invalidAtts = append(invalidAtts, att)
 	}
-	return validAtts, invalidAtts, nil
+	return validAtts, invalidAtts
 }
 
 // sortByProfitability orders attestations by highest slot and by highest aggregation bit count.
@@ -247,10 +247,7 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
 	defer span.End()
 
-	validAtts, invalidAtts, err := proposerAtts(atts).filter(ctx, st)
-	if err != nil {
-		return nil, err
-	}
+	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
 	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
