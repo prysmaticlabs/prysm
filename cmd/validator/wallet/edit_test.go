@@ -52,6 +52,7 @@ type testWalletConfig struct {
 	backupDir               string
 	walletDir               string
 	passwordsDir            string
+	mnemonicLanguage        string
 }
 
 func setupWalletCtx(
@@ -108,7 +109,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Remote),
 		accounts.WithWalletPassword("Passwordz0320$"),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

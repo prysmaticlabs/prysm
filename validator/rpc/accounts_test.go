@@ -42,7 +42,7 @@ func TestServer_ListAccounts(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -228,7 +228,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

@@ -40,7 +40,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestImport_DuplicateKeys(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -149,7 +149,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

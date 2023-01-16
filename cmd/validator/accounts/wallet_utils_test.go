@@ -35,7 +35,7 @@ func TestWalletWithKeymanager(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

@@ -39,7 +39,7 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 	req := &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   strongPass,
-		MnemonicLanguage: "english",
+		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	req := &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   "", // Weak password, empty string
-		MnemonicLanguage: "english",
+		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
@@ -128,7 +128,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	req = &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   "a", // Weak password, too short
-		MnemonicLanguage: "english",
+		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
@@ -181,7 +181,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		WalletPassword:   strongPass,
 		NumAccounts:      2,
 		Mnemonic:         mnemonic,
-		MnemonicLanguage: "english",
+		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
@@ -320,7 +320,7 @@ func TestServer_WalletConfig(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage("english"),
+		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

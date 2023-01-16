@@ -93,6 +93,7 @@ func TestCreateWallet_Derived(t *testing.T) {
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
 		numAccounts:        1,
+		mnemonicLanguage:   accounts.DefaultMnemonicLanguage,
 	})
 
 	// We attempt to create the wallet.
@@ -115,6 +116,7 @@ func TestCreateWallet_WalletAlreadyExists(t *testing.T) {
 		walletPasswordFile: passwordFile,
 		keymanagerKind:     keymanager.Derived,
 		numAccounts:        1,
+		mnemonicLanguage:   accounts.DefaultMnemonicLanguage,
 	})
 
 	// We attempt to create the wallet.
