@@ -130,6 +130,7 @@ func (s *Service) Start() {
 		}
 	}
 	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
+	s.spawnBroadcastBLSChangesRoutine(s.cfg.StateNotifier.StateFeed())
 	s.fillMissingPayloadIDRoutine(s.ctx, s.cfg.StateNotifier.StateFeed())
 }
 
