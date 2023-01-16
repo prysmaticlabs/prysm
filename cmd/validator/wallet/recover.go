@@ -26,13 +26,12 @@ const (
 )
 
 func walletRecover(c *cli.Context) error {
-	mnemonic, mnemonicLanguage, err := inputMnemonic(c)
+	mnemonic, err := inputMnemonic(c)
 	if err != nil {
 		return errors.Wrap(err, "could not get mnemonic phrase")
 	}
 	opts := []accounts.Option{
 		accounts.WithMnemonic(mnemonic),
-		accounts.WithMnemonicLanguage(mnemonicLanguage),
 	}
 
 	skipMnemonic25thWord := c.IsSet(flags.SkipMnemonic25thWordCheckFlag.Name)
