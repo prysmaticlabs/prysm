@@ -505,7 +505,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
-		historicalSummaries:       b.historicalSummaries,
 		stateRoots:                b.stateRoots,
 		randaoMixes:               b.randaoMixes,
 		previousEpochAttestations: b.previousEpochAttestations,
@@ -516,6 +515,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		// Large arrays, increases over time.
 		balances:                   b.balances,
 		historicalRoots:            b.historicalRoots,
+		historicalSummaries:        b.historicalSummaries,
 		validators:                 b.validators,
 		previousEpochParticipation: b.previousEpochParticipation,
 		currentEpochParticipation:  b.currentEpochParticipation,
