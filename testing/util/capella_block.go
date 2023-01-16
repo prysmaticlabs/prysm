@@ -217,10 +217,16 @@ func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val 
 		ValidatorIndex:     val,
 		FromBlsPubkey:      pubkey,
 	}
-	signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, priv)
+	c := params.BeaconConfig()
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
+	sr, err := signing.ComputeSigningRoot(message, domain)
+	if err != nil {
+		return nil, err
+	}
+	signature := priv.Sign(sr[:]).Marshal()
 	return &ethpb.SignedBLSToExecutionChange{
 		Message:   message,
 		Signature: signature,
