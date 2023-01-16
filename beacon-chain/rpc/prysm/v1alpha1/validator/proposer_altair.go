@@ -2,77 +2,42 @@ package validator
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	synccontribution "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) BuildAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.BuildAltairBeaconBlock")
-	defer span.End()
-	blkData, err := vs.buildPhase0BlockData(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not build block data: %v", err)
+func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlock) {
+	if blk.Version() < version.Altair {
+		return
 	}
 
-	// Use zero hash as stub for state root to compute later.
-	stateRoot := params.BeaconConfig().ZeroHash[:]
-
-	// No need for safe sub as req.Slot cannot be 0 if requesting Altair blocks. If 0, we will be throwing
-	// an error in the first validity check of this endpoint.
-	syncAggregate, err := vs.getSyncAggregate(ctx, req.Slot-1, bytesutil.ToBytes32(blkData.ParentRoot))
+	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
 	if err != nil {
-		return nil, err
+		log.WithError(err).Error("Could not get sync aggregate")
+		emptySig := [96]byte{0xC0}
+		emptyAggregate := &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
+			SyncCommitteeSignature: emptySig[:],
+		}
+		if err := blk.Body().SetSyncAggregate(emptyAggregate); err != nil {
+			log.WithError(err).Error("Could not set sync aggregate")
+		}
+		return
 	}
 
-	return &ethpb.BeaconBlockAltair{
-		Slot:          req.Slot,
-		ParentRoot:    blkData.ParentRoot,
-		StateRoot:     stateRoot,
-		ProposerIndex: blkData.ProposerIdx,
-		Body: &ethpb.BeaconBlockBodyAltair{
-			Eth1Data:          blkData.Eth1Data,
-			Deposits:          blkData.Deposits,
-			Attestations:      blkData.Attestations,
-			RandaoReveal:      req.RandaoReveal,
-			ProposerSlashings: blkData.ProposerSlashings,
-			AttesterSlashings: blkData.AttesterSlashings,
-			VoluntaryExits:    blkData.VoluntaryExits,
-			Graffiti:          blkData.Graffiti[:],
-			SyncAggregate:     syncAggregate,
-		},
-	}, nil
-}
-
-func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockAltair, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getAltairBeaconBlock")
-	defer span.End()
-	blk, err := vs.BuildAltairBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not build block data: %v", err)
+	// Can not error. We already filter block versioning at the top. Phase 0 is impossible.
+	if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
+		log.WithError(err).Error("Could not set sync aggregate")
 	}
-	// Compute state root with the newly constructed block.
-	wsb, err := blocks.NewSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-	return blk, nil
 }
 
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
@@ -81,6 +46,9 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [3
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")
 	defer span.End()
 
+	if vs.SyncCommitteePool == nil {
+		return nil, errors.New("sync committee pool is nil")
+	}
 	// Contributions have to match the input root
 	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(slot)
 	if err != nil {
