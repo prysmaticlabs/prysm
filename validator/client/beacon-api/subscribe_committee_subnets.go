@@ -45,12 +45,12 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 					return errors.Wrapf(err, "failed to parse slot `%s`", duty.Slot)
 				}
 
-				newCommitteesAtSlot, err := strconv.ParseUint(duty.CommitteesAtSlot, 10, 64)
+				committees, err := strconv.ParseUint(duty.CommitteesAtSlot, 10, 64)
 				if err != nil {
 					return errors.Wrapf(err, "failed to parse CommitteesAtSlot `%s`", duty.CommitteesAtSlot)
 				}
 
-				slotToCommitteesAtSlotMap[types.Slot(dutySlot)] = newCommitteesAtSlot
+				slotToCommitteesAtSlotMap[types.Slot(dutySlot)] = committees
 			}
 
 			// If the slot still isn't in the map, we either received bad data from the beacon node or the caller of this function gave us bad data

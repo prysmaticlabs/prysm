@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
-const subscrimeCommitteeSubnetsTestEndpoint = "/eth/v1/validator/beacon_committee_subscriptions"
+const subscribeCommitteeSubnetsTestEndpoint = "/eth/v1/validator/beacon_committee_subscriptions"
 
 func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	subscribeSlots := []types.Slot{0, 1, 100}
@@ -49,7 +49,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
 		ctx,
-		subscrimeCommitteeSubnetsTestEndpoint,
+		subscribeCommitteeSubnetsTestEndpoint,
 		nil,
 		bytes.NewBuffer(committeeSubscriptionsBytes),
 		nil,
@@ -274,7 +274,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			if testCase.expectSubscribeRestCall {
 				jsonRestHandler.EXPECT().PostRestJson(
 					ctx,
-					subscrimeCommitteeSubnetsTestEndpoint,
+					subscribeCommitteeSubnetsTestEndpoint,
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
