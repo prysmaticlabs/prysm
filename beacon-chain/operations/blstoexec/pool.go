@@ -15,6 +15,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// We recycle the BLS changes pool to avoid the backing map growing without
+// bound. The cycling operation is expensive because it copies all elements, so
+// we only do it when the map is smaller than this upper bound.
+const blsChangesPoolThreshold = 200
+
 // PoolManager maintains pending and seen BLS-to-execution-change objects.
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
@@ -23,8 +28,6 @@ type PoolManager interface {
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
 	ValidatorExists(idx types.ValidatorIndex) bool
-	Copy() PoolManager
-	NumPending() int
 }
 
 // Pool is a concrete implementation of PoolManager.
@@ -42,16 +45,13 @@ func NewPool() *Pool {
 	}
 }
 
-// Copies the pool and returns a new one.
-func (p *Pool) Copy() PoolManager {
+// Copies the internal map and returns a new one.
+func (p *Pool) cycleMap() {
 	newMap := make(map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange])
 	for k, v := range p.m {
 		newMap[k] = v
 	}
-	return &Pool{
-		pending: *p.pending.Copy(),
-		m:       newMap,
-	}
+	p.m = newMap
 }
 
 // PendingBLSToExecChanges returns all objects from the pool.
@@ -169,6 +169,9 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
 
 	delete(p.m, change.Message.ValidatorIndex)
 	p.pending.Remove(node)
+	if p.numPending() == blsChangesPoolThreshold {
+		p.cycleMap()
+	}
 	return nil
 }
 
@@ -183,7 +186,7 @@ func (p *Pool) ValidatorExists(idx types.ValidatorIndex) bool {
 	return node != nil
 }
 
-// NumPending returns the number of pending bls to execution changes in the pool
-func (p *Pool) NumPending() int {
+// numPending returns the number of pending bls to execution changes in the pool
+func (p *Pool) numPending() int {
 	return p.pending.Len()
 }

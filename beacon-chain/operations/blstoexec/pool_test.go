@@ -408,7 +408,7 @@ func TestValidatorExists(t *testing.T) {
 	})
 }
 
-func TestPoolCopy(t *testing.T) {
+func TestPoolCycleMap(t *testing.T) {
 	pool := NewPool()
 	firstChange := &eth.SignedBLSToExecutionChange{
 		Message: &eth.BLSToExecutionChange{
@@ -426,15 +426,10 @@ func TestPoolCopy(t *testing.T) {
 		}}
 	pool.InsertBLSToExecChange(thirdChange)
 
-	newPool := pool.Copy()
-	newChanges, err := newPool.PendingBLSToExecChanges()
-	require.NoError(t, err)
-	oldChanges, err := pool.PendingBLSToExecChanges()
-	require.NoError(t, err)
-	require.Equal(t, len(oldChanges), len(newChanges))
-	require.Equal(t, len(oldChanges), pool.NumPending())
+	pool.cycleMap()
+	require.Equal(t, true, pool.ValidatorExists(0))
+	require.Equal(t, true, pool.ValidatorExists(10))
+	require.Equal(t, true, pool.ValidatorExists(30))
+	require.Equal(t, false, pool.ValidatorExists(20))
 
-	for i, change := range newChanges {
-		require.DeepEqual(t, oldChanges[i], change)
-	}
 }
