@@ -2,6 +2,7 @@ package enginev1_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -140,47 +141,54 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 	})
 	t.Run("execution payload Capella", func(t *testing.T) {
-		baseFeePerGas := big.NewInt(1770307273)
-		parentHash := bytesutil.PadTo([]byte("parent"), fieldparams.RootLength)
-		feeRecipient := bytesutil.PadTo([]byte("feeRecipient"), fieldparams.FeeRecipientLength)
-		stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-		receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
-		logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-		random := bytesutil.PadTo([]byte("random"), fieldparams.RootLength)
-		extra := bytesutil.PadTo([]byte("extraData"), fieldparams.RootLength)
-		hash := bytesutil.PadTo([]byte("hash"), fieldparams.RootLength)
-		jsonPayload := &enginev1.ExecutionPayloadCapella{
-			ParentHash:    parentHash,
-			FeeRecipient:  feeRecipient,
-			StateRoot:     stateRoot,
-			ReceiptsRoot:  receiptsRoot,
-			LogsBloom:     logsBloom,
-			PrevRandao:    random,
-			BlockNumber:   1,
-			GasLimit:      2,
-			GasUsed:       3,
-			Timestamp:     4,
-			ExtraData:     extra,
-			BaseFeePerGas: baseFeePerGas.Bytes(),
-			BlockHash:     hash,
-			Transactions:  [][]byte{[]byte("hi")},
-			Withdrawals: []*enginev1.Withdrawal{{
-				Index:          1,
-				ValidatorIndex: 1,
-				Address:        bytesutil.PadTo([]byte("address"), 20),
-				Amount:         1,
-			}},
+		parentHash := common.BytesToHash([]byte("parent"))
+		feeRecipient := common.BytesToAddress([]byte("feeRecipient"))
+		stateRoot := common.BytesToHash([]byte("stateRoot"))
+		receiptsRoot := common.BytesToHash([]byte("receiptsRoot"))
+		logsBloom := hexutil.Bytes(bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength))
+		random := common.BytesToHash([]byte("random"))
+		extra := common.BytesToHash([]byte("extra"))
+		hash := common.BytesToHash([]byte("hash"))
+		bn := hexutil.Uint64(1)
+		gl := hexutil.Uint64(2)
+		gu := hexutil.Uint64(3)
+		ts := hexutil.Uint64(4)
+
+		resp := &enginev1.GetPayloadV2ResponseJson{
+			BlockValue: fmt.Sprint(123),
+			ExecutionPayload: &enginev1.ExecutionPayloadCapellaJSON{
+				ParentHash:    &parentHash,
+				FeeRecipient:  &feeRecipient,
+				StateRoot:     &stateRoot,
+				ReceiptsRoot:  &receiptsRoot,
+				LogsBloom:     &logsBloom,
+				PrevRandao:    &random,
+				BlockNumber:   &bn,
+				GasLimit:      &gl,
+				GasUsed:       &gu,
+				Timestamp:     &ts,
+				ExtraData:     hexutil.Bytes(extra[:]),
+				BaseFeePerGas: "0x123",
+				BlockHash:     &hash,
+				Transactions:  []hexutil.Bytes{{}},
+				Withdrawals: []*enginev1.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        bytesutil.PadTo([]byte("address"), 20),
+					Amount:         1,
+				}},
+			},
 		}
-		enc, err := json.Marshal(jsonPayload)
+		enc, err := json.Marshal(resp)
 		require.NoError(t, err)
 		payloadPb := &enginev1.ExecutionPayloadCapella{}
 		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, parentHash, payloadPb.ParentHash)
-		require.DeepEqual(t, feeRecipient, payloadPb.FeeRecipient)
-		require.DeepEqual(t, stateRoot, payloadPb.StateRoot)
-		require.DeepEqual(t, receiptsRoot, payloadPb.ReceiptsRoot)
-		require.DeepEqual(t, logsBloom, payloadPb.LogsBloom)
-		require.DeepEqual(t, random, payloadPb.PrevRandao)
+		require.DeepEqual(t, parentHash.Bytes(), payloadPb.ParentHash)
+		require.DeepEqual(t, feeRecipient.Bytes(), payloadPb.FeeRecipient)
+		require.DeepEqual(t, stateRoot.Bytes(), payloadPb.StateRoot)
+		require.DeepEqual(t, receiptsRoot.Bytes(), payloadPb.ReceiptsRoot)
+		require.DeepEqual(t, logsBloom, hexutil.Bytes(payloadPb.LogsBloom))
+		require.DeepEqual(t, random.Bytes(), payloadPb.PrevRandao)
 		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
 		require.DeepEqual(t, uint64(2), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
