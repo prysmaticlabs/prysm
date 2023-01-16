@@ -3,6 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "broadcast_bls_changes.go",
         "chain_info.go",
         "error.go",
         "execution_engine.go",
