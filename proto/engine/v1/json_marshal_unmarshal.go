@@ -214,12 +214,12 @@ type executionPayloadJSON struct {
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
-type getPayloadV2ResponseJson struct {
-	ExecutionPayload *executionPayloadCapellaJSON `json:"executionPayload"`
+type GetPayloadV2ResponseJson struct {
+	ExecutionPayload *ExecutionPayloadCapellaJSON `json:"executionPayload"`
 	BlockValue       string                       `json:"blockValue"`
 }
 
-type executionPayloadCapellaJSON struct {
+type ExecutionPayloadCapellaJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
 	StateRoot     *common.Hash    `json:"stateRoot"`
@@ -296,7 +296,7 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
-	return json.Marshal(executionPayloadCapellaJSON{
+	return json.Marshal(ExecutionPayloadCapellaJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
 		StateRoot:     &sRoot,
@@ -390,7 +390,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 
 // UnmarshalJSON --
 func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
-	dec := getPayloadV2ResponseJson{}
+	dec := GetPayloadV2ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}
