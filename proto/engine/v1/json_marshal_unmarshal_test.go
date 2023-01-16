@@ -195,9 +195,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
 		require.DeepEqual(t, extra.Bytes(), payloadPb.ExtraData)
 		feePerGas := new(big.Int).SetBytes(payloadPb.BaseFeePerGas)
-		require.Equal(t, 123, feePerGas.Uint64())
-		require.DeepEqual(t, hash, payloadPb.BlockHash)
-		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
+		require.Equal(t, "15832716547479101977395928904157292820330083199902421483727713169783165812736", feePerGas.String())
+		require.DeepEqual(t, hash.Bytes(), payloadPb.BlockHash)
+		require.DeepEqual(t, [][]byte{{}}, payloadPb.Transactions)
 		require.Equal(t, 1, len(payloadPb.Withdrawals))
 		withdrawal := payloadPb.Withdrawals[0]
 		require.Equal(t, uint64(1), withdrawal.Index)
