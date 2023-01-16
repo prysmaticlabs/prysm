@@ -82,14 +82,11 @@ go_test(
         "registration_test.go",
         "state_validators_test.go",
         "status_test.go",
-<<<<<<< HEAD
-        "subscribe_committee_subnets_test.go",
-=======
         "submit_signed_aggregate_proof_test.go",
         "submit_signed_contribution_and_proof_test.go",
+        "subscribe_committee_subnets_test.go",
         "sync_committee_test.go",
         "sync_message_block_root_test.go",
->>>>>>> 508e1ad005753d72684d1ffa7efa97f657bde392
         "wait_for_chain_start_test.go",
     ],
     embed = [":go_default_library"],
