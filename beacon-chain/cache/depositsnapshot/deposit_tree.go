@@ -13,6 +13,7 @@ var (
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
 	ErrInvalidMixInLength  = errors.New("mixInLength should be greater than 0")
 	ErrInvalidIndex        = errors.New("index should be greater than finalizedDeposits - 1")
+	ErrNoDeposits          = errors.New("number of deposits should be greater than 0")
 )
 
 // DepositTree is the Merkle tree representation of deposits.
@@ -54,6 +55,9 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 		return DepositTree{}, ErrInvalidSnapshotRoot
 	}
 	tree := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
+	if snapshot.depositCount == 0 {
+		return DepositTree{}, ErrNoDeposits
+	}
 	return DepositTree{
 		tree:                    tree,
 		mixInLength:             snapshot.depositCount,
