@@ -11,6 +11,8 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestFork(t *testing.T) {
@@ -383,5 +385,12 @@ func TestNextForkData(t *testing.T) {
 				t.Errorf("NextForkData() fork epoch = %v, want %v", fEpoch, tt.wantedEpoch)
 			}
 		})
+	}
+}
+
+func TestForkSlotStart_Overflow(t *testing.T) {
+	for _, epoch := range params.BeaconConfig().ForkVersionSchedule {
+		_, err := slots.EpochStart(epoch)
+		require.NoError(t, err)
 	}
 }
