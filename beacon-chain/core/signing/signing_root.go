@@ -45,6 +45,8 @@ const (
 	ContributionSignature = "sync committee contribution signature"
 	// SyncAggregateSignature represents sync committee aggregator's signature
 	SyncAggregateSignature = "sync committee aggregator signature"
+	// VoluntaryExitSignature represents voluntary exit signature
+	VoluntaryExitSignature = "voluntary exit signature"
 )
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.

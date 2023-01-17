@@ -1,125 +1,165 @@
 package voluntaryexits
 
 import (
-	"context"
-	"sort"
+	"math"
 	"sync"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"go.opencensus.io/trace"
+	"github.com/sirupsen/logrus"
 )
 
 // PoolManager maintains pending and seen voluntary exits.
 // This pool is used by proposers to insert voluntary exits into new blocks.
 type PoolManager interface {
-	PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
-	InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit)
+	PendingExits() []*ethpb.SignedVoluntaryExit
+	ExitsForInclusion(state state.ReadOnlyBeaconState) ([]*ethpb.SignedVoluntaryExit, error)
+	InsertVoluntaryExit(exit *ethpb.SignedVoluntaryExit)
 	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
 }
 
 // Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock    sync.RWMutex
-	pending []*ethpb.SignedVoluntaryExit
+	pending doublylinkedlist.List[*ethpb.SignedVoluntaryExit]
+	m       map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedVoluntaryExit]
 }
 
-// NewPool accepts a head fetcher (for reading the validator set) and returns an initialized
-// voluntary exit pool.
+// NewPool returns an initialized pool.
 func NewPool() *Pool {
 	return &Pool{
-		pending: make([]*ethpb.SignedVoluntaryExit, 0),
+		pending: doublylinkedlist.List[*ethpb.SignedVoluntaryExit]{},
+		m:       make(map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedVoluntaryExit]),
 	}
 }
 
-// PendingExits returns exits that are ready for inclusion at the given slot. This method will not
-// return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
+// PendingExits returns all objects from the pool.
+func (p *Pool) PendingExits() ([]*ethpb.SignedVoluntaryExit, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	// Allocate pending slice with a capacity of min(len(p.pending), maxVoluntaryExits) since the
-	// array cannot exceed the max and is typically less than the max value.
-	maxExits := params.BeaconConfig().MaxVoluntaryExits
-	if noLimit {
-		maxExits = uint64(len(p.pending))
-	}
-	pending := make([]*ethpb.SignedVoluntaryExit, 0, maxExits)
-	for _, e := range p.pending {
-		if e.Exit.Epoch > slots.ToEpoch(slot) {
-			continue
+	result := make([]*ethpb.SignedVoluntaryExit, p.pending.Len())
+	node := p.pending.First()
+	var err error
+	for i := 0; node != nil; i++ {
+		result[i], err = node.Value()
+		if err != nil {
+			return nil, err
 		}
-		if v, err := state.ValidatorAtIndexReadOnly(e.Exit.ValidatorIndex); err == nil &&
-			v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
-			pending = append(pending, e)
-			if uint64(len(pending)) == maxExits {
-				break
-			}
+		node, err = node.Next()
+		if err != nil {
+			return nil, err
 		}
 	}
-	return pending
+	return result, nil
 }
 
-// InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
-// or the validator is already exited.
-func (p *Pool) InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit) {
-	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
-	defer span.End()
+// ExitsForInclusion returns objects that are ready for inclusion at the given slot. This method will not
+// return more than the block enforced MaxVoluntaryExits.
+func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState) ([]*ethpb.SignedVoluntaryExit, error) {
+	p.lock.RLock()
+	length := int(math.Min(float64(params.BeaconConfig().MaxVoluntaryExits), float64(p.pending.Len())))
+	result := make([]*ethpb.SignedVoluntaryExit, 0, length)
+	node := p.pending.First()
+	for node != nil && len(result) < length {
+		exit, err := node.Value()
+		if err != nil {
+			p.lock.RUnlock()
+			return nil, err
+		}
+		validator, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
+		if err != nil {
+			return nil, p.handleInvalidExit(err, exit)
+		}
+		if err = blocks.VerifyExitConditions(validator, state.Slot(), exit.Exit); err != nil {
+			return nil, p.handleInvalidExit(err, exit)
+		}
+		result = append(result, exit)
+		node, err = node.Next()
+		if err != nil {
+			p.lock.RUnlock()
+			return nil, err
+		}
+	}
+	p.lock.RUnlock()
+	if len(result) == 0 {
+		return result, nil
+	}
+	// We now verify the signatures in batches
+	cSet, err := blocks.ExitSignatureBatch(state, result)
+	if err != nil {
+		logrus.WithError(err).Warning("could not get exit signatures")
+	} else {
+		ok, err := cSet.Verify()
+		if err != nil {
+			logrus.WithError(err).Warning("could not batch verify exit signatures")
+		} else if ok {
+			return result, nil
+		}
+	}
+	// Batch signature failed, check signatures individually
+	verified := make([]*ethpb.SignedVoluntaryExit, 0, length)
+	for i, sig := range cSet.Signatures {
+		signature, err := blst.SignatureFromBytes(sig)
+		if err != nil {
+			logrus.WithError(err).Warning("could not get signature from bytes")
+			continue
+		}
+		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
+			logrus.Warning("removing exit with invalid signature from pool")
+			if err := p.MarkIncluded(result[i]); err != nil {
+				return nil, errors.Wrap(err, "could not mark exit as included")
+			}
+		} else {
+			verified = append(verified, result[i])
+		}
+	}
+	return verified, nil
+}
+
+// InsertVoluntaryExit into the pool.
+func (p *Pool) InsertVoluntaryExit(exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	// Prevent malformed messages from being inserted.
-	if exit == nil || exit.Exit == nil {
+	_, exists := p.m[exit.Exit.ValidatorIndex]
+	if exists {
 		return
 	}
 
-	existsInPending, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
-	// If the item exists in the pending list and includes a more favorable, earlier
-	// exit epoch, we replace it in the pending list. If it exists but the prior condition is false,
-	// we simply return.
-	if existsInPending {
-		if exit.Exit.Epoch < p.pending[index].Exit.Epoch {
-			p.pending[index] = exit
-		}
-		return
-	}
-
-	// Has the validator been exited already?
-	if v, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex); err != nil ||
-		v.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
-		return
-	}
-
-	// Insert into pending list and sort.
-	p.pending = append(p.pending, exit)
-	sort.Slice(p.pending, func(i, j int) bool {
-		return p.pending[i].Exit.ValidatorIndex < p.pending[j].Exit.ValidatorIndex
-	})
+	p.pending.Append(doublylinkedlist.NewNode(exit))
+	p.m[exit.Exit.ValidatorIndex] = p.pending.Last()
 }
 
 // MarkIncluded is used when an exit has been included in a beacon block. Every block seen by this
-// node should call this method to include the exit. This will remove the exit from
-// the pending exits slice.
-func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
+// node should call this method to include the exit. This will remove the exit from the pool.
+func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	exists, index := existsInList(p.pending, exit.Exit.ValidatorIndex)
-	if exists {
-		// Exit we want is present at p.pending[index], so we remove it.
-		p.pending = append(p.pending[:index], p.pending[index+1:]...)
+
+	node := p.m[exit.Exit.ValidatorIndex]
+	if node == nil {
+		return nil
 	}
+
+	delete(p.m, exit.Exit.ValidatorIndex)
+	p.pending.Remove(node)
+	return nil
 }
 
-// Binary search to check if the index exists in the list of pending exits.
-func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor types.ValidatorIndex) (bool, int) {
-	i := sort.Search(len(pending), func(j int) bool {
-		return pending[j].Exit.ValidatorIndex >= searchingFor
-	})
-	if i < len(pending) && pending[i].Exit.ValidatorIndex == searchingFor {
-		return true, i
+func (p *Pool) handleInvalidExit(err error, exit *ethpb.SignedVoluntaryExit) error {
+	logrus.WithError(err).Warning("removing invalid exit from pool")
+	// MarkIncluded removes the invalid exit from the pool
+	p.lock.RUnlock()
+	if err := p.MarkIncluded(exit); err != nil {
+		return errors.Wrap(err, "could not mark exit as included")
 	}
-	return false, -1
+	p.lock.RLock()
+	return err
 }

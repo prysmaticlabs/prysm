@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -102,7 +103,7 @@ func VerifyExitAndSignature(
 	}
 
 	exit := signed.Exit
-	if err := verifyExitConditions(validator, currentSlot, exit); err != nil {
+	if err := VerifyExitConditions(validator, currentSlot, exit); err != nil {
 		return err
 	}
 	domain, err := signing.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
@@ -116,7 +117,7 @@ func VerifyExitAndSignature(
 	return nil
 }
 
-// verifyExitConditions implements the spec defined validation for voluntary exits(excluding signatures).
+// VerifyExitConditions implements the spec defined validation for voluntary exits (excluding signatures).
 //
 // Spec pseudocode definition:
 //
@@ -137,7 +138,7 @@ func VerifyExitAndSignature(
 //	 assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
 //	 # Initiate exit
 //	 initiate_validator_exit(state, voluntary_exit.validator_index)
-func verifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
+func VerifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
 	currentEpoch := slots.ToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {
@@ -162,4 +163,44 @@ func verifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.S
 		)
 	}
 	return nil
+}
+
+func ExitSignatureBatch(
+	st state.ReadOnlyBeaconState,
+	exits []*ethpb.SignedVoluntaryExit,
+) (*bls.SignatureBatch, error) {
+	// Return early if no exits
+	if len(exits) == 0 {
+		return bls.NewSet(), nil
+	}
+	batch := &bls.SignatureBatch{
+		Signatures:   make([][]byte, len(exits)),
+		PublicKeys:   make([]bls.PublicKey, len(exits)),
+		Messages:     make([][32]byte, len(exits)),
+		Descriptions: make([]string, len(exits)),
+	}
+	domain, err := signing.Domain(st.Fork(), slots.ToEpoch(st.Slot()), params.BeaconConfig().DomainVoluntaryExit, st.GenesisValidatorsRoot())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute signing domain")
+	}
+	for i, exit := range exits {
+		batch.Signatures[i] = exit.Signature
+		validator, err := st.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
+		if err != nil {
+			return nil, fmt.Errorf("could not obtain validator at index %d", exit.Exit.ValidatorIndex)
+		}
+		publicKeyBytes := validator.PublicKey()
+		publicKey, err := bls.PublicKeyFromBytes(publicKeyBytes[:])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not convert bytes to public key")
+		}
+		batch.PublicKeys[i] = publicKey
+		htr, err := signing.SigningData(exit.Exit.HashTreeRoot, domain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute exit's signing data")
+		}
+		batch.Messages[i] = htr
+		batch.Descriptions[i] = signing.VoluntaryExitSignature
+	}
+	return batch, nil
 }
