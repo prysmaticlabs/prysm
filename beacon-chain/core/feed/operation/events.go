@@ -20,7 +20,7 @@ const (
 	// SyncCommitteeContributionReceived is sent after a sync committee contribution object has been received.
 	SyncCommitteeContributionReceived
 
-	// BLSToExecutionChangeReceived is sent after a BLS to execution change object has been received from the outside world
+	// BLSToExecutionChangeReceived is sent after a BLS to execution change object has been received from gossip or rpc.
 	BLSToExecutionChangeReceived
 )
 
