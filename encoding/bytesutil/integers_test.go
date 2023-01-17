@@ -143,6 +143,30 @@ func TestBytes8(t *testing.T) {
 	}
 }
 
+func TestBytes32(t *testing.T) {
+	tests := []struct {
+		a uint64
+		b []byte
+	}{
+		{0,
+			[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{16777216,
+			[]byte{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{4294967296,
+			[]byte{0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{4294967297,
+			[]byte{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{9223372036854775806,
+			[]byte{254, 255, 255, 255, 255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{9223372036854775807,
+			[]byte{255, 255, 255, 255, 255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+	}
+	for _, tt := range tests {
+		b := bytesutil.Bytes32(tt.a)
+		assert.DeepEqual(t, tt.b, b)
+	}
+}
+
 func TestFromBool(t *testing.T) {
 	tests := []byte{
 		0,
@@ -252,4 +276,27 @@ func TestBigIntToLittleEndianBytes(t *testing.T) {
 	bigInt := new(big.Int).SetUint64(1234567890)
 	converted := bytesutil.BigIntToLittleEndianBytes(bigInt)
 	assert.DeepEqual(t, expected, converted)
+}
+
+func TestUint64ToBytesLittleEndian(t *testing.T) {
+	tests := []struct {
+		value uint64
+		want  [8]byte
+	}{
+		{
+			value: 0x01000000,
+			want:  [8]byte{0, 0, 0, 1, 0, 0, 0, 0},
+		},
+		{
+			value: 0x00000001,
+			want:  [8]byte{1, 0, 0, 0, 0, 0, 0, 0},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("0x%08x", tt.value), func(t *testing.T) {
+			if got := bytesutil.Uint64ToBytesLittleEndian(tt.value); !bytes.Equal(got, tt.want[:]) {
+				t.Errorf("Uint64ToBytesLittleEndian() = got %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
