@@ -351,7 +351,8 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 	}
 	gb := e2e.TestParams.Eth1GenesisBlock
 	t := e2e.TestParams.CLGenesisTime
+	pcreds := e2e.TestParams.NumberOfExecutionCreds
 	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
 	version := e2etypes.GenesisFork()
-	return util.NewPreminedGenesis(ctx, t, nvals, version, gb)
+	return util.NewPreminedGenesis(ctx, t, nvals, pcreds, version, gb)
 }

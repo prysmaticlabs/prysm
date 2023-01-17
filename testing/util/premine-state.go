@@ -26,19 +26,21 @@ import (
 var errUnsupportedVersion = errors.New("schema version not supported by premineGenesisConfig")
 
 type premineGenesisConfig struct {
-	GenesisTime uint64
-	NVals       uint64
-	Version     int          // as in "github.com/prysmaticlabs/prysm/v3/runtime/version"
-	GB          *types.Block // geth genesis block
+	GenesisTime     uint64
+	NVals           uint64
+	PregenesisCreds uint64
+	Version         int          // as in "github.com/prysmaticlabs/prysm/v3/runtime/version"
+	GB              *types.Block // geth genesis block
 }
 
 // NewPreminedGenesis creates a genesis BeaconState at the given fork version, suitable for using as an e2e genesis.
-func NewPreminedGenesis(ctx context.Context, t, nvals uint64, version int, gb *types.Block) (state.BeaconState, error) {
+func NewPreminedGenesis(ctx context.Context, t, nvals, pCreds uint64, version int, gb *types.Block) (state.BeaconState, error) {
 	return (&premineGenesisConfig{
-		GenesisTime: t,
-		NVals:       nvals,
-		Version:     version,
-		GB:          gb,
+		GenesisTime:     t,
+		NVals:           nvals,
+		PregenesisCreds: pCreds,
+		Version:         version,
+		GB:              gb,
 	}).prepare(ctx)
 }
 
@@ -150,7 +152,7 @@ func (s *premineGenesisConfig) deposits() ([]*ethpb.Deposit, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, roots, err := interop.DepositDataFromKeys(prv, pub)
+	items, roots, err := interop.DepositDataFromKeysWithExecCreds(prv, pub, s.PregenesisCreds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate deposit data from keys")
 	}
