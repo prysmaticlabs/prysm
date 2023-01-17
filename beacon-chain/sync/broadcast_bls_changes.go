@@ -11,7 +11,8 @@ import (
 func (s *Service) broadcastBLSChanges(currSlot types.Slot) error {
 	capellaSlotStart, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	if err != nil {
-		return errors.Wrap(err, "unable to compute Capella slot start")
+		// only possible error is an overflow, so we exit early from the method
+		return nil
 	}
 	if currSlot == capellaSlotStart {
 		changes, err := s.cfg.blsToExecPool.PendingBLSToExecChanges()
