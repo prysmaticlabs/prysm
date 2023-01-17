@@ -14,6 +14,7 @@ var (
 	ErrInvalidMixInLength  = errors.New("mixInLength should be greater than 0")
 	ErrInvalidIndex        = errors.New("index should be greater than finalizedDeposits - 1")
 	ErrNoDeposits          = errors.New("number of deposits should be greater than 0")
+	ErrNoFinalizedDeposits = errors.New("number of finalized deposits should be greater than 0")
 )
 
 // DepositTree is the Merkle tree representation of deposits.
@@ -80,6 +81,9 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
+	if finalizedDeposits == 0 {
+		return [32]byte{}, nil, ErrNoFinalizedDeposits
+	}
 	if index <= (finalizedDeposits - 1) {
 		return [32]byte{}, nil, ErrInvalidIndex
 	}
