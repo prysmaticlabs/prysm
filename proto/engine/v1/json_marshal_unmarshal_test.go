@@ -21,7 +21,7 @@ type withdrawalJSON struct {
 	Index     *hexutil.Uint64 `json:"index"`
 	Validator *hexutil.Uint64 `json:"validatorIndex"`
 	Address   *common.Address `json:"address"`
-	Amount    string          `json:"amount"`
+	Amount    *hexutil.Uint64 `json:"amount"`
 }
 
 func TestJsonMarshalUnmarshal(t *testing.T) {
@@ -353,6 +353,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 
 		withdrawalIndex1 := hexutil.Uint64(1)
 		withdrawalIndex2 := hexutil.Uint64(2)
+		withdrawalAmount1 := hexutil.Uint64(100)
+		withdrawalAmount2 := hexutil.Uint64(200)
 		withdrawalValidator1 := hexutil.Uint64(1)
 		withdrawalValidator2 := hexutil.Uint64(2)
 		address1 := common.Address(bytesutil.ToBytes20([]byte("address1")))
@@ -362,13 +364,13 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 				Index:     &withdrawalIndex1,
 				Validator: &withdrawalValidator1,
 				Address:   &address1,
-				Amount:    "0x3b9aca00",
+				Amount:    &withdrawalAmount1,
 			},
 			{
 				Index:     &withdrawalIndex2,
 				Validator: &withdrawalValidator2,
 				Address:   &address2,
-				Amount:    "0x77359400",
+				Amount:    &withdrawalAmount2,
 			},
 		}
 
@@ -400,11 +402,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].Index)
 		require.Equal(t, types.ValidatorIndex(1), payloadPb.Withdrawals[0].ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address1"), 20), payloadPb.Withdrawals[0].Address)
-		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].Amount)
+		require.Equal(t, uint64(100), payloadPb.Withdrawals[0].Amount)
 		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].Index)
 		require.Equal(t, types.ValidatorIndex(2), payloadPb.Withdrawals[1].ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address2"), 20), payloadPb.Withdrawals[1].Address)
-		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].Amount)
+		require.Equal(t, uint64(200), payloadPb.Withdrawals[1].Amount)
 	})
 }
 
