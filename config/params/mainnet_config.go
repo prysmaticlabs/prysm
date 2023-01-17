@@ -209,7 +209,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     math.MaxUint64 / 32,
+	CapellaForkEpoch:     math.MaxUint64 / 32, // Max value to prevent overflow of start slot computation.
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
