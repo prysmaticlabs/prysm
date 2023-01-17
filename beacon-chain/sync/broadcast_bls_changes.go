@@ -11,7 +11,7 @@ import (
 func (s *Service) broadcastBLSChanges(currSlot types.Slot) error {
 	capellaSlotStart, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	if err != nil {
-		// only possible error is an overflow
+		// only possible error is an overflow, so we exit early from the method
 		return nil
 	}
 	if currSlot == capellaSlotStart {
