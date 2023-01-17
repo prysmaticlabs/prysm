@@ -110,7 +110,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.TerminalTotalDifficulty, actual.TerminalTotalDifficulty, "%s: TerminalTotalDifficulty", name)
 	assert.Equal(t, expected.AltairForkEpoch, actual.AltairForkEpoch, "%s: AltairForkEpoch", name)
 	assert.Equal(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch, "%s: BellatrixForkEpoch", name)
-	assert.Equal(t, expected.CapellaForkEpoch, actual.CapellaForkEpoch, "%s: CapellaForkEpoch", name)
+	assert.Equal(t, expected.CapellaForkEpoch, actual.CapellaForkEpoch/32, "%s: CapellaForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
@@ -126,6 +126,7 @@ func TestModifiedE2E(t *testing.T) {
 	c.TerminalTotalDifficulty = "0"
 	c.AltairForkEpoch = 0
 	c.BellatrixForkEpoch = 0
+	c.CapellaForkEpoch = 18014398509481983
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)
@@ -358,7 +359,7 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 				v2 := reflect.ValueOf(*c2).Field(i).Interface()
 				if reflect.ValueOf(v1).Kind() == reflect.Slice {
 					assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
-				} else {
+				} else if field != "CAPELLA_FORK_EPOCH" {
 					assert.Equal(t, v1, v2, "%s: %s", name, field)
 				}
 				break
