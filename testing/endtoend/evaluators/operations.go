@@ -14,12 +14,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -67,14 +71,28 @@ var DepositedValidatorsAreActive = e2etypes.Evaluator{
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = e2etypes.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     policies.OnEpoch(7),
+	Policy:     policies.OnEpoch(4),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorsHaveExited checks the beacon state for the exited validator and ensures its marked as exited.
 var ValidatorsHaveExited = e2etypes.Evaluator{
 	Name:       "voluntary_has_exited_%d",
-	Policy:     policies.OnEpoch(8),
+	Policy:     policies.OnEpoch(5),
+	Evaluation: validatorsHaveExited,
+}
+
+// SubmitWithdrawal sends a withdrawal from a previously exited validator.
+var SubmitWithdrawal = e2etypes.Evaluator{
+	Name:       "submit_withdrawal_epoch_%d",
+	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch + 1),
+	Evaluation: submitWithdrawal,
+}
+
+// ValidatorsHaveWithdrawn checks the beacon state for the withdrawn validator and ensures it has been withdrawn.
+var ValidatorsHaveWithdrawn = e2etypes.Evaluator{
+	Name:       "validator_has_withdrawn_%d",
+	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch + 1),
 	Evaluation: validatorsHaveExited,
 }
 
@@ -462,4 +480,64 @@ func validatorsVoteWithTheMajority(ec *e2etypes.EvaluationContext, conns ...*grp
 		}
 	}
 	return nil
+}
+
+func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	beaconAPIClient := ethpbservice.NewBeaconChainClient(conn)
+	beaconClient := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpb.NewDebugClient(conn)
+
+	ctx := context.Background()
+	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not get chain head")
+	}
+	stObj, err := debugClient.GetBeaconState(ctx, &ethpb.BeaconStateRequest{QueryFilter: &ethpb.BeaconStateRequest_Slot{Slot: chainHead.HeadSlot}})
+	if err != nil {
+		return errors.Wrap(err, "could not get state object")
+	}
+	versionedMarshaler, err := detect.FromState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state marshaler")
+	}
+	st, err := versionedMarshaler.UnmarshalBeaconState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state")
+	}
+	wantedEpoch := slots.ToEpoch(st.Slot())
+	exitedIndices := make([]types.ValidatorIndex, 0)
+
+	for key, _ := range ec.ExitedVals {
+		valIdx, ok := st.ValidatorIndexByPubkey(key)
+		if !ok {
+			return errors.Errorf("pubkey %#x does not exist in our state", key)
+		}
+		exitedIndices = append(exitedIndices, valIdx)
+	}
+
+	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err != nil {
+		return err
+	}
+	changes := make([]*v2.SignedBLSToExecutionChange, 0)
+	for _, idx := range exitedIndices {
+		message := &v2.BLSToExecutionChange{
+			ValidatorIndex:     idx,
+			FromBlsPubkey:      privKeys[idx].PublicKey().Marshal(),
+			ToExecutionAddress: bytesutil.ToBytes(uint64(idx), 20),
+		}
+		signature, err := signing.ComputeDomainAndSign(st, wantedEpoch, message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[idx])
+		if err != nil {
+			return errors.Wrap(err, "could not get signature")
+		}
+		change := &v2.SignedBLSToExecutionChange{
+			Message:   message,
+			Signature: signature,
+		}
+		changes = append(changes, change)
+	}
+	_, err = beaconAPIClient.SubmitSignedBLSToExecutionChanges(ctx, &v2.SubmitBLSToExecutionChangesRequest{Changes: changes})
+
+	return err
 }

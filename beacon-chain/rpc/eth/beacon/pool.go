@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
@@ -355,7 +356,11 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 				err,
 			)
 		}
-		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation")
+		obj, err := json.Marshal(failuresContainer)
+		if err != nil {
+			return nil, err
+		}
+		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation: %s", string(obj))
 	}
 	return &emptypb.Empty{}, nil
 }

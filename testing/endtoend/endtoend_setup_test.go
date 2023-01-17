@@ -46,6 +46,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
+		ev.SubmitWithdrawal,
 		ev.ProcessesDepositsInBlocks,
 		ev.ActivatesDepositedValidators,
 		ev.DepositedValidatorsAreActive,

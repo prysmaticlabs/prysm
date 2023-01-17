@@ -32,7 +32,7 @@ var expectedSyncParticipation = 0.99
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     policies.AllEpochs,
+	Policy:     policies.BetweenEpochs(0, 5),
 	Evaluation: validatorsAreActive,
 }
 

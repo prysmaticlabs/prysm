@@ -3,7 +3,7 @@ package params
 const (
 	AltairE2EForkEpoch    = 0
 	BellatrixE2EForkEpoch = 0
-	CapellaE2EForkEpoch   = 2
+	CapellaE2EForkEpoch   = 4
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -27,6 +27,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
@@ -67,6 +68,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.ShardCommitteePeriod = 4
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
