@@ -346,6 +346,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			blk, err = blocks.NewSignedBeaconBlock(b.AltairBlock)
 		case *ethpb.StreamBlocksResponse_BellatrixBlock:
 			blk, err = blocks.NewSignedBeaconBlock(b.BellatrixBlock)
+		case *ethpb.StreamBlocksResponse_CapellaBlock:
+			blk, err = blocks.NewSignedBeaconBlock(b.CapellaBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")
