@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-type DoppelGangerHelper struct {
+type DoppelGangerInfo struct {
 	validatorEpoch types.Epoch
 	response       *ethpb.DoppelGangerResponse_ValidatorResponse
 }
@@ -41,7 +41,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 
 	// Prepare response
 	stringPubKeys := make([]string, len(validatorRequests))
-	stringPubKeyToDoppelGangerHelper := make(map[string]DoppelGangerHelper, len(validatorRequests))
+	stringPubKeyToDoppelGangerInfo := make(map[string]DoppelGangerInfo, len(validatorRequests))
 
 	for i, vr := range validatorRequests {
 		if vr == nil {
@@ -52,7 +52,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		stringPubKey := hexutil.Encode(pubKey)
 		stringPubKeys[i] = stringPubKey
 
-		stringPubKeyToDoppelGangerHelper[stringPubKey] = DoppelGangerHelper{
+		stringPubKeyToDoppelGangerInfo[stringPubKey] = DoppelGangerInfo{
 			validatorEpoch: vr.Epoch,
 			response: &ethpb.DoppelGangerResponse_ValidatorResponse{
 				PublicKey:       pubKey,
@@ -76,7 +76,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 
 	if forkVersion == version.Phase0 {
 		log.Info("Skipping doppelganger check for Phase 0")
-		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerHelper), nil
+		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerInfo), nil
 	}
 
 	// Retrieve current epoch
@@ -95,12 +95,11 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	currentEpoch := slots.ToEpoch(headSlot)
 
 	// Extract input pubkeys we did not validate for the 2 last epochs.
-	// If we detect onchain liveness for these keys during the 2 last epochs, it may
-	// exist a doppelganger somewhere.
+	// If we detect onchain liveness for these keys during the 2 last epochs, a doppelganger may exist somewhere.
 	var notRecentStringPubKeys []string
 
 	for _, spk := range stringPubKeys {
-		dph, ok := stringPubKeyToDoppelGangerHelper[spk]
+		dph, ok := stringPubKeyToDoppelGangerInfo[spk]
 		if !ok {
 			return nil, errors.New("failed to retrieve doppelganger helper from string public key")
 		}
@@ -113,10 +112,10 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	// If all provided keys are recent (aka `notRecentPubKeys` is empty) we return early
 	// as we are unable to effectively determine if a doppelganger is active.
 	if len(notRecentStringPubKeys) == 0 {
-		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerHelper), nil
+		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerInfo), nil
 	}
 
-	// Retrieve correspondance between validator pubkey and index
+	// Retrieve correspondence between validator pubkey and index
 	stateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, notRecentStringPubKeys, nil, nil)
 	if err != nil || stateValidators == nil || stateValidators.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get state validators")
@@ -148,18 +147,18 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 
 	indexToPreviousLiveness, err := c.getIndexToLiveness(ctx, previousEpoch, indexes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for previous epoch (%d)", previousEpoch)
+		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for previous epoch %d", previousEpoch)
 	}
 
 	// Get validators liveness for the current epoch
 	indexToCurrentLiveness, err := c.getIndexToLiveness(ctx, currentEpoch, indexes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for current epoch (%d)", currentEpoch)
+		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for current epoch %d", currentEpoch)
 	}
 
 	// Set `DuplicateExists` to `true` if needed
-	for _, nrspk := range notRecentStringPubKeys {
-		index, ok := stringPubKeyToIndex[nrspk]
+	for _, spk := range notRecentStringPubKeys {
+		index, ok := stringPubKeyToIndex[spk]
 		if !ok {
 			// if !ok, the validator corresponding to `stringPubKey` does not exist onchain
 			continue
@@ -171,32 +170,31 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		}
 
 		if previousLiveness {
-			log.WithField("pubkey", nrspk).WithField("epoch", previousEpoch).Warn("Doppelganger found")
+			log.WithField("pubkey", spk).WithField("epoch", previousEpoch).Warn("Doppelganger found")
 		}
 
 		currentLiveness, ok := indexToCurrentLiveness[index]
 		if !ok {
 			return nil, fmt.Errorf("failed to retrieve liveness for current epoch `%d` for validator index `%s`", currentEpoch, index)
-
 		}
 
 		if currentLiveness {
-			log.WithField("pubkey", nrspk).WithField("epoch", currentEpoch).Warn("Doppelganger found")
+			log.WithField("pubkey", spk).WithField("epoch", currentEpoch).Warn("Doppelganger found")
 		}
 
 		globalLiveness := previousLiveness || currentLiveness
 
 		if globalLiveness {
-			stringPubKeyToDoppelGangerHelper[nrspk].response.DuplicateExists = true
+			stringPubKeyToDoppelGangerInfo[spk].response.DuplicateExists = true
 		}
 	}
 
-	return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerHelper), nil
+	return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerInfo), nil
 }
 
 func buildResponse(
 	stringPubKeys []string,
-	stringPubKeyToDoppelGangerHelper map[string]DoppelGangerHelper,
+	stringPubKeyToDoppelGangerHelper map[string]DoppelGangerInfo,
 ) *ethpb.DoppelGangerResponse {
 	responses := make([]*ethpb.DoppelGangerResponse_ValidatorResponse, len(stringPubKeys))
 
@@ -212,7 +210,7 @@ func buildResponse(
 func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch types.Epoch, indexes []string) (map[string]bool, error) {
 	livenessResponse, err := c.getLiveness(ctx, epoch, indexes)
 	if err != nil || livenessResponse.Data == nil {
-		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch (%d)", epoch))
+		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch %d", epoch))
 	}
 
 	indexToLiveness := make(map[string]bool, len(livenessResponse.Data))

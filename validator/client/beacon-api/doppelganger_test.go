@@ -526,7 +526,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 		{
 			name:                        "previous epoch liveness error",
-			expectedErrorMessage:        "failed to get map from validator index to liveness for previous epoch (30)",
+			expectedErrorMessage:        "failed to get map from validator index to liveness for previous epoch 30",
 			inputValidatorRequests:      standardInputValidatorRequests,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
@@ -572,7 +572,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 		{
 			name:                        "current epoch liveness error",
-			expectedErrorMessage:        "failed to get map from validator index to liveness for current epoch (31)",
+			expectedErrorMessage:        "failed to get map from validator index to liveness for current epoch 31",
 			inputValidatorRequests:      standardInputValidatorRequests,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
