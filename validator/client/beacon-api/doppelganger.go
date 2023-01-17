@@ -31,7 +31,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	//   in local antislashing for the last two epochs, then we check onchain if there is
 	//   some liveness for these validators. If yes, we consider there is a doppelganger.
 
-	// Check inputs are correct
+	// Check inputs are correct.
 	if in == nil || in.ValidatorRequests == nil || len(in.ValidatorRequests) == 0 {
 		return &ethpb.DoppelGangerResponse{
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
@@ -40,7 +40,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 
 	validatorRequests := in.ValidatorRequests
 
-	// Prepare response
+	// Prepare response.
 	stringPubKeys := make([]string, len(validatorRequests))
 	stringPubKeyToDoppelGangerInfo := make(map[string]DoppelGangerInfo, len(validatorRequests))
 
@@ -62,7 +62,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		}
 	}
 
-	// Check if the beacon node if synced
+	// Check if the beacon node if synced.
 	isSyncing, err := c.isSyncing(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get beacon node sync status")
@@ -72,7 +72,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		return nil, errors.New("beacon node not synced")
 	}
 
-	// Retrieve fork version -- Return early if we are in phase0
+	// Retrieve fork version -- Return early if we are in phase0.
 	forkResponse, err := c.getFork(ctx)
 	if err != nil || forkResponse == nil || forkResponse.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get fork")
@@ -90,7 +90,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerInfo), nil
 	}
 
-	// Retrieve current epoch
+	// Retrieve current epoch.
 	headers, err := c.getHeaders(ctx)
 	if err != nil || headers == nil || headers.Data == nil || len(headers.Data) == 0 ||
 		headers.Data[0].Header == nil || headers.Data[0].Header.Message == nil {
@@ -112,7 +112,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 	for _, spk := range stringPubKeys {
 		dph, ok := stringPubKeyToDoppelGangerInfo[spk]
 		if !ok {
-			return nil, errors.New("failed to retrieve doppelganger helper from string public key")
+			return nil, errors.New("failed to retrieve doppelganger info from string public key")
 		}
 
 		if dph.validatorEpoch+2 < currentEpoch {
@@ -126,7 +126,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		return buildResponse(stringPubKeys, stringPubKeyToDoppelGangerInfo), nil
 	}
 
-	// Retrieve correspondence between validator pubkey and index
+	// Retrieve correspondence between validator pubkey and index.
 	stateValidators, err := c.stateValidatorsProvider.GetStateValidators(ctx, notRecentStringPubKeys, nil, nil)
 	if err != nil || stateValidators == nil || stateValidators.Data == nil {
 		return nil, errors.Wrapf(err, "failed to get state validators")
@@ -151,7 +151,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		indexes[i] = index
 	}
 
-	// Get validators liveness for the the last epoch
+	// Get validators liveness for the the last epoch.
 	// We request a state 1 epoch ago. We are guaranteed to have currentEpoch > 2
 	// since we assume that we are not in phase0.
 	previousEpoch := currentEpoch - 1
@@ -161,17 +161,17 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for previous epoch %d", previousEpoch)
 	}
 
-	// Get validators liveness for the current epoch
+	// Get validators liveness for the current epoch.
 	indexToCurrentLiveness, err := c.getIndexToLiveness(ctx, currentEpoch, indexes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get map from validator index to liveness for current epoch %d", currentEpoch)
 	}
 
-	// Set `DuplicateExists` to `true` if needed
+	// Set `DuplicateExists` to `true` if needed.
 	for _, spk := range notRecentStringPubKeys {
 		index, ok := stringPubKeyToIndex[spk]
 		if !ok {
-			// if !ok, the validator corresponding to `stringPubKey` does not exist onchain
+			// if !ok, the validator corresponding to `stringPubKey` does not exist onchain.
 			continue
 		}
 
