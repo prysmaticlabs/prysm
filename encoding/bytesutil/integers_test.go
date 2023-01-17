@@ -294,7 +294,7 @@ func TestUint64ToBytesLittleEndian(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("0x%08x", tt.value), func(t *testing.T) {
-			if got := bytesutil.Uint64ToBytesLittleEndian(tt.value); !bytes.Equal(got[:], tt.want[:]) {
+			if got := bytesutil.Uint64ToBytesLittleEndian(tt.value); !bytes.Equal(got, tt.want[:]) {
 				t.Errorf("Uint64ToBytesLittleEndian() = got %v, want %v", got, tt.want)
 			}
 		})
