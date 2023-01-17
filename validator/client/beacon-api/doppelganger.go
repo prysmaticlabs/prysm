@@ -22,6 +22,7 @@ type DoppelGangerInfo struct {
 
 func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
 	// Check if there is any doppelganger validator for the last 2 epochs.
+	// - Check if the beacon node is synced
 	// - If we are in Phase0, we consider there is no doppelganger.
 	// - If all validators we want to check doppelganger existence were live in local antislashing
 	//   database for the last 2 epochs, we consider there is no doppelganger.
@@ -59,6 +60,16 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 				DuplicateExists: false,
 			},
 		}
+	}
+
+	// Check if the beacon node if synced
+	isSyncing, err := c.isSyncing(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get beacon node sync status")
+	}
+
+	if isSyncing {
+		return nil, errors.New("beacon node not synced")
 	}
 
 	// Retrieve fork version -- Return early if we are in phase0

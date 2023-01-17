@@ -99,3 +99,31 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch types.
 
 	return livenessResponseJson, nil
 }
+
+func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddleware.SyncingResponseJson, error) {
+	const endpoint = "/eth/v1/node/syncing"
+
+	syncingResponseJson := &apimiddleware.SyncingResponseJson{}
+
+	_, err := c.jsonRestHandler.GetRestJsonResponse(
+		ctx,
+		endpoint,
+		syncingResponseJson,
+	)
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
+	}
+
+	return syncingResponseJson, nil
+}
+
+func (c *beaconApiValidatorClient) isSyncing(ctx context.Context) (bool, error) {
+	response, err := c.getSyncing(ctx)
+
+	if err != nil || response == nil || response.Data == nil {
+		return true, errors.Wrapf(err, "failed to get syncing status")
+	}
+
+	return response.Data.IsSyncing, err
+}

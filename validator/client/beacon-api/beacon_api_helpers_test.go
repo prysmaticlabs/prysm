@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -297,4 +298,87 @@ func TestGetLiveness_Invalid(t *testing.T) {
 	_, err := validatorClient.getLiveness(ctx, 42, nil)
 
 	require.ErrorContains(t, "failed to send POST data to `/eth/v1/validator/liveness/42` REST URL", err)
+}
+
+const syncingEnpoint = "/eth/v1/node/syncing"
+
+func TestGetIsSyncing_Nominal(t *testing.T) {
+	testCases := []struct {
+		name      string
+		isSyncing bool
+	}{
+		{
+			name:      "Syncing",
+			isSyncing: true,
+		},
+		{
+			name:      "Not syncing",
+			isSyncing: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			syncingResponseJson := apimiddleware.SyncingResponseJson{}
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+			expected := apimiddleware.SyncingResponseJson{
+				Data: &helpers.SyncDetailsJson{
+					IsSyncing: testCase.isSyncing,
+				},
+			}
+
+			ctx := context.Background()
+
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				syncingEnpoint,
+				&syncingResponseJson,
+			).Return(
+				nil,
+				nil,
+			).SetArg(
+				2,
+				expected,
+			).Times(1)
+
+			validatorClient := beaconApiValidatorClient{
+				jsonRestHandler: jsonRestHandler,
+			}
+
+			isSyncing, err := validatorClient.isSyncing(ctx)
+			require.NoError(t, err)
+			assert.Equal(t, testCase.isSyncing, isSyncing)
+		})
+	}
+}
+
+func TestGetIsSyncing_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	syncingResponseJson := apimiddleware.SyncingResponseJson{}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	ctx := context.Background()
+
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		syncingEnpoint,
+		&syncingResponseJson,
+	).Return(
+		nil,
+		errors.New("custom error"),
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		jsonRestHandler: jsonRestHandler,
+	}
+
+	isSyncing, err := validatorClient.isSyncing(ctx)
+	assert.Equal(t, true, isSyncing)
+	assert.ErrorContains(t, "failed to get syncing status", err)
 }

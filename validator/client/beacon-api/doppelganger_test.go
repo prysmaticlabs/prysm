@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -46,6 +47,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		name                        string
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
+		getSyncingOutput            *apimiddleware.SyncingResponseJson
 		getForkOutput               *apimiddleware.StateForkResponseJson
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
 		getStateValidatorsInterface *struct {
@@ -105,6 +107,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
+			getSyncingOutput: &apimiddleware.SyncingResponseJson{
+				Data: &helpers.SyncDetailsJson{
+					IsSyncing: false,
+				},
+			},
 			getForkOutput: &apimiddleware.StateForkResponseJson{
 				Data: &apimiddleware.ForkJson{
 					PreviousVersion: "0x00000000",
@@ -133,6 +140,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey4, DuplicateExists: false},
 					{PublicKey: pubKey5, DuplicateExists: false},
 					{PublicKey: pubKey6, DuplicateExists: false},
+				},
+			},
+			getSyncingOutput: &apimiddleware.SyncingResponseJson{
+				Data: &helpers.SyncDetailsJson{
+					IsSyncing: false,
 				},
 			},
 			getForkOutput: &apimiddleware.StateForkResponseJson{
@@ -174,6 +186,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey4, DuplicateExists: true},  // not recent - duplicate on both previous and current epoch
 					{PublicKey: pubKey5, DuplicateExists: false}, // non existing validator
 					{PublicKey: pubKey6, DuplicateExists: false}, // not recent - not duplicate
+				},
+			},
+			getSyncingOutput: &apimiddleware.SyncingResponseJson{
+				Data: &helpers.SyncDetailsJson{
+					IsSyncing: false,
 				},
 			},
 			getForkOutput: &apimiddleware.StateForkResponseJson{
@@ -283,6 +300,22 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			ctx := context.Background()
 
+			if testCase.getSyncingOutput != nil {
+				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+
+				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
+					syncingEnpoint,
+					&syncingResponseJson,
+				).Return(
+					nil,
+					nil,
+				).SetArg(
+					2,
+					*testCase.getSyncingOutput,
+				).Times(1)
+			}
+
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
 
@@ -380,6 +413,12 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
+	standardGetSyncingOutput := &apimiddleware.SyncingResponseJson{
+		Data: &helpers.SyncDetailsJson{
+			IsSyncing: false,
+		},
+	}
+
 	standardGetForkOutput := &apimiddleware.StateForkResponseJson{
 		Data: &apimiddleware.ForkJson{
 			CurrentVersion: "0x02000000",
@@ -420,6 +459,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		name                        string
 		expectedErrorMessage        string
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
+		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingError             error
 		getForkOutput               *apimiddleware.StateForkResponseJson
 		getForkError                error
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
@@ -442,9 +483,27 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{nil},
 		},
 		{
+			name:                   "isSyncing on error",
+			expectedErrorMessage:   "failed to get beacon node sync status",
+			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
+			getSyncingError:        errors.New("custom error"),
+		},
+		{
+			name:                   "beacon node not synced",
+			expectedErrorMessage:   "beacon node not synced",
+			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput: &apimiddleware.SyncingResponseJson{
+				Data: &helpers.SyncDetailsJson{
+					IsSyncing: true,
+				},
+			},
+		},
+		{
 			name:                   "getFork on error",
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          &apimiddleware.StateForkResponseJson{},
 			getForkError:           errors.New("custom error"),
 		},
@@ -452,12 +511,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "cannot decode fork version",
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          &apimiddleware.StateForkResponseJson{Data: &apimiddleware.ForkJson{CurrentVersion: "not a version"}},
 		},
 		{
 			name:                   "get headers on error",
 			expectedErrorMessage:   "failed to get headers",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
 			getHeadersOutput:       &apimiddleware.BlockHeadersResponseJson{},
 			getHeadersError:        errors.New("custom error"),
@@ -466,6 +527,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "cannot parse head slot",
 			expectedErrorMessage:   "failed to parse head slot",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
 			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
 				Data: []*apimiddleware.BlockHeaderContainerJson{
@@ -483,6 +545,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "state validators error",
 			expectedErrorMessage:   "failed to get state validators",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
@@ -498,6 +561,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "validator is nil",
 			expectedErrorMessage:   "validator is nil",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
@@ -513,6 +577,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "validator JSON is nil",
 			expectedErrorMessage:   "validator JSON is nil",
 			inputValidatorRequests: standardInputValidatorRequests,
+			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
@@ -528,6 +593,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                        "previous epoch liveness error",
 			expectedErrorMessage:        "failed to get map from validator index to liveness for previous epoch 30",
 			inputValidatorRequests:      standardInputValidatorRequests,
+			getSyncingOutput:            standardGetSyncingOutput,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
 			getStateValidatorsInterface: standardGetStateValidatorsInterface,
@@ -549,6 +615,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                        "liveness is nil",
 			expectedErrorMessage:        "liveness is nil",
 			inputValidatorRequests:      standardInputValidatorRequests,
+			getSyncingOutput:            standardGetSyncingOutput,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
 			getStateValidatorsInterface: standardGetStateValidatorsInterface,
@@ -574,6 +641,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                        "current epoch liveness error",
 			expectedErrorMessage:        "failed to get map from validator index to liveness for current epoch 31",
 			inputValidatorRequests:      standardInputValidatorRequests,
+			getSyncingOutput:            standardGetSyncingOutput,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
 			getStateValidatorsInterface: standardGetStateValidatorsInterface,
@@ -605,6 +673,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                        "wrong validator index for previous epoch",
 			expectedErrorMessage:        "failed to retrieve liveness for previous epoch `30` for validator index `42`",
 			inputValidatorRequests:      standardInputValidatorRequests,
+			getSyncingOutput:            standardGetSyncingOutput,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
 			getStateValidatorsInterface: standardGetStateValidatorsInterface,
@@ -640,6 +709,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                        "wrong validator index for current epoch",
 			expectedErrorMessage:        "failed to retrieve liveness for current epoch `31` for validator index `42`",
 			inputValidatorRequests:      standardInputValidatorRequests,
+			getSyncingOutput:            standardGetSyncingOutput,
 			getForkOutput:               standardGetForkOutput,
 			getHeadersOutput:            standardGetHeadersOutput,
 			getStateValidatorsInterface: standardGetStateValidatorsInterface,
@@ -685,6 +755,22 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 			ctx := context.Background()
+
+			if testCase.getSyncingOutput != nil {
+				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+
+				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
+					syncingEnpoint,
+					&syncingResponseJson,
+				).Return(
+					nil,
+					testCase.getSyncingError,
+				).SetArg(
+					2,
+					*testCase.getSyncingOutput,
+				).Times(1)
+			}
 
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
