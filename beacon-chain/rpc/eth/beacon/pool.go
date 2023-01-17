@@ -334,6 +334,12 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 			})
 			continue
 		}
+		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.BLSToExecutionChangeReceived,
+			Data: &operation.BLSToExecutionChangeReceivedData{
+				Change: alphaChange,
+			},
+		})
 		bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
 		if st.Version() >= version.Capella {
 			if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
