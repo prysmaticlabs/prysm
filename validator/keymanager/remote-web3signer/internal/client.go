@@ -53,9 +53,14 @@ type ApiClientOpt func(*ApiClient)
 // WithTls Enables two-way TLS on the API using the provided cert information.
 func WithTls(config *tls.Config) ApiClientOpt {
 	return func(c *ApiClient) {
-		if tpt, ok := c.RestClient.Transport.(*http.Transport); ok {
-			tpt.TLSClientConfig = config
+		if c.RestClient.Transport == nil {
+			c.RestClient.Transport = &http.Transport{TLSClientConfig: config}
+		} else {
+			if tpt, ok := c.RestClient.Transport.(*http.Transport); ok {
+				tpt.TLSClientConfig = config
+			}
 		}
+
 	}
 }
 

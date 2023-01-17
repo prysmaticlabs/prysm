@@ -6,9 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
-	"golang.org/x/crypto/pkcs12"
 	"io"
 	"net/http"
 	"os"
@@ -130,31 +128,31 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		MinVersion: tls.VersionTLS12,
 	}
 
-	p12, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
-	if err != nil {
-		return err
-	}
-	p12pass, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/pass.txt"))
-	if err != nil {
-		return err
-	}
-
-	blocks, err := pkcs12.ToPEM(p12, string(p12pass))
-	if err != nil {
-		return errors.Wrap(err, "pkcs12 to PEM conversion failed")
-	}
-	var pemData []byte
-	for _, b := range blocks {
-		pemData = append(pemData, pem.EncodeToMemory(b)...)
-	}
-
-	clientPair, err := tls.X509KeyPair(pemData, pemData)
-	if err != nil {
-		return errors.Wrap(err, "failed to obtain client's certificate and/or key")
-	}
-	tlsConfig.Certificates = []tls.Certificate{clientPair}
+	//p12, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
+	//if err != nil {
+	//	return err
+	//}
+	//p12pass, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/pass.txt"))
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//blocks, err := pkcs12.ToPEM(p12, string(p12pass))
+	//if err != nil {
+	//	return errors.Wrap(err, "pkcs12 to PEM conversion failed")
+	//}
+	//var pemData []byte
+	//for _, b := range blocks {
+	//	pemData = append(pemData, pem.EncodeToMemory(b)...)
+	//}
+	//
+	//clientPair, err := tls.X509KeyPair(pemData, pemData)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to obtain client's certificate and/or key")
+	//}
+	//tlsConfig.Certificates = []tls.Certificate{clientPair}
 	cp := x509.NewCertPool()
-	pemc, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/web3signer.pem"))
+	pemc, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/cacerts.pem"))
 	if err != nil {
 		return err
 	}
@@ -187,16 +185,16 @@ func (w *Web3RemoteSigner) Stop() error {
 
 // monitorStart by polling server until it returns a 200 at /upcheck.
 func (w *Web3RemoteSigner) monitorStart(config *tls.Config) {
-	client := &http.Client{}
-	tr := &http.Transport{TLSClientConfig: config}
-	client.Transport = tr
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: config}}
 	for {
 		req, err := http.NewRequestWithContext(w.ctx, "GET", fmt.Sprintf("https://localhost:%d/upcheck", Web3RemoteSignerPort), nil)
 		if err != nil {
 			panic(err)
 		}
 		res, err := client.Do(req)
-		_ = err
+		if err != nil {
+			log.WithError(err).Error("Web3signer upcheck failed, attempting again until time out...")
+		}
 		if res != nil && res.StatusCode == 200 {
 			close(w.started)
 			return

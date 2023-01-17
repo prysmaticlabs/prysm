@@ -9,7 +9,8 @@ filegroup(
         "server.cert",
         "server.key",
         "web3signer_keystore.p12",
-        "web3signer.pem",
+        "cacerts.pem",
+        "ca.pem",
     ],
     visibility = ["//testing/endtoend:__subpackages__"],
 )
