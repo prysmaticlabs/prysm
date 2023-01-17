@@ -68,8 +68,10 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 
 // finalize marks a deposit as finalized.
 func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) {
+	var blockHash [32]byte
+	copy(blockHash[:], eth1data.BlockHash)
 	d.finalizedExecutionBlock = ExecutionBlock{
-		Hash:  *(*[32]byte)(eth1data.BlockHash),
+		Hash:  blockHash,
 		Depth: executionBlockHeight,
 	}
 	d.tree.Finalize(eth1data.DepositCount, DepositContractDepth)
@@ -88,7 +90,9 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, ErrInvalidIndex
 	}
 	leaf, proof := generateProof(d.tree, index, DepositContractDepth)
-	proof = append(proof, *(*[32]byte)(bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)))
+	var mixInLength [32]byte
+	copy(mixInLength[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength))
+	proof = append(proof, mixInLength)
 	return leaf, proof, nil
 }
 
