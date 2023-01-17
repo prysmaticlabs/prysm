@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	corehelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -330,11 +331,37 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	conn := conns[0]
 	valClient := ethpb.NewBeaconNodeValidatorClient(conn)
 	beaconClient := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpb.NewDebugClient(conn)
 
 	ctx := context.Background()
 	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "could not get chain head")
+	}
+	stObj, err := debugClient.GetBeaconState(ctx, &ethpb.BeaconStateRequest{QueryFilter: &ethpb.BeaconStateRequest_Slot{Slot: chainHead.HeadSlot}})
+	if err != nil {
+		return errors.Wrap(err, "could not get state object")
+	}
+	versionedMarshaler, err := detect.FromState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state marshaler")
+	}
+	st, err := versionedMarshaler.UnmarshalBeaconState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state")
+	}
+	execIndices := []int{}
+	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+		if val.WithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
+			execIndices = append(execIndices, idx)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if len(execIndices) > 20 {
+		execIndices = execIndices[:20]
 	}
 
 	deposits, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -342,35 +369,46 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		return err
 	}
 
-	exitedIndex := types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
+	var sendExit = func(exitedIndex types.ValidatorIndex) error {
+		voluntaryExit := &ethpb.VoluntaryExit{
+			Epoch:          chainHead.HeadEpoch,
+			ValidatorIndex: exitedIndex,
+		}
+		req := &ethpb.DomainRequest{
+			Epoch:  chainHead.HeadEpoch,
+			Domain: params.BeaconConfig().DomainVoluntaryExit[:],
+		}
+		domain, err := valClient.DomainData(ctx, req)
+		if err != nil {
+			return err
+		}
+		signingData, err := signing.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
+		if err != nil {
+			return err
+		}
+		signature := privKeys[exitedIndex].Sign(signingData[:])
+		signedExit := &ethpb.SignedVoluntaryExit{
+			Exit:      voluntaryExit,
+			Signature: signature.Marshal(),
+		}
 
-	voluntaryExit := &ethpb.VoluntaryExit{
-		Epoch:          chainHead.HeadEpoch,
-		ValidatorIndex: exitedIndex,
+		if _, err = valClient.ProposeExit(ctx, signedExit); err != nil {
+			return errors.Wrap(err, "could not propose exit")
+		}
+		pubk := bytesutil.ToBytes48(deposits[exitedIndex].Data.PublicKey)
+		ec.ExitedVals[pubk] = true
+		return nil
 	}
-	req := &ethpb.DomainRequest{
-		Epoch:  chainHead.HeadEpoch,
-		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
-	}
-	domain, err := valClient.DomainData(ctx, req)
-	if err != nil {
+	randIndex := types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
+	if err := sendExit(randIndex); err != nil {
 		return err
 	}
-	signingData, err := signing.ComputeSigningRoot(voluntaryExit, domain.SignatureDomain)
-	if err != nil {
-		return err
-	}
-	signature := privKeys[exitedIndex].Sign(signingData[:])
-	signedExit := &ethpb.SignedVoluntaryExit{
-		Exit:      voluntaryExit,
-		Signature: signature.Marshal(),
-	}
 
-	if _, err = valClient.ProposeExit(ctx, signedExit); err != nil {
-		return errors.Wrap(err, "could not propose exit")
+	for _, idx := range execIndices {
+		if err := sendExit(types.ValidatorIndex(idx)); err != nil {
+			return err
+		}
 	}
-	pubk := bytesutil.ToBytes48(deposits[exitedIndex].Data.PublicKey)
-	ec.ExitedVals[pubk] = true
 
 	return nil
 }
@@ -522,6 +560,13 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	}
 	changes := make([]*v2.SignedBLSToExecutionChange, 0)
 	for _, idx := range exitedIndices {
+		val, err := st.ValidatorAtIndex(idx)
+		if err != nil {
+			return err
+		}
+		if val.WithdrawalCredentials[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
+			continue
+		}
 		message := &v2.BLSToExecutionChange{
 			ValidatorIndex:     idx,
 			FromBlsPubkey:      privKeys[idx].PublicKey().Marshal(),
