@@ -100,7 +100,7 @@ func convertSyncContributionJsonToProto(contribution *apimiddleware.SyncCommitte
 
 	blockRoot, err := hexutil.Decode(contribution.BeaconBlockRoot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to beacon block root `%s`", contribution.BeaconBlockRoot)
+		return nil, errors.Wrapf(err, "failed to decode beacon block root `%s`", contribution.BeaconBlockRoot)
 	}
 
 	subcommitteeIdx, err := strconv.ParseUint(contribution.SubcommitteeIndex, 10, 64)
