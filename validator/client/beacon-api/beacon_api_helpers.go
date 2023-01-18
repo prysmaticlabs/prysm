@@ -110,7 +110,6 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddlewa
 		endpoint,
 		syncingResponseJson,
 	)
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
@@ -120,7 +119,6 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddlewa
 
 func (c *beaconApiValidatorClient) isSyncing(ctx context.Context) (bool, error) {
 	response, err := c.getSyncing(ctx)
-
 	if err != nil || response == nil || response.Data == nil {
 		return true, errors.Wrapf(err, "failed to get syncing status")
 	}
