@@ -14,11 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -349,33 +352,39 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	return state, nil
 }
 
-// ProcessHistoricalRootsUpdate processes the updates to historical root accumulator during epoch processing.
-//
-// Spec pseudocode definition:
-//
-//	def process_historical_roots_update(state: BeaconState) -> None:
-//	  # Set historical root accumulator
-//	  next_epoch = Epoch(get_current_epoch(state) + 1)
-//	  if next_epoch % (SLOTS_PER_HISTORICAL_ROOT // SLOTS_PER_EPOCH) == 0:
-//	      historical_batch = HistoricalBatch(block_roots=state.block_roots, state_roots=state.state_roots)
-//	      state.historical_roots.append(hash_tree_root(historical_batch))
-func ProcessHistoricalRootsUpdate(state state.BeaconState) (state.BeaconState, error) {
+// ProcessHistoricalDataUpdate processes the updates to historical data during epoch processing.
+// From Capella onward, per spec,state's historical summaries are updated instead of historical roots.
+func ProcessHistoricalDataUpdate(state state.BeaconState) (state.BeaconState, error) {
 	currentEpoch := time.CurrentEpoch(state)
 	nextEpoch := currentEpoch + 1
 
 	// Set historical root accumulator.
 	epochsPerHistoricalRoot := params.BeaconConfig().SlotsPerHistoricalRoot.DivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if nextEpoch.Mod(uint64(epochsPerHistoricalRoot)) == 0 {
-		historicalBatch := &ethpb.HistoricalBatch{
-			BlockRoots: state.BlockRoots(),
-			StateRoots: state.StateRoots(),
-		}
-		batchRoot, err := historicalBatch.HashTreeRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not hash historical batch")
-		}
-		if err := state.AppendHistoricalRoots(batchRoot); err != nil {
-			return nil, err
+		if state.Version() >= version.Capella {
+			br, err := stateutil.ArraysRoot(state.BlockRoots(), fieldparams.BlockRootsLength)
+			if err != nil {
+				return nil, err
+			}
+			sr, err := stateutil.ArraysRoot(state.StateRoots(), fieldparams.StateRootsLength)
+			if err != nil {
+				return nil, err
+			}
+			if err := state.AppendHistoricalSummaries(&ethpb.HistoricalSummary{BlockSummaryRoot: br[:], StateSummaryRoot: sr[:]}); err != nil {
+				return nil, err
+			}
+		} else {
+			historicalBatch := &ethpb.HistoricalBatch{
+				BlockRoots: state.BlockRoots(),
+				StateRoots: state.StateRoots(),
+			}
+			batchRoot, err := historicalBatch.HashTreeRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash historical batch")
+			}
+			if err := state.AppendHistoricalRoots(batchRoot); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -426,7 +435,7 @@ func ProcessFinalUpdates(state state.BeaconState) (state.BeaconState, error) {
 	}
 
 	// Set historical root accumulator.
-	state, err = ProcessHistoricalRootsUpdate(state)
+	state, err = ProcessHistoricalDataUpdate(state)
 	if err != nil {
 		return nil, err
 	}

@@ -149,8 +149,6 @@ type BeaconChainConfig struct {
 	AltairForkEpoch      types.Epoch `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	BellatrixForkVersion []byte      `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	BellatrixForkEpoch   types.Epoch `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
-	ShardingForkVersion  []byte      `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch    types.Epoch `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	CapellaForkVersion   []byte      `yaml:"CAPELLA_FORK_VERSION" spec:"true"`   // CapellaForkVersion is used to represent the fork version for capella.
 	CapellaForkEpoch     types.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
 
@@ -221,22 +219,18 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 
 func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
 	fvs := map[[fieldparams.VersionLength]byte]types.Epoch{}
-	// Set Genesis fork data.
 	fvs[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
-	// Set Altair fork data.
 	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
-	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	return fvs
 }
 
 func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
 	fvn := map[[fieldparams.VersionLength]byte]string{}
-	// Set Genesis fork data.
 	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
-	// Set Altair fork data.
 	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
-	// Set Bellatrix fork data.
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
 }
