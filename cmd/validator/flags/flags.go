@@ -305,16 +305,19 @@ var (
 		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
 	}
 
+	// Web3SignerClientCertFLag is used to specify the PKCS12 client certificate and key in PFX (.p12) format.
 	Web3SignerClientCertFLag = &cli.StringFlag{
 		Name:  "validators-external-signer-client-cert",
 		Usage: "PKCS12 client cert and key in PFX (.p12 format. web3signer only supports PKCS12 ",
 	}
 
+	// Web3SignerClientCertPasswordFlag is used to specify the password for the PKCS12 client certificate specified in the "validators-external-signer-client-cert" flag.
 	Web3SignerClientCertPasswordFlag = &cli.StringFlag{
 		Name:  "validators-external-signer-client-cert-password",
 		Usage: "path to password for the provided PKCS12 client cert from --validators-external-signer-client-cert",
 	}
 
+	// Web3SignerCACertFLag is used to specify the CA certificate in .pem format.
 	Web3SignerCACertFLag = &cli.StringFlag{
 		Name:  "validators-external-signer-ca-cert",
 		Usage: "CA cert used in .pem format",

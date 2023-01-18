@@ -262,8 +262,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		//args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, pa+"/testing/endtoend/static-files/certs/client-identity.p12"))
-		//args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, pa+"/testing/endtoend/static-files/certs/clientpass.txt"))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertFLag.Name, pa+"/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerClientCertPasswordFlag.Name, pa+"/testing/endtoend/static-files/certs/pass.txt"))
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerCACertFLag.Name, pa+"/testing/endtoend/static-files/certs/cacerts.pem"))
 	} else {
 		// When not using remote key signer, use interop keys.
