@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -113,13 +114,29 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		}
 	case "finalized":
 		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get start slot")
+		}
+		// We use the stategen replayer to fetch the finalized state and then
+		// replay it to the start slot of our checkpoint's epoch. The replayer
+		// only ever accesses our canonical history, so the state retrieved will
+		// always be the finalized state at that epoch.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
 		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get start slot")
+		}
+		// We use the stategen replayer to fetch the justified state and then
+		// replay it to the start slot of our checkpoint's epoch. The replayer
+		// only ever accesses our canonical history, so the state retrieved will
+		// always be the justified state at that epoch.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
@@ -202,9 +219,6 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 
 	if target > p.GenesisTimeFetcher.CurrentSlot() {
 		return nil, errors.New("requested slot is in the future")
-	}
-	if target > p.ChainInfoFetcher.HeadSlot() {
-		return nil, errors.New("requested slot number is higher than head slot number")
 	}
 
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)

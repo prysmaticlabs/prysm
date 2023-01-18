@@ -110,7 +110,7 @@ func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersP
 		remaining, capacity := float64(f.rateLimiter.Remaining(peerID.String())), float64(f.rateLimiter.Capacity())
 		// When capacity is close to exhaustion, allow less performant peer to take a chance.
 		// Otherwise, there's a good chance system will be forced to wait for rate limiter.
-		if remaining < float64(f.blocksPerSecond) {
+		if remaining < float64(f.blocksPerPeriod) {
 			return 0.0
 		}
 		capScore := remaining / capacity

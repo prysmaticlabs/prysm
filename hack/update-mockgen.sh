@@ -69,11 +69,12 @@ goimports -w "$mock_path/."
 gofmt -s -w "$mock_path/."
 
 # github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api
-# --------------------------------------------------------
+# -------------------------------------------------------------
 beacon_api_mock_path="validator/client/beacon-api/mock"
 beacon_api_mocks=(
       "$beacon_api_mock_path/genesis_mock.go genesis.go"
       "$beacon_api_mock_path/json_rest_handler_mock.go json_rest_handler.go"
+      "$beacon_api_mock_path/state_validators_mock.go state_validators.go"
 )
 
 for ((i = 0; i < ${#beacon_api_mocks[@]}; i++)); do

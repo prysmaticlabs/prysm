@@ -70,7 +70,7 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
-	testDir, err := w.createTestnetDir()
+	testDir, err := createTestnetDir()
 	if err != nil {
 		return err
 	}
@@ -97,24 +97,16 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
 	w.cmd = cmd
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stderr.log"))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
 	log.Infof("Starting web3signer with flags: %s %s", binaryPath, strings.Join(args, " "))
@@ -256,10 +248,14 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	return nil
 }
 
-func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
+func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
+	return w.cmd.Process
+}
+
+func createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
-	rawYaml := params.E2ETestConfigYaml()
+	rawYaml := params.ConfigToYaml(params.BeaconConfig())
 	// Add in deposit contract in yaml
 	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
@@ -272,8 +268,4 @@ func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
 	}
 
 	return configPath, nil
-}
-
-func (w *Web3RemoteSigner) UnderlyingProcess() *os.Process {
-	return w.cmd.Process
 }

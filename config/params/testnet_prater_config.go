@@ -37,7 +37,6 @@ func PraterConfig() *BeaconChainConfig {
 	cfg.AltairForkEpoch = 36660
 	cfg.AltairForkVersion = []byte{0x1, 0x0, 0x10, 0x20}
 	cfg.CapellaForkVersion = []byte{0x3, 0x0, 0x10, 0x20}
-	cfg.ShardingForkVersion = []byte{0x4, 0x0, 0x10, 0x20}
 	cfg.BellatrixForkEpoch = 112260
 	cfg.BellatrixForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
 	cfg.TerminalTotalDifficulty = "10790000"

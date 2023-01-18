@@ -60,10 +60,16 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	startSlot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
+	var startSlot types.Slot
+	if req.Epoch == currentEpoch+1 {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(req.Epoch)
 	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
+	}
+
 	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
@@ -82,7 +88,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
 	for _, index := range req.Index {
 		pubkey := s.PubkeyAtIndex(index)
-		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
 		}
@@ -132,27 +138,38 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, err
 	}
 
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
-	}
-
 	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
+	cs := vs.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	nextEpoch := currentEpoch + 1
+	var nextEpochLookahead bool
+	if req.Epoch > nextEpoch {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	} else if req.Epoch == nextEpoch {
+		// If the request is for the next epoch, we use the current epoch's state to compute duties.
+		req.Epoch = currentEpoch
+		nextEpochLookahead = true
+	}
+
 	startSlot, err := slots.EpochStart(req.Epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
 	}
 	s, err := vs.StateFetcher.StateBySlot(ctx, startSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	_, proposals, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	var proposals map[types.ValidatorIndex][]types.Slot
+	if nextEpochLookahead {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
+	} else {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
@@ -183,11 +200,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
 
-	slot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	vs.ProposerSlotIndexCache.PrunePayloadIDs(slot)
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(startSlot)
 
 	return &ethpbv1.ProposerDutiesResponse{
 		DependentRoot:       root,
@@ -487,16 +500,9 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	altairBlk, err := vs.V1Alpha1Server.BuildAltairBeaconBlock(ctx, v1alpha1req)
+	b, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-	}
-	ok, b, err := vs.V1Alpha1Server.GetAndBuildBlindBlock(ctx, altairBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare blind beacon block: %v", err)
-	}
-	if !ok {
-		return nil, status.Error(codes.Unavailable, "Builder is not available due to miss-config or circuit breaker")
+		return nil, status.Error(codes.Unavailable, "Could not get block from prysm API")
 	}
 	blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.GetBlindedBellatrix())
 	if err != nil {
@@ -681,6 +687,10 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
 	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
+
+	if err := vs.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not aggregate unaggregated attestations: %v", err)
+	}
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
 	var bestMatchingAtt *ethpbalpha.Attestation
@@ -1108,7 +1118,7 @@ func syncCommitteeDuties(
 			ValidatorIndex: index,
 		}
 		valPubkey48 := st.PubkeyAtIndex(index)
-		zeroPubkey := [fieldparams.BLSPubkeyLength]byte{}
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
 			return nil, errInvalidValIndex
 		}

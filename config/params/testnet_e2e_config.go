@@ -1,8 +1,8 @@
 package params
 
 const (
-	altairE2EForkEpoch    = 0
-	bellatrixE2EForkEpoch = 0
+	altairE2EForkEpoch    = 6
+	bellatrixE2EForkEpoch = 8
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -36,14 +36,14 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "0"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
-	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 253}
+	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 253}
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
@@ -74,25 +74,15 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "0"
+	e2eConfig.TerminalTotalDifficulty = "480"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
-	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 254}
+	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 254}
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
-}
-
-// E2EMainnetConfigYaml returns the e2e config in yaml format.
-func E2EMainnetConfigYaml() []byte {
-	return ConfigToYaml(E2EMainnetTestConfig())
-}
-
-// E2ETestConfigYaml returns the e2e config in yaml format.
-func E2ETestConfigYaml() []byte {
-	return ConfigToYaml(E2ETestConfig())
 }

@@ -212,7 +212,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	err = beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
 	require.NoError(t, err)
 	cp := beaconState.CurrentJustifiedCheckpoint()
-	mockRoot := [32]byte{}
+	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
 	cp.Root = mockRoot[:]
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cp))

@@ -6,7 +6,9 @@ import (
 	"context"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc"
 )
 
@@ -58,11 +60,25 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
-	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
+	EvalInterceptor         func(*EvaluationContext, uint64, []*grpc.ClientConn) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
 	ExtraEpochs             uint64
+}
+
+func GenesisFork() int {
+	cfg := params.BeaconConfig()
+	if cfg.CapellaForkEpoch == 0 {
+		return version.Capella
+	}
+	if cfg.BellatrixForkEpoch == 0 {
+		return version.Bellatrix
+	}
+	if cfg.AltairForkEpoch == 0 {
+		return version.Altair
+	}
+	return version.Phase0
 }
 
 // Evaluator defines the structure of the evaluators used to
@@ -71,7 +87,7 @@ type Evaluator struct {
 	Name   string
 	Policy func(currentEpoch types.Epoch) bool
 	// Evaluation accepts one or many/all conns, depending on what is needed by the set of evaluators.
-	Evaluation func(ec EvaluationContext, conn ...*grpc.ClientConn) error
+	Evaluation func(ec *EvaluationContext, conn ...*grpc.ClientConn) error
 }
 
 // DepositBatch represents a group of deposits that are sent together during an e2e run.
@@ -93,8 +109,20 @@ type DepositBalancer interface {
 }
 
 // EvaluationContext allows for additional data to be provided to evaluators that need extra state.
-type EvaluationContext interface {
+type EvaluationContext struct {
 	DepositBalancer
+	ExitedVals           map[[48]byte]bool
+	SeenVotes            map[types.Slot][]byte
+	ExpectedEth1DataVote []byte
+}
+
+// NewEvaluationContext handles initializing internal datastructures (like maps) provided by the EvaluationContext.
+func NewEvaluationContext(d DepositBalancer) *EvaluationContext {
+	return &EvaluationContext{
+		DepositBalancer: d,
+		ExitedVals:      make(map[[48]byte]bool),
+		SeenVotes:       make(map[types.Slot][]byte),
+	}
 }
 
 // ComponentRunner defines an interface via which E2E component's configuration, execution and termination is managed.

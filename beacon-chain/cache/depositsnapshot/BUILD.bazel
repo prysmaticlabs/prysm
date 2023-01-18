@@ -2,7 +2,20 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["merkle_tree.go"],
+    srcs = [
+        "deposit_tree.go",
+        "deposit_tree_snapshot.go",
+        "merkle_tree.go",
+        "zerohashes.gen.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositsnapshot",
     visibility = ["//visibility:public"],
+    deps = [
+        "//container/slice:go_default_library",
+        "//crypto/hash:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//math:go_default_library",
+        "//proto/eth/v1:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+    ],
 )

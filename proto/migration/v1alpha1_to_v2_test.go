@@ -663,6 +663,15 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 		}
 		state.NextWithdrawalIndex = 123
 		state.NextWithdrawalValidatorIndex = 123
+		state.HistoricalSummaries = []*ethpbalpha.HistoricalSummary{
+			{
+				BlockSummaryRoot: bytesutil.PadTo([]byte("blocksummaryroot"), 32),
+				StateSummaryRoot: bytesutil.PadTo([]byte("statesummaryroot"), 32),
+			},
+			{
+				BlockSummaryRoot: bytesutil.PadTo([]byte("blocksummaryroot2"), 32),
+				StateSummaryRoot: bytesutil.PadTo([]byte("statesummaryroot2"), 32),
+			}}
 		return nil
 	})
 	require.NoError(t, err)
@@ -689,8 +698,6 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("blockroots"), 32), result.BlockRoots[0])
 	assert.Equal(t, 8192, len(result.StateRoots))
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroots"), 32), result.StateRoots[0])
-	assert.Equal(t, 1, len(result.HistoricalRoots))
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("historicalroots"), 32), result.HistoricalRoots[0])
 	resultEth1Data := result.Eth1Data
 	require.NotNil(t, resultEth1Data)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("e1ddepositroot"), 32), resultEth1Data.DepositRoot)
@@ -759,4 +766,26 @@ func TestBeaconStateCapellaToProto(t *testing.T) {
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalsroot"), 32), resultLatestExecutionPayloadHeader.WithdrawalsRoot)
 	assert.Equal(t, uint64(123), result.NextWithdrawalIndex)
 	assert.Equal(t, types.ValidatorIndex(123), result.NextWithdrawalValidatorIndex)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blocksummaryroot"), 32), result.HistoricalSummaries[0].BlockSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("statesummaryroot"), 32), result.HistoricalSummaries[0].StateSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("blocksummaryroot2"), 32), result.HistoricalSummaries[1].BlockSummaryRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("statesummaryroot2"), 32), result.HistoricalSummaries[1].StateSummaryRoot)
+}
+
+func TestV1Alpha1SignedBLSToExecChangeToV2(t *testing.T) {
+	alphaChange := &ethpbalpha.SignedBLSToExecutionChange{
+		Message: &ethpbalpha.BLSToExecutionChange{
+			ValidatorIndex:     validatorIndex,
+			FromBlsPubkey:      bytesutil.PadTo([]byte("fromblspubkey"), 48),
+			ToExecutionAddress: bytesutil.PadTo([]byte("toexecutionaddress"), 20),
+		},
+		Signature: signature,
+	}
+	change := V1Alpha1SignedBLSToExecChangeToV2(alphaChange)
+	require.NotNil(t, change)
+	require.NotNil(t, change.Message)
+	assert.DeepEqual(t, signature, change.Signature)
+	assert.Equal(t, validatorIndex, change.Message.ValidatorIndex)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("fromblspubkey"), 48), change.Message.FromBlsPubkey)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("toexecutionaddress"), 20), change.Message.ToExecutionAddress)
 }

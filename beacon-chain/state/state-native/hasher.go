@@ -42,7 +42,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[nativetypes.GenesisTime.RealPosition()] = genesisRoot[:]
 
 	// Genesis validators root.
-	r := [32]byte{}
+	var r [32]byte
 	copy(r[:], state.genesisValidatorsRoot[:])
 	fieldRoots[nativetypes.GenesisValidatorsRoot.RealPosition()] = r[:]
 
@@ -255,6 +255,13 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		nextWithdrawalValidatorIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
 		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
+
+		// Historical summary root.
+		historicalSummaryRoot, err := stateutil.HistoricalSummariesRoot(state.historicalSummaries)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
+		}
+		fieldRoots[nativetypes.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
 	}
 
 	return fieldRoots, nil
