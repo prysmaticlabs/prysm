@@ -140,6 +140,7 @@ go_test(
         "//time:go_default_library",
         "//time/slots:go_default_library",
         "//time/slots/testing:go_default_library",
+        "//validator/accounts:go_default_library",
         "//validator/accounts/testing:go_default_library",
         "//validator/accounts/wallet:go_default_library",
         "//validator/client/iface:go_default_library",
