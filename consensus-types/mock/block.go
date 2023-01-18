@@ -22,10 +22,6 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (SignedBeaconBlock) SetBlock(interfaces.BeaconBlock) error {
-	panic("implement me")
-}
-
 func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
@@ -207,10 +203,6 @@ func (BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
 
 type BeaconBlockBody struct{}
 
-func (b BeaconBlockBody) SetBlobKzgCommitments(c [][]byte) error {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
@@ -231,7 +223,11 @@ func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Attestations() []*eth.Attestation {
+func (BeaconBlockBody) IsNil() bool {
+	return false
+}
+
+func (BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	panic("implement me")
 }
 
@@ -264,10 +260,6 @@ func (BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 }
 
 func (BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 

@@ -43,11 +43,7 @@ var (
 // This returns the execution payload of a given slot.
 // The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context,
-	slot types.Slot,
-	vIdx types.ValidatorIndex,
-	headRoot [32]byte,
-	st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -111,22 +107,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			p, err := emptyPayload()
-			if err != nil {
-				return nil, nil, err
-			}
-			return p, nil, nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, nil, err
 		}
 		if !hasTerminalBlock {
-			p, err := emptyPayload()
-			if err != nil {
-				return nil, nil, err
-			}
-			return p, nil, nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -194,12 +182,12 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payloadRecipient []byte, feeRecipient common.Address) {
+func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
-	if !bytes.Equal(payloadRecipient, feeRecipient[:]) {
+	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
 			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payloadRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}

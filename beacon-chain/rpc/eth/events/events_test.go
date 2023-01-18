@@ -238,6 +238,43 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			feed: srv.OperationNotifier.OperationFeed(),
 		})
 	})
+	t.Run(BLSToExecutionChangeTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedChangeV1alpha1 := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex:     1,
+				FromBlsPubkey:      []byte("from"),
+				ToExecutionAddress: []byte("to"),
+			},
+			Signature: make([]byte, 96),
+		}
+		wantedChange := migration.V1Alpha1SignedBLSToExecChangeToV2(wantedChangeV1alpha1)
+		genericResponse, err := anypb.New(wantedChange)
+		require.NoError(t, err)
+
+		wantedMessage := &gateway.EventSource{
+			Event: BLSToExecutionChangeTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{BLSToExecutionChangeTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: operation.BLSToExecutionChangeReceived,
+				Data: &operation.BLSToExecutionChangeReceivedData{
+					Change: wantedChangeV1alpha1,
+				},
+			},
+			feed: srv.OperationNotifier.OperationFeed(),
+		})
+	})
 }
 
 func TestStreamEvents_StateEvents(t *testing.T) {

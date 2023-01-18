@@ -220,29 +220,25 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_Phase0Block)
-	if ok {
-		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
+	switch blkContainer := req.Message.(type) {
+	case *ethpbv2.SignedBeaconBlockContainer_Phase0Block:
+		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_AltairBlock)
-	if ok {
-		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
+	case *ethpbv2.SignedBeaconBlockContainer_AltairBlock:
+		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_BellatrixBlock)
-	if ok {
-		if err := bs.submitBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
+	case *ethpbv2.SignedBeaconBlockContainer_BellatrixBlock:
+		if err := bs.submitBellatrixBlock(ctx, blkContainer.BellatrixBlock, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-	capellaBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_CapellaBlock)
-	if ok {
-		if err := bs.submitCapellaBlock(ctx, capellaBlkContainer.CapellaBlock, req.Signature); err != nil {
+	case *ethpbv2.SignedBeaconBlockContainer_CapellaBlock:
+		if err := bs.submitCapellaBlock(ctx, blkContainer.CapellaBlock, req.Signature); err != nil {
 			return nil, err
 		}
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported block container type %T", blkContainer)
 	}
 
 	return &emptypb.Empty{}, nil

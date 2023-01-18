@@ -849,7 +849,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		})
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 		}
@@ -877,7 +877,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		var machineSlots []types.Slot
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -928,7 +928,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		var machineSlots []types.Slot
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -1118,7 +1118,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		p2p.Peers().SetChainState(emptyPeer, chainState)
 
 		startSlot := mc.HeadSlot() + 1
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		machineSlots := make([]types.Slot, 0)
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -1168,7 +1168,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		// its claims with actual blocks.
 		forkedPeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
 		startSlot := mc.HeadSlot() + 1
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		machineSlots := make([]types.Slot, 0)
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
