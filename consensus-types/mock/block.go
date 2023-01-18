@@ -22,10 +22,6 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (SignedBeaconBlock) SetBlock(interfaces.BeaconBlock) error {
-	panic("implement me")
-}
-
 func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
