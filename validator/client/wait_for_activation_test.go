@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	slotutilmock "github.com/prysmaticlabs/prysm/v3/time/slots/testing"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	walletMock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
@@ -346,7 +345,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			ListenForChanges: true,
 		})
 		require.NoError(t, err)
-		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, accounts.DefaultMnemonicLanguage, "", 1)
+		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "english", "", 1)
 		require.NoError(t, err)
 		validatorClient := mock.NewMockValidatorClient(ctrl)
 		beaconClient := mock.NewMockBeaconChainClient(ctrl)
@@ -391,7 +390,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
 			time.Sleep(time.Second * 1)
-			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, accounts.DefaultMnemonicLanguage, "", 2)
+			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "english", "", 2)
 			require.NoError(t, err)
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
