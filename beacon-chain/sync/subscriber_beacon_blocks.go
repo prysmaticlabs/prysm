@@ -35,7 +35,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 			if r != [32]byte{} {
 				s.setBadBlock(ctx, r) // Setting head block as bad.
 			} else {
-				interop.WriteBlockToDisk(signed, true /*failed*/)
+				interop.WriteBlockToDisk("receive_block", signed, true /*failed*/)
 				s.setBadBlock(ctx, root)
 			}
 		}

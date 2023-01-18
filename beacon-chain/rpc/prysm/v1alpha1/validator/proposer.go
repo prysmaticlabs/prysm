@@ -17,6 +17,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
@@ -128,6 +129,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
+		interop.WriteBlockToDisk("proposer", sBlk, true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.SetStateRoot(sr)
@@ -306,16 +308,18 @@ func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk i
 	if err != nil {
 		return errors.Wrap(err, "could not get blobs from cache")
 	}
-	aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs2.BlobsSequenceImpl(blobs))
-	if err != nil {
-		return fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
-	}
 	sc := &ethpb.BlobsSidecar{
 		Blobs:           blobs,
 		BeaconBlockSlot: blk.Block().Slot(),
 		BeaconBlockRoot: root[:],
-		AggregatedProof: aggregatedProof[:],
 	}
+	aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs2.BlobsSequenceImpl(blobs))
+	if err != nil {
+		interop.WriteBadBlobsToDisk("proposer", sc)
+		return fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
+	}
+	sc.AggregatedProof = aggregatedProof[:]
+
 	if err := vs.P2P.Broadcast(ctx, &ethpb.SignedBeaconBlockAndBlobsSidecar{
 		BeaconBlock:  blkPb,
 		BlobsSidecar: sc,

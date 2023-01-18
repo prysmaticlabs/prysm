@@ -13,11 +13,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -289,6 +292,31 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 			if features.Get().EnableFullSSZDataLogging {
 				fields["message"] = hexutil.Encode(msg.Data)
 			}
+			d, err := s.decodePubsubMessage(msg)
+			if err != nil {
+				log.WithError(err).Warn("Could not decode pubsub message")
+			} else {
+				switch d.(type) {
+				case *ethpb.SignedBeaconBlockAndBlobsSidecar:
+					bb, ok := d.(*ethpb.SignedBeaconBlockAndBlobsSidecar)
+					if ok {
+						interop.WriteBadBlobsToDisk("p2p", bb.BlobsSidecar)
+						sb, err := blocks.NewSignedBeaconBlock(bb.BeaconBlock)
+						if err != nil {
+							log.WithError(err).Warn("Could not decode beacon block")
+						} else {
+							interop.WriteBlockToDisk("p2p", sb, true)
+						}
+					}
+				case interfaces.SignedBeaconBlock:
+					bb, ok := d.(interfaces.SignedBeaconBlock)
+					if ok {
+						interop.WriteBlockToDisk("p2p", bb, true)
+					}
+				default:
+				}
+			}
+
 			log.WithError(err).WithFields(fields).Debugf("Gossip message was rejected")
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
 		}

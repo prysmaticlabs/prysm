@@ -9,7 +9,6 @@ import (
 	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -58,9 +57,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransitionNoVerifyAnySig")
 	defer span.End()
 	var err error
-
-	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
-	interop.WriteStateToDisk(st)
 
 	parentRoot := signed.Block().ParentRoot()
 	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
