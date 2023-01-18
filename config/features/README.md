@@ -35,7 +35,7 @@ your flag since you're going to invert the flag in a later step. i.e you will us
 later. For example, `--enable-my-feature`. Additionally, [create a feature flag tracking issue](https://github.com/prysmaticlabs/prysm/issues/new?template=feature_flag.md) 
 for your feature using the appropriate issue template.
 2. Use the feature throughout the application to enable your new functionality and be sure to write
-tests carefully and thoughtfully to ensure you have tested all of your new funcitonality without losing
+tests carefully and thoughtfully to ensure you have tested all of your new functionality without losing
 coverage on the existing functionality. This is considered an opt-in feature flag. Example usage:
 ```go
 func someExistingMethod(ctx context.Context) error {
