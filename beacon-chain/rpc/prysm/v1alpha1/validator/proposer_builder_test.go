@@ -34,7 +34,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 		err,
 	)
 	require.Equal(t, true, b)
-	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing consecutive slot")
+	require.LogsContain(t, hook, "Circuit breaker activated due to missing consecutive slot. Ignore if mev-boost is not used")
 
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
@@ -56,7 +56,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
 	require.NoError(t, err)
 	require.Equal(t, true, b)
-	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing enough slots last epoch")
+	require.LogsContain(t, hook, "Circuit breaker activated due to missing enough slots last epoch. Ignore if mev-boost is not used")
 
 	want := params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().MaxBuilderEpochMissedSlots
 	for i := types.Slot(2); i <= want+2; i++ {
