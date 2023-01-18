@@ -28,7 +28,7 @@ type metadata struct {
 
 type cliStakingWithdrawalMessage struct {
 	apimiddleware.SignedBLSToExecutionChangeJson
-	Metadata metadata `json:"metadata,omitempty"`
+	Metadata *metadata `json:"metadata,omitempty"`
 }
 
 func setWithdrawalAddresses(c *cli.Context) error {
