@@ -73,7 +73,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+			warnIfFeeRecipientDiffers(payload, feeRecipient)
 			if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
 				sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, pid)
 				if err != nil {
@@ -107,14 +107,22 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			p, err := emptyPayload()
+			if err != nil {
+				return nil, nil, err
+			}
+			return p, nil, nil
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, nil, err
 		}
 		if !hasTerminalBlock {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			p, err := emptyPayload()
+			if err != nil {
+				return nil, nil, err
+			}
+			return p, nil, nil
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -169,7 +177,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if err != nil {
 		return nil, nil, err
 	}
-	warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
 		sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, *payloadID)
 		if err != nil {

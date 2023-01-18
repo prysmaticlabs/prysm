@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 var (
@@ -21,17 +21,17 @@ var (
 
 // BlobsCache caches the blobs for the proposer through life cycle.
 type BlobsCache struct {
-	cache map[types.Slot]*eth.BlobsSidecar
+	cache map[types.Slot][]*v1.Blob
 	sync.Mutex
 }
 
 func NewBlobsCache() *BlobsCache {
 	return &BlobsCache{
-		cache: map[types.Slot]*eth.BlobsSidecar{},
+		cache: map[types.Slot][]*v1.Blob{},
 	}
 }
 
-func (b *BlobsCache) Get(slot types.Slot) (*eth.BlobsSidecar, error) {
+func (b *BlobsCache) Get(slot types.Slot) ([]*v1.Blob, error) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -44,8 +44,8 @@ func (b *BlobsCache) Get(slot types.Slot) (*eth.BlobsSidecar, error) {
 	return sc, nil
 }
 
-func (b *BlobsCache) Put(sidecar *eth.BlobsSidecar) {
+func (b *BlobsCache) Put(slot types.Slot, blobs []*v1.Blob) {
 	b.Lock()
 	defer b.Unlock()
-	b.cache[sidecar.BeaconBlockSlot] = sidecar
+	b.cache[slot] = blobs
 }

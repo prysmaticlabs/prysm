@@ -285,7 +285,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
 
 		// Historical summary root.
-		historicalSummaryRoot, err := historicalSummaryRoot(state.historicalSummaries)
+		historicalSummaryRoot, err := stateutil.HistoricalSummariesRoot(state.historicalSummaries)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
 		}

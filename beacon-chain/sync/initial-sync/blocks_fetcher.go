@@ -390,7 +390,7 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobsSideca
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blobs")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, req.Count); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -446,7 +446,7 @@ func (f *blocksFetcher) requestBlockAndSidecarByRoot(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
-		if err := f.waitForBandwidth(pid); err != nil {
+		if err := f.waitForBandwidth(pid, uint64(len(*req))); err != nil {
 			l.Unlock()
 			return nil, err
 		}

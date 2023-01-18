@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/protolambda/go-kzg/eth"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -133,6 +135,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	pb, err := blk.Proto()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
+	}
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_EIP4844{EIP4844: pb.(*ethpb.BeaconBlock4844)}}, nil
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
@@ -297,9 +302,19 @@ func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk i
 	if err != nil {
 		return errors.Wrap(err, "could not get protobuf block")
 	}
-	sc, err := vs.BlobsCache.Get(blk.Block().Slot())
+	blobs, err := vs.BlobsCache.Get(blk.Block().Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not get blobs from cache")
+	}
+	aggregatedProof, err := eth.ComputeAggregateKZGProof(blobs2.BlobsSequenceImpl(blobs))
+	if err != nil {
+		return fmt.Errorf("failed to compute aggregated kzg proof: %v", err)
+	}
+	sc := &ethpb.BlobsSidecar{
+		Blobs:           blobs,
+		BeaconBlockSlot: blk.Block().Slot(),
+		BeaconBlockRoot: root[:],
+		AggregatedProof: aggregatedProof[:],
 	}
 	if err := vs.P2P.Broadcast(ctx, &ethpb.SignedBeaconBlockAndBlobsSidecar{
 		BeaconBlock:  blkPb,

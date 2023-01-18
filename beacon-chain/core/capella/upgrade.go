@@ -53,6 +53,10 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
+	summarires, err := state.HistoricalSummaries()
+	if err != nil {
+		return nil, err
+	}
 
 	s := &ethpb.BeaconState4844{
 		GenesisTime:           state.GenesisTime(),
@@ -103,6 +107,7 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 		},
 		NextWithdrawalIndex:          wi,
 		NextWithdrawalValidatorIndex: vi,
+		HistoricalSummaries:          summarires,
 	}
 
 	return state_native.InitializeFromProtoUnsafe4844(s)

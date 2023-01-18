@@ -62,9 +62,15 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 			}
 		}
 	}
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+	executionData, blobsBundle, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
+	}
+	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		if err := blk.Body().SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
+			return errors.Wrap(err, "could not set blob kzg commitments")
+		}
+		vs.BlobsCache.Put(slot, blobsBundle.Blobs)
 	}
 	return blk.Body().SetExecution(executionData)
 }
@@ -254,7 +260,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
