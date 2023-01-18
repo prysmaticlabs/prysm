@@ -1,3 +1,6 @@
+// Package depositsnapshot implements the EIP-4881 standard for minimal sparse Merkle tree.
+// The format proposed by the EIP allows for the pruning of deposits that are no longer needed to participate fully in consensus.
+// Full EIP-4881 specification can be found here: https://eips.ethereum.org/EIPS/eip-4881
 package depositsnapshot
 
 import (
