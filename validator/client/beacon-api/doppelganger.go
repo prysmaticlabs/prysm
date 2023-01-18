@@ -138,13 +138,13 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 
 	for i, v := range validators {
 		if v == nil {
-			return nil, errors.New("validator is nil")
+			return nil, errors.New("validator container is nil")
 		}
 
 		index := v.Index
 
 		if v.Validator == nil {
-			return nil, errors.New("validator JSON is nil")
+			return nil, errors.New("validator is nil")
 		}
 
 		stringPubKeyToIndex[v.Validator.PublicKey] = index

@@ -558,8 +558,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			},
 		},
 		{
-			name:                   "validator is nil",
-			expectedErrorMessage:   "validator is nil",
+			name:                   "validator container is nil",
+			expectedErrorMessage:   "validator container is nil",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
@@ -574,8 +574,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			},
 		},
 		{
-			name:                   "validator JSON is nil",
-			expectedErrorMessage:   "validator JSON is nil",
+			name:                   "validator is nil",
+			expectedErrorMessage:   "validator is nil",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
