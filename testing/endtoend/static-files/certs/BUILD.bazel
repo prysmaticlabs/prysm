@@ -7,5 +7,5 @@ filegroup(
         "prysm_client_identity.p12",
         "web3signer_keystore.p12",
     ],
-    visibility = ["//testing/endtoend:__subpackages__"],
+    visibility = ["//visibility:public"],
 )
