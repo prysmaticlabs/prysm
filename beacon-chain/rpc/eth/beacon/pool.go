@@ -253,13 +253,10 @@ func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) 
 	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
 	defer span.End()
 
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
+	sourceExits, err := bs.VoluntaryExitsPool.PendingExits()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Error(codes.Internal, "Could not get exits from the pool")
 	}
-
-	sourceExits := bs.VoluntaryExitsPool.PendingExits(headState, headState.Slot(), true /* return unlimited exits */)
-
 	exits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
 	for i, s := range sourceExits {
 		exits[i] = migration.V1Alpha1ExitToV1(s)
@@ -299,7 +296,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
 	}
 
-	bs.VoluntaryExitsPool.InsertVoluntaryExit(ctx, headState, alphaExit)
+	bs.VoluntaryExitsPool.InsertVoluntaryExit(alphaExit)
 	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}

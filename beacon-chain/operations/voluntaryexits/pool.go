@@ -1,6 +1,7 @@
 package voluntaryexits
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -12,16 +13,17 @@ import (
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
 // PoolManager maintains pending and seen voluntary exits.
 // This pool is used by proposers to insert voluntary exits into new blocks.
 type PoolManager interface {
-	PendingExits() []*ethpb.SignedVoluntaryExit
-	ExitsForInclusion(state state.ReadOnlyBeaconState) ([]*ethpb.SignedVoluntaryExit, error)
+	PendingExits() ([]*ethpb.SignedVoluntaryExit, error)
+	ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slot) ([]*ethpb.SignedVoluntaryExit, error)
 	InsertVoluntaryExit(exit *ethpb.SignedVoluntaryExit)
-	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
+	MarkIncluded(exit *ethpb.SignedVoluntaryExit) error
 }
 
 // Pool is a concrete implementation of PoolManager.
@@ -62,7 +64,7 @@ func (p *Pool) PendingExits() ([]*ethpb.SignedVoluntaryExit, error) {
 
 // ExitsForInclusion returns objects that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState) ([]*ethpb.SignedVoluntaryExit, error) {
+func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slot) ([]*ethpb.SignedVoluntaryExit, error) {
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxVoluntaryExits), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedVoluntaryExit, 0, length)
@@ -72,6 +74,9 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState) ([]*ethpb.Sign
 		if err != nil {
 			p.lock.RUnlock()
 			return nil, err
+		}
+		if exit.Exit.Epoch > slots.ToEpoch(slot) {
+			continue
 		}
 		validator, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
@@ -145,7 +150,7 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) error {
 
 	node := p.m[exit.Exit.ValidatorIndex]
 	if node == nil {
-		return nil
+		return fmt.Errorf("no exit exists for validator index %d", exit.Exit.ValidatorIndex)
 	}
 
 	delete(p.m, exit.Exit.ValidatorIndex)

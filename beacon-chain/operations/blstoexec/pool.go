@@ -1,6 +1,7 @@
 package blstoexec
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -19,7 +20,7 @@ import (
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
 	PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
-	BLSToExecChangesForInclusion(state.BeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
+	BLSToExecChangesForInclusion(state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
 	ValidatorExists(idx types.ValidatorIndex) bool
@@ -150,10 +151,21 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
 
 	node := p.m[change.Message.ValidatorIndex]
 	if node == nil {
-		return nil
+		return fmt.Errorf("no change exists for validator index %d", change.Message.ValidatorIndex)
 	}
 
 	delete(p.m, change.Message.ValidatorIndex)
 	p.pending.Remove(node)
 	return nil
+}
+
+// ValidatorExists checks if the bls to execution change object exists
+// for that particular validator.
+func (p *Pool) ValidatorExists(idx types.ValidatorIndex) bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	node := p.m[idx]
+
+	return node != nil
 }
