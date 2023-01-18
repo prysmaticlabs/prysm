@@ -17,7 +17,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 const executionToBLSPadding = 12
@@ -162,25 +161,6 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	return st, nil
 }
 
-// blsChangesSigningDomain returns the signing domain to check  BLSToExecutionChange messages against.
-func blsChangesSigningDomain(st state.ReadOnlyBeaconState) ([]byte, error) {
-	var epoch types.Epoch
-	var fork *ethpb.Fork
-	if st.Version() < version.Capella {
-		epoch = params.BeaconConfig().CapellaForkEpoch
-		fork = &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           epoch,
-		}
-
-	} else {
-		epoch = slots.ToEpoch(st.Slot())
-		fork = st.Fork()
-	}
-	return signing.Domain(fork, epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
-}
-
 func BLSChangesSignatureBatch(
 	st state.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
@@ -195,9 +175,10 @@ func BLSChangesSignatureBatch(
 		Messages:     make([][32]byte, len(changes)),
 		Descriptions: make([]string, len(changes)),
 	}
-	domain, err := blsChangesSigningDomain(st)
+	c := params.BeaconConfig()
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not compute signing domain")
 	}
 	for i, change := range changes {
 		batch.Signatures[i] = change.Signature
@@ -223,7 +204,8 @@ func VerifyBLSChangeSignature(
 	st state.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
-	domain, err := blsChangesSigningDomain(st)
+	c := params.BeaconConfig()
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing domain")
 	}
