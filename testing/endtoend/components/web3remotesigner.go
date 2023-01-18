@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/crypto/pkcs12"
 	"io"
 	"net/http"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/pkcs12"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -109,8 +110,9 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Test code is safe to do this.
 	w.cmd = cmd
+
 	// Write stderr to log files.
-	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
+	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stderr.log"))
 	if err != nil {
 		return err
 	}
@@ -119,7 +121,18 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stderr
+	cmd.Stderr = stderr
+	// Write stdout to log files.
+	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, "web3signer.stdout.log"))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := stdout.Close(); err != nil {
+			log.WithError(err).Error("Failed to close stdout file")
+		}
+	}()
+	cmd.Stdout = stdout
 
 	log.Infof("Starting web3signer with flags: %s %s", binaryPath, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
@@ -160,7 +173,6 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 	}
 	cp.AppendCertsFromPEM(pemc)
 	tlsConfig.RootCAs = cp
-	//tlsConfig.ClientCAs = cp
 	go w.monitorStart(tlsConfig)
 
 	return cmd.Wait()
