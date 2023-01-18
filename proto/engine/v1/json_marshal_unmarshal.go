@@ -214,6 +214,29 @@ type executionPayloadJSON struct {
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
+type GetPayloadV2ResponseJson struct {
+	ExecutionPayload *ExecutionPayloadCapellaJSON `json:"executionPayload"`
+	BlockValue       string                       `json:"blockValue"`
+}
+
+type ExecutionPayloadCapellaJSON struct {
+	ParentHash    *common.Hash    `json:"parentHash"`
+	FeeRecipient  *common.Address `json:"feeRecipient"`
+	StateRoot     *common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
+	LogsBloom     *hexutil.Bytes  `json:"logsBloom"`
+	PrevRandao    *common.Hash    `json:"prevRandao"`
+	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64 `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64 `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64 `json:"timestamp"`
+	ExtraData     hexutil.Bytes   `json:"extraData"`
+	BaseFeePerGas string          `json:"baseFeePerGas"`
+	BlockHash     *common.Hash    `json:"blockHash"`
+	Transactions  []hexutil.Bytes `json:"transactions"`
+	Withdrawals   []*Withdrawal   `json:"withdrawals"`
+}
+
 // MarshalJSON --
 func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	transactions := make([]hexutil.Bytes, len(e.Transactions))
@@ -248,6 +271,47 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
+	})
+}
+
+// MarshalJSON --
+func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
+	logsBloom := hexutil.Bytes(e.LogsBloom)
+	if e.Withdrawals == nil {
+		e.Withdrawals = make([]*Withdrawal, 0)
+	}
+	return json.Marshal(ExecutionPayloadCapellaJSON{
+		ParentHash:    &pHash,
+		FeeRecipient:  &recipient,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
+		LogsBloom:     &logsBloom,
+		PrevRandao:    &prevRan,
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
+		ExtraData:     e.ExtraData,
+		BaseFeePerGas: baseFeeHex,
+		BlockHash:     &bHash,
+		Transactions:  transactions,
+		Withdrawals:   e.Withdrawals,
 	})
 }
 
@@ -324,10 +388,94 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	return nil
 }
 
+// UnmarshalJSON --
+func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
+	dec := GetPayloadV2ResponseJson{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+
+	if dec.ExecutionPayload.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+	if dec.ExecutionPayload.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if dec.ExecutionPayload.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
+	}
+
+	*e = ExecutionPayloadCapella{}
+	e.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
+	e.FeeRecipient = dec.ExecutionPayload.FeeRecipient.Bytes()
+	e.StateRoot = dec.ExecutionPayload.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.ExecutionPayload.ReceiptsRoot.Bytes()
+	e.LogsBloom = *dec.ExecutionPayload.LogsBloom
+	e.PrevRandao = dec.ExecutionPayload.PrevRandao.Bytes()
+	e.BlockNumber = uint64(*dec.ExecutionPayload.BlockNumber)
+	e.GasLimit = uint64(*dec.ExecutionPayload.GasLimit)
+	e.GasUsed = uint64(*dec.ExecutionPayload.GasUsed)
+	e.Timestamp = uint64(*dec.ExecutionPayload.Timestamp)
+	e.ExtraData = dec.ExecutionPayload.ExtraData
+	baseFee, err := hexutil.DecodeBig(dec.ExecutionPayload.BaseFeePerGas)
+	if err != nil {
+		return err
+	}
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
+	e.BlockHash = dec.ExecutionPayload.BlockHash.Bytes()
+	transactions := make([][]byte, len(dec.ExecutionPayload.Transactions))
+	for i, tx := range dec.ExecutionPayload.Transactions {
+		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	if dec.ExecutionPayload.Withdrawals == nil {
+		dec.ExecutionPayload.Withdrawals = make([]*Withdrawal, 0)
+	}
+	e.Withdrawals = dec.ExecutionPayload.Withdrawals
+	return nil
+}
+
 type payloadAttributesJSON struct {
 	Timestamp             hexutil.Uint64 `json:"timestamp"`
 	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
 	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+}
+
+type payloadAttributesV2JSON struct {
+	Timestamp             hexutil.Uint64 `json:"timestamp"`
+	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
+	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+	Withdrawals           []*Withdrawal  `json:"withdrawals"`
 }
 
 // MarshalJSON --
@@ -336,6 +484,16 @@ func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 		Timestamp:             hexutil.Uint64(p.Timestamp),
 		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+	})
+}
+
+// MarshalJSON --
+func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
+	return json.Marshal(payloadAttributesV2JSON{
+		Timestamp:             hexutil.Uint64(p.Timestamp),
+		PrevRandao:            p.PrevRandao,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+		Withdrawals:           p.Withdrawals,
 	})
 }
 
@@ -349,6 +507,19 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 	p.Timestamp = uint64(dec.Timestamp)
 	p.PrevRandao = dec.PrevRandao
 	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	return nil
+}
+
+func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
+	dec := payloadAttributesV2JSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributesV2{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.PrevRandao = dec.PrevRandao
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	p.Withdrawals = dec.Withdrawals
 	return nil
 }
 
