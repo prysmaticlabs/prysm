@@ -48,12 +48,7 @@ func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.Duti
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.CheckDoppelGanger(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.CheckDoppelGanger is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.checkDoppelGanger(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
