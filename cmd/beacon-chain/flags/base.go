@@ -5,9 +5,9 @@ package flags
 import (
 	"strings"
 
+	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
 )
 
 var (
