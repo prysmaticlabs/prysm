@@ -348,7 +348,9 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 
 func TestNewKeymanager_Certificates(t *testing.T) {
 	// web3signer only supports PKCS12
-	base := "../../../testing/endtoend/components/testdata/certs/"
+	base := "../../../testing/endtoend/static-files/certs/"
+	clientcert := "prysm_client_identity.p12"
+	cacert := "cacerts.pem"
 	tests := []struct {
 		name string
 		opts *SetupConfig
@@ -361,16 +363,16 @@ func TestNewKeymanager_Certificates(t *testing.T) {
 		{
 			name: "NoClientPass",
 			opts: &SetupConfig{
-				ClientCertPath: base + "client-identity.p12",
+				ClientCertPath: base + clientcert,
 			},
 			err: "PKCS12 client certificate password is required",
 		},
 		{
 			name: "happy path tls activated",
 			opts: &SetupConfig{
-				ClientCertPath:         base + "client-identity.p12",
+				ClientCertPath:         base + clientcert,
 				ClientCertPasswordPath: base + "pass.txt",
-				CACertPath:             base + "server.cert",
+				CACertPath:             base + cacert,
 			},
 		},
 		{
@@ -384,15 +386,15 @@ func TestNewKeymanager_Certificates(t *testing.T) {
 		{
 			name: "BadClientPassword",
 			opts: &SetupConfig{
-				ClientCertPath:         base + "client-identity.p12",
-				ClientCertPasswordPath: base + "server.cert",
+				ClientCertPath:         base + clientcert,
+				ClientCertPasswordPath: base + cacert,
 			},
 			err: "pkcs12 to PEM conversion failed: pkcs12: decryption password incorrect",
 		},
 		{
 			name: "MissingCACert",
 			opts: &SetupConfig{
-				ClientCertPath:         base + "client-identity.p12",
+				ClientCertPath:         base + clientcert,
 				ClientCertPasswordPath: base + "pass.txt",
 				CACertPath:             `bad`,
 			},
