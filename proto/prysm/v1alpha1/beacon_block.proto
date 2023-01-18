@@ -572,10 +572,10 @@ message BlindedBeaconBlockBodyCapella {
 }
 
 message ValidatorRegistrationV1 {
-    bytes fee_recipient         = 1 [(ethereum.eth.ext.ssz_size) = "20"];
-    uint64 gas_limit             = 2;
-    uint64 timestamp            = 3;
-    bytes pubkey      = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+    uint64 gas_limit = 2;
+    uint64 timestamp = 3;
+    bytes pubkey = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 message SignedValidatorRegistrationsV1 {
@@ -583,17 +583,28 @@ message SignedValidatorRegistrationsV1 {
 }
 
 message SignedValidatorRegistrationV1 {
-    ValidatorRegistrationV1 message         = 1 ;
-    bytes signature      = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+    ValidatorRegistrationV1 message = 1 ;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 message BuilderBid {
-    ethereum.engine.v1.ExecutionPayloadHeader header         = 1 ;
+    ethereum.engine.v1.ExecutionPayloadHeader header = 1;
     bytes value = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes pubkey      = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 message SignedBuilderBid {
-    BuilderBid message         = 1 ;
-    bytes signature      = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+    BuilderBid message = 1 ;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BuilderBidCapella {
+    ethereum.engine.v1.ExecutionPayloadHeaderCapella header = 1 ;
+    bytes value = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
+message SignedBuilderBidCapella {
+    BuilderBidCapella message = 1 ;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
