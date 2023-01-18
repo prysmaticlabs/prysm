@@ -20,12 +20,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type cliStakingWithdrawalMessage struct {
-	apimiddleware.SignedBLSToExecutionChangeJson
-	ForkVersion           string `json:"fork_version,omitempty"`
+type metadata struct {
 	NetworkName           string `json:"network_name,omitempty"`
 	GenesisValidatorsRoot string `json:"genesis_validators_root,omitempty"`
 	DepositCliVersion     string `json:"deposit_cli_version,omitempty"`
+}
+
+type cliStakingWithdrawalMessage struct {
+	apimiddleware.SignedBLSToExecutionChangeJson
+	Metadata metadata `json:"metadata,omitempty"`
 }
 
 func setWithdrawalAddresses(c *cli.Context) error {
