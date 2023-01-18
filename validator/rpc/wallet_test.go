@@ -39,7 +39,6 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
