@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "altair_beacon_block_test_helpers.go",
         "bellatrix_beacon_block_test_helpers.go",
+        "capella_beacon_block_test_helpers.go",
         "phase0_beacon_block_test_helpers.go",
         "test_helpers.go",
     ],

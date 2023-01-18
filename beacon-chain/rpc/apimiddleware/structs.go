@@ -400,12 +400,14 @@ type BeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
 	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type BlindedBeaconBlockContainerJson struct {
 	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
 	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
 }
 
 type SignedBeaconBlockAltairContainerJson struct {
@@ -690,6 +692,10 @@ type BLSToExecutionChangeJson struct {
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
+type SubmitBLSToExecutionChangesRequest struct {
+	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
+}
+
 type DepositJson struct {
 	Proof []string          `json:"proof" hex:"true"`
 	Data  *Deposit_DataJson `json:"data"`
@@ -858,6 +864,7 @@ type BeaconStateCapellaJson struct {
 	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"latest_execution_payload_header"`
 	NextWithdrawalIndex          string                             `json:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex string                             `json:"next_withdrawal_validator_index"`
+	HistoricalSummaries          []*HistoricalSummaryJson           `json:"historical_summaries"`
 }
 
 type BeaconStateContainerV2Json struct {
@@ -1029,6 +1036,11 @@ type ForkChoiceDumpJson struct {
 	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string                `json:"head_root" hex:"true"`
 	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"fork_choice_nodes"`
+}
+
+type HistoricalSummaryJson struct {
+	BlockSummaryRoot string `json:"block_summary_root" hex:"true"`
+	StateSummaryRoot string `json:"state_summary_root" hex:"true"`
 }
 
 //----------------

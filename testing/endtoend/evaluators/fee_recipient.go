@@ -62,7 +62,7 @@ func valKeyMap() (map[string]bool, error) {
 	return km, nil
 }
 
-func feeRecipientIsPresent(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func feeRecipientIsPresent(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &emptypb.Empty{})
