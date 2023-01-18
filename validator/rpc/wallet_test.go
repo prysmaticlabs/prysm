@@ -61,7 +61,7 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 	req := &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   strongPass,
-		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	req := &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   "", // Weak password, empty string
-		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
@@ -127,7 +127,7 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	req = &pb.CreateWalletRequest{
 		Keymanager:       pb.KeymanagerKind_IMPORTED,
 		WalletPassword:   "a", // Weak password, too short
-		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
