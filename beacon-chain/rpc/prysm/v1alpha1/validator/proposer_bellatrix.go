@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -12,9 +11,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -36,6 +35,38 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
+// Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlock, headState state.BeaconState) error {
+	idx := blk.ProposerIndex()
+	slot := blk.Slot()
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+
+	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
+	if err != nil {
+		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
+	} else if canUseBuilder {
+		h, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
+		} else {
+			blk.SetBlinded(true)
+			if err := blk.Body().SetExecution(h); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set execution payload")
+			} else {
+				return nil
+			}
+		}
+	}
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+	if err != nil {
+		return errors.Wrap(err, "failed to get execution payload")
+	}
+	return blk.Body().SetExecution(executionData)
+}
+
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (interfaces.ExecutionData, error) {
@@ -55,6 +86,10 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
+
 	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
@@ -63,7 +98,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(bid.Message.Value))
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
 	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
@@ -89,7 +124,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
 	}
 
-	if err := vs.validateBuilderSignature(bid); err != nil {
+	if err := validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
@@ -98,15 +133,14 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
 		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
 	}).Info("Received header with bid")
-
-	return coreBlock.WrappedExecutionPayloadHeader(bid.Message.Header)
+	return consensusblocks.WrappedExecutionPayloadHeader(bid.Message.Header)
 }
 
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
 func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 
@@ -213,26 +247,8 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	return wb, nil
 }
 
-// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
-// first finalized checkpt has been execution-enabled.
-func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
-	cp := vs.FinalizationFetcher.FinalizedCheckpt()
-	// Checkpoint root is zero means we are still at genesis epoch.
-	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
-		return false, nil
-	}
-	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return false, err
-	}
-	if err = consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return false, err
-	}
-	return blocks.IsExecutionBlock(b.Block().Body())
-}
-
 // Validates builder signature and returns an error if the signature is invalid.
-func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)

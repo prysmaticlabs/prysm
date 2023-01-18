@@ -144,7 +144,7 @@ type withdrawalJSON struct {
 	Index     *hexutil.Uint64 `json:"index"`
 	Validator *hexutil.Uint64 `json:"validatorIndex"`
 	Address   *common.Address `json:"address"`
-	Amount    string          `json:"amount"`
+	Amount    *hexutil.Uint64 `json:"amount"`
 }
 
 func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
@@ -162,14 +162,13 @@ func (j *withdrawalJSON) ToWithdrawal() (*Withdrawal, error) {
 func (w *Withdrawal) MarshalJSON() ([]byte, error) {
 	index := hexutil.Uint64(w.Index)
 	validatorIndex := hexutil.Uint64(w.ValidatorIndex)
+	gwei := hexutil.Uint64(w.Amount)
 	address := common.BytesToAddress(w.Address)
-	wei := new(big.Int).SetUint64(1000000000)
-	amountWei := new(big.Int).Mul(new(big.Int).SetUint64(w.Amount), wei)
 	return json.Marshal(withdrawalJSON{
 		Index:     &index,
 		Validator: &validatorIndex,
 		Address:   &address,
-		Amount:    hexutil.EncodeBig(amountWei),
+		Amount:    &gwei,
 	})
 }
 
@@ -184,23 +183,17 @@ func (w *Withdrawal) UnmarshalJSON(enc []byte) error {
 	if dec.Validator == nil {
 		return errors.New("missing validator index")
 	}
+	if dec.Amount == nil {
+		return errors.New("missing withdrawal amount")
+	}
 	if dec.Address == nil {
 		return errors.New("missing execution address")
 	}
 	*w = Withdrawal{}
 	w.Index = uint64(*dec.Index)
 	w.ValidatorIndex = types.ValidatorIndex(*dec.Validator)
+	w.Amount = uint64(*dec.Amount)
 	w.Address = dec.Address.Bytes()
-	wei := new(big.Int).SetUint64(1000000000)
-	amountWei, err := hexutil.DecodeBig(dec.Amount)
-	if err != nil {
-		return err
-	}
-	amount := new(big.Int).Div(amountWei, wei)
-	if !amount.IsUint64() {
-		return errors.New("withdrawal amount overflow")
-	}
-	w.Amount = amount.Uint64()
 	return nil
 }
 

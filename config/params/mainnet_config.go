@@ -210,8 +210,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
 	CapellaForkEpoch:     math.MaxUint64,
-	ShardingForkVersion:  []byte{4, 0, 0, 0},
-	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -273,8 +271,8 @@ func MainnetTestConfig() *BeaconChainConfig {
 	return mn
 }
 
-// FillTestVersions replaces the byte in the last position of each fork version
-// so that
+// FillTestVersions replaces the fork schedule in the given BeaconChainConfig with test values, using the given
+// byte argument as the high byte (common across forks).
 func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
 	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)

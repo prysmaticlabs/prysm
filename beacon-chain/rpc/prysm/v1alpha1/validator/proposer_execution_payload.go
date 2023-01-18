@@ -40,14 +40,9 @@ var (
 	})
 )
 
-// This returns the execution payload of a given slot.
-// The function has full awareness of pre and post merge.
+// This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context,
-	slot types.Slot,
-	vIdx types.ValidatorIndex,
-	headRoot [32]byte,
-	st state.BeaconState) (interfaces.ExecutionData, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -77,7 +72,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
-			warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+			warnIfFeeRecipientDiffers(payload, feeRecipient)
 			return payload, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
@@ -104,14 +99,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return emptyPayload()
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
 		if !hasTerminalBlock {
-			return emptyPayload()
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 	}
 	payloadIDCacheMiss.Inc()
@@ -147,15 +142,18 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
 
-	p, err := payloadattribute.New(&enginev1.PayloadAttributes{
+	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
 		PrevRandao:            random,
 		SuggestedFeeRecipient: feeRecipient.Bytes(),
-	})
+	}
+
+	// This will change in subsequent hardforks like Capella.
+	pa, err := payloadattribute.New(p)
 	if err != nil {
 		return nil, err
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, pa)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
@@ -166,18 +164,18 @@ func (vs *Server) getExecutionPayload(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	warnIfFeeRecipientDiffers(payload.FeeRecipient(), feeRecipient)
+	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	return payload, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payloadRecipient []byte, feeRecipient common.Address) {
+func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
-	if !bytes.Equal(payloadRecipient, feeRecipient[:]) {
+	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
 			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
-			"received":           fmt.Sprintf("%#x", payloadRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
@@ -229,8 +227,8 @@ func activationEpochNotReached(slot types.Slot) bool {
 	return false
 }
 
-func emptyPayload() (interfaces.ExecutionData, error) {
-	return consensusblocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -239,5 +237,5 @@ func emptyPayload() (interfaces.ExecutionData, error) {
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),
 		BlockHash:     make([]byte, fieldparams.RootLength),
-	})
+	}
 }
