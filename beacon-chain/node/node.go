@@ -447,7 +447,12 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	if !features.Get().EnableSlasher {
 		return nil
 	}
-	baseDir := cliCtx.String(cmd.SlasherDirFlag.Name)
+	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+
+	if cliCtx.IsSet(flags.SlasherDirFlag.Name) {
+		baseDir = cliCtx.String(flags.SlasherDirFlag.Name)
+	}
+
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)

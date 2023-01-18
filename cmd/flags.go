@@ -255,12 +255,6 @@ var (
 		Usage:   "Target file path for outputting a generated JWT secret to be used for JSON-RPC authentication",
 		Aliases: []string{"o"},
 	}
-	// SlasherDirFlag defines a path on disk where the slasher database is stored.
-	SlasherDirFlag = &cli.StringFlag{
-		Name:  "slasher-datadir",
-		Usage: "Directory for the slasher database",
-		Value: DefaultDataDir(),
-	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.

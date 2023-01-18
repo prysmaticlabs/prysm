@@ -130,7 +130,7 @@ var appFlags = []cli.Flag{
 	checkpoint.RemoteURL,
 	genesis.StatePath,
 	genesis.BeaconAPIURL,
-	cmd.SlasherDirFlag,
+	flags.SlasherDirFlag,
 }
 
 func init() {
