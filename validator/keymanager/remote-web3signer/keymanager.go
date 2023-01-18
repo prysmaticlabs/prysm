@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/crypto/pkcs12"
 	"os"
 	"path/filepath"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/pkcs12"
 )
 
 // SetupConfig includes configuration values for initializing.
