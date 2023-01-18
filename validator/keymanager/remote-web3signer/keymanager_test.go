@@ -213,7 +213,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	}
 	assert.NotNil(t, resp)
 	assert.NoError(t, err)
-	assert.Equal(t, resp, keys)
+	require.DeepEqual(t, resp, keys)
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testing.T) {

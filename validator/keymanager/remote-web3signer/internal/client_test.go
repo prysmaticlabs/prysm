@@ -170,7 +170,7 @@ func TestClient_GetPublicKeys_EncodingError(t *testing.T) {
 	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
 	resp, err := cl.GetPublicKeys(context.Background(), "example.com/api/publickeys")
 	assert.Equal(t, err.Error(), "failed to decode from Hex from the following public key index locations: 0, 1, 2, ")
-	assert.Equal(t, nil, resp)
+	assert.Equal(t, 0, len(resp))
 }
 
 // TODO: not really in use, should be revisited
