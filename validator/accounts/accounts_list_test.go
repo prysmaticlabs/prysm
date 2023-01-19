@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -14,23 +13,17 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/mock"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -112,37 +105,6 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
 	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	return walletDir, passwordsDir, passwordFilePath
-}
-
-type mockRemoteKeymanager struct {
-	publicKeys [][fieldparams.BLSPubkeyLength]byte
-	opts       *remote.KeymanagerOpts
-}
-
-func (m *mockRemoteKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	return m.publicKeys, nil
-}
-
-func (*mockRemoteKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
-	return nil, nil
-}
-
-func (*mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
-	return nil
-}
-
-func (*mockRemoteKeymanager) ExtractKeystores(
-	_ context.Context, _ []bls.PublicKey, _ string,
-) ([]*keymanager.Keystore, error) {
-	return nil, nil
-}
-
-func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
-	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
-}
-
-func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
-	return nil, nil
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
@@ -317,6 +279,44 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Private Key %s not found on line number %d", keyString, lineNumber)
 	}
+
+	rescueStdout = os.Stdout
+	r, writer, err = os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = writer
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := mock.NewMockValidatorClient(ctrl)
+	var pks [][]byte
+	for i := range pubKeys {
+		pks = append(pks, pubKeys[i][:])
+	}
+	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
+	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
+
+	m.
+		EXPECT().
+		MultipleValidatorStatus(gomock.Any(), gomock.Eq(req)).
+		Return(resp, nil)
+
+	require.NoError(
+		t,
+		listValidatorIndices(
+			cliCtx.Context,
+			km,
+			m,
+		),
+	)
+	require.NoError(t, writer.Close())
+	out, err = io.ReadAll(r)
+	require.NoError(t, err)
+	os.Stdout = rescueStdout
+
+	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() +
+		fmt.Sprintf("\n%#x: %d", pubKeys[0][0:4], 1) +
+		fmt.Sprintf("\n%#x: %d\n", pubKeys[2][0:4], 2)
+	require.Equal(t, expectedStdout, string(out))
 }
 
 func TestListAccounts_DerivedKeymanager(t *testing.T) {
@@ -459,56 +459,4 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keyFound := strings.Contains(lines[lineNumber], keyString)
 		assert.Equal(t, true, keyFound, "Validating Private Key %s not found on line number %d", keyString, lineNumber)
 	}
-}
-
-func TestListAccounts_ListValidatorIndices(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	numAccounts := 3
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numAccounts)
-	pks := make([][]byte, numAccounts)
-
-	for i := 0; i < numAccounts; i++ {
-		key := make([]byte, 48)
-		copy(key, strconv.Itoa(i))
-		pubKeys[i] = bytesutil.ToBytes48(key)
-		pks[i] = key
-	}
-
-	km := &mockRemoteKeymanager{
-		publicKeys: pubKeys,
-	}
-
-	rescueStdout := os.Stdout
-	r, writer, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = writer
-
-	m := mock.NewMockValidatorClient(ctrl)
-
-	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
-	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
-
-	m.
-		EXPECT().
-		MultipleValidatorStatus(gomock.Eq(context.Background()), gomock.Eq(req)).
-		Return(resp, nil)
-
-	require.NoError(
-		t,
-		listValidatorIndices(
-			context.Background(),
-			km,
-			m,
-		),
-	)
-
-	require.NoError(t, writer.Close())
-	out, err := io.ReadAll(r)
-	require.NoError(t, err)
-	os.Stdout = rescueStdout
-
-	expectedStdout := au.BrightGreen("Validator indices:").Bold().String() + "\n0x30000000: 1\n0x32000000: 2\n"
-	require.Equal(t, expectedStdout, string(out))
 }

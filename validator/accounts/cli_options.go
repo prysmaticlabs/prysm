@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
@@ -33,14 +32,6 @@ func WithKeymanager(km keymanager.IKeymanager) Option {
 func WithKeymanagerType(k keymanager.Kind) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.keymanagerKind = k
-		return nil
-	}
-}
-
-// WithKeymanagerOpts provides a keymanager configuration to the accounts cli manager.
-func WithKeymanagerOpts(kmo *remote.KeymanagerOpts) Option {
-	return func(acc *AccountsCLIManager) error {
-		acc.keymanagerOpts = kmo
 		return nil
 	}
 }
