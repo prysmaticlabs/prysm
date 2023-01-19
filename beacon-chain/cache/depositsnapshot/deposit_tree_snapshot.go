@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	// ErrZeroIndex occurs when the value of index is 0.
 	ErrZeroIndex = errors.New("index should be greater than 0")
 )
 

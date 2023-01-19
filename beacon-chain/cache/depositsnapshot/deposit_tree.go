@@ -13,13 +13,20 @@ import (
 )
 
 var (
+	// ErrEmptyExecutionBlock occurs when the execution block is nil.
 	ErrEmptyExecutionBlock = errors.New("empty execution block")
+	// ErrInvalidSnapshotRoot occurs when the snapshot root does not match the calculated root.
 	ErrInvalidSnapshotRoot = errors.New("snapshot root is invalid")
-	ErrInvalidMixInLength  = errors.New("mixInLength should be greater than 0")
-	ErrInvalidIndex        = errors.New("index should be greater than finalizedDeposits - 1")
-	ErrNoDeposits          = errors.New("number of deposits should be greater than 0")
+	// ErrInvalidMixInLength occurs when the value for mix in length is 0.
+	ErrInvalidMixInLength = errors.New("mixInLength should be greater than 0")
+	// ErrInvalidIndex occurs when the index is less than the number of finalized deposits.
+	ErrInvalidIndex = errors.New("index should be greater than finalizedDeposits - 1")
+	// ErrNoDeposits occurs when the number of deposits is 0.
+	ErrNoDeposits = errors.New("number of deposits should be greater than 0")
+	// ErrNoFinalizedDeposits occurs when the number of finalized deposits is 0.
 	ErrNoFinalizedDeposits = errors.New("number of finalized deposits should be greater than 0")
-	ErrTooManyDeposits     = errors.New("number of deposits should not be greater than the capacity of the tree")
+	// ErrTooManyDeposits occurs when the number of deposits exceeds the capacity of the tree.
+	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
 
 // DepositTree is the Merkle tree representation of deposits.
