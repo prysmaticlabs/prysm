@@ -17,7 +17,7 @@ func (m *PoolMock) PendingBLSToExecChanges() ([]*eth.SignedBLSToExecutionChange,
 }
 
 // BLSToExecChangesForInclusion --
-func (m *PoolMock) BLSToExecChangesForInclusion(_ state.BeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
+func (m *PoolMock) BLSToExecChangesForInclusion(_ state.ReadOnlyBeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
 	return m.Changes, nil
 }
 
