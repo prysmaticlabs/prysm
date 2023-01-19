@@ -139,22 +139,32 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
+	tlsConfig, err := getTLSconfig(pa)
+	if err != nil {
+		return err
+	}
+	go w.monitorStart(tlsConfig)
+
+	return cmd.Wait()
+}
+
+func getTLSconfig(runpath string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
 
-	p12, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
+	p12, err := os.ReadFile(filepath.Clean(runpath + "/testing/endtoend/static-files/certs/prysm_client_identity.p12"))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p12pass, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/pass.txt"))
+	p12pass, err := os.ReadFile(filepath.Clean(runpath + "/testing/endtoend/static-files/certs/pass.txt"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	blocks, err := pkcs12.ToPEM(p12, string(p12pass))
 	if err != nil {
-		return errors.Wrap(err, "pkcs12 to PEM conversion failed")
+		return nil, errors.Wrap(err, "pkcs12 to PEM conversion failed")
 	}
 	var pemData []byte
 	for _, b := range blocks {
@@ -163,19 +173,17 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 	clientPair, err := tls.X509KeyPair(pemData, pemData)
 	if err != nil {
-		return errors.Wrap(err, "failed to obtain client's certificate and/or key")
+		return nil, errors.Wrap(err, "failed to obtain client's certificate and/or key")
 	}
 	tlsConfig.Certificates = []tls.Certificate{clientPair}
 	cp := x509.NewCertPool()
-	pemc, err := os.ReadFile(filepath.Clean(pa + "/testing/endtoend/static-files/certs/cacerts.pem"))
+	pemc, err := os.ReadFile(filepath.Clean(runpath + "/testing/endtoend/static-files/certs/cacerts.pem"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	cp.AppendCertsFromPEM(pemc)
 	tlsConfig.RootCAs = cp
-	go w.monitorStart(tlsConfig)
-
-	return cmd.Wait()
+	return tlsConfig, nil
 }
 
 func (w *Web3RemoteSigner) Started() <-chan struct{} {
@@ -231,9 +239,21 @@ func (w *Web3RemoteSigner) wait(ctx context.Context) {
 // PublicKeys queries the web3signer and returns the response keys.
 func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, error) {
 	w.wait(ctx)
+	pa, err := bazel.RunfilesPath()
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig, err := getTLSconfig(pa)
+	if err != nil {
+		return nil, err
+	}
 
-	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://localhost:%d/api/v1/eth2/publicKeys", Web3RemoteSignerPort), nil)
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("https://localhost:%d/api/v1/eth2/publicKeys", Web3RemoteSignerPort), nil)
 	if err != nil {
 		return nil, err
 	}
