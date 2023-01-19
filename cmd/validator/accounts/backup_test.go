@@ -56,7 +56,6 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -175,7 +174,6 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(password),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

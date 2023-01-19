@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
@@ -45,7 +44,6 @@ func setupRecoverCfg(t *testing.T) *recoverCfgStruct {
 		walletDir:        walletDir,
 		passwordFilePath: passwordFilePath,
 		mnemonicFilePath: mnemonicFilePath,
-		mnemonicLanguage: accounts.DefaultMnemonicLanguage,
 	}
 }
 

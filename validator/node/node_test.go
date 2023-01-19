@@ -52,7 +52,6 @@ func TestNode_Builds(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(walletPassword),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

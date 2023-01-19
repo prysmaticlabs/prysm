@@ -70,7 +70,6 @@ func (s *Server) CreateWallet(ctx context.Context, req *pb.CreateWalletRequest) 
 			accounts.WithKeymanagerType(keymanager.Local),
 			accounts.WithWalletPassword(req.WalletPassword),
 			accounts.WithSkipMnemonicConfirm(true),
-			accounts.WithMnemonicLanguage(req.MnemonicLanguage),
 		}
 		acc, err := accounts.NewCLIManager(opts...)
 		if err != nil {

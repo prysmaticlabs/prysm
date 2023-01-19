@@ -59,9 +59,8 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		validatorService:      vs,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:       pb.KeymanagerKind_IMPORTED,
-		WalletPassword:   strongPass,
-		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		WalletPassword: strongPass,
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
@@ -117,17 +116,15 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 		walletDir:             defaultWalletPath,
 	}
 	req := &pb.CreateWalletRequest{
-		Keymanager:       pb.KeymanagerKind_IMPORTED,
-		WalletPassword:   "", // Weak password, empty string
-		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		WalletPassword: "", // Weak password, empty string
 	}
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
 
 	req = &pb.CreateWalletRequest{
-		Keymanager:       pb.KeymanagerKind_IMPORTED,
-		WalletPassword:   "a", // Weak password, too short
-		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		Keymanager:     pb.KeymanagerKind_IMPORTED,
+		WalletPassword: "a", // Weak password, too short
 	}
 	_, err = s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
@@ -176,11 +173,10 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	req.WalletPassword = strongPass
 	// Create(derived) should fail then test recover.
 	reqCreate := &pb.CreateWalletRequest{
-		Keymanager:       pb.KeymanagerKind_DERIVED,
-		WalletPassword:   strongPass,
-		NumAccounts:      2,
-		Mnemonic:         mnemonic,
-		MnemonicLanguage: accounts.DefaultMnemonicLanguage,
+		Keymanager:     pb.KeymanagerKind_DERIVED,
+		WalletPassword: strongPass,
+		NumAccounts:    2,
+		Mnemonic:       mnemonic,
 	}
 	_, err = s.CreateWallet(ctx, reqCreate)
 	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
@@ -319,7 +315,6 @@ func TestServer_WalletConfig(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Local),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

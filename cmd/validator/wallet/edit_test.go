@@ -109,7 +109,6 @@ func TestEditWalletConfiguration(t *testing.T) {
 		accounts.WithWalletDir(walletDir),
 		accounts.WithKeymanagerType(keymanager.Remote),
 		accounts.WithWalletPassword("Passwordz0320$"),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)

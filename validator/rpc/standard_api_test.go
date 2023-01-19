@@ -54,7 +54,6 @@ func TestServer_ListKeystores(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -112,7 +111,6 @@ func TestServer_ImportKeystores(t *testing.T) {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
@@ -501,7 +499,6 @@ func setupServerWithWallet(t testing.TB) *Server {
 		accounts.WithKeymanagerType(keymanager.Derived),
 		accounts.WithWalletPassword(strongPass),
 		accounts.WithSkipMnemonicConfirm(true),
-		accounts.WithMnemonicLanguage(accounts.DefaultMnemonicLanguage),
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	require.NoError(t, err)
