@@ -110,7 +110,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Web3SignerPublicValidatorKeysFlag,
 			flags.Web3SignerCACertFLag,
 			flags.Web3SignerClientCertPasswordFlag,
-			flags.Web3SignerCACertFLag,
+			flags.Web3SignerClientCertFLag,
 			flags.ProposerSettingsFlag,
 			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
