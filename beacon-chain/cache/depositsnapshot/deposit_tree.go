@@ -33,10 +33,10 @@ var (
 type DepositTree struct {
 	tree                    MerkleTreeNode
 	mixInLength             uint64 // number of deposits in the tree, reference implementation calls this mix_in_length.
-	finalizedExecutionBlock ExecutionBlock
+	finalizedExecutionBlock executionBlock
 }
 
-type ExecutionBlock struct {
+type executionBlock struct {
 	Hash  [32]byte
 	Depth uint64
 }
@@ -50,13 +50,13 @@ func New() *DepositTree {
 	return &DepositTree{
 		tree:                    merkle,
 		mixInLength:             0,
-		finalizedExecutionBlock: ExecutionBlock{},
+		finalizedExecutionBlock: executionBlock{},
 	}
 }
 
 // getSnapshot returns a deposit tree snapshot.
 func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
-	if d.finalizedExecutionBlock == (ExecutionBlock{}) {
+	if d.finalizedExecutionBlock == (executionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}
 	var finalized [][32]byte
@@ -96,7 +96,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
-	d.finalizedExecutionBlock = ExecutionBlock{
+	d.finalizedExecutionBlock = executionBlock{
 		Hash:  blockHash,
 		Depth: executionBlockHeight,
 	}
@@ -131,7 +131,7 @@ func (d *DepositTree) getRoot() [32]byte {
 // pushLeaf adds a new leaf to the tree.
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
-	d.mixInLength += 1
+	d.mixInLength++
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {
 		return err

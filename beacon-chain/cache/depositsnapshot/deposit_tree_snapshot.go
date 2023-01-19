@@ -18,7 +18,7 @@ type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
 	depositCount   uint64
-	executionBlock ExecutionBlock
+	executionBlock executionBlock
 }
 
 // CalculateRoot returns the root of a deposit tree snapshot.
@@ -31,7 +31,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 			if index == 0 {
 				return [32]byte{}, ErrZeroIndex
 			}
-			index -= 1
+			index--
 			root = sha256.Sum256(append(ds.finalized[index][:], root[:]...))
 		} else {
 			root = sha256.Sum256(append(root[:], Zerohashes[i][:]...))
@@ -42,7 +42,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.
-func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock ExecutionBlock) DepositTreeSnapshot {
+func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) DepositTreeSnapshot {
 	return DepositTreeSnapshot{
 		finalized:      finalised,
 		depositRoot:    Zerohashes[0],

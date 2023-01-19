@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	DepositContractDepth = 32 // Maximum tree depth as defined by EIP-4881.
+	// DepositContractDepth is the maximum tree depth as defined by EIP-4881.
+	DepositContractDepth = 32
 )
 
 var (
@@ -109,7 +110,7 @@ func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [
 			proof = append(proof, node.Right().GetRoot())
 			node = node.Left()
 		}
-		depth -= 1
+		depth--
 	}
 	proof = slice.Reverse(proof)
 	return node.GetRoot(), proof
