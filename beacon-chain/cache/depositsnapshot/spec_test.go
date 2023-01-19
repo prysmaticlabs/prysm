@@ -266,11 +266,12 @@ func TestFinalization(t *testing.T) {
 	}
 	originalRoot := tree.getRoot()
 	assert.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
-	tree.finalize(&eth.Eth1Data{
+	err = tree.finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[100].Eth1Data.DepositCount,
 		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
 	}, testCases[100].BlockHeight)
+	assert.NoError(t, err)
 	// ensure finalization doesn't change root
 	assert.Equal(t, tree.getRoot(), originalRoot)
 	snapshotData, err := tree.getSnapshot()
@@ -282,11 +283,12 @@ func TestFinalization(t *testing.T) {
 	// ensure original and copy have the same root
 	assert.Equal(t, tree.getRoot(), cp.getRoot())
 	//	finalize original again to check double finalization
-	tree.finalize(&eth.Eth1Data{
+	err = tree.finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[105].Eth1Data.DepositCount,
 		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
 	}, testCases[105].BlockHeight)
+	assert.NoError(t, err)
 	//	root should still be the same
 	assert.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
@@ -314,11 +316,12 @@ func TestSnapshotCases(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	for _, c := range testCases {
-		tree.finalize(&eth.Eth1Data{
+		err = tree.finalize(&eth.Eth1Data{
 			DepositRoot:  c.Eth1Data.DepositRoot[:],
 			DepositCount: c.Eth1Data.DepositCount,
 			BlockHash:    c.Eth1Data.BlockHash[:],
 		}, c.BlockHeight)
+		assert.NoError(t, err)
 		s, err := tree.getSnapshot()
 		assert.NoError(t, err)
 		assert.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
