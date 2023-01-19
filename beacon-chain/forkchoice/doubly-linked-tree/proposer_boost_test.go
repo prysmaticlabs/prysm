@@ -414,7 +414,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 func TestForkChoice_BoostProposerRoot(t *testing.T) {
 	ctx := context.Background()
 	root := [32]byte{'A'}
-	zeroHash := [32]byte{}
+	var zeroHash [32]byte
 
 	t.Run("does not boost block from different slot", func(t *testing.T) {
 		f := setup(0, 0)

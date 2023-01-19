@@ -34,7 +34,7 @@ func (s *Store) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubke
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		return bucket.ForEach(func(key []byte, _ []byte) error {
-			pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
+			var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
 			copy(pubKeyBytes[:], key)
 			proposedPublicKeys = append(proposedPublicKeys, pubKeyBytes)
 			return nil
@@ -52,7 +52,7 @@ func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [fieldpara
 
 	var err error
 	var proposalExists bool
-	signingRoot := [32]byte{}
+	var signingRoot [32]byte
 	err = s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey[:])

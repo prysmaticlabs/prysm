@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -41,4 +42,5 @@ type Server struct {
 	CanonicalHistory              *stategen.CanonicalHistory
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
+	BLSChangesPool                blstoexec.PoolManager
 }

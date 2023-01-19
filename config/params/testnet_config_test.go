@@ -20,14 +20,12 @@ func testnetConfigFilePath(t *testing.T, network string) string {
 }
 
 func TestE2EConfigParity(t *testing.T) {
-	// TODO(11750)
-	t.Skip("needs https://github.com/prysmaticlabs/prysm/issues/11750")
 	params.SetupTestConfigCleanup(t)
 	testDir := bazel.TestTmpDir()
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2EMainnetTestConfig()
-	yamlObj := params.E2EMainnetConfigYaml()
+	yamlObj := params.ConfigToYaml(params.E2EMainnetTestConfig())
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
 	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.MainnetConfig().Copy()))
@@ -137,8 +135,6 @@ func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
 	require.DeepEqual(t, expected.AltairForkEpoch, actual.AltairForkEpoch)
 	require.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion)
 	require.DeepEqual(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch)
-	require.DeepEqual(t, expected.ShardingForkVersion, actual.ShardingForkVersion)
-	require.DeepEqual(t, expected.ShardingForkEpoch, actual.ShardingForkEpoch)
 	require.DeepEqual(t, expected.ForkVersionSchedule, actual.ForkVersionSchedule)
 	require.DeepEqual(t, expected.SafetyDecay, actual.SafetyDecay)
 	require.DeepEqual(t, expected.TimelySourceFlagIndex, actual.TimelySourceFlagIndex)

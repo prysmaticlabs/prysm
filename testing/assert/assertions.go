@@ -41,6 +41,16 @@ func DeepNotSSZEqual(tb assertions.AssertionTestingTB, expected, actual interfac
 	assertions.DeepNotSSZEqual(tb.Errorf, expected, actual, msg...)
 }
 
+// StringContains asserts a string contains specified substring.
+func StringContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Errorf, expected, actual, true, msg...)
+}
+
+// StringContains asserts a string does not contain specified substring.
+func StringNotContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Errorf, expected, actual, false, msg...)
+}
+
 // NoError asserts that error is nil.
 func NoError(tb assertions.AssertionTestingTB, err error, msg ...interface{}) {
 	assertions.NoError(tb.Errorf, err, msg...)

@@ -170,7 +170,7 @@ func TestProcessProposedBlock(t *testing.T) {
 			hook := logTest.NewGlobal()
 			s := setupService(t)
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
-			root := [32]byte{}
+			var root [32]byte
 			copy(root[:], "hello-world")
 			wb, err := blocks.NewBeaconBlock(tt.block)
 			require.NoError(t, err)

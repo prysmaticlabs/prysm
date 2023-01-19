@@ -38,7 +38,7 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	headSlot, err := waitForActivation(ctx, v)
+	headSlot, err := initializeValidatorAndGetHeadSlot(ctx, v)
 	if err != nil {
 		return // Exit if context is canceled.
 	}
@@ -89,16 +89,16 @@ func run(ctx context.Context, v iface.Validator) {
 				go v.ReceiveBlocks(ctx, connectionErrorChannel)
 				continue
 			}
-		case newKeys := <-accountsChangedChan:
-			anyActive, err := v.HandleKeyReload(ctx, newKeys)
+		case currentKeys := <-accountsChangedChan:
+			anyActive, err := v.HandleKeyReload(ctx, currentKeys)
 			if err != nil {
 				log.WithError(err).Error("Could not properly handle reloaded keys")
 			}
 			if !anyActive {
-				log.Info("No active keys found. Waiting for activation...")
+				log.Warn("No active keys found. Waiting for activation...")
 				err := v.WaitForActivation(ctx, accountsChangedChan)
 				if err != nil {
-					log.WithError(err).Fatal("Could not wait for validator activation")
+					log.WithError(err).Warn("Could not wait for validator activation")
 				}
 			}
 		case slot := <-v.NextSlot():
@@ -165,7 +165,7 @@ func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
 	}
 }
 
-func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, error) {
+func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (types.Slot, error) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
@@ -206,10 +206,6 @@ func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, erro
 			log.WithError(err).Fatal("Could not determine if beacon node synced")
 		}
 		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not wait for validator activation")
-			continue
-		}
 		if err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}

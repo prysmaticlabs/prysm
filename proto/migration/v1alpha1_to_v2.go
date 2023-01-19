@@ -371,6 +371,11 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
+	hrs, err := altairState.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconState{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorsRoot()),
@@ -389,7 +394,7 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hrs),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -493,6 +498,11 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		return nil, errors.New("execution payload header has incorrect type")
 	}
 
+	hRoots, err := st.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconStateBellatrix{
 		GenesisTime:           st.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
@@ -511,7 +521,7 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoots),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -638,6 +648,17 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 	}
+	summaries, err := st.HistoricalSummaries()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical summaries")
+	}
+	sourceHistoricalSummaries := make([]*ethpbv2.HistoricalSummary, len(summaries))
+	for i, summary := range summaries {
+		sourceHistoricalSummaries[i] = &ethpbv2.HistoricalSummary{
+			BlockSummaryRoot: summary.BlockSummaryRoot,
+			StateSummaryRoot: summary.StateSummaryRoot,
+		}
+	}
 
 	result := &ethpbv2.BeaconStateCapella{
 		GenesisTime:           st.GenesisTime(),
@@ -655,9 +676,8 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		BlockRoots: bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots: bytesutil.SafeCopy2dBytes(st.StateRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -712,11 +732,13 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 		},
 		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
 		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
+		HistoricalSummaries:          sourceHistoricalSummaries,
 	}
 
 	return result, nil
 }
 
+// V1Alpha1SignedContributionAndProofToV2 converts a v1alpha1 SignedContributionAndProof object to its v2 equivalent.
 func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.SignedContributionAndProof) *ethpbv2.SignedContributionAndProof {
 	result := &ethpbv2.SignedContributionAndProof{
 		Message: &ethpbv2.ContributionAndProof{
@@ -731,6 +753,30 @@ func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.Signed
 			SelectionProof: alphaContribution.Message.SelectionProof,
 		},
 		Signature: alphaContribution.Signature,
+	}
+	return result
+}
+
+func V2SignedBLSToExecutionChangeToV1Alpha1(change *ethpbv2.SignedBLSToExecutionChange) *ethpbalpha.SignedBLSToExecutionChange {
+	return &ethpbalpha.SignedBLSToExecutionChange{
+		Message: &ethpbalpha.BLSToExecutionChange{
+			ValidatorIndex:     change.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(change.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(change.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(change.Signature),
+	}
+}
+
+// V1Alpha1SignedBLSToExecChangeToV2 converts a v1alpha1 SignedBLSToExecutionChange object to its v2 equivalent.
+func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecutionChange) *ethpbv2.SignedBLSToExecutionChange {
+	result := &ethpbv2.SignedBLSToExecutionChange{
+		Message: &ethpbv2.BLSToExecutionChange{
+			ValidatorIndex:     alphaChange.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(alphaChange.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(alphaChange.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(alphaChange.Signature),
 	}
 	return result
 }
