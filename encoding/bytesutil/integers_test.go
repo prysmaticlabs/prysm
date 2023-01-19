@@ -300,3 +300,26 @@ func TestUint64ToBytesLittleEndian(t *testing.T) {
 		})
 	}
 }
+
+func TestUint64ToBytesLittleEndian32(t *testing.T) {
+	tests := []struct {
+		value uint64
+		want  [32]byte
+	}{
+		{
+			value: 0x01000000,
+			want:  [32]byte{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			value: 0x00000001,
+			want:  [32]byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("0x%08x", tt.value), func(t *testing.T) {
+			if got := bytesutil.Uint64ToBytesLittleEndian32(tt.value); !bytes.Equal(got, tt.want[:]) {
+				t.Errorf("Uint64ToBytesLittleEndian32() = got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

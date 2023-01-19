@@ -2,7 +2,6 @@
 package bytesutil
 
 import (
-	"encoding/binary"
 	"fmt"
 )
 
@@ -45,14 +44,6 @@ func FromBytes48Array(x [][48]byte) [][]byte {
 		y[i] = x[i][:]
 	}
 	return y
-}
-
-// Uint64ToBytesLittleEndian32 conversion of a uint64 to a fix
-// sized 32 byte array in little endian order. Returns 32 byte array.
-func Uint64ToBytesLittleEndian32(i uint64) []byte {
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, i)
-	return buf
 }
 
 // Trunc truncates the byte slices to 6 bytes.
