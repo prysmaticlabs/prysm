@@ -37,17 +37,17 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 		}()
 	}
 
-	return v.waitForActivation(ctx, accountsChangedChan)
+	return v.internalWaitForActivation(ctx, accountsChangedChan)
 }
 
-// waitForActivation performs the following:
+// internalWaitForActivation performs the following:
 // 1) While the key manager is empty, poll the key manager until some validator keys exist.
 // 2) Open a server side stream for activation events against the given keys.
 // 3) In another go routine, the key manager is monitored for updates and emits an update event on
-// the accountsChangedChan. When an event signal is received, restart the waitForActivation routine.
+// the accountsChangedChan. When an event signal is received, restart the internalWaitForActivation routine.
 // 4) If the stream is reset in error, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
-func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
 
@@ -90,7 +90,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 			Error("Stream broken while waiting for activation. Reconnecting...")
 		// Reconnection attempt backoff, up to 60s.
 		time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
-		return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
+		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 
 	if err = v.handleAccountsChanged(ctx, accountsChangedChan, &stream, span); err != nil {
@@ -106,7 +106,7 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 		select {
 		case <-accountsChangedChan:
 			// Accounts (keys) changed, restart the process.
-			return v.waitForActivation(ctx, accountsChangedChan)
+			return v.internalWaitForActivation(ctx, accountsChangedChan)
 		default:
 			res, err := (*stream).Recv()
 			// If the stream is closed, we stop the loop.
@@ -124,7 +124,7 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 					Error("Stream broken while waiting for activation. Reconnecting...")
 				// Reconnection attempt backoff, up to 60s.
 				time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
-				return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
+				return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 			}
 
 			statuses := make([]*validatorStatus, len(res.Statuses))

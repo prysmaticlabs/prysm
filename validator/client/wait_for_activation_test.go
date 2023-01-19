@@ -243,7 +243,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil)
-	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
+	assert.NoError(t, v.internalWaitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -390,7 +390,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
 
-		assert.NoError(t, v.waitForActivation(context.Background(), channel))
+		assert.NoError(t, v.internalWaitForActivation(context.Background(), channel))
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
 		assert.LogsContain(t, hook, "Validator activated")
 	})
