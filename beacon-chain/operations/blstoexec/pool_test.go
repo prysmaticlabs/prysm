@@ -237,7 +237,7 @@ func TestMarkIncluded(t *testing.T) {
 				ValidatorIndex: types.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		assert.Equal(t, 0, pool.pending.Len())
 		_, ok := pool.m[0]
 		assert.Equal(t, false, ok)
@@ -259,7 +259,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(first))
+		pool.MarkIncluded(first)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[0]
 		assert.Equal(t, false, ok)
@@ -281,7 +281,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(third))
+		pool.MarkIncluded(third)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[2]
 		assert.Equal(t, false, ok)
@@ -303,7 +303,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(second))
+		pool.MarkIncluded(second)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[1]
 		assert.Equal(t, false, ok)
@@ -324,7 +324,7 @@ func TestMarkIncluded(t *testing.T) {
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[0]
 		require.Equal(t, true, ok)
@@ -378,7 +378,7 @@ func TestValidatorExists(t *testing.T) {
 				ValidatorIndex: types.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		assert.Equal(t, false, pool.ValidatorExists(0))
 	})
 	t.Run("multiple validators added to pool and removed", func(t *testing.T) {
@@ -399,8 +399,8 @@ func TestValidatorExists(t *testing.T) {
 			}}
 		pool.InsertBLSToExecChange(thirdChange)
 
-		assert.NoError(t, pool.MarkIncluded(firstChange))
-		assert.NoError(t, pool.MarkIncluded(thirdChange))
+		pool.MarkIncluded(firstChange)
+		pool.MarkIncluded(thirdChange)
 
 		assert.Equal(t, false, pool.ValidatorExists(0))
 		assert.Equal(t, true, pool.ValidatorExists(10))
