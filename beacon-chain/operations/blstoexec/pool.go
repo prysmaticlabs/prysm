@@ -1,11 +1,9 @@
 package blstoexec
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -22,7 +20,7 @@ type PoolManager interface {
 	PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BLSToExecChangesForInclusion(beaconState state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
-	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
+	MarkIncluded(change *ethpb.SignedBLSToExecutionChange)
 	ValidatorExists(idx types.ValidatorIndex) bool
 }
 
@@ -80,9 +78,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 			logrus.WithError(err).Warning("removing invalid BLSToExecutionChange from pool")
 			// MarkIncluded removes the invalid change from the pool
 			p.lock.RUnlock()
-			if err := p.MarkIncluded(change); err != nil {
-				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-			}
+			p.MarkIncluded(change)
 			p.lock.RLock()
 		} else {
 			result = append(result, change)
@@ -119,9 +115,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 		}
 		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
 			logrus.Warning("removing BLSToExecutionChange with invalid signature from pool")
-			if err := p.MarkIncluded(result[i]); err != nil {
-				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-			}
+			p.MarkIncluded(result[i])
 		} else {
 			verified = append(verified, result[i])
 		}
@@ -145,18 +139,17 @@ func (p *Pool) InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange) {
 
 // MarkIncluded is used when an object has been included in a beacon block. Every block seen by this
 // node should call this method to include the object. This will remove the object from the pool.
-func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
+func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	node := p.m[change.Message.ValidatorIndex]
 	if node == nil {
-		return fmt.Errorf("no change exists for validator index %d", change.Message.ValidatorIndex)
+		return
 	}
 
 	delete(p.m, change.Message.ValidatorIndex)
 	p.pending.Remove(node)
-	return nil
 }
 
 // ValidatorExists checks if the bls to execution change object exists

@@ -172,9 +172,7 @@ func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error 
 		return errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
 	for _, change := range changes {
-		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
-			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-		}
+		s.cfg.BLSToExecPool.MarkIncluded(change)
 	}
 	return nil
 }
