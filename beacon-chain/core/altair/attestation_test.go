@@ -16,13 +16,16 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	aggtesting "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/testing"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
@@ -285,6 +288,244 @@ func TestProcessAttestationNoVerify_SourceTargetHead(t *testing.T) {
 		has, err = altair.HasValidatorFlag(p[index], params.BeaconConfig().TimelyTargetFlagIndex)
 		require.NoError(t, err)
 		require.Equal(t, true, has)
+	}
+}
+
+func TestProcessAttestationNoVerifySignature_currentEpoch(t *testing.T) {
+	cfg := params.BeaconConfig().Copy()
+	// case where currentSlot > startSlot (96), expected target comes from start slot block
+	currentSlot := types.Slot(100)
+	// Oldest worthy slot is current slot - integer_squareroot(SLOTS_PER_EPOCH) i.e. 100 - 5 = 95
+	timelySource := types.Slot(95)
+	untimelySource := types.Slot(94)
+	someBits := aggtesting.BitlistWithAllBitsSet(128)
+	someRoot := []byte{1, 2, 3}
+
+	validators := make([]*ethpb.Validator, cfg.MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey:             make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             cfg.FarFutureEpoch,
+			Slashed:               true,
+		}
+	}
+	st, err := util.NewBeaconStateAltair()
+	require.NoError(t, err)
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetSlot(currentSlot))
+
+	// set up start slot block
+	startSlot, err := slots.EpochStart(slots.ToEpoch(currentSlot))
+	require.NoError(t, err)
+	sb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	sb, err = blocktest.SetBlockParentRoot(sb, cfg.ZeroHash)
+	require.NoError(t, err)
+	sb, err = blocktest.SetBlockSlot(sb, startSlot)
+	require.NoError(t, err)
+	sb, err = blocktest.SetProposerIndex(sb, 0)
+	require.NoError(t, err)
+
+	// set up state header pointing at checkpoint block
+	header, err := sb.Header()
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestBlockHeader(header.Header))
+
+	// set up checkpoint for attestations
+	sbRoot, err := sb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	correctTarget := func(s types.Slot) *ethpb.Checkpoint {
+		return &ethpb.Checkpoint{
+			Epoch: slots.ToEpoch(s),
+			Root:  sbRoot[:],
+		}
+	}
+	wrongTarget := func(s types.Slot) *ethpb.Checkpoint {
+		return &ethpb.Checkpoint{
+			Epoch: slots.ToEpoch(s),
+			Root:  someRoot,
+		}
+	}
+
+	// set up state block roots
+	var blockRoots [][]byte
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
+		blockRoots = append(blockRoots, sbRoot[:])
+	}
+	require.NoError(t, st.SetBlockRoots(blockRoots))
+
+	timelySourceCorrectTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           timelySource,
+		Target:         correctTarget(timelySource),
+		CommitteeIndex: 1,
+	})
+	timelySourceWrongTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           timelySource,
+		Target:         wrongTarget(timelySource),
+		CommitteeIndex: 1,
+	})
+	untimelySourceCorrectTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           untimelySource,
+		Target:         correctTarget(untimelySource),
+		CommitteeIndex: 1,
+	})
+	untimelySourceWrongTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           untimelySource,
+		Target:         wrongTarget(untimelySource),
+		CommitteeIndex: 1,
+	})
+
+	tests := []struct {
+		name string
+		att  *ethpb.Attestation
+		want string
+	}{
+		{
+			name: "should not discard timely source and correct target",
+			att:  &ethpb.Attestation{Data: timelySourceCorrectTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should not discard timely source and wrong target",
+			att:  &ethpb.Attestation{Data: timelySourceWrongTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should not discard untimely source and correct target",
+			att:  &ethpb.Attestation{Data: untimelySourceCorrectTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should discard untimely source and wrong target",
+			att:  &ethpb.Attestation{Data: untimelySourceWrongTarget, AggregationBits: someBits},
+			want: "att has no participation flags set",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, got := altair.ProcessAttestationNoVerifySignature(context.Background(), st, tt.att, 0)
+			require.ErrorContains(t, tt.want, got)
+		})
+	}
+}
+
+func TestProcessAttestationNoVerifySignature_previousEpoch(t *testing.T) {
+	cfg := params.BeaconConfig().Copy()
+	// case where currentSlot <= startSlot (96), expected target comes from latest block header
+	currentSlot := types.Slot(96)
+	// Oldest worthy slot is current slot - integer_squareroot(SLOTS_PER_EPOCH) i.e. 96 - 5 = 91
+	timelySource := types.Slot(91)
+	untimelySource := types.Slot(89)
+	someBits := aggtesting.BitlistWithAllBitsSet(128)
+	someRoot := []byte{1, 2, 3}
+
+	validators := make([]*ethpb.Validator, cfg.MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey:             make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             cfg.FarFutureEpoch,
+			Slashed:               true,
+		}
+	}
+	st, err := util.NewBeaconStateAltair()
+	require.NoError(t, err)
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetSlot(currentSlot))
+
+	// set up start slot block
+	startSlot, err := slots.EpochStart(slots.ToEpoch(currentSlot))
+	require.NoError(t, err)
+	sb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	sb, err = blocktest.SetBlockParentRoot(sb, cfg.ZeroHash)
+	require.NoError(t, err)
+	sb, err = blocktest.SetBlockSlot(sb, startSlot)
+	require.NoError(t, err)
+	sb, err = blocktest.SetProposerIndex(sb, 0)
+	require.NoError(t, err)
+
+	// set up state header pointing at checkpoint block
+	header, err := sb.Header()
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestBlockHeader(header.Header))
+
+	// set up checkpoint for attestations
+	sbRoot, err := sb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	correctTarget := func(s types.Slot) *ethpb.Checkpoint {
+		return &ethpb.Checkpoint{
+			Epoch: slots.ToEpoch(s),
+			Root:  sbRoot[:],
+		}
+	}
+	wrongTarget := func(s types.Slot) *ethpb.Checkpoint {
+		return &ethpb.Checkpoint{
+			Epoch: slots.ToEpoch(s),
+			Root:  someRoot,
+		}
+	}
+
+	// set up state block roots
+	var blockRoots [][]byte
+	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
+		blockRoots = append(blockRoots, sbRoot[:])
+	}
+	require.NoError(t, st.SetBlockRoots(blockRoots))
+
+	timelySourceCorrectTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           timelySource,
+		Target:         correctTarget(timelySource),
+		CommitteeIndex: 1,
+	})
+	timelySourceWrongTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           timelySource,
+		Target:         wrongTarget(timelySource),
+		CommitteeIndex: 1,
+	})
+	untimelySourceCorrectTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           untimelySource,
+		Target:         correctTarget(untimelySource),
+		CommitteeIndex: 1,
+	})
+	untimelySourceWrongTarget := util.HydrateAttestationData(&ethpb.AttestationData{
+		Slot:           untimelySource,
+		Target:         wrongTarget(untimelySource),
+		CommitteeIndex: 1,
+	})
+
+	tests := []struct {
+		name string
+		att  *ethpb.Attestation
+		want string
+	}{
+		{
+			name: "should not discard timely source and correct target",
+			att:  &ethpb.Attestation{Data: timelySourceCorrectTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should not discard timely source and wrong target",
+			att:  &ethpb.Attestation{Data: timelySourceWrongTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should not discard untimely source and correct target",
+			att:  &ethpb.Attestation{Data: untimelySourceCorrectTarget, AggregationBits: someBits},
+			want: "exceeds participation length",
+		},
+		{
+			name: "should discard untimely source and wrong target",
+			att:  &ethpb.Attestation{Data: untimelySourceWrongTarget, AggregationBits: someBits},
+			want: "att has no participation flags set",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, got := altair.ProcessAttestationNoVerifySignature(context.Background(), st, tt.att, 0)
+			require.ErrorContains(t, tt.want, got)
+		})
 	}
 }
 
