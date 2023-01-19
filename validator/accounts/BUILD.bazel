@@ -15,7 +15,6 @@ go_library(
         "doc.go",
         "log.go",
         "wallet_create.go",
-        "wallet_edit.go",
         "wallet_recover.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/validator/accounts",
@@ -72,7 +71,6 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
-        "//async/event:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -81,7 +79,6 @@ go_test(
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/mock:go_default_library",
         "//testing/require:go_default_library",
