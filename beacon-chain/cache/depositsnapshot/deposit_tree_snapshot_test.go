@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
@@ -42,7 +44,9 @@ func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
 				finalized:    finalized,
 				depositCount: tt.depositCount,
 			}
-			if got := ds.CalculateRoot(); !reflect.DeepEqual(got, tt.want) {
+			root, err := ds.CalculateRoot()
+			require.NoError(t, err)
+			if got := root; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CalculateRoot() = %v, want %v", got, tt.want)
 			}
 		})
