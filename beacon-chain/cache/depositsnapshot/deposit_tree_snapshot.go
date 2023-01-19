@@ -46,11 +46,17 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 // fromTreeParts constructs the deposit tree from pre-existing data.
 //
 //nolint:unused
-func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) DepositTreeSnapshot {
-	return DepositTreeSnapshot{
+func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) (DepositTreeSnapshot, error) {
+	snapshot := DepositTreeSnapshot{
 		finalized:      finalised,
 		depositRoot:    Zerohashes[0],
 		depositCount:   depositCount,
 		executionBlock: executionBlock,
 	}
+	root, err := snapshot.CalculateRoot()
+	if err != nil {
+		return snapshot, ErrInvalidSnapshotRoot
+	}
+	snapshot.depositRoot = root
+	return snapshot, nil
 }
