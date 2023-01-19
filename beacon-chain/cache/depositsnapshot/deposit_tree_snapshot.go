@@ -14,6 +14,8 @@ var (
 
 // DepositTreeSnapshot represents the data used to create a
 // deposit tree given a snapshot.
+//
+//nolint:unused
 type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
@@ -42,6 +44,8 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.
+//
+//nolint:unused
 func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) DepositTreeSnapshot {
 	return DepositTreeSnapshot{
 		finalized:      finalised,

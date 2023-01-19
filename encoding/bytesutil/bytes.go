@@ -2,8 +2,8 @@
 package bytesutil
 
 import (
-	"fmt"
 	"encoding/binary"
+	"fmt"
 )
 
 // ToBytes48Array is a convenience method for converting an array of

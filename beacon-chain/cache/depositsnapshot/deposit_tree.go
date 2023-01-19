@@ -55,6 +55,8 @@ func New() *DepositTree {
 }
 
 // getSnapshot returns a deposit tree snapshot.
+//
+//nolint:unused
 func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	if d.finalizedExecutionBlock == (executionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
@@ -93,6 +95,8 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 }
 
 // finalize marks a deposit as finalized.
+//
+//nolint:unused
 func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
@@ -108,6 +112,8 @@ func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 }
 
 // getProof returns the Deposit tree proof.
+//
+//nolint:unused
 func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.mixInLength <= 0 {
 		return [32]byte{}, nil, ErrInvalidMixInLength
@@ -127,12 +133,16 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 }
 
 // getRoot returns the root of the deposit tree.
+//
+//nolint:unused
 func (d *DepositTree) getRoot() [32]byte {
 	root := d.tree.GetRoot()
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...))
 }
 
 // pushLeaf adds a new leaf to the tree.
+//
+//nolint:unused
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.mixInLength++
