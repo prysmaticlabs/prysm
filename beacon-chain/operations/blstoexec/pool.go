@@ -1,6 +1,7 @@
 package blstoexec
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -19,7 +20,7 @@ import (
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
 	PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
-	BLSToExecChangesForInclusion(state.BeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
+	BLSToExecChangesForInclusion(beaconState state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error
 	ValidatorExists(idx types.ValidatorIndex) bool
@@ -61,9 +62,9 @@ func (p *Pool) PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, e
 	return result, nil
 }
 
-// BLSToExecChangesForInclusion returns objects that are ready for inclusion at the given slot.
+// BLSToExecChangesForInclusion returns objects that are ready for inclusion.
 // This method will not return more than the block enforced MaxBlsToExecutionChanges.
-func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.SignedBLSToExecutionChange, error) {
+func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error) {
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxBlsToExecutionChanges), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
@@ -143,14 +144,14 @@ func (p *Pool) InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange) {
 }
 
 // MarkIncluded is used when an object has been included in a beacon block. Every block seen by this
-// listNode should call this method to include the object. This will remove the object from the pool.
+// node should call this method to include the object. This will remove the object from the pool.
 func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	node := p.m[change.Message.ValidatorIndex]
 	if node == nil {
-		return nil
+		return fmt.Errorf("no change exists for validator index %d", change.Message.ValidatorIndex)
 	}
 
 	delete(p.m, change.Message.ValidatorIndex)

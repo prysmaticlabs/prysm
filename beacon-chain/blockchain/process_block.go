@@ -557,22 +557,6 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Be
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
-	if blk.Version() < version.Capella {
-		return nil
-	}
-	changes, err := blk.Body().BLSToExecutionChanges()
-	if err != nil {
-		return errors.Wrap(err, "could not get BLSToExecutionChanges")
-	}
-	for _, change := range changes {
-		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
-			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-		}
-	}
-	return nil
-}
-
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
