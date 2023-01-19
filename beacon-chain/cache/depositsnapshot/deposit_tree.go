@@ -148,7 +148,10 @@ func (d *DepositTree) getRoot() [32]byte {
 //nolint:unused
 func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 	var err error
-	d.mixInLength++
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
-	return err
+	if err != nil {
+		return err
+	}
+	d.mixInLength++
+	return nil
 }

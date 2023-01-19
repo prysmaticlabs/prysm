@@ -182,8 +182,8 @@ func (l *LeafNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTree
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
-func (_ *LeafNode) GetFinalized(_ [][32]byte) (uint64, [][32]byte) {
-	return 0, nil
+func (_ *LeafNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	return 0, result
 }
 
 // PushLeaf adds a new leaf node at the next available zero node.
@@ -304,8 +304,8 @@ func (_ *ZeroNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTree
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
-func (_ *ZeroNode) GetFinalized(_ [][32]byte) (uint64, [][32]byte) {
-	return 0, nil
+func (_ *ZeroNode) GetFinalized(result [][32]byte) (uint64, [][32]byte) {
+	return 0, result
 }
 
 // PushLeaf adds a new leaf node at the next available zero node.
