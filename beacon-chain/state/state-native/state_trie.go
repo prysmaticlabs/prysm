@@ -515,6 +515,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		// Large arrays, increases over time.
 		balances:                   b.balances,
 		historicalRoots:            b.historicalRoots,
+		historicalSummaries:        b.historicalSummaries,
 		validators:                 b.validators,
 		previousEpochParticipation: b.previousEpochParticipation,
 		currentEpochParticipation:  b.currentEpochParticipation,
@@ -533,7 +534,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 		nextSyncCommittee:                   b.nextSyncCommitteeVal(),
 		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
-		historicalSummaries:                 b.historicalSummariesVal(),
 
 		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),
@@ -838,7 +838,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 	case nativetypes.NextWithdrawalValidatorIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
 	case nativetypes.HistoricalSummaries:
-		return historicalSummaryRoot(b.historicalSummaries)
+		return stateutil.HistoricalSummariesRoot(b.historicalSummaries)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

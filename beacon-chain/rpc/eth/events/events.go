@@ -39,6 +39,8 @@ const (
 	LightClientFinalityUpdateTopic = "light_client_finality_update"
 	// LightClientOptimisticUpdateTopic represents a new light client optimistic update event topic.
 	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
+	// BLSToExecutionChangeTopic represents a new received BLS to execution change event topic.
+	BLSToExecutionChangeTopic = "bls_to_execution_change"
 )
 
 var casesHandled = map[string]bool{
@@ -49,6 +51,7 @@ var casesHandled = map[string]bool{
 	FinalizedCheckpointTopic:         true,
 	ChainReorgTopic:                  true,
 	SyncCommitteeContributionTopic:   true,
+	BLSToExecutionChangeTopic:        true,
 	LightClientFinalityUpdateTopic:   true,
 	LightClientOptimisticUpdateTopic: true,
 }
@@ -186,6 +189,16 @@ func handleBlockOperationEvents(
 		}
 		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
 		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
+	case operation.BLSToExecutionChangeReceived:
+		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
+			return nil
+		}
+		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
+		if !ok {
+			return nil
+		}
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
+		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
 	default:
 		return nil
 	}

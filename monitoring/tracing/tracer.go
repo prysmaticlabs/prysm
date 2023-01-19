@@ -41,7 +41,7 @@ func Setup(serviceName, processName, endpoint string, sampleFraction float64, en
 		},
 		BufferMaxCount: 10000,
 		OnError: func(err error) {
-			log.WithError(err).Error("Failed to process span")
+			log.WithError(err).Error("Could not process span")
 		},
 	})
 	if err != nil {

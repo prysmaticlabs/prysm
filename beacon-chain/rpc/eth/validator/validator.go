@@ -500,16 +500,9 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	altairBlk, err := vs.V1Alpha1Server.BuildAltairBeaconBlock(ctx, v1alpha1req)
+	b, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-	}
-	ok, b, err := vs.V1Alpha1Server.GetAndBuildBlindBlock(ctx, altairBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare blind beacon block: %v", err)
-	}
-	if !ok {
-		return nil, status.Error(codes.Unavailable, "Builder is not available due to miss-config or circuit breaker")
+		return nil, status.Error(codes.Unavailable, "Could not get block from prysm API")
 	}
 	blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(b.GetBlindedBellatrix())
 	if err != nil {

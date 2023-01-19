@@ -914,6 +914,7 @@ type BeaconStateCapellaJson struct {
 	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapellaJson `json:"latest_execution_payload_header"`
 	NextWithdrawalIndex          string                             `json:"next_withdrawal_index"`
 	NextWithdrawalValidatorIndex string                             `json:"next_withdrawal_validator_index"`
+	HistoricalSummaries          []*HistoricalSummaryJson           `json:"historical_summaries"`
 }
 
 type BeaconStateContainerV2Json struct {
@@ -1088,6 +1089,12 @@ type ForkChoiceDumpJson struct {
 }
 
 // ----------------
+type HistoricalSummaryJson struct {
+	BlockSummaryRoot string `json:"block_summary_root" hex:"true"`
+	StateSummaryRoot string `json:"state_summary_root" hex:"true"`
+}
+
+//----------------
 // SSZ
 // ---------------
 
