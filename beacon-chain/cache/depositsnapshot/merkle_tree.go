@@ -15,7 +15,9 @@ var (
 	// ErrFinalizedNodeCannotPushLeaf may occur when attempting to push a leaf to a finalized node. When a node is finalized, it cannot be modified or changed.
 	ErrFinalizedNodeCannotPushLeaf = errors.New("can't push a leaf to a finalized node")
 	// ErrLeafNodeCannotPushLeaf may occur when attempting to push a leaf to a leaf node.
-	ErrLeafNodeCannotPushLeaf      = errors.New("can't push a leaf to a leaf node")
+	ErrLeafNodeCannotPushLeaf = errors.New("can't push a leaf to a leaf node")
+	ErrZeroLevel              = errors.New("level should be greater than 0")
+	ErrZeroDepth              = errors.New("depth should be greater than 0")
 )
 
 // MerkleTreeNode is the interface for a Merkle tree.
@@ -25,7 +27,7 @@ type MerkleTreeNode interface {
 	// IsFull returns whether there is space left for deposits.
 	IsFull() bool
 	// Finalize marks deposits of the Merkle tree as finalized.
-	Finalize(deposits uint64, depth uint64) MerkleTreeNode
+	Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error)
 	// GetFinalized returns the number of deposits and a list of hashes of all the finalized nodes.
 	GetFinalized(result [][32]byte) (uint64, [][32]byte)
 	// PushLeaf adds a new leaf node at the next available Zero node.
@@ -53,33 +55,46 @@ func create(leaves [][32]byte, depth uint64) MerkleTreeNode {
 }
 
 // fromSnapshotParts creates a new Merkle tree from a list of finalized leaves, number of deposits and specified depth.
-func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) MerkleTreeNode {
+//
+//nolint:unused
+func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (_ MerkleTreeNode, err error) {
 	if len(finalized) < 1 || deposits == 0 {
 		return &ZeroNode{
 			depth: level,
-		}
+		}, nil
 	}
 	if deposits == math.PowerOf2(level) {
 		return &FinalizedNode{
 			depositCount: deposits,
 			hash:         finalized[0],
-		}
+		}, nil
+	}
+	if level == 0 {
+		return &ZeroNode{}, ErrZeroLevel
 	}
 	node := InnerNode{}
 	if leftSubtree := math.PowerOf2(level - 1); deposits <= leftSubtree {
-		node.left = fromSnapshotParts(finalized, deposits, level-1)
+		node.left, err = fromSnapshotParts(finalized, deposits, level-1)
+		if err != nil {
+			return &ZeroNode{}, err
+		}
 		node.right = &ZeroNode{depth: level - 1}
 	} else {
 		node.left = &FinalizedNode{
 			depositCount: leftSubtree,
 			hash:         finalized[0],
 		}
-		node.right = fromSnapshotParts(finalized[1:], deposits-leftSubtree, level-1)
+		node.right, err = fromSnapshotParts(finalized[1:], deposits-leftSubtree, level-1)
+		if err != nil {
+			return &ZeroNode{}, err
+		}
 	}
-	return &node
+	return &node, nil
 }
 
 // generateProof returns a merkle proof and root
+//
+//nolint:unused
 func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [][32]byte) {
 	var proof [][32]byte
 	node := tree
@@ -117,8 +132,8 @@ func (_ *FinalizedNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (f *FinalizedNode) Finalize(_ uint64, _ uint64) MerkleTreeNode {
-	return f
+func (f *FinalizedNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
+	return f, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
@@ -159,8 +174,8 @@ func (_ *LeafNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (l *LeafNode) Finalize(_ uint64, _ uint64) MerkleTreeNode {
-	return &FinalizedNode{1, l.hash}
+func (l *LeafNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
+	return &FinalizedNode{1, l.hash}, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
@@ -201,17 +216,26 @@ func (n *InnerNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) MerkleTreeNode {
+func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) (_ MerkleTreeNode, err error) {
 	deposits := math.PowerOf2(depth)
 	if deposits <= depositsToFinalize {
-		return &FinalizedNode{deposits, n.GetRoot()}
+		return &FinalizedNode{deposits, n.GetRoot()}, nil
 	}
-	n.left = n.left.Finalize(depositsToFinalize, depth-1)
+	if depth == 0 {
+		return &ZeroNode{}, ErrZeroDepth
+	}
+	n.left, err = n.left.Finalize(depositsToFinalize, depth-1)
+	if err != nil {
+		return &ZeroNode{}, err
+	}
 	if depositsToFinalize > deposits/2 {
 		remaining := depositsToFinalize - deposits/2
-		n.right = n.right.Finalize(remaining, depth-1)
+		n.right, err = n.right.Finalize(remaining, depth-1)
+		if err != nil {
+			return &ZeroNode{}, err
+		}
 	}
-	return n
+	return n, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
@@ -272,8 +296,8 @@ func (_ *ZeroNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (_ *ZeroNode) Finalize(_ uint64, _ uint64) MerkleTreeNode {
-	return nil
+func (_ *ZeroNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
+	return nil, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.

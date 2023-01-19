@@ -3,7 +3,12 @@ package depositsnapshot
 import (
 	"crypto/sha256"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+)
+
+var (
+	ErrZeroIndex = errors.New("index should be greater than 0")
 )
 
 // DepositTreeSnapshot represents the data used to create a
@@ -16,12 +21,15 @@ type DepositTreeSnapshot struct {
 }
 
 // CalculateRoot returns the root of a deposit tree snapshot.
-func (ds *DepositTreeSnapshot) CalculateRoot() [32]byte {
+func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 	size := ds.depositCount
 	index := len(ds.finalized)
 	root := Zerohashes[0]
 	for i := 0; i < DepositContractDepth; i++ {
 		if (size & 1) == 1 {
+			if index == 0 {
+				return [32]byte{}, ErrZeroIndex
+			}
 			index -= 1
 			root = sha256.Sum256(append(ds.finalized[index][:], root[:]...))
 		} else {
@@ -29,7 +37,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() [32]byte {
 		}
 		size >>= 1
 	}
-	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...))
+	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...)), nil
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.

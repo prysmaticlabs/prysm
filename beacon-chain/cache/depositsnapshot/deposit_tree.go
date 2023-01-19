@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/math"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
@@ -18,6 +19,7 @@ var (
 	ErrInvalidIndex        = errors.New("index should be greater than finalizedDeposits - 1")
 	ErrNoDeposits          = errors.New("number of deposits should be greater than 0")
 	ErrNoFinalizedDeposits = errors.New("number of finalized deposits should be greater than 0")
+	ErrTooManyDeposits     = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
 
 // DepositTree is the Merkle tree representation of deposits.
@@ -33,6 +35,8 @@ type ExecutionBlock struct {
 }
 
 // New creates an empty deposit tree.
+//
+//nolint:unused
 func New() *DepositTree {
 	var leaves [][32]byte
 	merkle := create(leaves, DepositContractDepth)
@@ -54,11 +58,23 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 }
 
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
+//
+//nolint:unused
 func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
-	if snapshot.depositRoot != snapshot.CalculateRoot() {
+	root, err := snapshot.CalculateRoot()
+	if err != nil {
+		return DepositTree{}, err
+	}
+	if snapshot.depositRoot != root {
 		return DepositTree{}, ErrInvalidSnapshotRoot
 	}
-	tree := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
+	if snapshot.depositCount >= math.PowerOf2(uint64(DepositContractDepth)) {
+		return DepositTree{}, ErrTooManyDeposits
+	}
+	tree, err := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
+	if err != nil {
+		return DepositTree{}, err
+	}
 	if snapshot.depositCount == 0 {
 		return DepositTree{}, ErrNoDeposits
 	}
