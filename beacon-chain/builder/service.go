@@ -93,6 +93,18 @@ func (s *Service) SubmitBlindedBlock(ctx context.Context, b *ethpb.SignedBlinded
 	return s.c.SubmitBlindedBlock(ctx, b)
 }
 
+// SubmitBlindedBlockCapella submits a blinded block to the builder relay network.
+func (s *Service) SubmitBlindedBlockCapella(ctx context.Context, b *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error) {
+	ctx, span := trace.StartSpan(ctx, "builder.SubmitBlindedBlockCapella")
+	defer span.End()
+	start := time.Now()
+	defer func() {
+		submitBlindedBlockLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
+	return s.c.SubmitBlindedBlockCapella(ctx, b)
+}
+
 // GetHeader retrieves the header for a given slot and parent hash from the builder relay network.
 func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error) {
 	ctx, span := trace.StartSpan(ctx, "builder.GetHeader")

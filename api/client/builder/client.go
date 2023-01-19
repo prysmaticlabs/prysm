@@ -85,6 +85,7 @@ type BuilderClient interface {
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
 	SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
+	SubmitBlindedBlockCapella(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error)
 	Status(ctx context.Context) error
 }
 
@@ -212,11 +213,24 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
-	hr := &ExecHeaderResponse{}
-	if err := json.Unmarshal(hb, hr); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+	v := &VersionResponse{}
+	if err := json.Unmarshal(hb, v); err != nil {
+		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader version, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
-	return hr.ToProto()
+	switch v.Version {
+	case "bellatrix":
+		hr := &ExecHeaderResponse{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		return hr.ToProto()
+	case "capella":
+		hr := &ExecHeaderResponse{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		return hr.ToProto()
+	}
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
@@ -265,6 +279,29 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlinded
 	ep := &ExecPayloadResponse{}
 	if err := json.Unmarshal(rb, ep); err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+	}
+	return ep.ToProto()
+}
+
+// SubmitBlindedBlockCapella calls the builder API endpoint that binds the validator to the builder and submits the block.
+// The response is the full ExecutionPayloadCapella used to create the blinded block.
+func (c *Client) SubmitBlindedBlockCapella(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error) {
+	v := &SignedBlindedBeaconBlockCapella{SignedBlindedBeaconBlockCapella: sb}
+	body, err := json.Marshal(v)
+	if err != nil {
+		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
+	defer cancel()
+	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+	}
+	ep := &ExecPayloadResponseCapella{}
+	if err := json.Unmarshal(rb, ep); err != nil {
+		return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
 	}
 	return ep.ToProto()
 }
