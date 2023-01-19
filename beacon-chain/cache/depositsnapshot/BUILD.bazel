@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "deposit_tree.go",
         "deposit_tree_snapshot.go",
-        "graph.go",
         "merkle_tree.go",
         "zerohashes.gen.go",
     ],
@@ -32,6 +31,7 @@ go_test(
     deps = [
         "//proto/eth/v1:go_default_library",
         "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@in_gopkg_yaml_v3//:go_default_library",
     ],

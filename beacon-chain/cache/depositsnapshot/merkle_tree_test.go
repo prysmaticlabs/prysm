@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func hexString(t *testing.T, hexStr string) [32]byte {
@@ -95,7 +95,9 @@ func Test_fromSnapshotParts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := fromSnapshotParts(tt.finalized, tt.deposits, tt.level); !reflect.DeepEqual(got, tt.want) {
+			tree, err := fromSnapshotParts(tt.finalized, tt.deposits, tt.level)
+			require.NoError(t, err)
+			if got := tree; !reflect.DeepEqual(got, tt.want) {
 				tmp := got
 				fmt.Println(tmp)
 				t.Errorf("fromSnapshotParts() = %v, want %v", got, tt.want)
@@ -125,17 +127,17 @@ func Test_generateProof(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testCases, err := readTestCases("test_cases.yaml")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			tree := New()
 			for _, c := range testCases[:tt.leaves] {
 				err = tree.pushLeaf(c.DepositDataRoot)
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			for i := uint64(0); i < tt.leaves; i++ {
 				leaf, proof := generateProof(tree.tree, i, DepositContractDepth)
-				assert.Equal(t, leaf, testCases[i].DepositDataRoot)
+				require.Equal(t, leaf, testCases[i].DepositDataRoot)
 				calcRoot := merkleRootFromBranch(leaf, proof, i)
-				assert.Equal(t, tree.tree.GetRoot(), calcRoot)
+				require.Equal(t, tree.tree.GetRoot(), calcRoot)
 			}
 		})
 	}
