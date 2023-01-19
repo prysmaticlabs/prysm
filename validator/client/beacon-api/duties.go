@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -15,10 +16,10 @@ import (
 )
 
 type dutiesProvider interface {
-	GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
-	GetProposerDuties(epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error)
-	GetSyncDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error)
-	GetCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error)
+	GetAttesterDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error)
+	GetProposerDuties(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error)
+	GetSyncDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error)
+	GetCommittees(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error)
 }
 
 type beaconApiDutiesProvider struct {
@@ -30,8 +31,8 @@ type committeeIndexSlotPair struct {
 	slot           types.Slot
 }
 
-func (c beaconApiValidatorClient) getDuties(in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	multipleValidatorStatus, err := c.multipleValidatorStatus(&ethpb.MultipleValidatorStatusRequest{PublicKeys: in.PublicKeys})
+func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+	multipleValidatorStatus, err := c.multipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{PublicKeys: in.PublicKeys})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator status")
 	}
@@ -39,13 +40,13 @@ func (c beaconApiValidatorClient) getDuties(in *ethpb.DutiesRequest) (*ethpb.Dut
 	// Sync committees are an Altair feature
 	fetchSyncDuties := in.Epoch >= params.BeaconConfig().AltairForkEpoch
 
-	currentEpochDuties, err := c.getDutiesForEpoch(in.Epoch, multipleValidatorStatus, true, fetchSyncDuties)
+	currentEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch, multipleValidatorStatus, true, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
 	}
 
 	// We don't fetch proposer duties for epoch+1
-	nextEpochDuties, err := c.getDutiesForEpoch(in.Epoch+1, multipleValidatorStatus, false, fetchSyncDuties)
+	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, multipleValidatorStatus, false, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
@@ -58,31 +59,32 @@ func (c beaconApiValidatorClient) getDuties(in *ethpb.DutiesRequest) (*ethpb.Dut
 }
 
 func (c beaconApiValidatorClient) getDutiesForEpoch(
+	ctx context.Context,
 	epoch types.Epoch,
 	multipleValidatorStatus *ethpb.MultipleValidatorStatusResponse,
 	fetchProposerDuties bool,
 	fetchSyncDuties bool,
 ) ([]*ethpb.DutiesResponse_Duty, error) {
-	attesterDuties, err := c.dutiesProvider.GetAttesterDuties(epoch, multipleValidatorStatus.Indices)
+	attesterDuties, err := c.dutiesProvider.GetAttesterDuties(ctx, epoch, multipleValidatorStatus.Indices)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
 	}
 
 	var syncDuties []*apimiddleware.SyncCommitteeDuty
 	if fetchSyncDuties {
-		if syncDuties, err = c.dutiesProvider.GetSyncDuties(epoch, multipleValidatorStatus.Indices); err != nil {
+		if syncDuties, err = c.dutiesProvider.GetSyncDuties(ctx, epoch, multipleValidatorStatus.Indices); err != nil {
 			return nil, errors.Wrapf(err, "failed to get sync duties for epoch `%d`", epoch)
 		}
 	}
 
 	var proposerDuties []*apimiddleware.ProposerDutyJson
 	if fetchProposerDuties {
-		if proposerDuties, err = c.dutiesProvider.GetProposerDuties(epoch); err != nil {
+		if proposerDuties, err = c.dutiesProvider.GetProposerDuties(ctx, epoch); err != nil {
 			return nil, errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
 		}
 	}
 
-	committees, err := c.dutiesProvider.GetCommittees(epoch)
+	committees, err := c.dutiesProvider.GetCommittees(ctx, epoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get committees for epoch `%d`", epoch)
 	}
@@ -201,13 +203,13 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 }
 
 // GetCommittees retrieves the committees for the given epoch
-func (c beaconApiDutiesProvider) GetCommittees(epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
 	committeeParams := url.Values{}
 	committeeParams.Add("epoch", strconv.FormatUint(uint64(epoch), 10))
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
 
 	var stateCommittees apimiddleware.StateCommitteesResponseJson
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(committeesRequest, &stateCommittees); err != nil {
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, committeesRequest, &stateCommittees); err != nil {
 		return nil, errors.Wrapf(err, "failed to query committees for epoch `%d`", epoch)
 	}
 
@@ -225,7 +227,7 @@ func (c beaconApiDutiesProvider) GetCommittees(epoch types.Epoch) ([]*apimiddlew
 }
 
 // GetAttesterDuties retrieves the attester duties for the given epoch and validatorIndices
-func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
+func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
 
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
@@ -238,7 +240,7 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorI
 	}
 
 	attesterDuties := &apimiddleware.AttesterDutiesResponseJson{}
-	if _, err := c.jsonRestHandler.PostRestJson(fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), attesterDuties); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), attesterDuties); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 
@@ -252,9 +254,9 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(epoch types.Epoch, validatorI
 }
 
 // GetProposerDuties retrieves the proposer duties for the given epoch
-func (c beaconApiDutiesProvider) GetProposerDuties(epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
+func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
 	proposerDuties := apimiddleware.ProposerDutiesResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
 		return nil, errors.Wrapf(err, "failed to query proposer duties for epoch `%d`", epoch)
 	}
 
@@ -268,7 +270,7 @@ func (c beaconApiDutiesProvider) GetProposerDuties(epoch types.Epoch) ([]*apimid
 }
 
 // GetSyncDuties retrieves the sync committee duties for the given epoch and validatorIndices
-func (c beaconApiDutiesProvider) GetSyncDuties(epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
+func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)
@@ -280,7 +282,7 @@ func (c beaconApiDutiesProvider) GetSyncDuties(epoch types.Epoch, validatorIndic
 	}
 
 	syncDuties := apimiddleware.SyncCommitteeDutiesResponseJson{}
-	if _, err := c.jsonRestHandler.PostRestJson(fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), &syncDuties); err != nil {
+	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), &syncDuties); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}
 

@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,9 +58,12 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	validatorIndices := []types.ValidatorIndex{2, 9}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
@@ -68,12 +72,12 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		expectedAttesterDuties,
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	attesterDuties, err := dutiesProvider.GetAttesterDuties(epoch, validatorIndices)
+	attesterDuties, err := dutiesProvider.GetAttesterDuties(ctx, epoch, validatorIndices)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedAttesterDuties.Data, attesterDuties)
 }
@@ -84,8 +88,11 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -96,7 +103,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(epoch, nil)
+	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 }
@@ -107,8 +114,11 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -117,14 +127,14 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		apimiddleware.AttesterDutiesResponseJson{
 			Data: []*apimiddleware.AttesterDutyJson{nil},
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetAttesterDuties(epoch, nil)
+	_, err := dutiesProvider.GetAttesterDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "attester duty at index `0` is nil", err)
 }
 
@@ -149,20 +159,23 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		&apimiddleware.ProposerDutiesResponseJson{},
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		expectedProposerDuties,
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	proposerDuties, err := dutiesProvider.GetProposerDuties(epoch)
+	proposerDuties, err := dutiesProvider.GetProposerDuties(ctx, epoch)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedProposerDuties.Data, proposerDuties)
 }
@@ -173,8 +186,11 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -183,7 +199,7 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetProposerDuties(epoch)
+	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to query proposer duties for epoch `1`", err)
 }
@@ -194,22 +210,25 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		apimiddleware.ProposerDutiesResponseJson{
 			Data: []*apimiddleware.ProposerDutyJson{nil},
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetProposerDuties(epoch)
+	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
 	assert.ErrorContains(t, "proposer duty at index `0` is nil", err)
 }
 
@@ -244,9 +263,12 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	validatorIndices := []types.ValidatorIndex{2, 6}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
@@ -255,12 +277,12 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		expectedSyncDuties,
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	syncDuties, err := dutiesProvider.GetSyncDuties(epoch, validatorIndices)
+	syncDuties, err := dutiesProvider.GetSyncDuties(ctx, epoch, validatorIndices)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedSyncDuties.Data, syncDuties)
 }
@@ -271,8 +293,11 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -283,7 +308,7 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetSyncDuties(epoch, nil)
+	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 }
@@ -294,8 +319,11 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		gomock.Any(),
 		gomock.Any(),
@@ -304,14 +332,14 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 		nil,
 		nil,
 	).SetArg(
-		3,
+		4,
 		apimiddleware.SyncCommitteeDutiesResponseJson{
 			Data: []*apimiddleware.SyncCommitteeDuty{nil},
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetSyncDuties(epoch, nil)
+	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "sync duty at index `0` is nil", err)
 }
 
@@ -342,20 +370,23 @@ func TestGetCommittees_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		&apimiddleware.StateCommitteesResponseJson{},
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		expectedCommittees,
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	committees, err := dutiesProvider.GetCommittees(epoch)
+	committees, err := dutiesProvider.GetCommittees(ctx, epoch)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedCommittees.Data, committees)
 }
@@ -366,8 +397,11 @@ func TestGetCommittees_HttpError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
@@ -376,7 +410,7 @@ func TestGetCommittees_HttpError(t *testing.T) {
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(epoch)
+	_, err := dutiesProvider.GetCommittees(ctx, epoch)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to query committees for epoch `1`", err)
 }
@@ -387,22 +421,25 @@ func TestGetCommittees_NilData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		apimiddleware.StateCommitteesResponseJson{
 			Data: nil,
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(epoch)
+	_, err := dutiesProvider.GetCommittees(ctx, epoch)
 	assert.ErrorContains(t, "state committees data is nil", err)
 }
 
@@ -412,22 +449,25 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		apimiddleware.StateCommitteesResponseJson{
 			Data: []*apimiddleware.CommitteeJson{nil},
 		},
 	).Times(1)
 
 	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
-	_, err := dutiesProvider.GetCommittees(epoch)
+	_, err := dutiesProvider.GetCommittees(ctx, epoch)
 	assert.ErrorContains(t, "committee at index `0` is nil", err)
 }
 
@@ -573,6 +613,8 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			var attesterDuties []*apimiddleware.AttesterDutyJson
 			if testCase.generateAttesterDuties == nil {
 				attesterDuties = generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
@@ -603,6 +645,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 			dutiesProvider.EXPECT().GetAttesterDuties(
+				ctx,
 				epoch,
 				gomock.Any(),
 			).Return(
@@ -611,6 +654,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			).AnyTimes()
 
 			dutiesProvider.EXPECT().GetProposerDuties(
+				ctx,
 				epoch,
 			).Return(
 				proposerDuties,
@@ -618,6 +662,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			).AnyTimes()
 
 			dutiesProvider.EXPECT().GetSyncDuties(
+				ctx,
 				epoch,
 				gomock.Any(),
 			).Return(
@@ -626,6 +671,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 			).AnyTimes()
 
 			dutiesProvider.EXPECT().GetCommittees(
+				ctx,
 				epoch,
 			).Return(
 				committees,
@@ -634,6 +680,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 
 			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
 			_, err := validatorClient.getDutiesForEpoch(
+				ctx,
 				epoch,
 				&ethpb.MultipleValidatorStatusResponse{
 					PublicKeys: pubkeys,
@@ -735,8 +782,11 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 			dutiesProvider.EXPECT().GetCommittees(
+				ctx,
 				epoch,
 			).Return(
 				generateValidCommittees(committeeIndices, committeeSlots, validatorIndices),
@@ -744,6 +794,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			).Times(1)
 
 			dutiesProvider.EXPECT().GetAttesterDuties(
+				ctx,
 				epoch,
 				multipleValidatorStatus.Indices,
 			).Return(
@@ -753,6 +804,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 
 			if testCase.fetchProposerDuties {
 				dutiesProvider.EXPECT().GetProposerDuties(
+					ctx,
 					epoch,
 				).Return(
 					generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
@@ -762,6 +814,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 
 			if testCase.fetchSyncDuties {
 				dutiesProvider.EXPECT().GetSyncDuties(
+					ctx,
 					epoch,
 					multipleValidatorStatus.Indices,
 				).Return(
@@ -907,6 +960,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 
 			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
 			duties, err := validatorClient.getDutiesForEpoch(
+				ctx,
 				epoch,
 				multipleValidatorStatus,
 				testCase.fetchProposerDuties,
@@ -978,8 +1032,11 @@ func TestGetDuties_Valid(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 			dutiesProvider.EXPECT().GetCommittees(
+				ctx,
 				testCase.epoch,
 			).Return(
 				generateValidCommittees(committeeIndices, committeeSlots, validatorIndices),
@@ -987,6 +1044,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			).Times(2)
 
 			dutiesProvider.EXPECT().GetAttesterDuties(
+				ctx,
 				testCase.epoch,
 				multipleValidatorStatus.Indices,
 			).Return(
@@ -995,6 +1053,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			).Times(2)
 
 			dutiesProvider.EXPECT().GetProposerDuties(
+				ctx,
 				testCase.epoch,
 			).Return(
 				generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
@@ -1004,6 +1063,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			fetchSyncDuties := testCase.epoch >= params.BeaconConfig().AltairForkEpoch
 			if fetchSyncDuties {
 				dutiesProvider.EXPECT().GetSyncDuties(
+					ctx,
 					testCase.epoch,
 					multipleValidatorStatus.Indices,
 				).Return(
@@ -1013,6 +1073,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			}
 
 			dutiesProvider.EXPECT().GetCommittees(
+				ctx,
 				testCase.epoch+1,
 			).Return(
 				reverseSlice(generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)),
@@ -1020,6 +1081,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			).Times(2)
 
 			dutiesProvider.EXPECT().GetAttesterDuties(
+				ctx,
 				testCase.epoch+1,
 				validatorIndices,
 			).Return(
@@ -1029,6 +1091,7 @@ func TestGetDuties_Valid(t *testing.T) {
 
 			if fetchSyncDuties {
 				dutiesProvider.EXPECT().GetSyncDuties(
+					ctx,
 					testCase.epoch+1,
 					validatorIndices,
 				).Return(
@@ -1039,6 +1102,7 @@ func TestGetDuties_Valid(t *testing.T) {
 
 			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 			stateValidatorsProvider.EXPECT().GetStateValidators(
+				ctx,
 				gomock.Any(),
 				gomock.Any(),
 				gomock.Any(),
@@ -1153,6 +1217,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			}
 
 			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
+				ctx,
 				testCase.epoch,
 				multipleValidatorStatus,
 				true,
@@ -1161,6 +1226,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedNextEpochDuties, err := validatorClient.getDutiesForEpoch(
+				ctx,
 				testCase.epoch+1,
 				multipleValidatorStatus,
 				false,
@@ -1174,7 +1240,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				NextEpochDuties:    expectedNextEpochDuties,
 			}
 
-			duties, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+			duties, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
 				Epoch:      testCase.epoch,
 				PublicKeys: pubkeys,
 			})
@@ -1189,8 +1255,11 @@ func TestGetDuties_GetValidatorStatusFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
@@ -1203,7 +1272,7 @@ func TestGetDuties_GetValidatorStatusFailed(t *testing.T) {
 		stateValidatorsProvider: stateValidatorsProvider,
 	}
 
-	_, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{},
 	})
@@ -1215,8 +1284,11 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 	stateValidatorsProvider.EXPECT().GetStateValidators(
+		ctx,
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
@@ -1229,6 +1301,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 
 	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 	dutiesProvider.EXPECT().GetAttesterDuties(
+		ctx,
 		types.Epoch(1),
 		gomock.Any(),
 	).Return(
@@ -1241,7 +1314,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		dutiesProvider:          dutiesProvider,
 	}
 
-	_, err := validatorClient.getDuties(&ethpb.DutiesRequest{
+	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
 		Epoch:      1,
 		PublicKeys: [][]byte{},
 	})

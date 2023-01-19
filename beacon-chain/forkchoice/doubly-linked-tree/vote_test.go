@@ -120,16 +120,16 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             |
 	//             3
 	//             |
-	//             4 <- head
+	//             4
 	//            /
-	//           5 <- justified epoch = 2
+	//           5 <- head, justified epoch = 2
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(5), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(5), r, "Incorrect head for with justified epoch at 2")
 
 	// Insert block 6 with justified epoch 3: verify it's head
 	//            0
@@ -138,15 +138,15 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             |
 	//             3
 	//             |
-	//             4 <- head
+	//             4
 	//            / \
-	//           5  6 <- justified epoch = 3
+	//           5  6 <- head, justified epoch = 3
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 3")
 
 	// Moved 2 votes to block 5:
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(5), 4)
@@ -174,10 +174,10 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 3")
 
-	// Insert block 9 with justified epoch 3, it becomes head
-	// Verify 9 is the head:
+	// Insert block 10 with justified epoch 3, it becomes head
+	// Verify 10 is the head:
 	//            0
 	//           / \
 	//          2  1
@@ -289,7 +289,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
 	// Insert new block 11 and verify head is at 11.
 	//          5   6
