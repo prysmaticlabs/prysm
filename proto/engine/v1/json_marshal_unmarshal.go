@@ -214,6 +214,29 @@ type executionPayloadJSON struct {
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
+type GetPayloadV2ResponseJson struct {
+	ExecutionPayload *ExecutionPayloadCapellaJSON `json:"executionPayload"`
+	BlockValue       string                       `json:"blockValue"`
+}
+
+type ExecutionPayloadCapellaJSON struct {
+	ParentHash    *common.Hash    `json:"parentHash"`
+	FeeRecipient  *common.Address `json:"feeRecipient"`
+	StateRoot     *common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
+	LogsBloom     *hexutil.Bytes  `json:"logsBloom"`
+	PrevRandao    *common.Hash    `json:"prevRandao"`
+	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64 `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64 `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64 `json:"timestamp"`
+	ExtraData     hexutil.Bytes   `json:"extraData"`
+	BaseFeePerGas string          `json:"baseFeePerGas"`
+	BlockHash     *common.Hash    `json:"blockHash"`
+	Transactions  []hexutil.Bytes `json:"transactions"`
+	Withdrawals   []*Withdrawal   `json:"withdrawals"`
+}
+
 type getPayloadV2ResponseJson struct {
 	ExecutionPayload *executionPayloadCapellaJSON `json:"executionPayload"`
 	BlockValue       string                       `json:"blockValue"`
@@ -296,7 +319,7 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 	if e.Withdrawals == nil {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
-	return json.Marshal(executionPayloadCapellaJSON{
+	return json.Marshal(ExecutionPayloadCapellaJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
 		StateRoot:     &sRoot,
@@ -390,7 +413,7 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 
 // UnmarshalJSON --
 func (e *ExecutionPayloadCapella) UnmarshalJSON(enc []byte) error {
-	dec := getPayloadV2ResponseJson{}
+	dec := GetPayloadV2ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}

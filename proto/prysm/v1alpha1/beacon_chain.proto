@@ -22,7 +22,6 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/validator.proto";
-import "proto/prysm/v1alpha1/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
@@ -257,13 +256,6 @@ service BeaconChain {
     rpc GetIndividualVotes(IndividualVotesRequest) returns (IndividualVotesRespond) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/beacon/individual_votes"
-        };
-    }
-
-    // Submit a BLS_TO_EXECUTION_CHANGE object to the beacon node.
-    rpc SubmitBLSToExecutionChange(SignedBLSToExecutionChange) returns (BLSToExecutionChangeResponse) {
-        option (google.api.http) = {
-            get: "/eth/v1alpha1/beacon/pool/bls_to_execution_changes/submit"
         };
     }
 
@@ -841,9 +833,6 @@ message SubmitSlashingResponse {
     // Indices of the validators to be slashed by the submitted
     // proposer/attester slashing object.
     repeated uint64 slashed_indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
-}
-
-message BLSToExecutionChangeResponse {
 }
 
 
