@@ -28,7 +28,6 @@ type recoverCfgStruct struct {
 	walletDir        string
 	passwordFilePath string
 	mnemonicFilePath string
-	mnemonicLanguage string
 	numAccounts      int64
 }
 
@@ -54,7 +53,7 @@ func createRecoverCliCtx(t *testing.T, cfg *recoverCfgStruct) *cli.Context {
 	set.String(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath, "")
 	set.String(flags.KeymanagerKindFlag.Name, keymanager.Derived.String(), "")
 	set.String(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath, "")
-	set.String(flags.MnemonicLanguageFlag.Name, cfg.mnemonicLanguage, "")
+	set.String(flags.MnemonicLanguageFlag.Name, accounts.DefaultMnemonicLanguage, "")
 	set.Bool(flags.SkipMnemonic25thWordCheckFlag.Name, true, "")
 	set.Int64(flags.NumAccountsFlag.Name, cfg.numAccounts, "")
 	assert.NoError(t, set.Set(flags.SkipMnemonic25thWordCheckFlag.Name, "true"))
@@ -62,7 +61,7 @@ func createRecoverCliCtx(t *testing.T, cfg *recoverCfgStruct) *cli.Context {
 	assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, cfg.passwordFilePath))
 	assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanager.Derived.String()))
 	assert.NoError(t, set.Set(flags.MnemonicFileFlag.Name, cfg.mnemonicFilePath))
-	assert.NoError(t, set.Set(flags.MnemonicLanguageFlag.Name, cfg.mnemonicLanguage))
+	assert.NoError(t, set.Set(flags.MnemonicLanguageFlag.Name, accounts.DefaultMnemonicLanguage))
 	assert.NoError(t, set.Set(flags.NumAccountsFlag.Name, strconv.Itoa(int(cfg.numAccounts))))
 	return cli.NewContext(&app, set, nil)
 }
