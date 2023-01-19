@@ -70,7 +70,7 @@ func TestDerivedKeymanager_RecoverSeedRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	wanted := bip39.NewSeed(mnemonic, "")
 
-	got, err := seedFromMnemonic(mnemonic, "english", "" /* no passphrase */)
+	got, err := seedFromMnemonic(mnemonic, DefaultMnemonicLanguage, "" /* no passphrase */)
 	require.NoError(t, err)
 	// Ensure the derived seed matches.
 	assert.DeepEqual(t, wanted, got)
