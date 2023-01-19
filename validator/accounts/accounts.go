@@ -8,7 +8,6 @@ var (
 	errKeymanagerNotSupported = "keymanager kind not supported: %s"
 	// ErrCouldNotInitializeKeymanager informs about failed keymanager initialization
 	ErrCouldNotInitializeKeymanager = "could not initialize keymanager"
-	DefaultMnemonicLanguage         = "english"
 )
 
 // DeleteConfig specifies parameters for the accounts delete command.

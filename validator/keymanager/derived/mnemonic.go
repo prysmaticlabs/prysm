@@ -21,7 +21,10 @@ type MnemonicGenerator struct {
 }
 
 // ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic langauge.
-var ErrUnsupportedMnemonicLanguage = errors.New("unsupported mnemonic language")
+var (
+	DefaultMnemonicLanguage        = "english"
+	ErrUnsupportedMnemonicLanguage = errors.New("unsupported mnemonic language")
+)
 
 // GenerateAndConfirmMnemonic requires confirming the generated mnemonics.
 func GenerateAndConfirmMnemonic(mnemonicLanguage string, skipMnemonicConfirm bool) (string, error) {
