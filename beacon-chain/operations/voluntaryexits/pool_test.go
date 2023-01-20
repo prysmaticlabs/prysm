@@ -1,530 +1,342 @@
 package voluntaryexits
 
 import (
-	"context"
-	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
-	"google.golang.org/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-func TestPool_InsertVoluntaryExit(t *testing.T) {
-	type fields struct {
-		pending []*ethpb.SignedVoluntaryExit
-	}
-	type args struct {
-		exit *ethpb.SignedVoluntaryExit
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []*ethpb.SignedVoluntaryExit
-	}{
-		{
-			name: "Prevent inserting nil exit",
-			fields: fields{
-				pending: make([]*ethpb.SignedVoluntaryExit, 0),
+func TestPendingExits(t *testing.T) {
+	t.Run("empty pool", func(t *testing.T) {
+		pool := NewPool()
+		changes, err := pool.PendingExits()
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(changes))
+	})
+	t.Run("non-empty pool", func(t *testing.T) {
+		pool := NewPool()
+		pool.InsertVoluntaryExit(&ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				Epoch:          0,
+				ValidatorIndex: 0,
 			},
-			args: args{
-				exit: nil,
-			},
-			want: []*ethpb.SignedVoluntaryExit{},
-		},
-		{
-			name: "Prevent inserting malformed exit",
-			fields: fields{
-				pending: make([]*ethpb.SignedVoluntaryExit, 0),
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: nil,
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{},
-		},
-		{
-			name: "Empty list",
-			fields: fields{
-				pending: make([]*ethpb.SignedVoluntaryExit, 0),
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-		},
-		{
-			name: "Duplicate identical exit",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-		},
-		{
-			name: "Duplicate exit in pending list",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-		},
-		{
-			name: "Duplicate validator index",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          20,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-		},
-		{
-			name: "Duplicate received with more favorable exit epoch",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          4,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          4,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-		},
-		{
-			name: "Exit for already exited validator",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 2,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{},
-		},
-		{
-			name: "Maintains sorted order",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 0,
-						},
-					},
-					{
-						Exit: &ethpb.VoluntaryExit{
-							Epoch:          12,
-							ValidatorIndex: 2,
-						},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          10,
-						ValidatorIndex: 1,
-					},
-				},
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 0,
-					},
-				},
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          10,
-						ValidatorIndex: 1,
-					},
-				},
-				{
-					Exit: &ethpb.VoluntaryExit{
-						Epoch:          12,
-						ValidatorIndex: 2,
-					},
-				},
-			},
-		},
-	}
-	ctx := context.Background()
-	validators := []*ethpb.Validator{
-		{ // 0
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-		{ // 1
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-		{ // 2 - Already exited.
-			ExitEpoch: 15,
-		},
-		{ // 3
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &Pool{
-				pending: tt.fields.pending,
-			}
-			s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{Validators: validators})
-			require.NoError(t, err)
-			p.InsertVoluntaryExit(ctx, s, tt.args.exit)
-			if len(p.pending) != len(tt.want) {
-				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
-			}
-			for i := range p.pending {
-				if !proto.Equal(p.pending[i], tt.want[i]) {
-					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want[i])
-				}
-			}
 		})
-	}
+		pool.InsertVoluntaryExit(&ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				Epoch:          0,
+				ValidatorIndex: 1,
+			},
+		})
+		changes, err := pool.PendingExits()
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(changes))
+	})
 }
 
-func TestPool_MarkIncluded(t *testing.T) {
-	type fields struct {
-		pending []*ethpb.SignedVoluntaryExit
-	}
-	type args struct {
-		exit *ethpb.SignedVoluntaryExit
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   fields
-	}{
-		{
-			name: "Removes from pending list",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 1},
-					},
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-					},
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-					},
-				},
-			},
-			args: args{
-				exit: &ethpb.SignedVoluntaryExit{
-					Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-				},
-			},
-			want: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 1},
-					},
-					{
-						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-					},
-				},
-			},
+func TestExitsForInclusion(t *testing.T) {
+	spb := &ethpb.BeaconStateCapella{
+		Fork: &ethpb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &Pool{
-				pending: tt.fields.pending,
-			}
-			p.MarkIncluded(tt.args.exit)
-			if len(p.pending) != len(tt.want.pending) {
-				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want.pending))
-			}
-			for i := range p.pending {
-				if !proto.Equal(p.pending[i], tt.want.pending[i]) {
-					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want.pending[i])
-				}
-			}
-		})
+	stateSlot := types.Slot(uint64(params.BeaconConfig().ShardCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
+	spb.Slot = stateSlot
+	numValidators := 2 * params.BeaconConfig().MaxVoluntaryExits
+	validators := make([]*ethpb.Validator, numValidators)
+	exits := make([]*ethpb.VoluntaryExit, numValidators)
+	privKeys := make([]common.SecretKey, numValidators)
+
+	for i := range validators {
+		v := &ethpb.Validator{}
+		if i == len(validators)-2 {
+			// exit for this validator is invalid
+			v.ExitEpoch = 0
+		} else {
+			v.ExitEpoch = params.BeaconConfig().FarFutureEpoch
+		}
+		priv, err := bls.RandKey()
+		require.NoError(t, err)
+		privKeys[i] = priv
+		pubkey := priv.PublicKey().Marshal()
+		v.PublicKey = pubkey
+
+		message := &ethpb.VoluntaryExit{
+			ValidatorIndex: types.ValidatorIndex(i),
+		}
+		// exit for future slot
+		if i == len(validators)-1 {
+			message.Epoch = slots.ToEpoch(stateSlot) + 1
+		}
+
+		validators[i] = v
+		exits[i] = message
 	}
+	spb.Validators = validators
+	st, err := state_native.InitializeFromProtoCapella(spb)
+	require.NoError(t, err)
+
+	signedExits := make([]*ethpb.SignedVoluntaryExit, numValidators)
+	for i, message := range exits {
+		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainVoluntaryExit, privKeys[i])
+		require.NoError(t, err)
+
+		signed := &ethpb.SignedVoluntaryExit{
+			Exit:      message,
+			Signature: signature,
+		}
+		signedExits[i] = signed
+	}
+
+	t.Run("empty pool", func(t *testing.T) {
+		pool := NewPool()
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(exits))
+	})
+	t.Run("less than MaxVoluntaryExits in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits-1; i++ {
+			pool.InsertVoluntaryExit(signedExits[i])
+		}
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits)-1, len(exits))
+	})
+	t.Run("MaxVoluntaryExits in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits; i++ {
+			pool.InsertVoluntaryExit(signedExits[i])
+		}
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits), len(exits))
+	})
+	t.Run("more than MaxVoluntaryExits in pool", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertVoluntaryExit(signedExits[i])
+		}
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		// We want LIFO semantics, which means validator with index 0 shouldn't be returned
+		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits), len(exits))
+		for _, ch := range exits {
+			assert.NotEqual(t, types.ValidatorIndex(0), ch.Exit.ValidatorIndex)
+		}
+	})
+	t.Run("exit for future epoch not returned", func(t *testing.T) {
+		pool := NewPool()
+		pool.InsertVoluntaryExit(signedExits[len(signedExits)-1])
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(exits))
+	})
+	t.Run("one bad exit", func(t *testing.T) {
+		pool := NewPool()
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertVoluntaryExit(signedExits[i])
+		}
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(exits))
+		assert.Equal(t, types.ValidatorIndex(29), exits[1].Exit.ValidatorIndex)
+	})
+	t.Run("one bad signature", func(t *testing.T) {
+		pool := NewPool()
+		copy(signedExits[25].Signature, signedExits[26].Signature)
+		for i := uint64(0); i < numValidators; i++ {
+			pool.InsertVoluntaryExit(signedExits[i])
+		}
+		exits, err := pool.ExitsForInclusion(st, stateSlot)
+		require.NoError(t, err)
+		assert.Equal(t, int(params.BeaconConfig().MaxVoluntaryExits)-1, len(exits))
+		assert.Equal(t, types.ValidatorIndex(29), exits[1].Exit.ValidatorIndex)
+	})
 }
 
-func TestPool_PendingExits(t *testing.T) {
-	type fields struct {
-		pending []*ethpb.SignedVoluntaryExit
-		noLimit bool
-	}
-	type args struct {
-		slot types.Slot
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []*ethpb.SignedVoluntaryExit
-	}{
-		{
-			name: "Empty list",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{},
+func TestInsertExit(t *testing.T) {
+	t.Run("empty pool", func(t *testing.T) {
+		pool := NewPool()
+		exit := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			args: args{
-				slot: 100000,
+		}
+		pool.InsertVoluntaryExit(exit)
+		require.Equal(t, 1, pool.pending.Len())
+		require.Equal(t, 1, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		v, err := n.Value()
+		require.NoError(t, err)
+		assert.DeepEqual(t, exit, v)
+	})
+	t.Run("item in pool", func(t *testing.T) {
+		pool := NewPool()
+		old := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			want: []*ethpb.SignedVoluntaryExit{},
-		},
-		{
-			name: "All eligible",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-				},
+		}
+		exit := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(1),
 			},
-			args: args{
-				slot: 1000000,
+		}
+		pool.InsertVoluntaryExit(old)
+		pool.InsertVoluntaryExit(exit)
+		require.Equal(t, 2, pool.pending.Len())
+		require.Equal(t, 2, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		v, err := n.Value()
+		require.NoError(t, err)
+		assert.DeepEqual(t, old, v)
+		n, ok = pool.m[1]
+		require.Equal(t, true, ok)
+		v, err = n.Value()
+		require.NoError(t, err)
+		assert.DeepEqual(t, exit, v)
+	})
+	t.Run("validator index already exists", func(t *testing.T) {
+		pool := NewPool()
+		old := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
+			Signature: []byte("old"),
+		}
+		exit := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
 			},
-		},
-		{
-			name: "All eligible, above max",
-			fields: fields{
-				noLimit: true,
-				pending: []*ethpb.SignedVoluntaryExit{
-					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
-				},
-			},
-			args: args{
-				slot: 1000000,
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
-			},
-		},
-		{
-			name: "All eligible, block max",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
-				},
-			},
-			args: args{
-				slot: 1000000,
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-			},
-		},
-		{
-			name: "Some eligible",
-			fields: fields{
-				pending: []*ethpb.SignedVoluntaryExit{
-					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-				},
-			},
-			args: args{
-				slot: 2 * params.BeaconConfig().SlotsPerEpoch,
-			},
-			want: []*ethpb.SignedVoluntaryExit{
-				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := &Pool{
-				pending: tt.fields.pending,
-			}
-			s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
-			require.NoError(t, err)
-			if got := p.PendingExits(s, tt.args.slot, tt.fields.noLimit); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+			Signature: []byte("exit"),
+		}
+		pool.InsertVoluntaryExit(old)
+		pool.InsertVoluntaryExit(exit)
+		assert.Equal(t, 1, pool.pending.Len())
+		require.Equal(t, 1, len(pool.m))
+		n, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		v, err := n.Value()
+		require.NoError(t, err)
+		assert.DeepEqual(t, old, v)
+	})
+}
+
+func TestMarkIncluded(t *testing.T) {
+	t.Run("one element in pool", func(t *testing.T) {
+		pool := NewPool()
+		exit := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		pool.InsertVoluntaryExit(exit)
+		pool.MarkIncluded(exit)
+		assert.Equal(t, 0, pool.pending.Len())
+		_, ok := pool.m[0]
+		assert.Equal(t, false, ok)
+	})
+	t.Run("first of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertVoluntaryExit(first)
+		pool.InsertVoluntaryExit(second)
+		pool.InsertVoluntaryExit(third)
+		pool.MarkIncluded(first)
+		require.Equal(t, 2, pool.pending.Len())
+		_, ok := pool.m[0]
+		assert.Equal(t, false, ok)
+	})
+	t.Run("last of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertVoluntaryExit(first)
+		pool.InsertVoluntaryExit(second)
+		pool.InsertVoluntaryExit(third)
+		pool.MarkIncluded(third)
+		require.Equal(t, 2, pool.pending.Len())
+		_, ok := pool.m[2]
+		assert.Equal(t, false, ok)
+	})
+	t.Run("in the middle of multiple elements", func(t *testing.T) {
+		pool := NewPool()
+		first := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		third := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertVoluntaryExit(first)
+		pool.InsertVoluntaryExit(second)
+		pool.InsertVoluntaryExit(third)
+		pool.MarkIncluded(second)
+		require.Equal(t, 2, pool.pending.Len())
+		_, ok := pool.m[1]
+		assert.Equal(t, false, ok)
+	})
+	t.Run("not in pool", func(t *testing.T) {
+		pool := NewPool()
+		first := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(0),
+			}}
+		second := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(1),
+			}}
+		exit := &ethpb.SignedVoluntaryExit{
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: types.ValidatorIndex(2),
+			}}
+		pool.InsertVoluntaryExit(first)
+		pool.InsertVoluntaryExit(second)
+		pool.MarkIncluded(exit)
+		require.Equal(t, 2, pool.pending.Len())
+		_, ok := pool.m[0]
+		require.Equal(t, true, ok)
+		assert.NotNil(t, pool.m[0])
+		_, ok = pool.m[1]
+		require.Equal(t, true, ok)
+		assert.NotNil(t, pool.m[1])
+	})
 }

@@ -1,11 +1,9 @@
 package voluntaryexits
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -68,7 +66,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxVoluntaryExits), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedVoluntaryExit, 0, length)
-	node := p.pending.First()
+	node := p.pending.Last()
 	for node != nil && len(result) < length {
 		exit, err := node.Value()
 		if err != nil {
@@ -76,17 +74,22 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 			return nil, err
 		}
 		if exit.Exit.Epoch > slots.ToEpoch(slot) {
+			node, err = node.Prev()
+			if err != nil {
+				p.lock.RUnlock()
+				return nil, err
+			}
 			continue
 		}
 		validator, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 		if err != nil {
-			return nil, p.handleInvalidExit(err, exit)
+			p.handleInvalidExit(err, exit)
 		}
 		if err = blocks.VerifyExitConditions(validator, state.Slot(), exit.Exit); err != nil {
-			return nil, p.handleInvalidExit(err, exit)
+			p.handleInvalidExit(err, exit)
 		}
 		result = append(result, exit)
-		node, err = node.Next()
+		node, err = node.Prev()
 		if err != nil {
 			p.lock.RUnlock()
 			return nil, err
@@ -118,9 +121,7 @@ func (p *Pool) ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slo
 		}
 		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
 			logrus.Warning("removing exit with invalid signature from pool")
-			if err := p.MarkIncluded(result[i]); err != nil {
-				return nil, errors.Wrap(err, "could not mark exit as included")
-			}
+			p.MarkIncluded(result[i])
 		} else {
 			verified = append(verified, result[i])
 		}
@@ -144,27 +145,23 @@ func (p *Pool) InsertVoluntaryExit(exit *ethpb.SignedVoluntaryExit) {
 
 // MarkIncluded is used when an exit has been included in a beacon block. Every block seen by this
 // node should call this method to include the exit. This will remove the exit from the pool.
-func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) error {
+func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
 	node := p.m[exit.Exit.ValidatorIndex]
 	if node == nil {
-		return fmt.Errorf("no exit exists for validator index %d", exit.Exit.ValidatorIndex)
+		return
 	}
 
 	delete(p.m, exit.Exit.ValidatorIndex)
 	p.pending.Remove(node)
-	return nil
 }
 
-func (p *Pool) handleInvalidExit(err error, exit *ethpb.SignedVoluntaryExit) error {
+func (p *Pool) handleInvalidExit(err error, exit *ethpb.SignedVoluntaryExit) {
 	logrus.WithError(err).Warning("removing invalid exit from pool")
 	// MarkIncluded removes the invalid exit from the pool
 	p.lock.RUnlock()
-	if err := p.MarkIncluded(exit); err != nil {
-		return errors.Wrap(err, "could not mark exit as included")
-	}
+	p.MarkIncluded(exit)
 	p.lock.RLock()
-	return err
 }
