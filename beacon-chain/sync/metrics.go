@@ -86,9 +86,13 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
 			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000, 20000, 24000},
+			Buckets: []float64{100, 200, 300, 400, 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000},
 		},
 	)
+	arrivalBlockPropagationGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_arrival_latency_gauge",
+		Help: "Captures blocks propagation time. Blocks arrival in milliseconds",
+	})
 
 	// Attestation processing granular error tracking.
 	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{
