@@ -27,7 +27,7 @@ func (m *PoolMock) InsertBLSToExecChange(change *eth.SignedBLSToExecutionChange)
 }
 
 // MarkIncluded --
-func (*PoolMock) MarkIncluded(_ *eth.SignedBLSToExecutionChange) error {
+func (*PoolMock) MarkIncluded(_ *eth.SignedBLSToExecutionChange) {
 	panic("implement me")
 }
 
