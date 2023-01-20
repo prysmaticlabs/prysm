@@ -66,7 +66,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxBlsToExecutionChanges), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
-	node := p.pending.First()
+	node := p.pending.Last()
 	for node != nil && len(result) < length {
 		change, err := node.Value()
 		if err != nil {
@@ -83,7 +83,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*et
 		} else {
 			result = append(result, change)
 		}
-		node, err = node.Next()
+		node, err = node.Prev()
 		if err != nil {
 			p.lock.RUnlock()
 			return nil, err

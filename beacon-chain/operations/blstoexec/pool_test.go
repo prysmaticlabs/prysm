@@ -130,7 +130,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		// We want FIFO semantics, which means validator with index 16 shouldn't be returned
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		for _, ch := range changes {
-			assert.NotEqual(t, types.ValidatorIndex(16), ch.Message.ValidatorIndex)
+			assert.NotEqual(t, types.ValidatorIndex(15), ch.Message.ValidatorIndex)
 		}
 	})
 	t.Run("One Bad change", func(t *testing.T) {
@@ -143,19 +143,19 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
-		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
 		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
 	})
 	t.Run("One Bad Signature", func(t *testing.T) {
 		pool := NewPool()
-		copy(signedChanges[1].Signature, signedChanges[2].Signature)
+		copy(signedChanges[30].Signature, signedChanges[31].Signature)
 		for i := uint64(0); i < numValidators; i++ {
 			pool.InsertBLSToExecChange(signedChanges[i])
 		}
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
-		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
 	})
 }
 
