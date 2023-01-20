@@ -94,15 +94,19 @@ func TestGetState(t *testing.T) {
 
 	t.Run("finalized", func(t *testing.T) {
 		stateGen := mockstategen.NewMockService()
+		replayer := mockstategen.NewMockReplayerBuilder()
+		replayer.SetMockStateForSlot(newBeaconState, params.BeaconConfig().SlotsPerEpoch*10)
 		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Root: stateRoot[:],
+					Root:  stateRoot[:],
+					Epoch: 10,
 				},
 			},
 			StateGenService: stateGen,
+			ReplayerBuilder: replayer,
 		}
 
 		s, err := p.State(ctx, []byte("finalized"))
@@ -114,15 +118,19 @@ func TestGetState(t *testing.T) {
 
 	t.Run("justified", func(t *testing.T) {
 		stateGen := mockstategen.NewMockService()
+		replayer := mockstategen.NewMockReplayerBuilder()
+		replayer.SetMockStateForSlot(newBeaconState, params.BeaconConfig().SlotsPerEpoch*10)
 		stateGen.StatesByRoot[stateRoot] = newBeaconState
 
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				CurrentJustifiedCheckPoint: &ethpb.Checkpoint{
-					Root: stateRoot[:],
+					Root:  stateRoot[:],
+					Epoch: 10,
 				},
 			},
 			StateGenService: stateGen,
+			ReplayerBuilder: replayer,
 		}
 
 		s, err := p.State(ctx, []byte("justified"))
@@ -387,11 +395,16 @@ func TestStateBySlot_FutureSlot(t *testing.T) {
 }
 
 func TestStateBySlot_AfterHeadSlot(t *testing.T) {
-	st, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 100})
+	headSt, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 100})
+	require.NoError(t, err)
+	slotSt, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 101})
 	require.NoError(t, err)
 	currentSlot := types.Slot(102)
-	mock := &chainMock.ChainService{State: st, Slot: &currentSlot}
-	p := StateProvider{ChainInfoFetcher: mock, GenesisTimeFetcher: mock}
-	_, err = p.StateBySlot(context.Background(), 101)
-	assert.ErrorContains(t, "requested slot number is higher than head slot number", err)
+	mock := &chainMock.ChainService{State: headSt, Slot: &currentSlot}
+	mockReplayer := mockstategen.NewMockReplayerBuilder()
+	mockReplayer.SetMockStateForSlot(slotSt, 101)
+	p := StateProvider{ChainInfoFetcher: mock, GenesisTimeFetcher: mock, ReplayerBuilder: mockReplayer}
+	st, err := p.StateBySlot(context.Background(), 101)
+	require.NoError(t, err)
+	assert.Equal(t, types.Slot(101), st.Slot())
 }

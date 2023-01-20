@@ -83,6 +83,18 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot types
 		}
 		response.Block = bellatrixBlock
 
+	case "capella":
+		jsonCapellaBlock := apimiddleware.BeaconBlockCapellaJson{}
+		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
+			return nil, errors.Wrap(err, "failed to decode capella block response json")
+		}
+
+		capellaBlock, err := convertRESTCapellaBlockToProto(&jsonCapellaBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get capella block")
+		}
+		response.Block = capellaBlock
+
 	default:
 		return nil, errors.Errorf("unsupported consensus version `%s`", produceBlockResponseJson.Version)
 	}
@@ -391,6 +403,103 @@ func convertRESTBellatrixBlockToProto(block *apimiddleware.BeaconBlockBellatrixJ
 					BlockHash:     blockHash,
 					Transactions:  transactions,
 				},
+			},
+		},
+	}, nil
+}
+
+func convertRESTCapellaBlockToProto(block *apimiddleware.BeaconBlockCapellaJson) (*ethpb.GenericBeaconBlock_Capella, error) {
+	if block.Body == nil {
+		return nil, errors.New("block body is nil")
+	}
+
+	if block.Body.ExecutionPayload == nil {
+		return nil, errors.New("execution payload is nil")
+	}
+
+	// Call convertRESTBellatrixBlockToProto to set the bellatrix fields because all the error handling and the heavy
+	// lifting has already been done
+	bellatrixBlock, err := convertRESTBellatrixBlockToProto(&apimiddleware.BeaconBlockBellatrixJson{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    block.ParentRoot,
+		StateRoot:     block.StateRoot,
+		Body: &apimiddleware.BeaconBlockBodyBellatrixJson{
+			RandaoReveal:      block.Body.RandaoReveal,
+			Eth1Data:          block.Body.Eth1Data,
+			Graffiti:          block.Body.Graffiti,
+			ProposerSlashings: block.Body.ProposerSlashings,
+			AttesterSlashings: block.Body.AttesterSlashings,
+			Attestations:      block.Body.Attestations,
+			Deposits:          block.Body.Deposits,
+			VoluntaryExits:    block.Body.VoluntaryExits,
+			SyncAggregate:     block.Body.SyncAggregate,
+			ExecutionPayload: &apimiddleware.ExecutionPayloadJson{
+				ParentHash:    block.Body.ExecutionPayload.ParentHash,
+				FeeRecipient:  block.Body.ExecutionPayload.FeeRecipient,
+				StateRoot:     block.Body.ExecutionPayload.StateRoot,
+				ReceiptsRoot:  block.Body.ExecutionPayload.ReceiptsRoot,
+				LogsBloom:     block.Body.ExecutionPayload.LogsBloom,
+				PrevRandao:    block.Body.ExecutionPayload.PrevRandao,
+				BlockNumber:   block.Body.ExecutionPayload.BlockNumber,
+				GasLimit:      block.Body.ExecutionPayload.GasLimit,
+				GasUsed:       block.Body.ExecutionPayload.GasUsed,
+				TimeStamp:     block.Body.ExecutionPayload.TimeStamp,
+				ExtraData:     block.Body.ExecutionPayload.ExtraData,
+				BaseFeePerGas: block.Body.ExecutionPayload.BaseFeePerGas,
+				BlockHash:     block.Body.ExecutionPayload.BlockHash,
+				Transactions:  block.Body.ExecutionPayload.Transactions,
+			},
+		},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get the bellatrix fields of the capella block")
+	}
+
+	withdrawals, err := convertWithdrawalsToProto(block.Body.ExecutionPayload.Withdrawals)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get withdrawals")
+	}
+
+	blsToExecutionChanges, err := convertBlsToExecutionChangesToProto(block.Body.BLSToExecutionChanges)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get bls to execution changes")
+	}
+
+	return &ethpb.GenericBeaconBlock_Capella{
+		Capella: &ethpb.BeaconBlockCapella{
+			Slot:          bellatrixBlock.Bellatrix.Slot,
+			ProposerIndex: bellatrixBlock.Bellatrix.ProposerIndex,
+			ParentRoot:    bellatrixBlock.Bellatrix.ParentRoot,
+			StateRoot:     bellatrixBlock.Bellatrix.StateRoot,
+			Body: &ethpb.BeaconBlockBodyCapella{
+				RandaoReveal:      bellatrixBlock.Bellatrix.Body.RandaoReveal,
+				Eth1Data:          bellatrixBlock.Bellatrix.Body.Eth1Data,
+				Graffiti:          bellatrixBlock.Bellatrix.Body.Graffiti,
+				ProposerSlashings: bellatrixBlock.Bellatrix.Body.ProposerSlashings,
+				AttesterSlashings: bellatrixBlock.Bellatrix.Body.AttesterSlashings,
+				Attestations:      bellatrixBlock.Bellatrix.Body.Attestations,
+				Deposits:          bellatrixBlock.Bellatrix.Body.Deposits,
+				VoluntaryExits:    bellatrixBlock.Bellatrix.Body.VoluntaryExits,
+				SyncAggregate:     bellatrixBlock.Bellatrix.Body.SyncAggregate,
+				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+					ParentHash:    bellatrixBlock.Bellatrix.Body.ExecutionPayload.ParentHash,
+					FeeRecipient:  bellatrixBlock.Bellatrix.Body.ExecutionPayload.FeeRecipient,
+					StateRoot:     bellatrixBlock.Bellatrix.Body.ExecutionPayload.StateRoot,
+					ReceiptsRoot:  bellatrixBlock.Bellatrix.Body.ExecutionPayload.ReceiptsRoot,
+					LogsBloom:     bellatrixBlock.Bellatrix.Body.ExecutionPayload.LogsBloom,
+					PrevRandao:    bellatrixBlock.Bellatrix.Body.ExecutionPayload.PrevRandao,
+					BlockNumber:   bellatrixBlock.Bellatrix.Body.ExecutionPayload.BlockNumber,
+					GasLimit:      bellatrixBlock.Bellatrix.Body.ExecutionPayload.GasLimit,
+					GasUsed:       bellatrixBlock.Bellatrix.Body.ExecutionPayload.GasUsed,
+					Timestamp:     bellatrixBlock.Bellatrix.Body.ExecutionPayload.Timestamp,
+					ExtraData:     bellatrixBlock.Bellatrix.Body.ExecutionPayload.ExtraData,
+					BaseFeePerGas: bellatrixBlock.Bellatrix.Body.ExecutionPayload.BaseFeePerGas,
+					BlockHash:     bellatrixBlock.Bellatrix.Body.ExecutionPayload.BlockHash,
+					Transactions:  bellatrixBlock.Bellatrix.Body.ExecutionPayload.Transactions,
+					Withdrawals:   withdrawals,
+				},
+				BlsToExecutionChanges: blsToExecutionChanges,
 			},
 		},
 	}, nil

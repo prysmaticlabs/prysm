@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -349,4 +350,88 @@ func convertTransactionsToProto(jsonTransactions []string) ([][]byte, error) {
 	}
 
 	return transactions, nil
+}
+
+func convertWithdrawalsToProto(jsonWithdrawals []*apimiddleware.WithdrawalJson) ([]*enginev1.Withdrawal, error) {
+	withdrawals := make([]*enginev1.Withdrawal, len(jsonWithdrawals))
+
+	for index, jsonWithdrawal := range jsonWithdrawals {
+		if jsonWithdrawal == nil {
+			return nil, errors.Errorf("withdrawal at index `%d` is nil", index)
+		}
+
+		withdrawalIndex, err := strconv.ParseUint(jsonWithdrawal.WithdrawalIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse withdrawal index `%s`", jsonWithdrawal.WithdrawalIndex)
+		}
+
+		validatorIndex, err := strconv.ParseUint(jsonWithdrawal.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", jsonWithdrawal.ValidatorIndex)
+		}
+
+		executionAddress, err := hexutil.Decode(jsonWithdrawal.ExecutionAddress)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonWithdrawal.ExecutionAddress)
+		}
+
+		amount, err := strconv.ParseUint(jsonWithdrawal.Amount, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse withdrawal amount `%s`", jsonWithdrawal.Amount)
+		}
+
+		withdrawals[index] = &enginev1.Withdrawal{
+			Index:          withdrawalIndex,
+			ValidatorIndex: types.ValidatorIndex(validatorIndex),
+			Address:        executionAddress,
+			Amount:         amount,
+		}
+	}
+
+	return withdrawals, nil
+}
+
+func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*apimiddleware.SignedBLSToExecutionChangeJson) ([]*ethpb.SignedBLSToExecutionChange, error) {
+	signedBlsToExecutionChanges := make([]*ethpb.SignedBLSToExecutionChange, len(jsonSignedBlsToExecutionChanges))
+
+	for index, jsonBlsToExecutionChange := range jsonSignedBlsToExecutionChanges {
+		if jsonBlsToExecutionChange == nil {
+			return nil, errors.Errorf("bls to execution change at index `%d` is nil", index)
+		}
+
+		if jsonBlsToExecutionChange.Message == nil {
+			return nil, errors.Errorf("bls to execution change message at index `%d` is nil", index)
+		}
+
+		validatorIndex, err := strconv.ParseUint(jsonBlsToExecutionChange.Message.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode validator index `%s`", jsonBlsToExecutionChange.Message.ValidatorIndex)
+		}
+
+		fromBlsPubkey, err := hexutil.Decode(jsonBlsToExecutionChange.Message.FromBLSPubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode bls pubkey `%s`", jsonBlsToExecutionChange.Message.FromBLSPubkey)
+		}
+
+		toExecutionAddress, err := hexutil.Decode(jsonBlsToExecutionChange.Message.ToExecutionAddress)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonBlsToExecutionChange.Message.ToExecutionAddress)
+		}
+
+		signature, err := hexutil.Decode(jsonBlsToExecutionChange.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode signature `%s`", jsonBlsToExecutionChange.Signature)
+		}
+
+		signedBlsToExecutionChanges[index] = &ethpb.SignedBLSToExecutionChange{
+			Message: &ethpb.BLSToExecutionChange{
+				ValidatorIndex:     types.ValidatorIndex(validatorIndex),
+				FromBlsPubkey:      fromBlsPubkey,
+				ToExecutionAddress: toExecutionAddress,
+			},
+			Signature: signature,
+		}
+	}
+
+	return signedBlsToExecutionChanges, nil
 }

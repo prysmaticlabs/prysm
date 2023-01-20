@@ -59,8 +59,8 @@ func (s *Service) pruneExpiredAtts() {
 			if err := s.cfg.Pool.DeleteBlockAttestation(att); err != nil {
 				log.WithError(err).Error("Could not delete expired block attestation")
 			}
+			expiredBlockAtts.Inc()
 		}
-		expiredBlockAtts.Inc()
 	}
 }
 

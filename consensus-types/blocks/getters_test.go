@@ -16,25 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-func Test_SignedBeaconBlock_SetBlock(t *testing.T) {
-	b := &eth.BeaconBlockCapella{Slot: 1, Body: &eth.BeaconBlockBodyCapella{ExecutionPayload: &pb.ExecutionPayloadCapella{}}}
-	wb, err := NewBeaconBlock(b)
-	require.NoError(t, err)
-	wsb, err := NewSignedBeaconBlock(&eth.SignedBeaconBlockCapella{
-		Block: &eth.BeaconBlockCapella{StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
-			ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-			Body: &eth.BeaconBlockBodyCapella{
-				RandaoReveal:     make([]byte, fieldparams.BLSSignatureLength),
-				Graffiti:         make([]byte, fieldparams.RootLength),
-				ExecutionPayload: &pb.ExecutionPayloadCapella{},
-			}},
-		Signature: make([]byte, fieldparams.BLSSignatureLength),
-	})
-	require.NoError(t, err)
-	require.NoError(t, wsb.SetBlock(wb))
-	require.DeepEqual(t, wsb.Block(), wb)
-}
-
 func Test_BeaconBlockIsNil(t *testing.T) {
 	t.Run("not nil", func(t *testing.T) {
 		assert.NoError(t, BeaconBlockIsNil(&SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}))

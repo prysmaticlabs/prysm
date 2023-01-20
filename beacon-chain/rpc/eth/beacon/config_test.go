@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -49,8 +50,6 @@ func TestGetSpec(t *testing.T) {
 	config.AltairForkEpoch = 100
 	config.BellatrixForkVersion = []byte("BellatrixForkVersion")
 	config.BellatrixForkEpoch = 101
-	config.ShardingForkVersion = []byte("ShardingForkVersion")
-	config.ShardingForkEpoch = 102
 	config.CapellaForkVersion = []byte("CapellaForkVersion")
 	config.CapellaForkEpoch = 103
 	config.BLSWithdrawalPrefixByte = byte('b')
@@ -138,7 +137,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 105, len(resp.Data))
+	assert.Equal(t, 103, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -203,10 +202,6 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("BellatrixForkVersion")), v)
 		case "BELLATRIX_FORK_EPOCH":
 			assert.Equal(t, "101", v)
-		case "SHARDING_FORK_VERSION":
-			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
-		case "SHARDING_FORK_EPOCH":
-			assert.Equal(t, "102", v)
 		case "CAPELLA_FORK_VERSION":
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("CapellaForkVersion")), v)
 		case "CAPELLA_FORK_EPOCH":
@@ -425,6 +420,6 @@ func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// Genesis and Altair.
-	assert.Equal(t, 3, len(resp.Data))
+	os := forks.NewOrderedSchedule(params.BeaconConfig())
+	assert.Equal(t, os.Len(), len(resp.Data))
 }

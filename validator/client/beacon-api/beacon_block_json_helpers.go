@@ -1,8 +1,11 @@
 package beacon_api
 
 import (
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -169,4 +172,17 @@ func jsonifySignedAggregateAndProof(signedAggregateAndProof *ethpb.SignedAggrega
 		},
 		Signature: hexutil.Encode(signedAggregateAndProof.Signature),
 	}
+}
+
+func jsonifyWithdrawals(withdrawals []*enginev1.Withdrawal) []*apimiddleware.WithdrawalJson {
+	jsonWithdrawals := make([]*apimiddleware.WithdrawalJson, len(withdrawals))
+	for index, withdrawal := range withdrawals {
+		jsonWithdrawals[index] = &apimiddleware.WithdrawalJson{
+			WithdrawalIndex:  strconv.FormatUint(withdrawal.Index, 10),
+			ValidatorIndex:   strconv.FormatUint(uint64(withdrawal.ValidatorIndex), 10),
+			ExecutionAddress: hexutil.Encode(withdrawal.Address),
+			Amount:           strconv.FormatUint(withdrawal.Amount, 10),
+		}
+	}
+	return jsonWithdrawals
 }

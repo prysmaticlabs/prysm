@@ -13,53 +13,6 @@ func (b *SignedBeaconBlock) SetSignature(sig []byte) {
 	copy(b.signature[:], sig)
 }
 
-// SetBlock sets the underlying beacon block object.
-// This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetBlock(blk interfaces.BeaconBlock) error {
-	copied, err := blk.Copy()
-	if err != nil {
-		return err
-	}
-	b.block.slot = copied.Slot()
-	b.block.parentRoot = copied.ParentRoot()
-	b.block.stateRoot = copied.StateRoot()
-	b.block.proposerIndex = copied.ProposerIndex()
-	b.block.body.randaoReveal = copied.Body().RandaoReveal()
-	b.block.body.eth1Data = copied.Body().Eth1Data()
-	b.block.body.graffiti = copied.Body().Graffiti()
-	b.block.body.proposerSlashings = copied.Body().ProposerSlashings()
-	b.block.body.attesterSlashings = copied.Body().AttesterSlashings()
-	b.block.body.attestations = copied.Body().Attestations()
-	b.block.body.deposits = copied.Body().Deposits()
-	b.block.body.voluntaryExits = copied.Body().VoluntaryExits()
-	if b.version >= version.Altair {
-		syncAggregate, err := copied.Body().SyncAggregate()
-		if err != nil {
-			return err
-		}
-		b.block.body.syncAggregate = syncAggregate
-	}
-	if b.version >= version.Bellatrix {
-		executionData, err := copied.Body().Execution()
-		if err != nil {
-			return err
-		}
-		if b.block.body.isBlinded {
-			b.block.body.executionPayloadHeader = executionData
-		} else {
-			b.block.body.executionPayload = executionData
-		}
-	}
-	if b.version >= version.Capella {
-		changes, err := copied.Body().BLSToExecutionChanges()
-		if err != nil {
-			return err
-		}
-		b.block.body.blsToExecutionChanges = changes
-	}
-	return nil
-}
-
 // SetSlot sets the respective slot of the block.
 // This function is not thread safe, it is only used during block creation.
 func (b *BeaconBlock) SetSlot(slot types.Slot) {

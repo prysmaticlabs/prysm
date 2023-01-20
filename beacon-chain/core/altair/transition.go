@@ -93,7 +93,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	if err != nil {
 		return nil, err
 	}
-	state, err = e.ProcessHistoricalRootsUpdate(state)
+	state, err = e.ProcessHistoricalDataUpdate(state)
 	if err != nil {
 		return nil, err
 	}
