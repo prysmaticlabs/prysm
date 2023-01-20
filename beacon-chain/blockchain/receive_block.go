@@ -147,9 +147,7 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
-		if err := s.cfg.ExitPool.MarkIncluded(e); err != nil {
-			return errors.Wrap(err, "could not mark exit as included")
-		}
+		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.

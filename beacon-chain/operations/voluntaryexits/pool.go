@@ -21,7 +21,7 @@ type PoolManager interface {
 	PendingExits() ([]*ethpb.SignedVoluntaryExit, error)
 	ExitsForInclusion(state state.ReadOnlyBeaconState, slot types.Slot) ([]*ethpb.SignedVoluntaryExit, error)
 	InsertVoluntaryExit(exit *ethpb.SignedVoluntaryExit)
-	MarkIncluded(exit *ethpb.SignedVoluntaryExit) error
+	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
 }
 
 // Pool is a concrete implementation of PoolManager.
