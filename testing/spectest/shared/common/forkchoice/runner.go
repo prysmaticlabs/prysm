@@ -77,9 +77,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				case version.Capella:
 					beaconState = unmarshalCapellaState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalCapellaBlock(t, blockSSZ)
-				case version.EIP4844:
-					beaconState = unmarshal4844State(t, preBeaconStateSSZ)
-					beaconBlock = unmarshal4844Block(t, blockSSZ)
+				case version.Deneb:
+					beaconState = unmarshalDenebState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalDenebBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -105,8 +105,8 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							beaconBlock = unmarshalSignedBellatrixBlock(t, blockSSZ)
 						case version.Capella:
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
-						case version.EIP4844:
-							beaconBlock = unmarshalSigned4844Block(t, blockSSZ)
+						case version.Deneb:
+							beaconBlock = unmarshalSignedDenebBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
@@ -250,24 +250,24 @@ func unmarshalSignedCapellaBlock(t *testing.T, raw []byte) interfaces.SignedBeac
 	return blk
 }
 
-func unmarshal4844State(t *testing.T, raw []byte) state.BeaconState {
-	base := &ethpb.BeaconState4844{}
+func unmarshalDenebState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateDeneb{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProto4844(base)
+	st, err := state_native.InitializeFromProtoDeneb(base)
 	require.NoError(t, err)
 	return st
 }
 
-func unmarshal4844Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
-	base := &ethpb.BeaconBlock4844{}
+func unmarshalDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockDeneb{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock4844{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 	require.NoError(t, err)
 	return blk
 }
 
-func unmarshalSigned4844Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
-	base := &ethpb.SignedBeaconBlock4844{}
+func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockDeneb{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)

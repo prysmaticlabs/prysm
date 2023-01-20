@@ -176,7 +176,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 			}
 			log = log.WithField("withdrawalCount", len(withdrawals))
 
-			if blk.Version() >= version.EIP4844 {
+			if blk.Version() >= version.Deneb {
 				bs, err := blk.Block().Body().BlobKzgCommitments()
 				if err != nil {
 					log.WithError(err).Error("Failed to get blob kzg commitments")

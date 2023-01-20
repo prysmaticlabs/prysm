@@ -8,11 +8,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/forkchoice"
 )
 
-func TestMinimal_EIP4844_Forkchoice(t *testing.T) {
+func TestMinimal_Deneb_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnableDefensivePull: false,
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "minimal", version.EIP4844)
+	forkchoice.Run(t, "minimal", version.Deneb)
 }

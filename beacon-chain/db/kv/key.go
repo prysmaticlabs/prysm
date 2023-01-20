@@ -38,16 +38,16 @@ func hasCapellaBlindKey(enc []byte) bool {
 	return bytes.Equal(enc[:len(capellaBlindKey)], capellaBlindKey)
 }
 
-func hasEip4844Key(enc []byte) bool {
-	if len(eip4844Key) >= len(enc) {
+func hasDenebKey(enc []byte) bool {
+	if len(denebKey) >= len(enc) {
 		return false
 	}
-	return bytes.Equal(enc[:len(eip4844Key)], eip4844Key)
+	return bytes.Equal(enc[:len(denebKey)], denebKey)
 }
 
-func hasEip4844BlindKey(enc []byte) bool {
-	if len(eip4844BlindKey) >= len(enc) {
+func hasDenebBlindKey(enc []byte) bool {
+	if len(denebBlindKey) >= len(enc) {
 		return false
 	}
-	return bytes.Equal(enc[:len(eip4844BlindKey)], eip4844BlindKey)
+	return bytes.Equal(enc[:len(denebBlindKey)], denebBlindKey)
 }

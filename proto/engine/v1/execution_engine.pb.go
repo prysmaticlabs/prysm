@@ -391,7 +391,7 @@ func (x *ExecutionPayloadCapella) GetWithdrawals() []*Withdrawal {
 	return nil
 }
 
-type ExecutionPayload4844 struct {
+type ExecutionPayloadDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -414,8 +414,8 @@ type ExecutionPayload4844 struct {
 	Withdrawals   []*Withdrawal `protobuf:"bytes,16,rep,name=withdrawals,proto3" json:"withdrawals,omitempty" ssz-max:"16"`
 }
 
-func (x *ExecutionPayload4844) Reset() {
-	*x = ExecutionPayload4844{}
+func (x *ExecutionPayloadDeneb) Reset() {
+	*x = ExecutionPayloadDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -423,13 +423,13 @@ func (x *ExecutionPayload4844) Reset() {
 	}
 }
 
-func (x *ExecutionPayload4844) String() string {
+func (x *ExecutionPayloadDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExecutionPayload4844) ProtoMessage() {}
+func (*ExecutionPayloadDeneb) ProtoMessage() {}
 
-func (x *ExecutionPayload4844) ProtoReflect() protoreflect.Message {
+func (x *ExecutionPayloadDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -441,117 +441,117 @@ func (x *ExecutionPayload4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExecutionPayload4844.ProtoReflect.Descriptor instead.
-func (*ExecutionPayload4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use ExecutionPayloadDeneb.ProtoReflect.Descriptor instead.
+func (*ExecutionPayloadDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_engine_v1_execution_engine_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ExecutionPayload4844) GetParentHash() []byte {
+func (x *ExecutionPayloadDeneb) GetParentHash() []byte {
 	if x != nil {
 		return x.ParentHash
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetFeeRecipient() []byte {
+func (x *ExecutionPayloadDeneb) GetFeeRecipient() []byte {
 	if x != nil {
 		return x.FeeRecipient
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetStateRoot() []byte {
+func (x *ExecutionPayloadDeneb) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetReceiptsRoot() []byte {
+func (x *ExecutionPayloadDeneb) GetReceiptsRoot() []byte {
 	if x != nil {
 		return x.ReceiptsRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetLogsBloom() []byte {
+func (x *ExecutionPayloadDeneb) GetLogsBloom() []byte {
 	if x != nil {
 		return x.LogsBloom
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetPrevRandao() []byte {
+func (x *ExecutionPayloadDeneb) GetPrevRandao() []byte {
 	if x != nil {
 		return x.PrevRandao
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetBlockNumber() uint64 {
+func (x *ExecutionPayloadDeneb) GetBlockNumber() uint64 {
 	if x != nil {
 		return x.BlockNumber
 	}
 	return 0
 }
 
-func (x *ExecutionPayload4844) GetGasLimit() uint64 {
+func (x *ExecutionPayloadDeneb) GetGasLimit() uint64 {
 	if x != nil {
 		return x.GasLimit
 	}
 	return 0
 }
 
-func (x *ExecutionPayload4844) GetGasUsed() uint64 {
+func (x *ExecutionPayloadDeneb) GetGasUsed() uint64 {
 	if x != nil {
 		return x.GasUsed
 	}
 	return 0
 }
 
-func (x *ExecutionPayload4844) GetTimestamp() uint64 {
+func (x *ExecutionPayloadDeneb) GetTimestamp() uint64 {
 	if x != nil {
 		return x.Timestamp
 	}
 	return 0
 }
 
-func (x *ExecutionPayload4844) GetExtraData() []byte {
+func (x *ExecutionPayloadDeneb) GetExtraData() []byte {
 	if x != nil {
 		return x.ExtraData
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetBaseFeePerGas() []byte {
+func (x *ExecutionPayloadDeneb) GetBaseFeePerGas() []byte {
 	if x != nil {
 		return x.BaseFeePerGas
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetExcessDataGas() []byte {
+func (x *ExecutionPayloadDeneb) GetExcessDataGas() []byte {
 	if x != nil {
 		return x.ExcessDataGas
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetBlockHash() []byte {
+func (x *ExecutionPayloadDeneb) GetBlockHash() []byte {
 	if x != nil {
 		return x.BlockHash
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetTransactions() [][]byte {
+func (x *ExecutionPayloadDeneb) GetTransactions() [][]byte {
 	if x != nil {
 		return x.Transactions
 	}
 	return nil
 }
 
-func (x *ExecutionPayload4844) GetWithdrawals() []*Withdrawal {
+func (x *ExecutionPayloadDeneb) GetWithdrawals() []*Withdrawal {
 	if x != nil {
 		return x.Withdrawals
 	}
@@ -868,7 +868,7 @@ func (x *ExecutionPayloadHeaderCapella) GetWithdrawalsRoot() []byte {
 	return nil
 }
 
-type ExecutionPayloadHeader4844 struct {
+type ExecutionPayloadHeaderDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -891,8 +891,8 @@ type ExecutionPayloadHeader4844 struct {
 	WithdrawalsRoot  []byte `protobuf:"bytes,16,opt,name=withdrawals_root,json=withdrawalsRoot,proto3" json:"withdrawals_root,omitempty" ssz-size:"32"`
 }
 
-func (x *ExecutionPayloadHeader4844) Reset() {
-	*x = ExecutionPayloadHeader4844{}
+func (x *ExecutionPayloadHeaderDeneb) Reset() {
+	*x = ExecutionPayloadHeaderDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -900,13 +900,13 @@ func (x *ExecutionPayloadHeader4844) Reset() {
 	}
 }
 
-func (x *ExecutionPayloadHeader4844) String() string {
+func (x *ExecutionPayloadHeaderDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExecutionPayloadHeader4844) ProtoMessage() {}
+func (*ExecutionPayloadHeaderDeneb) ProtoMessage() {}
 
-func (x *ExecutionPayloadHeader4844) ProtoReflect() protoreflect.Message {
+func (x *ExecutionPayloadHeaderDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -918,117 +918,117 @@ func (x *ExecutionPayloadHeader4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExecutionPayloadHeader4844.ProtoReflect.Descriptor instead.
-func (*ExecutionPayloadHeader4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use ExecutionPayloadHeaderDeneb.ProtoReflect.Descriptor instead.
+func (*ExecutionPayloadHeaderDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_engine_v1_execution_engine_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ExecutionPayloadHeader4844) GetParentHash() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetParentHash() []byte {
 	if x != nil {
 		return x.ParentHash
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetFeeRecipient() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetFeeRecipient() []byte {
 	if x != nil {
 		return x.FeeRecipient
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetStateRoot() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetReceiptsRoot() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetReceiptsRoot() []byte {
 	if x != nil {
 		return x.ReceiptsRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetLogsBloom() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetLogsBloom() []byte {
 	if x != nil {
 		return x.LogsBloom
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetPrevRandao() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetPrevRandao() []byte {
 	if x != nil {
 		return x.PrevRandao
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetBlockNumber() uint64 {
+func (x *ExecutionPayloadHeaderDeneb) GetBlockNumber() uint64 {
 	if x != nil {
 		return x.BlockNumber
 	}
 	return 0
 }
 
-func (x *ExecutionPayloadHeader4844) GetGasLimit() uint64 {
+func (x *ExecutionPayloadHeaderDeneb) GetGasLimit() uint64 {
 	if x != nil {
 		return x.GasLimit
 	}
 	return 0
 }
 
-func (x *ExecutionPayloadHeader4844) GetGasUsed() uint64 {
+func (x *ExecutionPayloadHeaderDeneb) GetGasUsed() uint64 {
 	if x != nil {
 		return x.GasUsed
 	}
 	return 0
 }
 
-func (x *ExecutionPayloadHeader4844) GetTimestamp() uint64 {
+func (x *ExecutionPayloadHeaderDeneb) GetTimestamp() uint64 {
 	if x != nil {
 		return x.Timestamp
 	}
 	return 0
 }
 
-func (x *ExecutionPayloadHeader4844) GetExtraData() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetExtraData() []byte {
 	if x != nil {
 		return x.ExtraData
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetBaseFeePerGas() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetBaseFeePerGas() []byte {
 	if x != nil {
 		return x.BaseFeePerGas
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetExcessDataGas() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetExcessDataGas() []byte {
 	if x != nil {
 		return x.ExcessDataGas
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetBlockHash() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetBlockHash() []byte {
 	if x != nil {
 		return x.BlockHash
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetTransactionsRoot() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetTransactionsRoot() []byte {
 	if x != nil {
 		return x.TransactionsRoot
 	}
 	return nil
 }
 
-func (x *ExecutionPayloadHeader4844) GetWithdrawalsRoot() []byte {
+func (x *ExecutionPayloadHeaderDeneb) GetWithdrawalsRoot() []byte {
 	if x != nil {
 		return x.WithdrawalsRoot
 	}
@@ -1910,10 +1910,10 @@ var file_proto_engine_v1_execution_engine_proto_goTypes = []interface{}{
 	(PayloadStatus_Status)(0),             // 0: ethereum.engine.v1.PayloadStatus.Status
 	(*ExecutionPayload)(nil),              // 1: ethereum.engine.v1.ExecutionPayload
 	(*ExecutionPayloadCapella)(nil),       // 2: ethereum.engine.v1.ExecutionPayloadCapella
-	(*ExecutionPayload4844)(nil),          // 3: ethereum.engine.v1.ExecutionPayload4844
+	(*ExecutionPayloadDeneb)(nil),          // 3: ethereum.engine.v1.ExecutionPayloadDeneb
 	(*ExecutionPayloadHeader)(nil),        // 4: ethereum.engine.v1.ExecutionPayloadHeader
 	(*ExecutionPayloadHeaderCapella)(nil), // 5: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*ExecutionPayloadHeader4844)(nil),    // 6: ethereum.engine.v1.ExecutionPayloadHeader4844
+	(*ExecutionPayloadHeaderDeneb)(nil),    // 6: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(*TransitionConfiguration)(nil),       // 7: ethereum.engine.v1.TransitionConfiguration
 	(*PayloadAttributes)(nil),             // 8: ethereum.engine.v1.PayloadAttributes
 	(*PayloadAttributesV2)(nil),           // 9: ethereum.engine.v1.PayloadAttributesV2
@@ -1925,7 +1925,7 @@ var file_proto_engine_v1_execution_engine_proto_goTypes = []interface{}{
 }
 var file_proto_engine_v1_execution_engine_proto_depIdxs = []int32{
 	12, // 0: ethereum.engine.v1.ExecutionPayloadCapella.withdrawals:type_name -> ethereum.engine.v1.Withdrawal
-	12, // 1: ethereum.engine.v1.ExecutionPayload4844.withdrawals:type_name -> ethereum.engine.v1.Withdrawal
+	12, // 1: ethereum.engine.v1.ExecutionPayloadDeneb.withdrawals:type_name -> ethereum.engine.v1.Withdrawal
 	12, // 2: ethereum.engine.v1.PayloadAttributesV2.withdrawals:type_name -> ethereum.engine.v1.Withdrawal
 	0,  // 3: ethereum.engine.v1.PayloadStatus.status:type_name -> ethereum.engine.v1.PayloadStatus.Status
 	14, // 4: ethereum.engine.v1.BlobsBundle.blobs:type_name -> ethereum.engine.v1.Blob
@@ -1967,7 +1967,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 			}
 		}
 		file_proto_engine_v1_execution_engine_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExecutionPayload4844); i {
+			switch v := v.(*ExecutionPayloadDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2003,7 +2003,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 			}
 		}
 		file_proto_engine_v1_execution_engine_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExecutionPayloadHeader4844); i {
+			switch v := v.(*ExecutionPayloadHeaderDeneb); i {
 			case 0:
 				return &v.state
 			case 1:

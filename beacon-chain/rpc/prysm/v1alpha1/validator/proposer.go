@@ -138,8 +138,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().EIP4844ForkEpoch {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_EIP4844{EIP4844: pb.(*ethpb.BeaconBlock4844)}}, nil
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().DenebForkEpoch {
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: pb.(*ethpb.BeaconBlockDeneb)}}, nil
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
@@ -271,7 +271,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		})
 	}()
 
-	if blk.Version() == version.EIP4844 {
+	if blk.Version() == version.Deneb {
 		if err := vs.proposeBlockAndBlobs(ctx, root, blk); err != nil {
 			return nil, errors.Wrap(err, "could not propose block and blob")
 		}
@@ -300,7 +300,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 }
 
 func (vs *Server) proposeBlockAndBlobs(ctx context.Context, root [32]byte, blk interfaces.SignedBeaconBlock) error {
-	blkPb, err := blk.Pb4844Block()
+	blkPb, err := blk.PbDenebBlock()
 	if err != nil {
 		return errors.Wrap(err, "could not get protobuf block")
 	}

@@ -41,12 +41,12 @@ func (d *Delta) unmarshalSSZ(buf []byte) error {
 func RunPrecomputeRewardsAndPenaltiesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	_, testsFolderPath := utils.TestFolders(t, config, "eip4844", "rewards")
+	_, testsFolderPath := utils.TestFolders(t, config, "deneb", "rewards")
 	testTypes, err := util.BazelListDirectories(testsFolderPath)
 	require.NoError(t, err)
 
 	for _, testType := range testTypes {
-		testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
+		testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", fmt.Sprintf("rewards/%s/pyspec_tests", testType))
 		for _, folder := range testFolders {
 			helpers.ClearCache()
 			t.Run(fmt.Sprintf("%v/%v", testType, folder.Name()), func(t *testing.T) {
@@ -63,9 +63,9 @@ func runPrecomputeRewardsAndPenaltiesTest(t *testing.T, testFolderPath string) {
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")
-	preBeaconStateBase := &ethpb.BeaconState4844{}
+	preBeaconStateBase := &ethpb.BeaconStateDeneb{}
 	require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-	preBeaconState, err := state_native.InitializeFromProto4844(preBeaconStateBase)
+	preBeaconState, err := state_native.InitializeFromProtoDeneb(preBeaconStateBase)
 	require.NoError(t, err)
 
 	vp, bp, err := altair.InitializePrecomputeValidators(ctx, preBeaconState)

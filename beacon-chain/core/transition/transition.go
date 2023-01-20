@@ -303,8 +303,8 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 			}
 		}
 
-		if time.CanUpgradeToEIP4844(state.Slot()) {
-			state, err = capella.UpgradeToEip4844(state)
+		if time.CanUpgradeToDeneb(state.Slot()) {
+			state, err = capella.UpgradeToDeneb(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

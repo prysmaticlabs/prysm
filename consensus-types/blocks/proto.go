@@ -101,30 +101,30 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Block:     block,
 			Signature: b.signature[:],
 		}, nil
-	case version.EIP4844:
+	case version.Deneb:
 		if b.IsBlinded() {
-			var block *eth.BlindedBeaconBlock4844
+			var block *eth.BlindedBeaconBlockDeneb
 			if blockMessage != nil {
 				var ok bool
-				block, ok = blockMessage.(*eth.BlindedBeaconBlock4844)
+				block, ok = blockMessage.(*eth.BlindedBeaconBlockDeneb)
 				if !ok {
 					return nil, errIncorrectBlockVersion
 				}
 			}
-			return &eth.SignedBlindedBeaconBlock4844{
+			return &eth.SignedBlindedBeaconBlockDeneb{
 				Block:     block,
 				Signature: b.signature[:],
 			}, nil
 		}
-		var block *eth.BeaconBlock4844
+		var block *eth.BeaconBlockDeneb
 		if blockMessage != nil {
 			var ok bool
-			block, ok = blockMessage.(*eth.BeaconBlock4844)
+			block, ok = blockMessage.(*eth.BeaconBlockDeneb)
 			if !ok {
 				return nil, errIncorrectBlockVersion
 			}
 		}
-		return &eth.SignedBeaconBlock4844{
+		return &eth.SignedBeaconBlockDeneb{
 			Block:     block,
 			Signature: b.signature[:],
 		}, nil
@@ -243,17 +243,17 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			StateRoot:     b.stateRoot[:],
 			Body:          body,
 		}, nil
-	case version.EIP4844:
+	case version.Deneb:
 		if b.IsBlinded() {
-			var body *eth.BlindedBeaconBlockBody4844
+			var body *eth.BlindedBeaconBlockBodyDeneb
 			if bodyMessage != nil {
 				var ok bool
-				body, ok = bodyMessage.(*eth.BlindedBeaconBlockBody4844)
+				body, ok = bodyMessage.(*eth.BlindedBeaconBlockBodyDeneb)
 				if !ok {
 					return nil, errIncorrectBodyVersion
 				}
 			}
-			return &eth.BlindedBeaconBlock4844{
+			return &eth.BlindedBeaconBlockDeneb{
 				Slot:          b.slot,
 				ProposerIndex: b.proposerIndex,
 				ParentRoot:    b.parentRoot[:],
@@ -261,15 +261,15 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 				Body:          body,
 			}, nil
 		}
-		var body *eth.BeaconBlockBody4844
+		var body *eth.BeaconBlockBodyDeneb
 		if bodyMessage != nil {
 			var ok bool
-			body, ok = bodyMessage.(*eth.BeaconBlockBody4844)
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyDeneb)
 			if !ok {
 				return nil, errIncorrectBodyVersion
 			}
 		}
-		return &eth.BeaconBlock4844{
+		return &eth.BeaconBlockDeneb{
 			Slot:          b.slot,
 			ProposerIndex: b.proposerIndex,
 			ParentRoot:    b.parentRoot[:],
@@ -399,17 +399,17 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 		}, nil
-	case version.EIP4844:
+	case version.Deneb:
 		if b.isBlinded {
-			var ph *enginev1.ExecutionPayloadHeader4844
+			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader4844)
+				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
-			return &eth.BlindedBeaconBlockBody4844{
+			return &eth.BlindedBeaconBlockBodyDeneb{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
 				Graffiti:               b.graffiti[:],
@@ -424,15 +424,15 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				BlobKzgCommitments:     b.blobKzgCommitments,
 			}, nil
 		}
-		var p *enginev1.ExecutionPayload4844
+		var p *enginev1.ExecutionPayloadDeneb
 		var ok bool
 		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayload4844)
+			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadDeneb)
 			if !ok {
 				return nil, errPayloadWrongType
 			}
 		}
-		return &eth.BeaconBlockBody4844{
+		return &eth.BeaconBlockBodyDeneb{
 			RandaoReveal:          b.randaoReveal[:],
 			Eth1Data:              b.eth1Data,
 			Graffiti:              b.graffiti[:],
@@ -519,17 +519,17 @@ func initSignedBlockFromProtoCapella(pb *eth.SignedBeaconBlockCapella) (*SignedB
 	return b, nil
 }
 
-func initSignedBlockFromProto4844(pb *eth.SignedBeaconBlock4844) (*SignedBeaconBlock, error) {
+func initSignedBlockFromProtoDeneb(pb *eth.SignedBeaconBlockDeneb) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
 
-	block, err := initBlockFromProto4844(pb.Block)
+	block, err := initBlockFromProtoDeneb(pb.Block)
 	if err != nil {
 		return nil, err
 	}
 	b := &SignedBeaconBlock{
-		version:   version.EIP4844,
+		version:   version.Deneb,
 		block:     block,
 		signature: bytesutil.ToBytes96(pb.Signature),
 	}
@@ -570,17 +570,17 @@ func initBlindedSignedBlockFromProtoCapella(pb *eth.SignedBlindedBeaconBlockCape
 	return b, nil
 }
 
-func initBlindedSignedBlockFromProto4844(pb *eth.SignedBlindedBeaconBlock4844) (*SignedBeaconBlock, error) {
+func initBlindedSignedBlockFromProtoDeneb(pb *eth.SignedBlindedBeaconBlockDeneb) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
 
-	block, err := initBlindedBlockFromProto4844(pb.Block)
+	block, err := initBlindedBlockFromProtoDeneb(pb.Block)
 	if err != nil {
 		return nil, err
 	}
 	b := &SignedBeaconBlock{
-		version:   version.EIP4844,
+		version:   version.Deneb,
 		block:     block,
 		signature: bytesutil.ToBytes96(pb.Signature),
 	}
@@ -687,17 +687,17 @@ func initBlockFromProtoCapella(pb *eth.BeaconBlockCapella) (*BeaconBlock, error)
 	return b, nil
 }
 
-func initBlockFromProto4844(pb *eth.BeaconBlock4844) (*BeaconBlock, error) {
+func initBlockFromProtoDeneb(pb *eth.BeaconBlockDeneb) (*BeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
 
-	body, err := initBlockBodyFromProto4844(pb.Body)
+	body, err := initBlockBodyFromProtoDeneb(pb.Body)
 	if err != nil {
 		return nil, err
 	}
 	b := &BeaconBlock{
-		version:       version.EIP4844,
+		version:       version.Deneb,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
@@ -727,17 +727,17 @@ func initBlindedBlockFromProtoCapella(pb *eth.BlindedBeaconBlockCapella) (*Beaco
 	return b, nil
 }
 
-func initBlindedBlockFromProto4844(pb *eth.BlindedBeaconBlock4844) (*BeaconBlock, error) {
+func initBlindedBlockFromProtoDeneb(pb *eth.BlindedBeaconBlockDeneb) (*BeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
 
-	body, err := initBlindedBlockBodyFromProto4844(pb.Body)
+	body, err := initBlindedBlockBodyFromProtoDeneb(pb.Body)
 	if err != nil {
 		return nil, err
 	}
 	b := &BeaconBlock{
-		version:       version.EIP4844,
+		version:       version.Deneb,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    bytesutil.ToBytes32(pb.ParentRoot),
@@ -898,18 +898,18 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 	return b, nil
 }
 
-func initBlockBodyFromProto4844(pb *eth.BeaconBlockBody4844) (*BeaconBlockBody, error) {
+func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadEIP4844(pb.ExecutionPayload)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload)
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
-		version:               version.EIP4844,
+		version:               version.Deneb,
 		isBlinded:             false,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:              pb.Eth1Data,
@@ -927,18 +927,18 @@ func initBlockBodyFromProto4844(pb *eth.BeaconBlockBody4844) (*BeaconBlockBody, 
 	return b, nil
 }
 
-func initBlindedBlockBodyFromProto4844(pb *eth.BlindedBeaconBlockBody4844) (*BeaconBlockBody, error) {
+func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderEIP4844(pb.ExecutionPayloadHeader)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
 	if err != nil && err != ErrNilObjectWrapped {
 		return nil, err
 	}
 	b := &BeaconBlockBody{
-		version:                version.EIP4844,
+		version:                version.Deneb,
 		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,

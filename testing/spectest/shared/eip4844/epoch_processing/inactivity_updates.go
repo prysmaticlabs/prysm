@@ -17,7 +17,7 @@ func RunInactivityUpdatesTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testPath := "epoch_processing/inactivity_updates/pyspec_tests"
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", testPath)
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", testPath)
 	for _, folder := range testFolders {
 		helpers.ClearCache()
 		t.Run(folder.Name(), func(t *testing.T) {

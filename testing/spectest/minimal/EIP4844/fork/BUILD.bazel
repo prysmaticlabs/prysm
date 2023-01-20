@@ -13,5 +13,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/eip4844/fork:go_default_library"],
+    deps = ["//testing/spectest/shared/deneb/fork:go_default_library"],
 )

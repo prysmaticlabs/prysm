@@ -66,13 +66,13 @@ func CapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBeaconBlockCapella) 
 	return v1alpha1Block, nil
 }
 
-// Eip4844ToV1Alpha1SignedBlock converts a v2 SignedBeaconBlock4844 proto to a v1alpha1 proto.
-func Eip4844ToV1Alpha1SignedBlock(eip4844Blk *ethpbv2.SignedBeaconBlock4844) (*ethpbalpha.SignedBeaconBlock4844, error) {
-	marshaledBlk, err := proto.Marshal(eip4844Blk)
+// DenebToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockDeneb proto to a v1alpha1 proto.
+func DenebToV1Alpha1SignedBlock(denebBlk *ethpbv2.SignedBeaconBlockDeneb) (*ethpbalpha.SignedBeaconBlockDeneb, error) {
+	marshaledBlk, err := proto.Marshal(denebBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v1alpha1Block := &ethpbalpha.SignedBeaconBlock4844{}
+	v1alpha1Block := &ethpbalpha.SignedBeaconBlockDeneb{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -105,13 +105,13 @@ func BlindedCapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBlindedBeacon
 	return v1alpha1Block, nil
 }
 
-// Blinded4844ToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlock4844 proto to a v1alpha1 proto.
-func Blinded4844ToV1Alpha1SignedBlock(eip4844Blk *ethpbv2.SignedBlindedBeaconBlock4844) (*ethpbalpha.SignedBlindedBeaconBlock4844, error) {
-	marshaledBlk, err := proto.Marshal(eip4844Blk)
+// BlindedDenebToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlockDeneb proto to a v1alpha1 proto.
+func BlindedDenebToV1Alpha1SignedBlock(denebBlk *ethpbv2.SignedBlindedBeaconBlockDeneb) (*ethpbalpha.SignedBlindedBeaconBlockDeneb, error) {
+	marshaledBlk, err := proto.Marshal(denebBlk)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlock4844{}
+	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlockDeneb{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -146,14 +146,14 @@ func V1Alpha1BeaconBlockCapellaToV2(v1alpha1Block *ethpbalpha.BeaconBlockCapella
 	return v2Block, nil
 }
 
-// V1Alpha1BeaconBlock4844ToV2 converts a v1alpha1 4844 beacon block to a v2
-// 4844 block.
-func V1Alpha1BeaconBlock4844ToV2(v1alpha1Block *ethpbalpha.BeaconBlock4844) (*ethpbv2.BeaconBlock4844, error) {
+// V1Alpha1BeaconBlockDenebToV2 converts a v1alpha1 Deneb beacon block to a v2
+// Deneb block.
+func V1Alpha1BeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.BeaconBlockDeneb) (*ethpbv2.BeaconBlockDeneb, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v2Block := &ethpbv2.BeaconBlock4844{}
+	v2Block := &ethpbv2.BeaconBlockDeneb{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -186,13 +186,13 @@ func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.Blin
 	return v2Block, nil
 }
 
-// V1Alpha1BeaconBlockBlinded4844ToV2Blinded converts a v1alpha1 Blinded 4844 beacon block to a v2 Blinded 4844 block.
-func V1Alpha1BeaconBlockBlinded4844ToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlock4844) (*ethpbv2.BlindedBeaconBlock4844, error) {
+// V1Alpha1BeaconBlockBlindedDenebToV2Blinded converts a v1alpha1 Blinded Deneb beacon block to a v2 Blinded Deneb block.
+func V1Alpha1BeaconBlockBlindedDenebToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockDeneb) (*ethpbv2.BlindedBeaconBlockDeneb, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v2Block := &ethpbv2.BlindedBeaconBlock4844{}
+	v2Block := &ethpbv2.BlindedBeaconBlockDeneb{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -988,8 +988,8 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 	return result, nil
 }
 
-// BeaconState4844ToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, error) {
+// BeaconStateDenebToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconStateDenebToProto(st state.BeaconState) (*ethpbv2.BeaconStateDeneb, error) {
 	sourceFork := st.Fork()
 	sourceLatestBlockHeader := st.LatestBlockHeader()
 	sourceEth1Data := st.Eth1Data()
@@ -1046,7 +1046,7 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get latest execution payload header")
 	}
-	sourceLatestExecutionPayloadHeader, ok := executionPayloadHeaderInterface.Proto().(*enginev1.ExecutionPayloadHeader4844)
+	sourceLatestExecutionPayloadHeader, ok := executionPayloadHeaderInterface.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 	if !ok {
 		return nil, errors.New("execution payload header has incorrect type")
 	}
@@ -1064,7 +1064,7 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 		return nil, errors.Wrap(err, "could not get historical roots")
 	}
 
-	result := &ethpbv2.BeaconState4844{
+	result := &ethpbv2.BeaconStateDeneb{
 		GenesisTime:           st.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
 		Slot:                  st.Slot(),
@@ -1118,7 +1118,7 @@ func BeaconState4844ToProto(st state.BeaconState) (*ethpbv2.BeaconState4844, err
 			Pubkeys:         bytesutil.SafeCopy2dBytes(sourceNextSyncCommittee.Pubkeys),
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderDeneb{
 			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ParentHash),
 			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.FeeRecipient),
 			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.StateRoot),

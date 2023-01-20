@@ -3,9 +3,9 @@ package rewards
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/eip4844/rewards"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/deneb/rewards"
 )
 
-func TestMinimal_EIP4844_Rewards(t *testing.T) {
+func TestMinimal_Deneb_Rewards(t *testing.T) {
 	rewards.RunPrecomputeRewardsAndPenaltiesTests(t, "minimal")
 }

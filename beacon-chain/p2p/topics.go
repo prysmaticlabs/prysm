@@ -26,7 +26,7 @@ const (
 	GossipAggregateAndProofMessage = "beacon_aggregate_and_proof"
 	// GossipContributionAndProofMessage is the name for the sync contribution and proof message type.
 	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
-	// GossipBlockAndBlobsMessage is the name for the block and blobs sidecar message type. (EIP4844)
+	// GossipBlockAndBlobsMessage is the name for the block and blobs sidecar message type. (Deneb)
 	GossipBlockAndBlobsMessage = "beacon_block_and_blobs_sidecar"
 	// GossipBlsToExecutionChangeMessage is the name for the bls to execution change message type.
 	GossipBlsToExecutionChangeMessage = "bls_to_execution_change"

@@ -48,9 +48,9 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Capella fork blinded beacon block.
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
-        SignedBeaconBlock4844 EIP4844  = 7;
+        SignedBeaconBlockDeneb Deneb  = 7;
 
-        SignedBlindedBeaconBlock4844 blinded_EIP4844  = 8;
+        SignedBlindedBeaconBlockDeneb blinded_Deneb  = 8;
     }
 }
 
@@ -74,9 +74,9 @@ message GenericBeaconBlock {
         // Representing a post-Capella fork blinded beacon block.
         BlindedBeaconBlockCapella blinded_capella = 6;
 
-        BeaconBlock4844 EIP4844  = 7;
+        BeaconBlockDeneb Deneb  = 7;
 
-        BlindedBeaconBlock4844 blinded_EIP4844  = 8;
+        BlindedBeaconBlockDeneb blinded_Deneb  = 8;
     }
 }
 
@@ -449,20 +449,20 @@ message BlindedBeaconBlockBodyBellatrix {
 // It is to be gossip'ed over p2p to peers to validate and process.
 message SignedBeaconBlockAndBlobsSidecar {
     // The block of the beacon chain.
-    SignedBeaconBlock4844 beacon_block = 1;
+    SignedBeaconBlockDeneb beacon_block = 1;
     // The blob sidecar which corresponds to the block itself.
     BlobsSidecar blobs_sidecar = 2;
 }
 
-message SignedBeaconBlock4844 {
+message SignedBeaconBlockDeneb {
     // The unsigned beacon block itself.
-    BeaconBlock4844 block = 1;
+    BeaconBlockDeneb block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BeaconBlock4844 {
+message BeaconBlockDeneb {
     // Beacon chain slot that this block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
@@ -476,10 +476,10 @@ message BeaconBlock4844 {
     bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // The beacon block body.
-    BeaconBlockBody4844 body = 5;
+    BeaconBlockBodyDeneb body = 5;
 }
 
-message BeaconBlockBody4844 {
+message BeaconBlockBodyDeneb {
     // The validators RANDAO reveal 96 byte value.
     bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 
@@ -512,7 +512,7 @@ message BeaconBlockBody4844 {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload from the execution chain. New in Bellatrix network upgrade.
-    ethereum.engine.v1.ExecutionPayload4844 execution_payload = 10;
+    ethereum.engine.v1.ExecutionPayloadDeneb execution_payload = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
@@ -646,15 +646,15 @@ message BlindedBeaconBlockBodyCapella {
 }
 
 
-message SignedBlindedBeaconBlock4844 {
+message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.
-    BlindedBeaconBlock4844 block = 1;
+    BlindedBeaconBlockDeneb block = 1;
 
     // 96 byte BLS signature from the validator that produced this blinded block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BlindedBeaconBlock4844 {
+message BlindedBeaconBlockDeneb {
     // Beacon chain slot that this blinded block represents.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
@@ -668,10 +668,10 @@ message BlindedBeaconBlock4844 {
     bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
 
     // The blinded beacon block body.
-    BlindedBeaconBlockBody4844 body = 5;
+    BlindedBeaconBlockBodyDeneb body = 5;
 }
 
-message BlindedBeaconBlockBody4844 {
+message BlindedBeaconBlockBodyDeneb {
     // The validators RANDAO reveal 96 byte value.
     bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
 
@@ -701,9 +701,9 @@ message BlindedBeaconBlockBody4844 {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
-    ethereum.engine.v1.ExecutionPayloadHeader4844 execution_payload_header = 10;
+    ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution_payload_header = 10;
 
-    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in 4844 network upgrade.
+    // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Deneb network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4"];
@@ -736,13 +736,13 @@ message SignedBuilderBid {
     bytes signature      = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-// BlobsAndCommitments is to be merkelized to compute the "r" value for eip4844 blob validation.
+// BlobsAndCommitments is to be merkelized to compute the "r" value for deneb blob validation.
 message BlobsAndCommitments {
     repeated ethereum.engine.v1.Blob blobs = 1 [(ethereum.eth.ext.ssz_max) = "16"];
     repeated bytes commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
 }
 
-// PolynomailAndCommitment is to be  merkelized to compute the "x" value for eip4844 blob validation.
+// PolynomailAndCommitment is to be  merkelized to compute the "x" value for deneb blob validation.
 message PolynomialAndCommitment {
     repeated bytes polynomial = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
     bytes commitment = 2 [(ethereum.eth.ext.ssz_size) = "48"];

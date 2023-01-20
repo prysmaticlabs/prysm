@@ -35,7 +35,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	case version.Capella:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
-	case version.EIP4844:
+	case version.Deneb:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	}
 
@@ -266,13 +266,13 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
 	}
 
-	if state.version == version.EIP4844 {
+	if state.version == version.Deneb {
 		// Execution payload root.
-		executionPayloadRoot, err := state.latestExecutionPayloadHeader4844.HashTreeRoot()
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderDeneb.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
-		fieldRoots[nativetypes.LatestExecutionPayloadHeader4844.RealPosition()] = executionPayloadRoot[:]
+		fieldRoots[nativetypes.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
 
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)

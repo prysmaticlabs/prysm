@@ -18,9 +18,9 @@ import (
 
 func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "operations/bls_to_execution_change/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "operations/bls_to_execution_change/pyspec_tests")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", config, "eip4844", "operations/bls_to_execution_change/pyspec_tests")
+		t.Fatalf("No test folders found for %s/%s/%s", config, "deneb", "operations/bls_to_execution_change/pyspec_tests")
 	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -32,7 +32,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 			change := &ethpb.SignedBLSToExecutionChange{}
 			require.NoError(t, change.UnmarshalSSZ(changeSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody4844{
+			body := &ethpb.BeaconBlockBodyDeneb{
 				BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{change},
 			}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {

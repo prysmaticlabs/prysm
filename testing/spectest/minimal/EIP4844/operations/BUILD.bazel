@@ -22,5 +22,5 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/eip4844/operations:go_default_library"],
+    deps = ["//testing/spectest/shared/deneb/operations:go_default_library"],
 )

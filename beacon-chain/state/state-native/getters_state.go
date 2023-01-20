@@ -128,8 +128,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 			HistoricalSummaries:          b.historicalSummaries,
 		}
-	case version.EIP4844:
-		return &ethpb.BeaconState4844{
+	case version.Deneb:
+		return &ethpb.BeaconStateDeneb{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
 			Slot:                         b.slot,
@@ -154,7 +154,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			InactivityScores:             b.inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader4844,
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderDeneb,
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 			HistoricalSummaries:          b.historicalSummaries,
@@ -286,8 +286,8 @@ func (b *BeaconState) ToProto() interface{} {
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 			HistoricalSummaries:          b.historicalSummariesVal(),
 		}
-	case version.EIP4844:
-		return &ethpb.BeaconState4844{
+	case version.Deneb:
+		return &ethpb.BeaconStateDeneb{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
 			Slot:                         b.slot,
@@ -312,7 +312,7 @@ func (b *BeaconState) ToProto() interface{} {
 			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
-			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader4844Val(),
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderDenebVal(),
 			NextWithdrawalIndex:          b.nextWithdrawalIndex,
 			NextWithdrawalValidatorIndex: b.nextWithdrawalValidatorIndex,
 			HistoricalSummaries:          b.historicalSummariesVal(),
@@ -401,8 +401,8 @@ func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error
 	return pbState, nil
 }
 
-func ProtobufBeaconState4844(s interface{}) (*ethpb.BeaconState4844, error) {
-	pbState, ok := s.(*ethpb.BeaconState4844)
+func ProtobufBeaconStateDeneb(s interface{}) (*ethpb.BeaconStateDeneb, error) {
+	pbState, ok := s.(*ethpb.BeaconStateDeneb)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateCapella")
 	}

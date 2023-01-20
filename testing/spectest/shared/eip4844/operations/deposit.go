@@ -17,7 +17,7 @@ import (
 
 func RunDepositTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "operations/deposit/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "operations/deposit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -28,7 +28,7 @@ func RunDepositTest(t *testing.T, config string) {
 			deposit := &ethpb.Deposit{}
 			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody4844{Deposits: []*ethpb.Deposit{deposit}}
+			body := &ethpb.BeaconBlockBodyDeneb{Deposits: []*ethpb.Deposit{deposit}}
 			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				return altair.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}

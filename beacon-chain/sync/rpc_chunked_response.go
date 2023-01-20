@@ -61,9 +61,9 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 			return err
 		}
 		obtainedCtx = digest[:]
-	case version.EIP4844:
+	case version.Deneb:
 		valRoot := chain.GenesisValidatorsRoot()
-		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, valRoot[:])
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfo
 		return err
 	}
 	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, valRoot[:])
+	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, valRoot[:])
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func WriteBlockAndBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.C
 		return err
 	}
 	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().EIP4844ForkEpoch, valRoot[:])
+	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().DenebForkEpoch, valRoot[:])
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func extractBeaconBlockAndBlobsSidecarDataType(digest []byte, chain blockchain.F
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
 	vRoot := chain.GenesisValidatorsRoot()
-	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().EIP4844ForkVersion, vRoot[:])
+	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().DenebForkVersion, vRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func extractBlobsSidecarDataType(digest []byte, chain blockchain.ForkFetcher) (*
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
 	vRoot := chain.GenesisValidatorsRoot()
-	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().EIP4844ForkVersion, vRoot[:])
+	rDigest, err := signing.ComputeForkDigest(params.BeaconConfig().DenebForkVersion, vRoot[:])
 	if err != nil {
 		return nil, err
 	}

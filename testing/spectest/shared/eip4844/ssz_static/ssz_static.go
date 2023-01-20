@@ -15,14 +15,14 @@ import (
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
-	common.RunSSZStaticTests(t, config, "eip4844", unmarshalledSSZ, customHtr)
+	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, customHtr)
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
 	switch object.(type) {
-	case *ethpb.BeaconState4844:
+	case *ethpb.BeaconStateDeneb:
 		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProto4844(s.(*ethpb.BeaconState4844))
+			beaconState, err := state_native.InitializeFromProtoDeneb(s.(*ethpb.BeaconStateDeneb))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})
@@ -35,9 +35,9 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		obj = &enginev1.ExecutionPayload4844{}
+		obj = &enginev1.ExecutionPayloadDeneb{}
 	case "ExecutionPayloadHeader":
-		obj = &enginev1.ExecutionPayloadHeader4844{}
+		obj = &enginev1.ExecutionPayloadHeaderDeneb{}
 	case "Attestation":
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
@@ -48,14 +48,14 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.AggregateAttestationAndProof{}
 	case "BeaconBlock":
 		t.Skip("Skipping BeaconBlock test")
-		obj = &ethpb.BeaconBlock4844{}
+		obj = &ethpb.BeaconBlockDeneb{}
 	case "BeaconBlockBody":
-		obj = &ethpb.BeaconBlockBody4844{}
+		obj = &ethpb.BeaconBlockBodyDeneb{}
 	case "BeaconBlockHeader":
 		obj = &ethpb.BeaconBlockHeader{}
 	case "BeaconState":
 		t.Skip("Skipping BeaconState test")
-		obj = &ethpb.BeaconState4844{}
+		obj = &ethpb.BeaconStateDeneb{}
 	case "Checkpoint":
 		obj = &ethpb.Checkpoint{}
 	case "Deposit":
@@ -85,7 +85,7 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.SignedAggregateAttestationAndProof{}
 	case "SignedBeaconBlock":
 		t.Skip("Skipping SignedBeaconBlock test")
-		obj = &ethpb.SignedBeaconBlock4844{}
+		obj = &ethpb.SignedBeaconBlockDeneb{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":

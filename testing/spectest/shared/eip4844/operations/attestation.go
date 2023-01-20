@@ -19,7 +19,7 @@ import (
 
 func RunAttestationTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "operations/attestation/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "operations/attestation/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -30,7 +30,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			att := &ethpb.Attestation{}
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody4844{Attestations: []*ethpb.Attestation{att}}
+			body := &ethpb.BeaconBlockBodyDeneb{Attestations: []*ethpb.Attestation{att}}
 			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 				if err != nil {

@@ -49,8 +49,8 @@ func (s *Service) registerRPCHandlers() {
 			s.pingHandler,
 		)
 		s.registerRPCHandlersAltair()
-		if currEpoch >= params.BeaconConfig().EIP4844ForkEpoch {
-			s.registerRPCHandlers4844()
+		if currEpoch >= params.BeaconConfig().DenebForkEpoch {
+			s.registerRPCHandlersDeneb()
 		}
 		return
 	}
@@ -86,7 +86,7 @@ func (s *Service) registerRPCHandlersAltair() {
 		p2p.RPCBlocksByRangeTopicV2,
 		s.beaconBlocksByRangeRPCHandler,
 	)
-	// TODO(4844): Unregister this post 4844 fork epoch.
+	// TODO(Deneb): Unregister this post Deneb fork epoch.
 	s.registerRPC(
 		p2p.RPCBlocksByRootTopicV2,
 		s.beaconBlocksRootRPCHandler,
@@ -97,7 +97,7 @@ func (s *Service) registerRPCHandlersAltair() {
 	)
 }
 
-func (s *Service) registerRPCHandlers4844() {
+func (s *Service) registerRPCHandlersDeneb() {
 	s.registerRPC(
 		p2p.RPCBlobsSidecarsByRangeTopicV1,
 		s.blobsSidecarsByRangeRPCHandler,

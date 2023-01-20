@@ -66,11 +66,11 @@ func (SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlockC
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) Pb4844Block() (*eth.SignedBeaconBlock4844, error) {
+func (SignedBeaconBlock) PbDenebBlock() (*eth.SignedBeaconBlockDeneb, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) PbBlinded4844Block() (*eth.SignedBlindedBeaconBlock4844, error) {
+func (SignedBeaconBlock) PbBlindedDenebBlock() (*eth.SignedBlindedBeaconBlockDeneb, error) {
 	panic("implement me")
 }
 

@@ -240,11 +240,11 @@ type ExecutionPayloadCapellaJSON struct {
 }
 
 type getPayloadV3ResponseJson struct {
-	ExecutionPayload *executionPayload4844JSON `json:"executionPayload"`
-	BlockValue       string                    `json:"blockValue"`
+	ExecutionPayload *executionPayloadDenebJSON `json:"executionPayload"`
+	BlockValue       string                     `json:"blockValue"`
 }
 
-type executionPayload4844JSON struct {
+type executionPayloadDenebJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
 	StateRoot     *common.Hash    `json:"stateRoot"`
@@ -713,7 +713,7 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 }
 
 // MarshalJSON --
-func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
+func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	transactions := make([]hexutil.Bytes, len(e.Transactions))
 	for i, tx := range e.Transactions {
 		transactions[i] = tx
@@ -737,7 +737,7 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 		e.Withdrawals = make([]*Withdrawal, 0)
 	}
 
-	return json.Marshal(executionPayload4844JSON{
+	return json.Marshal(executionPayloadDenebJSON{
 		ParentHash:    &pHash,
 		FeeRecipient:  &recipient,
 		StateRoot:     &sRoot,
@@ -758,7 +758,7 @@ func (e *ExecutionPayload4844) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON --
-func (e *ExecutionPayload4844) UnmarshalJSON(enc []byte) error {
+func (e *ExecutionPayloadDeneb) UnmarshalJSON(enc []byte) error {
 	dec := getPayloadV3ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
@@ -804,7 +804,7 @@ func (e *ExecutionPayload4844) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
 
-	*e = ExecutionPayload4844{}
+	*e = ExecutionPayloadDeneb{}
 	e.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
 	e.FeeRecipient = dec.ExecutionPayload.FeeRecipient.Bytes()
 	e.StateRoot = dec.ExecutionPayload.StateRoot.Bytes()

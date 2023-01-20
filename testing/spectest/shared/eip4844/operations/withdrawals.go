@@ -18,7 +18,7 @@ import (
 
 func RunWithdrawalsTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "operations/withdrawals/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "operations/withdrawals/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -26,10 +26,10 @@ func RunWithdrawalsTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			payloadSSZ, err := snappy.Decode(nil /* dst */, payloadFile)
 			require.NoError(t, err, "Failed to decompress")
-			payload := &enginev1.ExecutionPayload4844{}
+			payload := &enginev1.ExecutionPayloadDeneb{}
 			require.NoError(t, payload.UnmarshalSSZ(payloadSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody4844{ExecutionPayload: payload}
+			body := &ethpb.BeaconBlockBodyDeneb{ExecutionPayload: payload}
 			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				payload, err := b.Block().Body().Execution()
 				if err != nil {

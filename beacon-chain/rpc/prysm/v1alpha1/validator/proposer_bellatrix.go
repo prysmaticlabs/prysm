@@ -66,7 +66,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
 	}
-	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 		if err := blk.Body().SetBlobKzgCommitments(blobsBundle.KzgCommitments); err != nil {
 			return errors.Wrap(err, "could not set blob kzg commitments")
 		}

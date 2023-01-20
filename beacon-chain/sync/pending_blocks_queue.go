@@ -88,7 +88,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			continue
 		}
 		var blobs []*ethpb.BlobsSidecar
-		if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 			blobs = s.pendingBlobsInCache(slot)
 			if len(bs) != len(blobs) {
 				log.Errorf("Processing pending blocks and blobs are not the same length: %d != %d", len(bs), len(blobs))
@@ -186,7 +186,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				continue
 			}
-			if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 				sc := blobs[i]
 				_, err := s.validateBlobsSidecar(sc, false)
 				if err != nil {
@@ -292,12 +292,12 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
 			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
 		}
-		if slots.ToEpoch(s.cfg.chain.CurrentSlot()) >= params.BeaconConfig().EIP4844ForkEpoch {
+		if slots.ToEpoch(s.cfg.chain.CurrentSlot()) >= params.BeaconConfig().DenebForkEpoch {
 			if err := s.sendBlocksAndSidecarsRequest(ctx, &req, pid); err != nil {
 				log.WithError(err).Error("Could not send recent block and blob request, falling back to block only")
 				if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 					tracing.AnnotateError(span, err)
-					log.WithError(err).Error("Could not send recent block request after 4844 fork epoch")
+					log.WithError(err).Error("Could not send recent block request after Deneb fork epoch")
 				}
 			}
 		} else {
@@ -376,7 +376,7 @@ func (s *Service) validatePendingSlots() error {
 		slot := cacheKeyToSlot(k)
 		blks := s.pendingBlocksInCache(slot)
 		blobs := s.pendingBlobsInCache(slot)
-		if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+		if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 			if len(blks) != len(blobs) {
 				return fmt.Errorf("blks and blobs are different length in pending queue: %d, %d", len(blks), len(blobs))
 			}
@@ -431,7 +431,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	blobs := s.pendingBlobsInCache(slot)
-	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 		if len(blobs) != len(blks) {
 			return fmt.Errorf("blobs and blks are different length in pending queue for deletion: %d, %d", len(blobs), len(blks))
 		}

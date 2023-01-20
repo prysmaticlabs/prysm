@@ -250,7 +250,7 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 	return state_native.InitializeFromProtoCapella(st)
 }
 
-func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func buildGenesisBeaconStateDeneb(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -298,7 +298,7 @@ func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	st := &ethpb.BeaconState4844{
+	st := &ethpb.BeaconStateDeneb{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
@@ -347,7 +347,7 @@ func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState,
 	}
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
-	bodyRoot, err := (&ethpb.BeaconBlockBody4844{
+	bodyRoot, err := (&ethpb.BeaconBlockBodyDeneb{
 		RandaoReveal: make([]byte, 96),
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),
@@ -358,7 +358,7 @@ func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState,
 			SyncCommitteeBits:      scBits[:],
 			SyncCommitteeSignature: make([]byte, 96),
 		},
-		ExecutionPayload: &enginev1.ExecutionPayload4844{
+		ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
 			ParentHash:    make([]byte, 32),
 			FeeRecipient:  make([]byte, 20),
 			StateRoot:     make([]byte, 32),
@@ -393,7 +393,7 @@ func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState,
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader4844{
+	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, 32),
@@ -407,5 +407,5 @@ func buildGenesisBeaconState4844(genesisTime uint64, preState state.BeaconState,
 		ExcessDataGas:    make([]byte, 32),
 	}
 
-	return state_native.InitializeFromProto4844(st)
+	return state_native.InitializeFromProtoDeneb(st)
 }

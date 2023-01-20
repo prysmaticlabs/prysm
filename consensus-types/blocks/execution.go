@@ -702,8 +702,8 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	}, nil
 }
 
-// PayloadToHeaderEIP4844 converts `payload` into execution payload header format.
-func PayloadToHeaderEIP4844(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader4844, error) {
+// PayloadToHeaderDeneb converts `payload` into execution payload header format.
+func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeaderDeneb, error) {
 	txs, err := payload.Transactions()
 	if err != nil {
 		return nil, err
@@ -725,7 +725,7 @@ func PayloadToHeaderEIP4844(payload interfaces.ExecutionData) (*enginev1.Executi
 		return nil, err
 	}
 
-	return &enginev1.ExecutionPayloadHeader4844{
+	return &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient()),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot()),
@@ -802,16 +802,16 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	return true, nil
 }
 
-// executionPayloadHeaderEIP4844 is a convenience wrapper around a blinded beacon block body's execution header data structure
+// executionPayloadHeaderDeneb is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
-type executionPayloadHeaderEIP4844 struct {
-	p *enginev1.ExecutionPayloadHeader4844
+type executionPayloadHeaderDeneb struct {
+	p *enginev1.ExecutionPayloadHeaderDeneb
 }
 
-// WrappedExecutionPayloadHeaderEIP4844 is a constructor which wraps a protobuf execution header into an interface.
-func WrappedExecutionPayloadHeaderEIP4844(p *enginev1.ExecutionPayloadHeader4844) (interfaces.ExecutionData, error) {
-	w := executionPayloadHeaderEIP4844{p: p}
+// WrappedExecutionPayloadHeaderDeneb is a constructor which wraps a protobuf execution header into an interface.
+func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadHeaderDeneb{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -819,154 +819,154 @@ func WrappedExecutionPayloadHeaderEIP4844(p *enginev1.ExecutionPayloadHeader4844
 }
 
 // IsNil checks if the underlying data is nil.
-func (e executionPayloadHeaderEIP4844) IsNil() bool {
+func (e executionPayloadHeaderDeneb) IsNil() bool {
 	return e.p == nil
 }
 
 // MarshalSSZ --
-func (e executionPayloadHeaderEIP4844) MarshalSSZ() ([]byte, error) {
+func (e executionPayloadHeaderDeneb) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
 }
 
 // MarshalSSZTo --
-func (e executionPayloadHeaderEIP4844) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (e executionPayloadHeaderDeneb) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return e.p.MarshalSSZTo(dst)
 }
 
 // SizeSSZ --
-func (e executionPayloadHeaderEIP4844) SizeSSZ() int {
+func (e executionPayloadHeaderDeneb) SizeSSZ() int {
 	return e.p.SizeSSZ()
 }
 
 // UnmarshalSSZ --
-func (e executionPayloadHeaderEIP4844) UnmarshalSSZ(buf []byte) error {
+func (e executionPayloadHeaderDeneb) UnmarshalSSZ(buf []byte) error {
 	return e.p.UnmarshalSSZ(buf)
 }
 
 // HashTreeRoot --
-func (e executionPayloadHeaderEIP4844) HashTreeRoot() ([32]byte, error) {
+func (e executionPayloadHeaderDeneb) HashTreeRoot() ([32]byte, error) {
 	return e.p.HashTreeRoot()
 }
 
 // HashTreeRootWith --
-func (e executionPayloadHeaderEIP4844) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadHeaderDeneb) HashTreeRootWith(hh *fastssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
 // Proto --
-func (e executionPayloadHeaderEIP4844) Proto() proto.Message {
+func (e executionPayloadHeaderDeneb) Proto() proto.Message {
 	return e.p
 }
 
 // ParentHash --
-func (e executionPayloadHeaderEIP4844) ParentHash() []byte {
+func (e executionPayloadHeaderDeneb) ParentHash() []byte {
 	return e.p.ParentHash
 }
 
 // FeeRecipient --
-func (e executionPayloadHeaderEIP4844) FeeRecipient() []byte {
+func (e executionPayloadHeaderDeneb) FeeRecipient() []byte {
 	return e.p.FeeRecipient
 }
 
 // StateRoot --
-func (e executionPayloadHeaderEIP4844) StateRoot() []byte {
+func (e executionPayloadHeaderDeneb) StateRoot() []byte {
 	return e.p.StateRoot
 }
 
 // ReceiptsRoot --
-func (e executionPayloadHeaderEIP4844) ReceiptsRoot() []byte {
+func (e executionPayloadHeaderDeneb) ReceiptsRoot() []byte {
 	return e.p.ReceiptsRoot
 }
 
 // LogsBloom --
-func (e executionPayloadHeaderEIP4844) LogsBloom() []byte {
+func (e executionPayloadHeaderDeneb) LogsBloom() []byte {
 	return e.p.LogsBloom
 }
 
 // PrevRandao --
-func (e executionPayloadHeaderEIP4844) PrevRandao() []byte {
+func (e executionPayloadHeaderDeneb) PrevRandao() []byte {
 	return e.p.PrevRandao
 }
 
 // BlockNumber --
-func (e executionPayloadHeaderEIP4844) BlockNumber() uint64 {
+func (e executionPayloadHeaderDeneb) BlockNumber() uint64 {
 	return e.p.BlockNumber
 }
 
 // GasLimit --
-func (e executionPayloadHeaderEIP4844) GasLimit() uint64 {
+func (e executionPayloadHeaderDeneb) GasLimit() uint64 {
 	return e.p.GasLimit
 }
 
 // GasUsed --
-func (e executionPayloadHeaderEIP4844) GasUsed() uint64 {
+func (e executionPayloadHeaderDeneb) GasUsed() uint64 {
 	return e.p.GasUsed
 }
 
 // Timestamp --
-func (e executionPayloadHeaderEIP4844) Timestamp() uint64 {
+func (e executionPayloadHeaderDeneb) Timestamp() uint64 {
 	return e.p.Timestamp
 }
 
 // ExtraData --
-func (e executionPayloadHeaderEIP4844) ExtraData() []byte {
+func (e executionPayloadHeaderDeneb) ExtraData() []byte {
 	return e.p.ExtraData
 }
 
 // BaseFeePerGas --
-func (e executionPayloadHeaderEIP4844) BaseFeePerGas() []byte {
+func (e executionPayloadHeaderDeneb) BaseFeePerGas() []byte {
 	return e.p.BaseFeePerGas
 }
 
 // BlockHash --
-func (e executionPayloadHeaderEIP4844) BlockHash() []byte {
+func (e executionPayloadHeaderDeneb) BlockHash() []byte {
 	return e.p.BlockHash
 }
 
 // Transactions --
-func (executionPayloadHeaderEIP4844) Transactions() ([][]byte, error) {
+func (executionPayloadHeaderDeneb) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // TransactionsRoot --
-func (e executionPayloadHeaderEIP4844) TransactionsRoot() ([]byte, error) {
+func (e executionPayloadHeaderDeneb) TransactionsRoot() ([]byte, error) {
 	return e.p.TransactionsRoot, nil
 }
 
 // Withdrawals --
-func (e executionPayloadHeaderEIP4844) Withdrawals() ([]*enginev1.Withdrawal, error) {
+func (e executionPayloadHeaderDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // WitdrawalsRoot --
-func (e executionPayloadHeaderEIP4844) WithdrawalsRoot() ([]byte, error) {
+func (e executionPayloadHeaderDeneb) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
-func (e executionPayloadHeaderEIP4844) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadHeaderDeneb) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
 // PbBellatrix --
-func (e executionPayloadHeaderEIP4844) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+func (e executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbCapella --
-func (e executionPayloadHeaderEIP4844) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-// executionPayloadEIP4844 is a convenience wrapper around a beacon block body's execution payload data structure
+// executionPayloadDeneb is a convenience wrapper around a beacon block body's execution payload data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
-type executionPayloadEIP4844 struct {
-	p *enginev1.ExecutionPayload4844
+type executionPayloadDeneb struct {
+	p *enginev1.ExecutionPayloadDeneb
 }
 
-// WrappedExecutionPayloadEIP4844 is a constructor which wraps a protobuf execution payload into an interface.
-func WrappedExecutionPayloadEIP4844(p *enginev1.ExecutionPayload4844) (interfaces.ExecutionData, error) {
-	w := executionPayloadEIP4844{p: p}
+// WrappedExecutionPayloadDeneb is a constructor which wraps a protobuf execution payload into an interface.
+func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces.ExecutionData, error) {
+	w := executionPayloadDeneb{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -974,140 +974,140 @@ func WrappedExecutionPayloadEIP4844(p *enginev1.ExecutionPayload4844) (interface
 }
 
 // IsNil checks if the underlying data is nil.
-func (e executionPayloadEIP4844) IsNil() bool {
+func (e executionPayloadDeneb) IsNil() bool {
 	return e.p == nil
 }
 
 // MarshalSSZ --
-func (e executionPayloadEIP4844) MarshalSSZ() ([]byte, error) {
+func (e executionPayloadDeneb) MarshalSSZ() ([]byte, error) {
 	return e.p.MarshalSSZ()
 }
 
 // MarshalSSZTo --
-func (e executionPayloadEIP4844) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (e executionPayloadDeneb) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return e.p.MarshalSSZTo(dst)
 }
 
 // SizeSSZ --
-func (e executionPayloadEIP4844) SizeSSZ() int {
+func (e executionPayloadDeneb) SizeSSZ() int {
 	return e.p.SizeSSZ()
 }
 
 // UnmarshalSSZ --
-func (e executionPayloadEIP4844) UnmarshalSSZ(buf []byte) error {
+func (e executionPayloadDeneb) UnmarshalSSZ(buf []byte) error {
 	return e.p.UnmarshalSSZ(buf)
 }
 
 // HashTreeRoot --
-func (e executionPayloadEIP4844) HashTreeRoot() ([32]byte, error) {
+func (e executionPayloadDeneb) HashTreeRoot() ([32]byte, error) {
 	return e.p.HashTreeRoot()
 }
 
 // HashTreeRootWith --
-func (e executionPayloadEIP4844) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadDeneb) HashTreeRootWith(hh *fastssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
 // Proto --
-func (e executionPayloadEIP4844) Proto() proto.Message {
+func (e executionPayloadDeneb) Proto() proto.Message {
 	return e.p
 }
 
 // ParentHash --
-func (e executionPayloadEIP4844) ParentHash() []byte {
+func (e executionPayloadDeneb) ParentHash() []byte {
 	return e.p.ParentHash
 }
 
 // FeeRecipient --
-func (e executionPayloadEIP4844) FeeRecipient() []byte {
+func (e executionPayloadDeneb) FeeRecipient() []byte {
 	return e.p.FeeRecipient
 }
 
 // StateRoot --
-func (e executionPayloadEIP4844) StateRoot() []byte {
+func (e executionPayloadDeneb) StateRoot() []byte {
 	return e.p.StateRoot
 }
 
 // ReceiptsRoot --
-func (e executionPayloadEIP4844) ReceiptsRoot() []byte {
+func (e executionPayloadDeneb) ReceiptsRoot() []byte {
 	return e.p.ReceiptsRoot
 }
 
 // LogsBloom --
-func (e executionPayloadEIP4844) LogsBloom() []byte {
+func (e executionPayloadDeneb) LogsBloom() []byte {
 	return e.p.LogsBloom
 }
 
 // PrevRandao --
-func (e executionPayloadEIP4844) PrevRandao() []byte {
+func (e executionPayloadDeneb) PrevRandao() []byte {
 	return e.p.PrevRandao
 }
 
 // BlockNumber --
-func (e executionPayloadEIP4844) BlockNumber() uint64 {
+func (e executionPayloadDeneb) BlockNumber() uint64 {
 	return e.p.BlockNumber
 }
 
 // GasLimit --
-func (e executionPayloadEIP4844) GasLimit() uint64 {
+func (e executionPayloadDeneb) GasLimit() uint64 {
 	return e.p.GasLimit
 }
 
 // GasUsed --
-func (e executionPayloadEIP4844) GasUsed() uint64 {
+func (e executionPayloadDeneb) GasUsed() uint64 {
 	return e.p.GasUsed
 }
 
 // Timestamp --
-func (e executionPayloadEIP4844) Timestamp() uint64 {
+func (e executionPayloadDeneb) Timestamp() uint64 {
 	return e.p.Timestamp
 }
 
 // ExtraData --
-func (e executionPayloadEIP4844) ExtraData() []byte {
+func (e executionPayloadDeneb) ExtraData() []byte {
 	return e.p.ExtraData
 }
 
 // BaseFeePerGas --
-func (e executionPayloadEIP4844) BaseFeePerGas() []byte {
+func (e executionPayloadDeneb) BaseFeePerGas() []byte {
 	return e.p.BaseFeePerGas
 }
 
 // BlockHash --
-func (e executionPayloadEIP4844) BlockHash() []byte {
+func (e executionPayloadDeneb) BlockHash() []byte {
 	return e.p.BlockHash
 }
 
 // Transactions --
-func (e executionPayloadEIP4844) Transactions() ([][]byte, error) {
+func (e executionPayloadDeneb) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
 // TransactionsRoot --
-func (e executionPayloadEIP4844) TransactionsRoot() ([]byte, error) {
+func (e executionPayloadDeneb) TransactionsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // Withdrawals --
-func (e executionPayloadEIP4844) Withdrawals() ([]*enginev1.Withdrawal, error) {
+func (e executionPayloadDeneb) Withdrawals() ([]*enginev1.Withdrawal, error) {
 	return e.p.Withdrawals, nil
 }
 
 // WithdrawalsRoot --
-func (e executionPayloadEIP4844) WithdrawalsRoot() ([]byte, error) {
+func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedGetter
 }
 
-func (e executionPayloadEIP4844) ExcessiveDataGas() ([]byte, error) {
+func (e executionPayloadDeneb) ExcessiveDataGas() ([]byte, error) {
 	return e.p.ExcessDataGas, nil
 }
 
 // PbBellatrix --
-func (e executionPayloadEIP4844) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+func (e executionPayloadDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, ErrUnsupportedGetter
 }
 
 // PbCapella --
-func (e executionPayloadEIP4844) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+func (e executionPayloadDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, ErrUnsupportedGetter
 }

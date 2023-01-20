@@ -25,7 +25,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapellaVal())
 	}
 
-	return blocks.WrappedExecutionPayloadHeaderEIP4844(b.latestExecutionPayloadHeader4844Val())
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDenebVal())
 }
 
 // latestExecutionPayloadHeaderVal of the beacon state.
@@ -40,6 +40,6 @@ func (b *BeaconState) latestExecutionPayloadHeaderCapellaVal() *enginev1.Executi
 	return ethpb.CopyExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapella)
 }
 
-func (b *BeaconState) latestExecutionPayloadHeader4844Val() *enginev1.ExecutionPayloadHeader4844 {
-	return ethpb.CopyExecutionPayloadHeader4844(b.latestExecutionPayloadHeader4844)
+func (b *BeaconState) latestExecutionPayloadHeaderDenebVal() *enginev1.ExecutionPayloadHeaderDeneb {
+	return ethpb.CopyExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDeneb)
 }

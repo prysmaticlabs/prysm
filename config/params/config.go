@@ -151,8 +151,8 @@ type BeaconChainConfig struct {
 	BellatrixForkEpoch   types.Epoch `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
 	CapellaForkVersion   []byte      `yaml:"CAPELLA_FORK_VERSION" spec:"true"`   // CapellaForkVersion is used to represent the fork version for capella.
 	CapellaForkEpoch     types.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
-	EIP4844ForkVersion   []byte      `yaml:"EIP4844_FORK_VERSION" spec:"true"`   // EIP4844ForkVersion is used to represent the fork version for EIP4844.
-	EIP4844ForkEpoch     types.Epoch `yaml:"EIP4844_FORK_EPOCH" spec:"true"`     // EIP4844ForkEpoch is used to represent the assigned fork epoch for EIP4844.
+	DenebForkVersion     []byte      `yaml:"EIP4844_FORK_VERSION" spec:"true"`   // DenebForkVersion is used to represent the fork version for Deneb.
+	DenebForkEpoch       types.Epoch `yaml:"EIP4844_FORK_EPOCH" spec:"true"`     // DenebForkEpoch is used to represent the assigned fork epoch for Deneb.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string      // Human-readable names of fork versions.
@@ -226,8 +226,8 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	// Set Capella fork data.
 	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
-	// Set EIP4844 fork data.
-	fvs[bytesutil.ToBytes4(b.EIP4844ForkVersion)] = b.EIP4844ForkEpoch
+	// Set Deneb fork data.
+	fvs[bytesutil.ToBytes4(b.DenebForkVersion)] = b.DenebForkEpoch
 	return fvs
 }
 
@@ -238,7 +238,7 @@ func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]s
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
 	// Set Capella fork data.
 	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
-	// Set EIP4844 fork data.
-	fvn[bytesutil.ToBytes4(b.EIP4844ForkVersion)] = "eip4844"
+	// Set Deneb fork data.
+	fvn[bytesutil.ToBytes4(b.DenebForkVersion)] = "deneb"
 	return fvn
 }

@@ -17,7 +17,7 @@ import (
 
 func RunVoluntaryExitTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "operations/voluntary_exit/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "operations/voluntary_exit/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
@@ -28,7 +28,7 @@ func RunVoluntaryExitTest(t *testing.T, config string) {
 			voluntaryExit := &ethpb.SignedVoluntaryExit{}
 			require.NoError(t, voluntaryExit.UnmarshalSSZ(exitSSZ), "Failed to unmarshal")
 
-			body := &ethpb.BeaconBlockBody4844{VoluntaryExits: []*ethpb.SignedVoluntaryExit{voluntaryExit}}
+			body := &ethpb.BeaconBlockBodyDeneb{VoluntaryExits: []*ethpb.SignedVoluntaryExit{voluntaryExit}}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				return blocks.ProcessVoluntaryExits(ctx, s, b.Block().Body().VoluntaryExits())
 			})

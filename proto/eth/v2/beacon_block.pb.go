@@ -225,7 +225,7 @@ type BeaconBlockContainerV2 struct {
 	//	*BeaconBlockContainerV2_AltairBlock
 	//	*BeaconBlockContainerV2_BellatrixBlock
 	//	*BeaconBlockContainerV2_CapellaBlock
-	//	*BeaconBlockContainerV2_Eip4844Block
+	//	*BeaconBlockContainerV2_DenebBlock
 	Block isBeaconBlockContainerV2_Block `protobuf_oneof:"block"`
 }
 
@@ -296,9 +296,9 @@ func (x *BeaconBlockContainerV2) GetCapellaBlock() *BeaconBlockCapella {
 	return nil
 }
 
-func (x *BeaconBlockContainerV2) GetEip4844Block() *BeaconBlock4844 {
-	if x, ok := x.GetBlock().(*BeaconBlockContainerV2_Eip4844Block); ok {
-		return x.Eip4844Block
+func (x *BeaconBlockContainerV2) GetDenebBlock() *BeaconBlockDeneb {
+	if x, ok := x.GetBlock().(*BeaconBlockContainerV2_DenebBlock); ok {
+		return x.DenebBlock
 	}
 	return nil
 }
@@ -323,8 +323,8 @@ type BeaconBlockContainerV2_CapellaBlock struct {
 	CapellaBlock *BeaconBlockCapella `protobuf:"bytes,4,opt,name=capella_block,json=capellaBlock,proto3,oneof"`
 }
 
-type BeaconBlockContainerV2_Eip4844Block struct {
-	Eip4844Block *BeaconBlock4844 `protobuf:"bytes,5,opt,name=eip4844_block,json=eip4844Block,proto3,oneof"`
+type BeaconBlockContainerV2_DenebBlock struct {
+	DenebBlock *BeaconBlockDeneb `protobuf:"bytes,5,opt,name=deneb_block,json=denebBlock,proto3,oneof"`
 }
 
 func (*BeaconBlockContainerV2_Phase0Block) isBeaconBlockContainerV2_Block() {}
@@ -335,7 +335,7 @@ func (*BeaconBlockContainerV2_BellatrixBlock) isBeaconBlockContainerV2_Block() {
 
 func (*BeaconBlockContainerV2_CapellaBlock) isBeaconBlockContainerV2_Block() {}
 
-func (*BeaconBlockContainerV2_Eip4844Block) isBeaconBlockContainerV2_Block() {}
+func (*BeaconBlockContainerV2_DenebBlock) isBeaconBlockContainerV2_Block() {}
 
 type SignedBeaconBlockContainer struct {
 	state         protoimpl.MessageState
@@ -348,7 +348,7 @@ type SignedBeaconBlockContainer struct {
 	//	*SignedBeaconBlockContainer_AltairBlock
 	//	*SignedBeaconBlockContainer_BellatrixBlock
 	//	*SignedBeaconBlockContainer_CapellaBlock
-	//	*SignedBeaconBlockContainer_Eip4844Block
+	//	*SignedBeaconBlockContainer_DenebBlock
 	Message   isSignedBeaconBlockContainer_Message `protobuf_oneof:"message"`
 	Signature []byte                               `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
@@ -420,9 +420,9 @@ func (x *SignedBeaconBlockContainer) GetCapellaBlock() *BeaconBlockCapella {
 	return nil
 }
 
-func (x *SignedBeaconBlockContainer) GetEip4844Block() *BeaconBlock4844 {
-	if x, ok := x.GetMessage().(*SignedBeaconBlockContainer_Eip4844Block); ok {
-		return x.Eip4844Block
+func (x *SignedBeaconBlockContainer) GetDenebBlock() *BeaconBlockDeneb {
+	if x, ok := x.GetMessage().(*SignedBeaconBlockContainer_DenebBlock); ok {
+		return x.DenebBlock
 	}
 	return nil
 }
@@ -454,8 +454,8 @@ type SignedBeaconBlockContainer_CapellaBlock struct {
 	CapellaBlock *BeaconBlockCapella `protobuf:"bytes,4,opt,name=capella_block,json=capellaBlock,proto3,oneof"`
 }
 
-type SignedBeaconBlockContainer_Eip4844Block struct {
-	Eip4844Block *BeaconBlock4844 `protobuf:"bytes,5,opt,name=eip4844_block,json=eip4844Block,proto3,oneof"`
+type SignedBeaconBlockContainer_DenebBlock struct {
+	DenebBlock *BeaconBlockDeneb `protobuf:"bytes,5,opt,name=deneb_block,json=denebBlock,proto3,oneof"`
 }
 
 func (*SignedBeaconBlockContainer_Phase0Block) isSignedBeaconBlockContainer_Message() {}
@@ -466,7 +466,7 @@ func (*SignedBeaconBlockContainer_BellatrixBlock) isSignedBeaconBlockContainer_M
 
 func (*SignedBeaconBlockContainer_CapellaBlock) isSignedBeaconBlockContainer_Message() {}
 
-func (*SignedBeaconBlockContainer_Eip4844Block) isSignedBeaconBlockContainer_Message() {}
+func (*SignedBeaconBlockContainer_DenebBlock) isSignedBeaconBlockContainer_Message() {}
 
 type BlindedBeaconBlockContainer struct {
 	state         protoimpl.MessageState
@@ -479,7 +479,7 @@ type BlindedBeaconBlockContainer struct {
 	//	*BlindedBeaconBlockContainer_AltairBlock
 	//	*BlindedBeaconBlockContainer_BellatrixBlock
 	//	*BlindedBeaconBlockContainer_CapellaBlock
-	//	*BlindedBeaconBlockContainer_Eip4844Block
+	//	*BlindedBeaconBlockContainer_DenebBlock
 	Block isBlindedBeaconBlockContainer_Block `protobuf_oneof:"block"`
 }
 
@@ -550,9 +550,9 @@ func (x *BlindedBeaconBlockContainer) GetCapellaBlock() *BlindedBeaconBlockCapel
 	return nil
 }
 
-func (x *BlindedBeaconBlockContainer) GetEip4844Block() *BlindedBeaconBlock4844 {
-	if x, ok := x.GetBlock().(*BlindedBeaconBlockContainer_Eip4844Block); ok {
-		return x.Eip4844Block
+func (x *BlindedBeaconBlockContainer) GetDenebBlock() *BlindedBeaconBlockDeneb {
+	if x, ok := x.GetBlock().(*BlindedBeaconBlockContainer_DenebBlock); ok {
+		return x.DenebBlock
 	}
 	return nil
 }
@@ -577,8 +577,8 @@ type BlindedBeaconBlockContainer_CapellaBlock struct {
 	CapellaBlock *BlindedBeaconBlockCapella `protobuf:"bytes,4,opt,name=capella_block,json=capellaBlock,proto3,oneof"`
 }
 
-type BlindedBeaconBlockContainer_Eip4844Block struct {
-	Eip4844Block *BlindedBeaconBlock4844 `protobuf:"bytes,5,opt,name=eip4844_block,json=eip4844Block,proto3,oneof"`
+type BlindedBeaconBlockContainer_DenebBlock struct {
+	DenebBlock *BlindedBeaconBlockDeneb `protobuf:"bytes,5,opt,name=deneb_block,json=denebBlock,proto3,oneof"`
 }
 
 func (*BlindedBeaconBlockContainer_Phase0Block) isBlindedBeaconBlockContainer_Block() {}
@@ -589,7 +589,7 @@ func (*BlindedBeaconBlockContainer_BellatrixBlock) isBlindedBeaconBlockContainer
 
 func (*BlindedBeaconBlockContainer_CapellaBlock) isBlindedBeaconBlockContainer_Block() {}
 
-func (*BlindedBeaconBlockContainer_Eip4844Block) isBlindedBeaconBlockContainer_Block() {}
+func (*BlindedBeaconBlockContainer_DenebBlock) isBlindedBeaconBlockContainer_Block() {}
 
 type SignedBlindedBeaconBlockContainer struct {
 	state         protoimpl.MessageState
@@ -602,7 +602,7 @@ type SignedBlindedBeaconBlockContainer struct {
 	//	*SignedBlindedBeaconBlockContainer_AltairBlock
 	//	*SignedBlindedBeaconBlockContainer_BellatrixBlock
 	//	*SignedBlindedBeaconBlockContainer_CapellaBlock
-	//	*SignedBlindedBeaconBlockContainer_Eip4844Block
+	//	*SignedBlindedBeaconBlockContainer_DenebBlock
 	Message   isSignedBlindedBeaconBlockContainer_Message `protobuf_oneof:"message"`
 	Signature []byte                                      `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
@@ -674,9 +674,9 @@ func (x *SignedBlindedBeaconBlockContainer) GetCapellaBlock() *BlindedBeaconBloc
 	return nil
 }
 
-func (x *SignedBlindedBeaconBlockContainer) GetEip4844Block() *BlindedBeaconBlock4844 {
-	if x, ok := x.GetMessage().(*SignedBlindedBeaconBlockContainer_Eip4844Block); ok {
-		return x.Eip4844Block
+func (x *SignedBlindedBeaconBlockContainer) GetDenebBlock() *BlindedBeaconBlockDeneb {
+	if x, ok := x.GetMessage().(*SignedBlindedBeaconBlockContainer_DenebBlock); ok {
+		return x.DenebBlock
 	}
 	return nil
 }
@@ -708,8 +708,8 @@ type SignedBlindedBeaconBlockContainer_CapellaBlock struct {
 	CapellaBlock *BlindedBeaconBlockCapella `protobuf:"bytes,4,opt,name=capella_block,json=capellaBlock,proto3,oneof"`
 }
 
-type SignedBlindedBeaconBlockContainer_Eip4844Block struct {
-	Eip4844Block *BlindedBeaconBlock4844 `protobuf:"bytes,5,opt,name=eip4844_block,json=eip4844Block,proto3,oneof"`
+type SignedBlindedBeaconBlockContainer_DenebBlock struct {
+	DenebBlock *BlindedBeaconBlockDeneb `protobuf:"bytes,5,opt,name=deneb_block,json=denebBlock,proto3,oneof"`
 }
 
 func (*SignedBlindedBeaconBlockContainer_Phase0Block) isSignedBlindedBeaconBlockContainer_Message() {}
@@ -722,8 +722,7 @@ func (*SignedBlindedBeaconBlockContainer_BellatrixBlock) isSignedBlindedBeaconBl
 func (*SignedBlindedBeaconBlockContainer_CapellaBlock) isSignedBlindedBeaconBlockContainer_Message() {
 }
 
-func (*SignedBlindedBeaconBlockContainer_Eip4844Block) isSignedBlindedBeaconBlockContainer_Message() {
-}
+func (*SignedBlindedBeaconBlockContainer_DenebBlock) isSignedBlindedBeaconBlockContainer_Message() {}
 
 type SignedBeaconBlockBellatrix struct {
 	state         protoimpl.MessageState
@@ -835,17 +834,17 @@ func (x *SignedBeaconBlockCapella) GetSignature() []byte {
 	return nil
 }
 
-type SignedBeaconBlock4844 struct {
+type SignedBeaconBlockDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *BeaconBlock4844 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message   *BeaconBlockDeneb `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Signature []byte           `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
-func (x *SignedBeaconBlock4844) Reset() {
-	*x = SignedBeaconBlock4844{}
+func (x *SignedBeaconBlockDeneb) Reset() {
+	*x = SignedBeaconBlockDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -853,13 +852,13 @@ func (x *SignedBeaconBlock4844) Reset() {
 	}
 }
 
-func (x *SignedBeaconBlock4844) String() string {
+func (x *SignedBeaconBlockDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignedBeaconBlock4844) ProtoMessage() {}
+func (*SignedBeaconBlockDeneb) ProtoMessage() {}
 
-func (x *SignedBeaconBlock4844) ProtoReflect() protoreflect.Message {
+func (x *SignedBeaconBlockDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -871,19 +870,19 @@ func (x *SignedBeaconBlock4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SignedBeaconBlock4844.ProtoReflect.Descriptor instead.
-func (*SignedBeaconBlock4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use SignedBeaconBlockDeneb.ProtoReflect.Descriptor instead.
+func (*SignedBeaconBlockDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *SignedBeaconBlock4844) GetMessage() *BeaconBlock4844 {
+func (x *SignedBeaconBlockDeneb) GetMessage() *BeaconBlockDeneb {
 	if x != nil {
 		return x.Message
 	}
 	return nil
 }
 
-func (x *SignedBeaconBlock4844) GetSignature() []byte {
+func (x *SignedBeaconBlockDeneb) GetSignature() []byte {
 	if x != nil {
 		return x.Signature
 	}
@@ -1000,17 +999,17 @@ func (x *SignedBlindedBeaconBlockCapella) GetSignature() []byte {
 	return nil
 }
 
-type SignedBlindedBeaconBlock4844 struct {
+type SignedBlindedBeaconBlockDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message   *BlindedBeaconBlock4844 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message   *BlindedBeaconBlockDeneb `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Signature []byte                  `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
-func (x *SignedBlindedBeaconBlock4844) Reset() {
-	*x = SignedBlindedBeaconBlock4844{}
+func (x *SignedBlindedBeaconBlockDeneb) Reset() {
+	*x = SignedBlindedBeaconBlockDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1018,13 +1017,13 @@ func (x *SignedBlindedBeaconBlock4844) Reset() {
 	}
 }
 
-func (x *SignedBlindedBeaconBlock4844) String() string {
+func (x *SignedBlindedBeaconBlockDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SignedBlindedBeaconBlock4844) ProtoMessage() {}
+func (*SignedBlindedBeaconBlockDeneb) ProtoMessage() {}
 
-func (x *SignedBlindedBeaconBlock4844) ProtoReflect() protoreflect.Message {
+func (x *SignedBlindedBeaconBlockDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1036,19 +1035,19 @@ func (x *SignedBlindedBeaconBlock4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SignedBlindedBeaconBlock4844.ProtoReflect.Descriptor instead.
-func (*SignedBlindedBeaconBlock4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use SignedBlindedBeaconBlockDeneb.ProtoReflect.Descriptor instead.
+func (*SignedBlindedBeaconBlockDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *SignedBlindedBeaconBlock4844) GetMessage() *BlindedBeaconBlock4844 {
+func (x *SignedBlindedBeaconBlockDeneb) GetMessage() *BlindedBeaconBlockDeneb {
 	if x != nil {
 		return x.Message
 	}
 	return nil
 }
 
-func (x *SignedBlindedBeaconBlock4844) GetSignature() []byte {
+func (x *SignedBlindedBeaconBlockDeneb) GetSignature() []byte {
 	if x != nil {
 		return x.Signature
 	}
@@ -1347,7 +1346,7 @@ func (x *BlindedBeaconBlockCapella) GetBody() *BlindedBeaconBlockBodyCapella {
 	return nil
 }
 
-type BlindedBeaconBlock4844 struct {
+type BlindedBeaconBlockDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1356,11 +1355,11 @@ type BlindedBeaconBlock4844 struct {
 	ProposerIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                      `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                      `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BlindedBeaconBlockBody4844                                                 `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body          *BlindedBeaconBlockBodyDeneb                                                 `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
-func (x *BlindedBeaconBlock4844) Reset() {
-	*x = BlindedBeaconBlock4844{}
+func (x *BlindedBeaconBlockDeneb) Reset() {
+	*x = BlindedBeaconBlockDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1368,13 +1367,13 @@ func (x *BlindedBeaconBlock4844) Reset() {
 	}
 }
 
-func (x *BlindedBeaconBlock4844) String() string {
+func (x *BlindedBeaconBlockDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BlindedBeaconBlock4844) ProtoMessage() {}
+func (*BlindedBeaconBlockDeneb) ProtoMessage() {}
 
-func (x *BlindedBeaconBlock4844) ProtoReflect() protoreflect.Message {
+func (x *BlindedBeaconBlockDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1386,40 +1385,40 @@ func (x *BlindedBeaconBlock4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BlindedBeaconBlock4844.ProtoReflect.Descriptor instead.
-func (*BlindedBeaconBlock4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlindedBeaconBlockDeneb.ProtoReflect.Descriptor instead.
+func (*BlindedBeaconBlockDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *BlindedBeaconBlock4844) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
+func (x *BlindedBeaconBlockDeneb) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.Slot
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(0)
 }
 
-func (x *BlindedBeaconBlock4844) GetProposerIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
+func (x *BlindedBeaconBlockDeneb) GetProposerIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.ProposerIndex
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *BlindedBeaconBlock4844) GetParentRoot() []byte {
+func (x *BlindedBeaconBlockDeneb) GetParentRoot() []byte {
 	if x != nil {
 		return x.ParentRoot
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlock4844) GetStateRoot() []byte {
+func (x *BlindedBeaconBlockDeneb) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlock4844) GetBody() *BlindedBeaconBlockBody4844 {
+func (x *BlindedBeaconBlockDeneb) GetBody() *BlindedBeaconBlockBodyDeneb {
 	if x != nil {
 		return x.Body
 	}
@@ -1870,7 +1869,7 @@ func (x *BlindedBeaconBlockBodyCapella) GetBlsToExecutionChanges() []*SignedBLST
 	return nil
 }
 
-type BlindedBeaconBlockBody4844 struct {
+type BlindedBeaconBlockBodyDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1884,12 +1883,12 @@ type BlindedBeaconBlockBody4844 struct {
 	Deposits               []*v1.Deposit                   `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
 	VoluntaryExits         []*v1.SignedVoluntaryExit       `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
 	SyncAggregate          *v1.SyncAggregate               `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
-	ExecutionPayloadHeader *v11.ExecutionPayloadHeader4844 `protobuf:"bytes,10,opt,name=execution_payload_header,json=executionPayloadHeader,proto3" json:"execution_payload_header,omitempty"`
+	ExecutionPayloadHeader *v11.ExecutionPayloadHeaderDeneb `protobuf:"bytes,10,opt,name=execution_payload_header,json=executionPayloadHeader,proto3" json:"execution_payload_header,omitempty"`
 	BlsToExecutionChanges  []*SignedBLSToExecutionChange   `protobuf:"bytes,11,rep,name=bls_to_execution_changes,json=blsToExecutionChanges,proto3" json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
 }
 
-func (x *BlindedBeaconBlockBody4844) Reset() {
-	*x = BlindedBeaconBlockBody4844{}
+func (x *BlindedBeaconBlockBodyDeneb) Reset() {
+	*x = BlindedBeaconBlockBodyDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1897,13 +1896,13 @@ func (x *BlindedBeaconBlockBody4844) Reset() {
 	}
 }
 
-func (x *BlindedBeaconBlockBody4844) String() string {
+func (x *BlindedBeaconBlockBodyDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BlindedBeaconBlockBody4844) ProtoMessage() {}
+func (*BlindedBeaconBlockBodyDeneb) ProtoMessage() {}
 
-func (x *BlindedBeaconBlockBody4844) ProtoReflect() protoreflect.Message {
+func (x *BlindedBeaconBlockBodyDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1915,82 +1914,82 @@ func (x *BlindedBeaconBlockBody4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BlindedBeaconBlockBody4844.ProtoReflect.Descriptor instead.
-func (*BlindedBeaconBlockBody4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlindedBeaconBlockBodyDeneb.ProtoReflect.Descriptor instead.
+func (*BlindedBeaconBlockBodyDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{22}
 }
 
-func (x *BlindedBeaconBlockBody4844) GetRandaoReveal() []byte {
+func (x *BlindedBeaconBlockBodyDeneb) GetRandaoReveal() []byte {
 	if x != nil {
 		return x.RandaoReveal
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetEth1Data() *v1.Eth1Data {
+func (x *BlindedBeaconBlockBodyDeneb) GetEth1Data() *v1.Eth1Data {
 	if x != nil {
 		return x.Eth1Data
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetGraffiti() []byte {
+func (x *BlindedBeaconBlockBodyDeneb) GetGraffiti() []byte {
 	if x != nil {
 		return x.Graffiti
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetProposerSlashings() []*v1.ProposerSlashing {
+func (x *BlindedBeaconBlockBodyDeneb) GetProposerSlashings() []*v1.ProposerSlashing {
 	if x != nil {
 		return x.ProposerSlashings
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetAttesterSlashings() []*v1.AttesterSlashing {
+func (x *BlindedBeaconBlockBodyDeneb) GetAttesterSlashings() []*v1.AttesterSlashing {
 	if x != nil {
 		return x.AttesterSlashings
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetAttestations() []*v1.Attestation {
+func (x *BlindedBeaconBlockBodyDeneb) GetAttestations() []*v1.Attestation {
 	if x != nil {
 		return x.Attestations
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetDeposits() []*v1.Deposit {
+func (x *BlindedBeaconBlockBodyDeneb) GetDeposits() []*v1.Deposit {
 	if x != nil {
 		return x.Deposits
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetVoluntaryExits() []*v1.SignedVoluntaryExit {
+func (x *BlindedBeaconBlockBodyDeneb) GetVoluntaryExits() []*v1.SignedVoluntaryExit {
 	if x != nil {
 		return x.VoluntaryExits
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetSyncAggregate() *v1.SyncAggregate {
+func (x *BlindedBeaconBlockBodyDeneb) GetSyncAggregate() *v1.SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetExecutionPayloadHeader() *v11.ExecutionPayloadHeader4844 {
+func (x *BlindedBeaconBlockBodyDeneb) GetExecutionPayloadHeader() *v11.ExecutionPayloadHeaderDeneb {
 	if x != nil {
 		return x.ExecutionPayloadHeader
 	}
 	return nil
 }
 
-func (x *BlindedBeaconBlockBody4844) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
+func (x *BlindedBeaconBlockBodyDeneb) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
 	if x != nil {
 		return x.BlsToExecutionChanges
 	}
@@ -2322,7 +2321,7 @@ func (x *BeaconBlockBodyCapella) GetBlobKzgCommitments() [][]byte {
 	return nil
 }
 
-type BeaconBlock4844 struct {
+type BeaconBlockDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -2331,11 +2330,11 @@ type BeaconBlock4844 struct {
 	ProposerIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                      `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                      `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BeaconBlockBody4844                                                        `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body          *BeaconBlockBodyDeneb                                                        `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
-func (x *BeaconBlock4844) Reset() {
-	*x = BeaconBlock4844{}
+func (x *BeaconBlockDeneb) Reset() {
+	*x = BeaconBlockDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2343,13 +2342,13 @@ func (x *BeaconBlock4844) Reset() {
 	}
 }
 
-func (x *BeaconBlock4844) String() string {
+func (x *BeaconBlockDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BeaconBlock4844) ProtoMessage() {}
+func (*BeaconBlockDeneb) ProtoMessage() {}
 
-func (x *BeaconBlock4844) ProtoReflect() protoreflect.Message {
+func (x *BeaconBlockDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2361,47 +2360,47 @@ func (x *BeaconBlock4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BeaconBlock4844.ProtoReflect.Descriptor instead.
-func (*BeaconBlock4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use BeaconBlockDeneb.ProtoReflect.Descriptor instead.
+func (*BeaconBlockDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{26}
 }
 
-func (x *BeaconBlock4844) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
+func (x *BeaconBlockDeneb) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.Slot
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(0)
 }
 
-func (x *BeaconBlock4844) GetProposerIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
+func (x *BeaconBlockDeneb) GetProposerIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.ProposerIndex
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *BeaconBlock4844) GetParentRoot() []byte {
+func (x *BeaconBlockDeneb) GetParentRoot() []byte {
 	if x != nil {
 		return x.ParentRoot
 	}
 	return nil
 }
 
-func (x *BeaconBlock4844) GetStateRoot() []byte {
+func (x *BeaconBlockDeneb) GetStateRoot() []byte {
 	if x != nil {
 		return x.StateRoot
 	}
 	return nil
 }
 
-func (x *BeaconBlock4844) GetBody() *BeaconBlockBody4844 {
+func (x *BeaconBlockDeneb) GetBody() *BeaconBlockBodyDeneb {
 	if x != nil {
 		return x.Body
 	}
 	return nil
 }
 
-type BeaconBlockBody4844 struct {
+type BeaconBlockBodyDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -2415,13 +2414,13 @@ type BeaconBlockBody4844 struct {
 	Deposits              []*v1.Deposit                 `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
 	VoluntaryExits        []*v1.SignedVoluntaryExit     `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
 	SyncAggregate         *v1.SyncAggregate             `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
-	ExecutionPayload      *v11.ExecutionPayload4844     `protobuf:"bytes,10,opt,name=execution_payload,json=executionPayload,proto3" json:"execution_payload,omitempty"`
+	ExecutionPayload      *v11.ExecutionPayloadDeneb     `protobuf:"bytes,10,opt,name=execution_payload,json=executionPayload,proto3" json:"execution_payload,omitempty"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `protobuf:"bytes,11,rep,name=bls_to_execution_changes,json=blsToExecutionChanges,proto3" json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
 	BlobKzgCommitments    [][]byte                      `protobuf:"bytes,12,rep,name=blob_kzg_commitments,json=blobKzgCommitments,proto3" json:"blob_kzg_commitments,omitempty" ssz-max:"4" ssz-size:"?,48"`
 }
 
-func (x *BeaconBlockBody4844) Reset() {
-	*x = BeaconBlockBody4844{}
+func (x *BeaconBlockBodyDeneb) Reset() {
+	*x = BeaconBlockBodyDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2429,13 +2428,13 @@ func (x *BeaconBlockBody4844) Reset() {
 	}
 }
 
-func (x *BeaconBlockBody4844) String() string {
+func (x *BeaconBlockBodyDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BeaconBlockBody4844) ProtoMessage() {}
+func (*BeaconBlockBodyDeneb) ProtoMessage() {}
 
-func (x *BeaconBlockBody4844) ProtoReflect() protoreflect.Message {
+func (x *BeaconBlockBodyDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_eth_v2_beacon_block_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -2447,89 +2446,89 @@ func (x *BeaconBlockBody4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BeaconBlockBody4844.ProtoReflect.Descriptor instead.
-func (*BeaconBlockBody4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use BeaconBlockBodyDeneb.ProtoReflect.Descriptor instead.
+func (*BeaconBlockBodyDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_eth_v2_beacon_block_proto_rawDescGZIP(), []int{27}
 }
 
-func (x *BeaconBlockBody4844) GetRandaoReveal() []byte {
+func (x *BeaconBlockBodyDeneb) GetRandaoReveal() []byte {
 	if x != nil {
 		return x.RandaoReveal
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetEth1Data() *v1.Eth1Data {
+func (x *BeaconBlockBodyDeneb) GetEth1Data() *v1.Eth1Data {
 	if x != nil {
 		return x.Eth1Data
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetGraffiti() []byte {
+func (x *BeaconBlockBodyDeneb) GetGraffiti() []byte {
 	if x != nil {
 		return x.Graffiti
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetProposerSlashings() []*v1.ProposerSlashing {
+func (x *BeaconBlockBodyDeneb) GetProposerSlashings() []*v1.ProposerSlashing {
 	if x != nil {
 		return x.ProposerSlashings
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetAttesterSlashings() []*v1.AttesterSlashing {
+func (x *BeaconBlockBodyDeneb) GetAttesterSlashings() []*v1.AttesterSlashing {
 	if x != nil {
 		return x.AttesterSlashings
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetAttestations() []*v1.Attestation {
+func (x *BeaconBlockBodyDeneb) GetAttestations() []*v1.Attestation {
 	if x != nil {
 		return x.Attestations
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetDeposits() []*v1.Deposit {
+func (x *BeaconBlockBodyDeneb) GetDeposits() []*v1.Deposit {
 	if x != nil {
 		return x.Deposits
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetVoluntaryExits() []*v1.SignedVoluntaryExit {
+func (x *BeaconBlockBodyDeneb) GetVoluntaryExits() []*v1.SignedVoluntaryExit {
 	if x != nil {
 		return x.VoluntaryExits
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetSyncAggregate() *v1.SyncAggregate {
+func (x *BeaconBlockBodyDeneb) GetSyncAggregate() *v1.SyncAggregate {
 	if x != nil {
 		return x.SyncAggregate
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetExecutionPayload() *v11.ExecutionPayload4844 {
+func (x *BeaconBlockBodyDeneb) GetExecutionPayload() *v11.ExecutionPayloadDeneb {
 	if x != nil {
 		return x.ExecutionPayload
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
+func (x *BeaconBlockBodyDeneb) GetBlsToExecutionChanges() []*SignedBLSToExecutionChange {
 	if x != nil {
 		return x.BlsToExecutionChanges
 	}
 	return nil
 }
 
-func (x *BeaconBlockBody4844) GetBlobKzgCommitments() [][]byte {
+func (x *BeaconBlockBodyDeneb) GetBlobKzgCommitments() [][]byte {
 	if x != nil {
 		return x.BlobKzgCommitments
 	}
@@ -2585,7 +2584,7 @@ var file_proto_eth_v2_beacon_block_proto_rawDesc = []byte{
 	0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x4f, 0x70, 0x74, 0x69, 0x6d, 0x69, 0x73,
 	0x74, 0x69, 0x63, 0x12, 0x1c, 0x0a, 0x09, 0x66, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64,
 	0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x66, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65,
-	0x64, 0x22, 0x94, 0x03, 0x0a, 0x16, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63,
+	0x64, 0x22, 0x90, 0x03, 0x0a, 0x16, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63,
 	0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x56, 0x32, 0x12, 0x41, 0x0a, 0x0c,
 	0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
@@ -2605,94 +2604,93 @@ var file_proto_eth_v2_beacon_block_proto_rawDesc = []byte{
 	0x0b, 0x32, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
 	0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43,
 	0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x48, 0x00, 0x52, 0x0c, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c,
-	0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0d, 0x65, 0x69, 0x70, 0x34, 0x38, 0x34,
-	0x34, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x20, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e,
-	0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48,
-	0x00, 0x52, 0x0c, 0x65, 0x69, 0x70, 0x34, 0x38, 0x34, 0x34, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42,
-	0x07, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x22, 0xc0, 0x03, 0x0a, 0x1a, 0x53, 0x69, 0x67,
-	0x6e, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f,
-	0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70, 0x68, 0x61, 0x73, 0x65,
-	0x30, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e,
-	0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70,
-	0x68, 0x61, 0x73, 0x65, 0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0c, 0x61, 0x6c,
-	0x74, 0x61, 0x69, 0x72, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x22, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c,
-	0x74, 0x61, 0x69, 0x72, 0x48, 0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x12, 0x50, 0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78,
-	0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x65, 0x6c, 0x6c, 0x61, 0x74,
-	0x72, 0x69, 0x78, 0x48, 0x00, 0x52, 0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78,
-	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x4a, 0x0a, 0x0d, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61,
-	0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x23, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65, 0x6c, 0x6c,
-	0x61, 0x48, 0x00, 0x52, 0x0c, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c, 0x6f, 0x63,
-	0x6b, 0x12, 0x47, 0x0a, 0x0d, 0x65, 0x69, 0x70, 0x34, 0x38, 0x34, 0x34, 0x5f, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x20, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0c, 0x65, 0x69,
-	0x70, 0x34, 0x38, 0x34, 0x34, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x24, 0x0a, 0x09, 0x73, 0x69,
-	0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a,
-	0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65,
-	0x42, 0x09, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0xae, 0x03, 0x0a, 0x1b,
-	0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f,
-	0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70,
-	0x68, 0x61, 0x73, 0x65, 0x30, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48,
-	0x00, 0x52, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47,
-	0x0a, 0x0c, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
-	0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f,
-	0x63, 0x6b, 0x41, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x48, 0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61,
-	0x69, 0x72, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x57, 0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61,
-	0x74, 0x72, 0x69, 0x78, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e,
-	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x48, 0x00,
-	0x52, 0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
-	0x12, 0x51, 0x0a, 0x0d, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x5f, 0x62, 0x6c, 0x6f, 0x63,
-	0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
-	0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65,
-	0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65,
-	0x6c, 0x6c, 0x61, 0x48, 0x00, 0x52, 0x0c, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x12, 0x4e, 0x0a, 0x0d, 0x65, 0x69, 0x70, 0x34, 0x38, 0x34, 0x34, 0x5f, 0x62,
-	0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69,
-	0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34,
-	0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0c, 0x65, 0x69, 0x70, 0x34, 0x38, 0x34, 0x34, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x42, 0x07, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x22, 0xdc, 0x03, 0x0a,
-	0x21, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65,
-	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e,
-	0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x5f, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30,
-	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0c, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x5f,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x65, 0x74,
+	0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x43, 0x0a, 0x0b, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x5f,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x20, 0x2e, 0x65, 0x74,
 	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65,
-	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x48,
-	0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x57,
-	0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x5f, 0x62, 0x6c, 0x6f, 0x63,
-	0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
-	0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65,
-	0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x65, 0x6c, 0x6c,
-	0x61, 0x74, 0x72, 0x69, 0x78, 0x48, 0x00, 0x52, 0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72,
-	0x69, 0x78, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x51, 0x0a, 0x0d, 0x63, 0x61, 0x70, 0x65, 0x6c,
-	0x6c, 0x61, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2a,
-	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32,
-	0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c,
-	0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x48, 0x00, 0x52, 0x0c, 0x63, 0x61,
-	0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x4e, 0x0a, 0x0d, 0x65, 0x69,
-	0x70, 0x34, 0x38, 0x34, 0x34, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f,
-	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0c, 0x65, 0x69,
-	0x70, 0x34, 0x38, 0x34, 0x34, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x24, 0x0a, 0x09, 0x73, 0x69,
+	0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52,
+	0x0a, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x07, 0x0a, 0x05, 0x62,
+	0x6c, 0x6f, 0x63, 0x6b, 0x22, 0xbc, 0x03, 0x0a, 0x1a, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69,
+	0x6e, 0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x5f, 0x62, 0x6c,
+	0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65,
+	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65,
+	0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0c, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72,
+	0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x65,
+	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74, 0x61, 0x69, 0x72,
+	0x48, 0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
+	0x50, 0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x5f, 0x62, 0x6c, 0x6f,
+	0x63, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
+	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x48,
+	0x00, 0x52, 0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x42, 0x6c, 0x6f, 0x63,
+	0x6b, 0x12, 0x4a, 0x0a, 0x0d, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x5f, 0x62, 0x6c, 0x6f,
+	0x63, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f,
+	0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x48, 0x00, 0x52,
+	0x0c, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x43, 0x0a,
+	0x0b, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x20, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
+	0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0a, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x42, 0x6c, 0x6f,
+	0x63, 0x6b, 0x12, 0x24, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18,
+	0x06, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x09, 0x73,
+	0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x42, 0x09, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73,
+	0x61, 0x67, 0x65, 0x22, 0xaa, 0x03, 0x0a, 0x1b, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69,
+	0x6e, 0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30, 0x5f, 0x62, 0x6c,
+	0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65,
+	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70, 0x68, 0x61, 0x73, 0x65,
+	0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0c, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72,
+	0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x65,
+	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74, 0x61, 0x69, 0x72,
+	0x48, 0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
+	0x57, 0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x5f, 0x62, 0x6c, 0x6f,
+	0x63, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64,
+	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x65, 0x6c,
+	0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x48, 0x00, 0x52, 0x0e, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74,
+	0x72, 0x69, 0x78, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x51, 0x0a, 0x0d, 0x63, 0x61, 0x70, 0x65,
+	0x6c, 0x6c, 0x61, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x2a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42,
+	0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x48, 0x00, 0x52, 0x0c, 0x63,
+	0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x4a, 0x0a, 0x0b, 0x64,
+	0x65, 0x6e, 0x65, 0x62, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
+	0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e,
+	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0a, 0x64, 0x65, 0x6e,
+	0x65, 0x62, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x42, 0x07, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
+	0x22, 0xd8, 0x03, 0x0a, 0x21, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64,
+	0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e,
+	0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x12, 0x41, 0x0a, 0x0c, 0x70, 0x68, 0x61, 0x73, 0x65, 0x30,
+	0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65,
+	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42,
+	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x00, 0x52, 0x0b, 0x70, 0x68,
+	0x61, 0x73, 0x65, 0x30, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x47, 0x0a, 0x0c, 0x61, 0x6c, 0x74,
+	0x61, 0x69, 0x72, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x22, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
+	0x32, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x41, 0x6c, 0x74,
+	0x61, 0x69, 0x72, 0x48, 0x00, 0x52, 0x0b, 0x61, 0x6c, 0x74, 0x61, 0x69, 0x72, 0x42, 0x6c, 0x6f,
+	0x63, 0x6b, 0x12, 0x57, 0x0a, 0x0f, 0x62, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x5f,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x65, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c,
+	0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
+	0x42, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x48, 0x00, 0x52, 0x0e, 0x62, 0x65, 0x6c,
+	0x6c, 0x61, 0x74, 0x72, 0x69, 0x78, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x51, 0x0a, 0x0d, 0x63,
+	0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x2a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61, 0x63,
+	0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x48, 0x00,
+	0x52, 0x0c, 0x63, 0x61, 0x70, 0x65, 0x6c, 0x6c, 0x61, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x4a,
+	0x0a, 0x0b, 0x64, 0x65, 0x6e, 0x65, 0x62, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x05, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
+	0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61,
+	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x34, 0x38, 0x34, 0x34, 0x48, 0x00, 0x52, 0x0a,
+	0x64, 0x65, 0x6e, 0x65, 0x62, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x24, 0x0a, 0x09, 0x73, 0x69,
 	0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0c, 0x42, 0x06, 0x8a,
 	0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65,
 	0x42, 0x09, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x83, 0x01, 0x0a, 0x1a,
@@ -3307,25 +3305,25 @@ var file_proto_eth_v2_beacon_block_proto_goTypes = []interface{}{
 	(*SignedBlindedBeaconBlockContainer)(nil), // 6: ethereum.eth.v2.SignedBlindedBeaconBlockContainer
 	(*SignedBeaconBlockBellatrix)(nil),        // 7: ethereum.eth.v2.SignedBeaconBlockBellatrix
 	(*SignedBeaconBlockCapella)(nil),          // 8: ethereum.eth.v2.SignedBeaconBlockCapella
-	(*SignedBeaconBlock4844)(nil),             // 9: ethereum.eth.v2.SignedBeaconBlock4844
+	(*SignedBeaconBlockDeneb)(nil),             // 9: ethereum.eth.v2.SignedBeaconBlockDeneb
 	(*SignedBlindedBeaconBlockBellatrix)(nil), // 10: ethereum.eth.v2.SignedBlindedBeaconBlockBellatrix
 	(*SignedBlindedBeaconBlockCapella)(nil),   // 11: ethereum.eth.v2.SignedBlindedBeaconBlockCapella
-	(*SignedBlindedBeaconBlock4844)(nil),      // 12: ethereum.eth.v2.SignedBlindedBeaconBlock4844
+	(*SignedBlindedBeaconBlockDeneb)(nil),      // 12: ethereum.eth.v2.SignedBlindedBeaconBlockDeneb
 	(*SignedBeaconBlockAltair)(nil),           // 13: ethereum.eth.v2.SignedBeaconBlockAltair
 	(*BeaconBlockBellatrix)(nil),              // 14: ethereum.eth.v2.BeaconBlockBellatrix
 	(*BlindedBeaconBlockBellatrix)(nil),       // 15: ethereum.eth.v2.BlindedBeaconBlockBellatrix
 	(*BlindedBeaconBlockCapella)(nil),         // 16: ethereum.eth.v2.BlindedBeaconBlockCapella
-	(*BlindedBeaconBlock4844)(nil),            // 17: ethereum.eth.v2.BlindedBeaconBlock4844
+	(*BlindedBeaconBlockDeneb)(nil),            // 17: ethereum.eth.v2.BlindedBeaconBlockDeneb
 	(*BeaconBlockAltair)(nil),                 // 18: ethereum.eth.v2.BeaconBlockAltair
 	(*BeaconBlockBodyBellatrix)(nil),          // 19: ethereum.eth.v2.BeaconBlockBodyBellatrix
 	(*BlindedBeaconBlockBodyBellatrix)(nil),   // 20: ethereum.eth.v2.BlindedBeaconBlockBodyBellatrix
 	(*BlindedBeaconBlockBodyCapella)(nil),     // 21: ethereum.eth.v2.BlindedBeaconBlockBodyCapella
-	(*BlindedBeaconBlockBody4844)(nil),        // 22: ethereum.eth.v2.BlindedBeaconBlockBody4844
+	(*BlindedBeaconBlockBodyDeneb)(nil),        // 22: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb
 	(*BeaconBlockBodyAltair)(nil),             // 23: ethereum.eth.v2.BeaconBlockBodyAltair
 	(*BeaconBlockCapella)(nil),                // 24: ethereum.eth.v2.BeaconBlockCapella
 	(*BeaconBlockBodyCapella)(nil),            // 25: ethereum.eth.v2.BeaconBlockBodyCapella
-	(*BeaconBlock4844)(nil),                   // 26: ethereum.eth.v2.BeaconBlock4844
-	(*BeaconBlockBody4844)(nil),               // 27: ethereum.eth.v2.BeaconBlockBody4844
+	(*BeaconBlockDeneb)(nil),                   // 26: ethereum.eth.v2.BeaconBlockDeneb
+	(*BeaconBlockBodyDeneb)(nil),               // 27: ethereum.eth.v2.BeaconBlockBodyDeneb
 	(Version)(0),                              // 28: ethereum.eth.v2.Version
 	(*v1.BeaconBlock)(nil),                    // 29: ethereum.eth.v1.BeaconBlock
 	(*v1.Eth1Data)(nil),                       // 30: ethereum.eth.v1.Eth1Data
@@ -3339,9 +3337,9 @@ var file_proto_eth_v2_beacon_block_proto_goTypes = []interface{}{
 	(*v11.ExecutionPayloadHeader)(nil),        // 38: ethereum.engine.v1.ExecutionPayloadHeader
 	(*v11.ExecutionPayloadHeaderCapella)(nil), // 39: ethereum.engine.v1.ExecutionPayloadHeaderCapella
 	(*SignedBLSToExecutionChange)(nil),        // 40: ethereum.eth.v2.SignedBLSToExecutionChange
-	(*v11.ExecutionPayloadHeader4844)(nil),    // 41: ethereum.engine.v1.ExecutionPayloadHeader4844
+	(*v11.ExecutionPayloadHeaderDeneb)(nil),    // 41: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(*v11.ExecutionPayloadCapella)(nil),       // 42: ethereum.engine.v1.ExecutionPayloadCapella
-	(*v11.ExecutionPayload4844)(nil),          // 43: ethereum.engine.v1.ExecutionPayload4844
+	(*v11.ExecutionPayloadDeneb)(nil),          // 43: ethereum.engine.v1.ExecutionPayloadDeneb
 }
 var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
 	28, // 0: ethereum.eth.v2.BlockResponseV2.version:type_name -> ethereum.eth.v2.Version
@@ -3352,33 +3350,33 @@ var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
 	18, // 5: ethereum.eth.v2.BeaconBlockContainerV2.altair_block:type_name -> ethereum.eth.v2.BeaconBlockAltair
 	14, // 6: ethereum.eth.v2.BeaconBlockContainerV2.bellatrix_block:type_name -> ethereum.eth.v2.BeaconBlockBellatrix
 	24, // 7: ethereum.eth.v2.BeaconBlockContainerV2.capella_block:type_name -> ethereum.eth.v2.BeaconBlockCapella
-	26, // 8: ethereum.eth.v2.BeaconBlockContainerV2.eip4844_block:type_name -> ethereum.eth.v2.BeaconBlock4844
+	26, // 8: ethereum.eth.v2.BeaconBlockContainerV2.deneb_block:type_name -> ethereum.eth.v2.BeaconBlockDeneb
 	29, // 9: ethereum.eth.v2.SignedBeaconBlockContainer.phase0_block:type_name -> ethereum.eth.v1.BeaconBlock
 	18, // 10: ethereum.eth.v2.SignedBeaconBlockContainer.altair_block:type_name -> ethereum.eth.v2.BeaconBlockAltair
 	14, // 11: ethereum.eth.v2.SignedBeaconBlockContainer.bellatrix_block:type_name -> ethereum.eth.v2.BeaconBlockBellatrix
 	24, // 12: ethereum.eth.v2.SignedBeaconBlockContainer.capella_block:type_name -> ethereum.eth.v2.BeaconBlockCapella
-	26, // 13: ethereum.eth.v2.SignedBeaconBlockContainer.eip4844_block:type_name -> ethereum.eth.v2.BeaconBlock4844
+	26, // 13: ethereum.eth.v2.SignedBeaconBlockContainer.deneb_block:type_name -> ethereum.eth.v2.BeaconBlockDeneb
 	29, // 14: ethereum.eth.v2.BlindedBeaconBlockContainer.phase0_block:type_name -> ethereum.eth.v1.BeaconBlock
 	18, // 15: ethereum.eth.v2.BlindedBeaconBlockContainer.altair_block:type_name -> ethereum.eth.v2.BeaconBlockAltair
 	15, // 16: ethereum.eth.v2.BlindedBeaconBlockContainer.bellatrix_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockBellatrix
 	16, // 17: ethereum.eth.v2.BlindedBeaconBlockContainer.capella_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockCapella
-	17, // 18: ethereum.eth.v2.BlindedBeaconBlockContainer.eip4844_block:type_name -> ethereum.eth.v2.BlindedBeaconBlock4844
+	17, // 18: ethereum.eth.v2.BlindedBeaconBlockContainer.deneb_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockDeneb
 	29, // 19: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.phase0_block:type_name -> ethereum.eth.v1.BeaconBlock
 	18, // 20: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.altair_block:type_name -> ethereum.eth.v2.BeaconBlockAltair
 	15, // 21: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.bellatrix_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockBellatrix
 	16, // 22: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.capella_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockCapella
-	17, // 23: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.eip4844_block:type_name -> ethereum.eth.v2.BlindedBeaconBlock4844
+	17, // 23: ethereum.eth.v2.SignedBlindedBeaconBlockContainer.deneb_block:type_name -> ethereum.eth.v2.BlindedBeaconBlockDeneb
 	14, // 24: ethereum.eth.v2.SignedBeaconBlockBellatrix.message:type_name -> ethereum.eth.v2.BeaconBlockBellatrix
 	24, // 25: ethereum.eth.v2.SignedBeaconBlockCapella.message:type_name -> ethereum.eth.v2.BeaconBlockCapella
-	26, // 26: ethereum.eth.v2.SignedBeaconBlock4844.message:type_name -> ethereum.eth.v2.BeaconBlock4844
+	26, // 26: ethereum.eth.v2.SignedBeaconBlockDeneb.message:type_name -> ethereum.eth.v2.BeaconBlockDeneb
 	15, // 27: ethereum.eth.v2.SignedBlindedBeaconBlockBellatrix.message:type_name -> ethereum.eth.v2.BlindedBeaconBlockBellatrix
 	16, // 28: ethereum.eth.v2.SignedBlindedBeaconBlockCapella.message:type_name -> ethereum.eth.v2.BlindedBeaconBlockCapella
-	17, // 29: ethereum.eth.v2.SignedBlindedBeaconBlock4844.message:type_name -> ethereum.eth.v2.BlindedBeaconBlock4844
+	17, // 29: ethereum.eth.v2.SignedBlindedBeaconBlockDeneb.message:type_name -> ethereum.eth.v2.BlindedBeaconBlockDeneb
 	18, // 30: ethereum.eth.v2.SignedBeaconBlockAltair.message:type_name -> ethereum.eth.v2.BeaconBlockAltair
 	19, // 31: ethereum.eth.v2.BeaconBlockBellatrix.body:type_name -> ethereum.eth.v2.BeaconBlockBodyBellatrix
 	20, // 32: ethereum.eth.v2.BlindedBeaconBlockBellatrix.body:type_name -> ethereum.eth.v2.BlindedBeaconBlockBodyBellatrix
 	21, // 33: ethereum.eth.v2.BlindedBeaconBlockCapella.body:type_name -> ethereum.eth.v2.BlindedBeaconBlockBodyCapella
-	22, // 34: ethereum.eth.v2.BlindedBeaconBlock4844.body:type_name -> ethereum.eth.v2.BlindedBeaconBlockBody4844
+	22, // 34: ethereum.eth.v2.BlindedBeaconBlockDeneb.body:type_name -> ethereum.eth.v2.BlindedBeaconBlockBodyDeneb
 	23, // 35: ethereum.eth.v2.BeaconBlockAltair.body:type_name -> ethereum.eth.v2.BeaconBlockBodyAltair
 	30, // 36: ethereum.eth.v2.BeaconBlockBodyBellatrix.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
 	31, // 37: ethereum.eth.v2.BeaconBlockBodyBellatrix.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
@@ -3405,15 +3403,15 @@ var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
 	36, // 58: ethereum.eth.v2.BlindedBeaconBlockBodyCapella.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
 	39, // 59: ethereum.eth.v2.BlindedBeaconBlockBodyCapella.execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
 	40, // 60: ethereum.eth.v2.BlindedBeaconBlockBodyCapella.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
-	30, // 61: ethereum.eth.v2.BlindedBeaconBlockBody4844.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	31, // 62: ethereum.eth.v2.BlindedBeaconBlockBody4844.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
-	32, // 63: ethereum.eth.v2.BlindedBeaconBlockBody4844.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
-	33, // 64: ethereum.eth.v2.BlindedBeaconBlockBody4844.attestations:type_name -> ethereum.eth.v1.Attestation
-	34, // 65: ethereum.eth.v2.BlindedBeaconBlockBody4844.deposits:type_name -> ethereum.eth.v1.Deposit
-	35, // 66: ethereum.eth.v2.BlindedBeaconBlockBody4844.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
-	36, // 67: ethereum.eth.v2.BlindedBeaconBlockBody4844.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
-	41, // 68: ethereum.eth.v2.BlindedBeaconBlockBody4844.execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader4844
-	40, // 69: ethereum.eth.v2.BlindedBeaconBlockBody4844.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
+	30, // 61: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	31, // 62: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
+	32, // 63: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
+	33, // 64: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.attestations:type_name -> ethereum.eth.v1.Attestation
+	34, // 65: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.deposits:type_name -> ethereum.eth.v1.Deposit
+	35, // 66: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
+	36, // 67: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	41, // 68: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	40, // 69: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
 	30, // 70: ethereum.eth.v2.BeaconBlockBodyAltair.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
 	31, // 71: ethereum.eth.v2.BeaconBlockBodyAltair.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
 	32, // 72: ethereum.eth.v2.BeaconBlockBodyAltair.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
@@ -3431,16 +3429,16 @@ var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
 	36, // 84: ethereum.eth.v2.BeaconBlockBodyCapella.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
 	42, // 85: ethereum.eth.v2.BeaconBlockBodyCapella.execution_payload:type_name -> ethereum.engine.v1.ExecutionPayloadCapella
 	40, // 86: ethereum.eth.v2.BeaconBlockBodyCapella.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
-	27, // 87: ethereum.eth.v2.BeaconBlock4844.body:type_name -> ethereum.eth.v2.BeaconBlockBody4844
-	30, // 88: ethereum.eth.v2.BeaconBlockBody4844.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	31, // 89: ethereum.eth.v2.BeaconBlockBody4844.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
-	32, // 90: ethereum.eth.v2.BeaconBlockBody4844.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
-	33, // 91: ethereum.eth.v2.BeaconBlockBody4844.attestations:type_name -> ethereum.eth.v1.Attestation
-	34, // 92: ethereum.eth.v2.BeaconBlockBody4844.deposits:type_name -> ethereum.eth.v1.Deposit
-	35, // 93: ethereum.eth.v2.BeaconBlockBody4844.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
-	36, // 94: ethereum.eth.v2.BeaconBlockBody4844.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
-	43, // 95: ethereum.eth.v2.BeaconBlockBody4844.execution_payload:type_name -> ethereum.engine.v1.ExecutionPayload4844
-	40, // 96: ethereum.eth.v2.BeaconBlockBody4844.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
+	27, // 87: ethereum.eth.v2.BeaconBlockDeneb.body:type_name -> ethereum.eth.v2.BeaconBlockBodyDeneb
+	30, // 88: ethereum.eth.v2.BeaconBlockBodyDeneb.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	31, // 89: ethereum.eth.v2.BeaconBlockBodyDeneb.proposer_slashings:type_name -> ethereum.eth.v1.ProposerSlashing
+	32, // 90: ethereum.eth.v2.BeaconBlockBodyDeneb.attester_slashings:type_name -> ethereum.eth.v1.AttesterSlashing
+	33, // 91: ethereum.eth.v2.BeaconBlockBodyDeneb.attestations:type_name -> ethereum.eth.v1.Attestation
+	34, // 92: ethereum.eth.v2.BeaconBlockBodyDeneb.deposits:type_name -> ethereum.eth.v1.Deposit
+	35, // 93: ethereum.eth.v2.BeaconBlockBodyDeneb.voluntary_exits:type_name -> ethereum.eth.v1.SignedVoluntaryExit
+	36, // 94: ethereum.eth.v2.BeaconBlockBodyDeneb.sync_aggregate:type_name -> ethereum.eth.v1.SyncAggregate
+	43, // 95: ethereum.eth.v2.BeaconBlockBodyDeneb.execution_payload:type_name -> ethereum.engine.v1.ExecutionPayloadDeneb
+	40, // 96: ethereum.eth.v2.BeaconBlockBodyDeneb.bls_to_execution_changes:type_name -> ethereum.eth.v2.SignedBLSToExecutionChange
 	97, // [97:97] is the sub-list for method output_type
 	97, // [97:97] is the sub-list for method input_type
 	97, // [97:97] is the sub-list for extension type_name
@@ -3565,7 +3563,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBeaconBlock4844); i {
+			switch v := v.(*SignedBeaconBlockDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3601,7 +3599,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SignedBlindedBeaconBlock4844); i {
+			switch v := v.(*SignedBlindedBeaconBlockDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3661,7 +3659,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BlindedBeaconBlock4844); i {
+			switch v := v.(*BlindedBeaconBlockDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3721,7 +3719,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BlindedBeaconBlockBody4844); i {
+			switch v := v.(*BlindedBeaconBlockBodyDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3769,7 +3767,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconBlock4844); i {
+			switch v := v.(*BeaconBlockDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3781,7 +3779,7 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 			}
 		}
 		file_proto_eth_v2_beacon_block_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconBlockBody4844); i {
+			switch v := v.(*BeaconBlockBodyDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3798,28 +3796,28 @@ func file_proto_eth_v2_beacon_block_proto_init() {
 		(*BeaconBlockContainerV2_AltairBlock)(nil),
 		(*BeaconBlockContainerV2_BellatrixBlock)(nil),
 		(*BeaconBlockContainerV2_CapellaBlock)(nil),
-		(*BeaconBlockContainerV2_Eip4844Block)(nil),
+		(*BeaconBlockContainerV2_DenebBlock)(nil),
 	}
 	file_proto_eth_v2_beacon_block_proto_msgTypes[4].OneofWrappers = []interface{}{
 		(*SignedBeaconBlockContainer_Phase0Block)(nil),
 		(*SignedBeaconBlockContainer_AltairBlock)(nil),
 		(*SignedBeaconBlockContainer_BellatrixBlock)(nil),
 		(*SignedBeaconBlockContainer_CapellaBlock)(nil),
-		(*SignedBeaconBlockContainer_Eip4844Block)(nil),
+		(*SignedBeaconBlockContainer_DenebBlock)(nil),
 	}
 	file_proto_eth_v2_beacon_block_proto_msgTypes[5].OneofWrappers = []interface{}{
 		(*BlindedBeaconBlockContainer_Phase0Block)(nil),
 		(*BlindedBeaconBlockContainer_AltairBlock)(nil),
 		(*BlindedBeaconBlockContainer_BellatrixBlock)(nil),
 		(*BlindedBeaconBlockContainer_CapellaBlock)(nil),
-		(*BlindedBeaconBlockContainer_Eip4844Block)(nil),
+		(*BlindedBeaconBlockContainer_DenebBlock)(nil),
 	}
 	file_proto_eth_v2_beacon_block_proto_msgTypes[6].OneofWrappers = []interface{}{
 		(*SignedBlindedBeaconBlockContainer_Phase0Block)(nil),
 		(*SignedBlindedBeaconBlockContainer_AltairBlock)(nil),
 		(*SignedBlindedBeaconBlockContainer_BellatrixBlock)(nil),
 		(*SignedBlindedBeaconBlockContainer_CapellaBlock)(nil),
-		(*SignedBlindedBeaconBlockContainer_Eip4844Block)(nil),
+		(*SignedBlindedBeaconBlockContainer_DenebBlock)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

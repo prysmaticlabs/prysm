@@ -74,7 +74,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 				sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, pid)
 				if err != nil {
 					return nil, nil, errors.Wrap(err, "could not get blobs bundle from execution client")
@@ -178,7 +178,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, nil, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
-	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
 		sc, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, *payloadID)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get blobs bundle from execution client")

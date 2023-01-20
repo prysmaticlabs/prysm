@@ -183,7 +183,7 @@ message HistoricalSummary {
   bytes state_summary_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message BeaconState4844 {
+message BeaconStateDeneb {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -228,7 +228,7 @@ message BeaconState4844 {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Bellatrix fields [10001-11000]
-  ethereum.engine.v1.ExecutionPayloadHeader4844 latest_execution_payload_header = 10001; // [Updated in EIP-4844]
+  ethereum.engine.v1.ExecutionPayloadHeaderDeneb latest_execution_payload_header = 10001; // [Updated in EIP-Deneb]
 
   // Capella fields [11001-12000]
   uint64 next_withdrawal_index = 11001; // [New in Capella]
@@ -258,7 +258,7 @@ message BeaconStateContainer {
     BeaconState altair_state = 2;
     BeaconStateBellatrix bellatrix_state = 3;
     BeaconStateCapella capella_state = 4;
-    BeaconState4844 eip4844_state = 5;
+    BeaconStateDeneb deneb_state = 5;
   }
 }
 

@@ -53,10 +53,10 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockCapella{Block: &ethpb.BeaconBlockCapella{Body: &ethpb.BeaconBlockBodyCapella{}}},
 			)
 		},
-		// TODO(4844): Is this right?
-		bytesutil.ToBytes4(params.BeaconConfig().EIP4844ForkVersion): func() (interfaces.SignedBeaconBlock, error) {
+		// TODO(Deneb): Is this right?
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return blocks.NewSignedBeaconBlock(
-				&ethpb.SignedBeaconBlock4844{Block: &ethpb.BeaconBlock4844{Body: &ethpb.BeaconBlockBody4844{}}},
+				&ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Body: &ethpb.BeaconBlockBodyDeneb{}}},
 			)
 		},
 	}
@@ -75,7 +75,7 @@ func InitializeDataMaps() {
 		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().EIP4844ForkVersion): func() metadata.Metadata {
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}

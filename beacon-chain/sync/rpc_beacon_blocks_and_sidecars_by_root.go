@@ -57,12 +57,12 @@ func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context
 		sidecar, err := s.cfg.beaconDB.BlobsSidecar(ctx, root)
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch sidecar")
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream) // TODO(4844): Return unavailable?
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream) // TODO(Deneb): Return unavailable?
 			return err
 		}
 
-		// TODO(4844): Reconstruct blind block
-		pb, err := blk.Pb4844Block()
+		// TODO(Deneb): Reconstruct blind block
+		pb, err := blk.PbDenebBlock()
 		if err != nil {
 			log.WithError(err).Debug("Could not fetch block")
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)

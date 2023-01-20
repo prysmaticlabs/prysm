@@ -17,7 +17,7 @@ func RunJustificationAndFinalizationTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testPath := "epoch_processing/justification_and_finalization/pyspec_tests"
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", testPath)
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", testPath)
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())

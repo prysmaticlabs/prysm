@@ -8,5 +8,5 @@ go_test(
         "@consensus_spec_tests_mainnet//:test_data",
     ],
     tags = ["spectest"],
-    deps = ["//testing/spectest/shared/eip4844/rewards:go_default_library"],
+    deps = ["//testing/spectest/shared/deneb/rewards:go_default_library"],
 )

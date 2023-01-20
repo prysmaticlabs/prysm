@@ -512,37 +512,37 @@ func CopyBlindedBeaconBlockBodyCapella(body *BlindedBeaconBlockBodyCapella) *Bli
 	}
 }
 
-// CopySignedBlindedBeaconBlock4844 copies the provided SignedBlindedBeaconBlock4844.
-func CopySignedBlindedBeaconBlock4844(sigBlock *SignedBlindedBeaconBlock4844) *SignedBlindedBeaconBlock4844 {
+// CopySignedBlindedBeaconBlockDeneb copies the provided SignedBlindedBeaconBlockDeneb.
+func CopySignedBlindedBeaconBlockDeneb(sigBlock *SignedBlindedBeaconBlockDeneb) *SignedBlindedBeaconBlockDeneb {
 	if sigBlock == nil {
 		return nil
 	}
-	return &SignedBlindedBeaconBlock4844{
-		Block:     CopyBlindedBeaconBlock4844(sigBlock.Block),
+	return &SignedBlindedBeaconBlockDeneb{
+		Block:     CopyBlindedBeaconBlockDeneb(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
-// CopyBlindedBeaconBlock4844 copies the provided BlindedBeaconBlock4844.
-func CopyBlindedBeaconBlock4844(block *BlindedBeaconBlock4844) *BlindedBeaconBlock4844 {
+// CopyBlindedBeaconBlockDeneb copies the provided BlindedBeaconBlockDeneb.
+func CopyBlindedBeaconBlockDeneb(block *BlindedBeaconBlockDeneb) *BlindedBeaconBlockDeneb {
 	if block == nil {
 		return nil
 	}
-	return &BlindedBeaconBlock4844{
+	return &BlindedBeaconBlockDeneb{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
-		Body:          CopyBlindedBeaconBlockBody4844(block.Body),
+		Body:          CopyBlindedBeaconBlockBodyDeneb(block.Body),
 	}
 }
 
-// CopyBlindedBeaconBlockBody4844 copies the provided BlindedBeaconBlockBody4844.
-func CopyBlindedBeaconBlockBody4844(body *BlindedBeaconBlockBody4844) *BlindedBeaconBlockBody4844 {
+// CopyBlindedBeaconBlockBodyDeneb copies the provided BlindedBeaconBlockBodyDeneb.
+func CopyBlindedBeaconBlockBodyDeneb(body *BlindedBeaconBlockBodyDeneb) *BlindedBeaconBlockBodyDeneb {
 	if body == nil {
 		return nil
 	}
-	return &BlindedBeaconBlockBody4844{
+	return &BlindedBeaconBlockBodyDeneb{
 		RandaoReveal:           bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:               CopyETH1Data(body.Eth1Data),
 		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
@@ -552,7 +552,7 @@ func CopyBlindedBeaconBlockBody4844(body *BlindedBeaconBlockBody4844) *BlindedBe
 		Deposits:               CopyDeposits(body.Deposits),
 		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayloadHeader: CopyExecutionPayloadHeader4844(body.ExecutionPayloadHeader),
+		ExecutionPayloadHeader: CopyExecutionPayloadHeaderDeneb(body.ExecutionPayloadHeader),
 		BlsToExecutionChanges:  CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
 	}
@@ -750,37 +750,37 @@ func CopyBlobKZGs(b [][]byte) [][]byte {
 	return bytesutil.SafeCopy2dBytes(b)
 }
 
-// CopySignedBeaconBlock4844 copies the provided SignedBeaconBlock4844.
-func CopySignedBeaconBlock4844(sigBlock *SignedBeaconBlock4844) *SignedBeaconBlock4844 {
+// CopySignedBeaconBlockDeneb copies the provided SignedBeaconBlockDeneb.
+func CopySignedBeaconBlockDeneb(sigBlock *SignedBeaconBlockDeneb) *SignedBeaconBlockDeneb {
 	if sigBlock == nil {
 		return nil
 	}
-	return &SignedBeaconBlock4844{
-		Block:     CopyBeaconBlock4844(sigBlock.Block),
+	return &SignedBeaconBlockDeneb{
+		Block:     CopyBeaconBlockDeneb(sigBlock.Block),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }
 
-// CopyBeaconBlock4844 copies the provided BeaconBlock4844.
-func CopyBeaconBlock4844(block *BeaconBlock4844) *BeaconBlock4844 {
+// CopyBeaconBlockDeneb copies the provided BeaconBlockDeneb.
+func CopyBeaconBlockDeneb(block *BeaconBlockDeneb) *BeaconBlockDeneb {
 	if block == nil {
 		return nil
 	}
-	return &BeaconBlock4844{
+	return &BeaconBlockDeneb{
 		Slot:          block.Slot,
 		ProposerIndex: block.ProposerIndex,
 		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
 		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
-		Body:          CopyBeaconBlockBody4844(block.Body),
+		Body:          CopyBeaconBlockBodyDeneb(block.Body),
 	}
 }
 
-// CopyBeaconBlockBody4844 copies the provided BeaconBlockBody4844.
-func CopyBeaconBlockBody4844(body *BeaconBlockBody4844) *BeaconBlockBody4844 {
+// CopyBeaconBlockBodyDeneb copies the provided BeaconBlockBodyDeneb.
+func CopyBeaconBlockBodyDeneb(body *BeaconBlockBodyDeneb) *BeaconBlockBodyDeneb {
 	if body == nil {
 		return nil
 	}
-	return &BeaconBlockBody4844{
+	return &BeaconBlockBodyDeneb{
 		RandaoReveal:          bytesutil.SafeCopyBytes(body.RandaoReveal),
 		Eth1Data:              CopyETH1Data(body.Eth1Data),
 		Graffiti:              bytesutil.SafeCopyBytes(body.Graffiti),
@@ -790,18 +790,18 @@ func CopyBeaconBlockBody4844(body *BeaconBlockBody4844) *BeaconBlockBody4844 {
 		Deposits:              CopyDeposits(body.Deposits),
 		VoluntaryExits:        CopySignedVoluntaryExits(body.VoluntaryExits),
 		SyncAggregate:         CopySyncAggregate(body.SyncAggregate),
-		ExecutionPayload:      CopyExecutionPayload4844(body.ExecutionPayload),
+		ExecutionPayload:      CopyExecutionPayloadDeneb(body.ExecutionPayload),
 		BlsToExecutionChanges: CopyBLSToExecutionChanges(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
 	}
 }
 
-// CopyExecutionPayloadHeader4844 copies the provided execution payload object.
-func CopyExecutionPayloadHeader4844(payload *enginev1.ExecutionPayloadHeader4844) *enginev1.ExecutionPayloadHeader4844 {
+// CopyExecutionPayloadHeaderDeneb copies the provided execution payload object.
+func CopyExecutionPayloadHeaderDeneb(payload *enginev1.ExecutionPayloadHeaderDeneb) *enginev1.ExecutionPayloadHeaderDeneb {
 	if payload == nil {
 		return nil
 	}
-	return &enginev1.ExecutionPayloadHeader4844{
+	return &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
@@ -821,12 +821,12 @@ func CopyExecutionPayloadHeader4844(payload *enginev1.ExecutionPayloadHeader4844
 	}
 }
 
-// CopyExecutionPayload4844 copies the provided execution payload.
-func CopyExecutionPayload4844(payload *enginev1.ExecutionPayload4844) *enginev1.ExecutionPayload4844 {
+// CopyExecutionPayloadDeneb copies the provided execution payload.
+func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev1.ExecutionPayloadDeneb {
 	if payload == nil {
 		return nil
 	}
-	return &enginev1.ExecutionPayload4844{
+	return &enginev1.ExecutionPayloadDeneb{
 		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),

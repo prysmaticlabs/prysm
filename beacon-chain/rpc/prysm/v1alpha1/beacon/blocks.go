@@ -122,7 +122,7 @@ func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, is
 			}
 			ctr.Block = &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: rBlk}
 		}
-	case version.Capella, version.EIP4844:
+	case version.Capella, version.Deneb:
 		if blk.IsBlinded() {
 			rBlk, err := blk.PbBlindedCapellaBlock()
 			if err != nil {

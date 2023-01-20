@@ -175,7 +175,7 @@ func CurrentSlot(genesisTimeSec uint64) types.Slot {
 
 // WithinDataAvailabilityBound returns true if the given slot is within the data availability bound.
 func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch types.Epoch) bool {
-	if params.BeaconConfig().EIP4844ForkEpoch > epoch {
+	if params.BeaconConfig().DenebForkEpoch > epoch {
 		return false
 	}
 

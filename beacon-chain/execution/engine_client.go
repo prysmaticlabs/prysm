@@ -126,10 +126,10 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-	case *pb.ExecutionPayload4844:
-		payloadPb, ok := payload.Proto().(*pb.ExecutionPayload4844)
+	case *pb.ExecutionPayloadDeneb:
+		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadDeneb)
 		if !ok {
-			return nil, errors.New("execution data must be a 4844 execution payload")
+			return nil, errors.New("execution data must be a Deneb execution payload")
 		}
 		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb)
 		if err != nil {
@@ -182,7 +182,7 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Capella, version.EIP4844:
+	case version.Capella, version.Deneb:
 		a, err := attrs.PbV2()
 		if err != nil {
 			return nil, nil, err
@@ -224,13 +224,13 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot prysmT
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 
-	if slots.ToEpoch(slot) >= params.BeaconConfig().EIP4844ForkEpoch {
-		result := &pb.ExecutionPayload4844{}
+	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+		result := &pb.ExecutionPayloadDeneb{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV3, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadEIP4844(result)
+		return blocks.WrappedExecutionPayloadDeneb(result)
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {

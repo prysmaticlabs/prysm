@@ -8,11 +8,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/forkchoice"
 )
 
-func TestMainnet_EIP4844_Forkchoice(t *testing.T) {
+func TestMainnet_Deneb_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnableDefensivePull: false,
 		DisablePullTips:     true,
 	})
 	defer resetCfg()
-	forkchoice.Run(t, "mainnet", version.EIP4844)
+	forkchoice.Run(t, "mainnet", version.Deneb)
 }

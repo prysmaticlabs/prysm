@@ -473,10 +473,10 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	}
 
 	switch {
-	case hasEip4844Key(enc):
-		protoState := &ethpb.BeaconState4844{}
-		if err := protoState.UnmarshalSSZ(enc[len(eip4844Key):]); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal encoding for 4844")
+	case hasDenebKey(enc):
+		protoState := &ethpb.BeaconStateDeneb{}
+		if err := protoState.UnmarshalSSZ(enc[len(denebKey):]); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal encoding for Deneb")
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
@@ -485,7 +485,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return statenative.InitializeFromProtoUnsafe4844(protoState)
+		return statenative.InitializeFromProtoUnsafeDeneb(protoState)
 	case hasCapellaKey(enc):
 		// Marshal state bytes to capella beacon state.
 		protoState := &ethpb.BeaconStateCapella{}
@@ -593,8 +593,8 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 			return nil, err
 		}
 		return snappy.Encode(nil, append(capellaKey, rawObj...)), nil
-	case *ethpb.BeaconState4844:
-		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconState4844)
+	case *ethpb.BeaconStateDeneb:
+		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateDeneb)
 		if !ok {
 			return nil, errors.New("non valid inner state")
 		}
@@ -605,7 +605,7 @@ func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, er
 		if err != nil {
 			return nil, err
 		}
-		return snappy.Encode(nil, append(eip4844Key, rawObj...)), nil
+		return snappy.Encode(nil, append(denebKey, rawObj...)), nil
 	default:
 		return nil, errors.New("invalid inner state")
 	}

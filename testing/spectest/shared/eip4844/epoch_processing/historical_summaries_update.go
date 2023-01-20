@@ -14,7 +14,7 @@ import (
 func RunHistoricalSummariesUpdateTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "epoch_processing/historical_summaries_update/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "epoch_processing/historical_summaries_update/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())

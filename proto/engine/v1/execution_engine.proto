@@ -60,7 +60,7 @@ message ExecutionPayloadCapella {
 	repeated Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"]; // New in Capella.
 }
 
-message ExecutionPayload4844 {
+message ExecutionPayloadDeneb {
 	bytes parent_hash           = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient         = 2 [(ethereum.eth.ext.ssz_size) = "20"];
 	bytes state_root            = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -115,7 +115,7 @@ message ExecutionPayloadHeaderCapella {
 	bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"]; // New in Capella.
 }
 
-message ExecutionPayloadHeader4844 {
+message ExecutionPayloadHeaderDeneb {
 	bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes fee_recipient     = 2 [(ethereum.eth.ext.ssz_size) = "20"];
 	bytes state_root        = 3 [(ethereum.eth.ext.ssz_size) = "32"];

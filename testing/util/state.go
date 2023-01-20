@@ -305,14 +305,14 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 	return st.Copy(), nil
 }
 
-// NewBeaconState4844 creates a beacon state with minimum marshalable fields.
-func NewBeaconState4844(options ...func(state *ethpb.BeaconState4844) error) (state.BeaconState, error) {
+// NewBeaconStateDeneb creates a beacon state with minimum marshalable fields.
+func NewBeaconStateDeneb(options ...func(state *ethpb.BeaconStateDeneb) error) (state.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
 	}
 
-	seed := &ethpb.BeaconState4844{
+	seed := &ethpb.BeaconStateDeneb{
 		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
 		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
@@ -343,7 +343,7 @@ func NewBeaconState4844(options ...func(state *ethpb.BeaconState4844) error) (st
 			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderDeneb{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
 			StateRoot:        make([]byte, 32),
@@ -366,7 +366,7 @@ func NewBeaconState4844(options ...func(state *ethpb.BeaconState4844) error) (st
 		}
 	}
 
-	var st, err = state_native.InitializeFromProtoUnsafe4844(seed)
+	var st, err = state_native.InitializeFromProtoUnsafeDeneb(seed)
 	if err != nil {
 		return nil, err
 	}

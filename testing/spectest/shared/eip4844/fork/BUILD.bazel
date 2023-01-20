@@ -7,7 +7,7 @@ go_library(
         "transition.go",
         "upgrade_to_capella.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/eip4844/fork",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/deneb/fork",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/capella:go_default_library",

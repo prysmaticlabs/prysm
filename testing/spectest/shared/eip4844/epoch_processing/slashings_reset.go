@@ -14,7 +14,7 @@ import (
 func RunSlashingsResetTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "epoch_processing/slashings_reset/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "epoch_processing/slashings_reset/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())

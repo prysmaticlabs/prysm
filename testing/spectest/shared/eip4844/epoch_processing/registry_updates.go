@@ -16,7 +16,7 @@ import (
 func RunRegistryUpdatesTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "epoch_processing/registry_updates/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "epoch_processing/registry_updates/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			// Important to clear cache for every test or else the old value of active validator count gets reused.

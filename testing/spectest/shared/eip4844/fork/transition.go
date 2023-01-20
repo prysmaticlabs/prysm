@@ -25,12 +25,12 @@ type ForkConfig struct {
 	BlocksCount int    `json:"blocks_count"`
 }
 
-// RunForkTransitionTest is a helper function that runs eip4844's transition core tests.
+// RunForkTransitionTest is a helper function that runs deneb's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
 	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "eip4844", "transition/core/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "deneb", "transition/core/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -40,7 +40,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
 			preforkBlocks := make([]*ethpb.SignedBeaconBlockCapella, 0)
-			postforkBlocks := make([]*ethpb.SignedBeaconBlock4844, 0)
+			postforkBlocks := make([]*ethpb.SignedBeaconBlockDeneb, 0)
 			// Fork happens without any pre-fork blocks.
 			if config.ForkBlock == nil {
 				for i := 0; i < config.BlocksCount; i++ {
@@ -49,7 +49,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlock4844{}
+					block := &ethpb.SignedBeaconBlockDeneb{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					postforkBlocks = append(postforkBlocks, block)
 				}
@@ -71,7 +71,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 					require.NoError(t, err)
 					blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 					require.NoError(t, err, "Failed to decompress")
-					block := &ethpb.SignedBeaconBlock4844{}
+					block := &ethpb.SignedBeaconBlockDeneb{}
 					require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 					postforkBlocks = append(postforkBlocks, block)
 				}
@@ -87,7 +87,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err)
 
 			bc := params.BeaconConfig().Copy()
-			bc.EIP4844ForkEpoch = types.Epoch(config.ForkEpoch)
+			bc.DenebForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 
 			ctx := context.Background()
@@ -114,10 +114,10 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			require.NoError(t, err)
 			postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")
-			postBeaconState := &ethpb.BeaconState4844{}
+			postBeaconState := &ethpb.BeaconStateDeneb{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := state_native.ProtobufBeaconState4844(beaconState.ToProto())
+			pbState, err := state_native.ProtobufBeaconStateDeneb(beaconState.ToProto())
 			require.NoError(t, err)
 			require.DeepEqual(t, postBeaconState, pbState, "Did not get expected post state")
 		})

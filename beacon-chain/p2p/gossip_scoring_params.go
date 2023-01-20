@@ -120,7 +120,7 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 	case strings.Contains(topic, GossipAttesterSlashingMessage):
 		return defaultAttesterSlashingTopicParams(), nil
 	case strings.Contains(topic, GossipBlockAndBlobsMessage):
-		// TODO(EIP4844): Using the default block scoring. But this should be updated.
+		// TODO(Deneb): Using the default block scoring. But this should be updated.
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, GossipBlsToExecutionChangeMessage):
 		return defaultBlsToExecutionChangeTopicParams(), nil

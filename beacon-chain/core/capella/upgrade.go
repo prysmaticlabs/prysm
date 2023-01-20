@@ -9,8 +9,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-// UpgradeToEip4844 updates inputs a generic state to return the version Eip4844 state.
-func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
+// UpgradeToDeneb updates inputs a generic state to return the version Deneb state.
+func UpgradeToDeneb(state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
@@ -58,13 +58,13 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 		return nil, err
 	}
 
-	s := &ethpb.BeaconState4844{
+	s := &ethpb.BeaconStateDeneb{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
-			CurrentVersion:  params.BeaconConfig().EIP4844ForkVersion,
+			CurrentVersion:  params.BeaconConfig().DenebForkVersion,
 			Epoch:           epoch,
 		},
 		LatestBlockHeader:           state.LatestBlockHeader(),
@@ -87,7 +87,7 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 		InactivityScores:            inactivityScores,
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader4844{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderDeneb{
 			ParentHash:       payloadHeader.ParentHash(),
 			FeeRecipient:     payloadHeader.FeeRecipient(),
 			StateRoot:        payloadHeader.StateRoot(),
@@ -110,7 +110,7 @@ func UpgradeToEip4844(state state.BeaconState) (state.BeaconState, error) {
 		HistoricalSummaries:          summarires,
 	}
 
-	return state_native.InitializeFromProtoUnsafe4844(s)
+	return state_native.InitializeFromProtoUnsafeDeneb(s)
 }
 
 // UpgradeToCapella updates a generic state to return the version Capella state.

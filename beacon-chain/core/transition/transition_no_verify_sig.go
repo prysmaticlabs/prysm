@@ -254,7 +254,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix, version.Capella, version.EIP4844:
+	case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -354,7 +354,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "process_sync_aggregate failed")
 	}
 
-	if signed.Block().Version() == version.EIP4844 {
+	if signed.Block().Version() == version.Deneb {
 		err := ValidateBlobKzgs(ctx, signed.Block().Body())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not validate blob kzgs")

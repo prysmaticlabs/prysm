@@ -379,7 +379,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	result, err = bs.getBlock4844(ctx, blk)
+	result, err = bs.getBlockDeneb(ctx, blk)
 	if result != nil {
 		return result, nil
 	}
@@ -441,7 +441,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
-	result, err = bs.getSSZBlock4844(ctx, blk)
+	result, err = bs.getSSZBlockDeneb(ctx, blk)
 	if result != nil {
 		return result, nil
 	}
@@ -830,24 +830,24 @@ func (bs *Server) getBlockCapella(ctx context.Context, blk interfaces.SignedBeac
 	}, nil
 }
 
-func (bs *Server) getBlock4844(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
-	eip4844Blk, err := blk.Pb4844Block()
+func (bs *Server) getBlockDeneb(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.BlockResponseV2, error) {
+	denebBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
 		if errors.Is(err, blocks.ErrUnsupportedGetter) {
-			if blinded4844Blk, err := blk.PbBlinded4844Block(); err == nil {
-				if blinded4844Blk == nil {
+			if blindedDenebBlk, err := blk.PbBlindedDenebBlock(); err == nil {
+				if blindedDenebBlk == nil {
 					return nil, errNilBlock
 				}
 				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}
-				eip4844Blk, err = signedFullBlock.Pb4844Block()
+				denebBlk, err = signedFullBlock.PbDenebBlock()
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not get signed beacon block")
 				}
-				v2Blk, err := migration.V1Alpha1BeaconBlock4844ToV2(eip4844Blk.Block)
+				v2Blk, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlk.Block)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not convert beacon block")
 				}
@@ -861,9 +861,9 @@ func (bs *Server) getBlock4844(ctx context.Context, blk interfaces.SignedBeaconB
 				}
 				sig := blk.Signature()
 				return &ethpbv2.BlockResponseV2{
-					Version: ethpbv2.Version_EIP4844,
+					Version: ethpbv2.Version_Deneb,
 					Data: &ethpbv2.SignedBeaconBlockContainer{
-						Message:   &ethpbv2.SignedBeaconBlockContainer_Eip4844Block{Eip4844Block: v2Blk},
+						Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Blk},
 						Signature: sig[:],
 					},
 					ExecutionOptimistic: isOptimistic,
@@ -874,10 +874,10 @@ func (bs *Server) getBlock4844(ctx context.Context, blk interfaces.SignedBeaconB
 		return nil, err
 	}
 
-	if eip4844Blk == nil {
+	if denebBlk == nil {
 		return nil, errNilBlock
 	}
-	v2Blk, err := migration.V1Alpha1BeaconBlock4844ToV2(eip4844Blk.Block)
+	v2Blk, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlk.Block)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not convert beacon block")
 	}
@@ -891,9 +891,9 @@ func (bs *Server) getBlock4844(ctx context.Context, blk interfaces.SignedBeaconB
 	}
 	sig := blk.Signature()
 	return &ethpbv2.BlockResponseV2{
-		Version: ethpbv2.Version_EIP4844,
+		Version: ethpbv2.Version_Deneb,
 		Data: &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_Eip4844Block{Eip4844Block: v2Blk},
+			Message:   &ethpbv2.SignedBeaconBlockContainer_DenebBlock{DenebBlock: v2Blk},
 			Signature: sig[:],
 		},
 		ExecutionOptimistic: isOptimistic,
@@ -1095,24 +1095,24 @@ func (bs *Server) getSSZBlockCapella(ctx context.Context, blk interfaces.SignedB
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_CAPELLA, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
-func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
-	eip4844Blk, err := blk.Pb4844Block()
+func (bs *Server) getSSZBlockDeneb(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpbv2.SSZContainer, error) {
+	denebBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
 		if errors.Is(err, blocks.ErrUnsupportedGetter) {
-			if blinded4844Blk, err := blk.PbBlinded4844Block(); err == nil {
-				if blinded4844Blk == nil {
+			if blindedDenebBlk, err := blk.PbBlindedDenebBlock(); err == nil {
+				if blindedDenebBlk == nil {
 					return nil, errNilBlock
 				}
 				signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBlock(ctx, blk)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not reconstruct full execution payload to create signed beacon block")
 				}
-				eip4844Blk, err = signedFullBlock.Pb4844Block()
+				denebBlk, err = signedFullBlock.PbDenebBlock()
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not get signed beacon block")
 				}
-				v2Blk, err := migration.V1Alpha1BeaconBlock4844ToV2(eip4844Blk.Block)
+				v2Blk, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlk.Block)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not convert signed beacon block")
 				}
@@ -1125,7 +1125,7 @@ func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeac
 					return nil, errors.Wrapf(err, "could not check if block is optimistic")
 				}
 				sig := blk.Signature()
-				data := &ethpbv2.SignedBeaconBlock4844{
+				data := &ethpbv2.SignedBeaconBlockDeneb{
 					Message:   v2Blk,
 					Signature: sig[:],
 				}
@@ -1134,7 +1134,7 @@ func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeac
 					return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 				}
 				return &ethpbv2.SSZContainer{
-					Version:             ethpbv2.Version_EIP4844,
+					Version:             ethpbv2.Version_Deneb,
 					ExecutionOptimistic: isOptimistic,
 					Data:                sszData,
 				}, nil
@@ -1144,10 +1144,10 @@ func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeac
 		return nil, err
 	}
 
-	if eip4844Blk == nil {
+	if denebBlk == nil {
 		return nil, errNilBlock
 	}
-	v2Blk, err := migration.V1Alpha1BeaconBlock4844ToV2(eip4844Blk.Block)
+	v2Blk, err := migration.V1Alpha1BeaconBlockDenebToV2(denebBlk.Block)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not convert signed beacon block")
 	}
@@ -1160,7 +1160,7 @@ func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeac
 		return nil, errors.Wrapf(err, "could not check if block is optimistic")
 	}
 	sig := blk.Signature()
-	data := &ethpbv2.SignedBeaconBlock4844{
+	data := &ethpbv2.SignedBeaconBlockDeneb{
 		Message:   v2Blk,
 		Signature: sig[:],
 	}
@@ -1168,7 +1168,7 @@ func (bs *Server) getSSZBlock4844(ctx context.Context, blk interfaces.SignedBeac
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 	}
-	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_EIP4844, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
+	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_Deneb, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
 }
 
 func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.BeaconBlock, sig []byte) error {

@@ -3,9 +3,9 @@ package ssz_static
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/eip4844/ssz_static"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/deneb/ssz_static"
 )
 
-func TestMainnet_EIP4844_SSZStatic(t *testing.T) {
+func TestMainnet_Deneb_SSZStatic(t *testing.T) {
 	ssz_static.RunSSZStaticTests(t, "mainnet")
 }

@@ -3,9 +3,9 @@ package finality
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/eip4844/finality"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/deneb/finality"
 )
 
-func TestMinimal_EIP4844_Finality(t *testing.T) {
+func TestMinimal_Deneb_Finality(t *testing.T) {
 	finality.RunFinalityTest(t, "minimal")
 }

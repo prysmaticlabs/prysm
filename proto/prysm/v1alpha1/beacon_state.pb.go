@@ -1571,7 +1571,7 @@ func (x *BeaconStateCapella) GetHistoricalSummaries() []*HistoricalSummary {
 	return nil
 }
 
-type BeaconState4844 struct {
+type BeaconStateDeneb struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1600,14 +1600,14 @@ type BeaconState4844 struct {
 	InactivityScores             []uint64                                                                    `protobuf:"varint,9001,rep,packed,name=inactivity_scores,json=inactivityScores,proto3" json:"inactivity_scores,omitempty" ssz-max:"1099511627776"`
 	CurrentSyncCommittee         *SyncCommittee                                                              `protobuf:"bytes,9002,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
 	NextSyncCommittee            *SyncCommittee                                                              `protobuf:"bytes,9003,opt,name=next_sync_committee,json=nextSyncCommittee,proto3" json:"next_sync_committee,omitempty"`
-	LatestExecutionPayloadHeader *v1.ExecutionPayloadHeader4844                                              `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
+	LatestExecutionPayloadHeader *v1.ExecutionPayloadHeaderDeneb                                              `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
 	NextWithdrawalIndex          uint64                                                                      `protobuf:"varint,11001,opt,name=next_withdrawal_index,json=nextWithdrawalIndex,proto3" json:"next_withdrawal_index,omitempty"`
 	NextWithdrawalValidatorIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,11002,opt,name=next_withdrawal_validator_index,json=nextWithdrawalValidatorIndex,proto3" json:"next_withdrawal_validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	HistoricalSummaries          []*HistoricalSummary                                                        `protobuf:"bytes,11003,rep,name=historical_summaries,json=historicalSummaries,proto3" json:"historical_summaries,omitempty" ssz-max:"16777216"`
 }
 
-func (x *BeaconState4844) Reset() {
-	*x = BeaconState4844{}
+func (x *BeaconStateDeneb) Reset() {
+	*x = BeaconStateDeneb{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1615,13 +1615,13 @@ func (x *BeaconState4844) Reset() {
 	}
 }
 
-func (x *BeaconState4844) String() string {
+func (x *BeaconStateDeneb) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BeaconState4844) ProtoMessage() {}
+func (*BeaconStateDeneb) ProtoMessage() {}
 
-func (x *BeaconState4844) ProtoReflect() protoreflect.Message {
+func (x *BeaconStateDeneb) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1633,201 +1633,201 @@ func (x *BeaconState4844) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BeaconState4844.ProtoReflect.Descriptor instead.
-func (*BeaconState4844) Descriptor() ([]byte, []int) {
+// Deprecated: Use BeaconStateDeneb.ProtoReflect.Descriptor instead.
+func (*BeaconStateDeneb) Descriptor() ([]byte, []int) {
 	return file_proto_prysm_v1alpha1_beacon_state_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *BeaconState4844) GetGenesisTime() uint64 {
+func (x *BeaconStateDeneb) GetGenesisTime() uint64 {
 	if x != nil {
 		return x.GenesisTime
 	}
 	return 0
 }
 
-func (x *BeaconState4844) GetGenesisValidatorsRoot() []byte {
+func (x *BeaconStateDeneb) GetGenesisValidatorsRoot() []byte {
 	if x != nil {
 		return x.GenesisValidatorsRoot
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
+func (x *BeaconStateDeneb) GetSlot() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.Slot
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(0)
 }
 
-func (x *BeaconState4844) GetFork() *Fork {
+func (x *BeaconStateDeneb) GetFork() *Fork {
 	if x != nil {
 		return x.Fork
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetLatestBlockHeader() *BeaconBlockHeader {
+func (x *BeaconStateDeneb) GetLatestBlockHeader() *BeaconBlockHeader {
 	if x != nil {
 		return x.LatestBlockHeader
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetBlockRoots() [][]byte {
+func (x *BeaconStateDeneb) GetBlockRoots() [][]byte {
 	if x != nil {
 		return x.BlockRoots
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetStateRoots() [][]byte {
+func (x *BeaconStateDeneb) GetStateRoots() [][]byte {
 	if x != nil {
 		return x.StateRoots
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetHistoricalRoots() [][]byte {
+func (x *BeaconStateDeneb) GetHistoricalRoots() [][]byte {
 	if x != nil {
 		return x.HistoricalRoots
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetEth1Data() *Eth1Data {
+func (x *BeaconStateDeneb) GetEth1Data() *Eth1Data {
 	if x != nil {
 		return x.Eth1Data
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetEth1DataVotes() []*Eth1Data {
+func (x *BeaconStateDeneb) GetEth1DataVotes() []*Eth1Data {
 	if x != nil {
 		return x.Eth1DataVotes
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetEth1DepositIndex() uint64 {
+func (x *BeaconStateDeneb) GetEth1DepositIndex() uint64 {
 	if x != nil {
 		return x.Eth1DepositIndex
 	}
 	return 0
 }
 
-func (x *BeaconState4844) GetValidators() []*Validator {
+func (x *BeaconStateDeneb) GetValidators() []*Validator {
 	if x != nil {
 		return x.Validators
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetBalances() []uint64 {
+func (x *BeaconStateDeneb) GetBalances() []uint64 {
 	if x != nil {
 		return x.Balances
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetRandaoMixes() [][]byte {
+func (x *BeaconStateDeneb) GetRandaoMixes() [][]byte {
 	if x != nil {
 		return x.RandaoMixes
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetSlashings() []uint64 {
+func (x *BeaconStateDeneb) GetSlashings() []uint64 {
 	if x != nil {
 		return x.Slashings
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetPreviousEpochParticipation() []byte {
+func (x *BeaconStateDeneb) GetPreviousEpochParticipation() []byte {
 	if x != nil {
 		return x.PreviousEpochParticipation
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetCurrentEpochParticipation() []byte {
+func (x *BeaconStateDeneb) GetCurrentEpochParticipation() []byte {
 	if x != nil {
 		return x.CurrentEpochParticipation
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetJustificationBits() github_com_prysmaticlabs_go_bitfield.Bitvector4 {
+func (x *BeaconStateDeneb) GetJustificationBits() github_com_prysmaticlabs_go_bitfield.Bitvector4 {
 	if x != nil {
 		return x.JustificationBits
 	}
 	return github_com_prysmaticlabs_go_bitfield.Bitvector4(nil)
 }
 
-func (x *BeaconState4844) GetPreviousJustifiedCheckpoint() *Checkpoint {
+func (x *BeaconStateDeneb) GetPreviousJustifiedCheckpoint() *Checkpoint {
 	if x != nil {
 		return x.PreviousJustifiedCheckpoint
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetCurrentJustifiedCheckpoint() *Checkpoint {
+func (x *BeaconStateDeneb) GetCurrentJustifiedCheckpoint() *Checkpoint {
 	if x != nil {
 		return x.CurrentJustifiedCheckpoint
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetFinalizedCheckpoint() *Checkpoint {
+func (x *BeaconStateDeneb) GetFinalizedCheckpoint() *Checkpoint {
 	if x != nil {
 		return x.FinalizedCheckpoint
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetInactivityScores() []uint64 {
+func (x *BeaconStateDeneb) GetInactivityScores() []uint64 {
 	if x != nil {
 		return x.InactivityScores
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetCurrentSyncCommittee() *SyncCommittee {
+func (x *BeaconStateDeneb) GetCurrentSyncCommittee() *SyncCommittee {
 	if x != nil {
 		return x.CurrentSyncCommittee
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetNextSyncCommittee() *SyncCommittee {
+func (x *BeaconStateDeneb) GetNextSyncCommittee() *SyncCommittee {
 	if x != nil {
 		return x.NextSyncCommittee
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetLatestExecutionPayloadHeader() *v1.ExecutionPayloadHeader4844 {
+func (x *BeaconStateDeneb) GetLatestExecutionPayloadHeader() *v1.ExecutionPayloadHeaderDeneb {
 	if x != nil {
 		return x.LatestExecutionPayloadHeader
 	}
 	return nil
 }
 
-func (x *BeaconState4844) GetNextWithdrawalIndex() uint64 {
+func (x *BeaconStateDeneb) GetNextWithdrawalIndex() uint64 {
 	if x != nil {
 		return x.NextWithdrawalIndex
 	}
 	return 0
 }
 
-func (x *BeaconState4844) GetNextWithdrawalValidatorIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
+func (x *BeaconStateDeneb) GetNextWithdrawalValidatorIndex() github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex {
 	if x != nil {
 		return x.NextWithdrawalValidatorIndex
 	}
 	return github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex(0)
 }
 
-func (x *BeaconState4844) GetHistoricalSummaries() []*HistoricalSummary {
+func (x *BeaconStateDeneb) GetHistoricalSummaries() []*HistoricalSummary {
 	if x != nil {
 		return x.HistoricalSummaries
 	}
@@ -2731,7 +2731,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*SyncAggregatorSelectionData)(nil),      // 11: ethereum.eth.v1alpha1.SyncAggregatorSelectionData
 	(*BeaconStateBellatrix)(nil),             // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
 	(*BeaconStateCapella)(nil),               // 13: ethereum.eth.v1alpha1.BeaconStateCapella
-	(*BeaconState4844)(nil),                  // 14: ethereum.eth.v1alpha1.BeaconState4844
+	(*BeaconStateDeneb)(nil),                  // 14: ethereum.eth.v1alpha1.BeaconStateDeneb
 	(*PowBlock)(nil),                         // 15: ethereum.eth.v1alpha1.PowBlock
 	(*HistoricalSummary)(nil),                // 16: ethereum.eth.v1alpha1.HistoricalSummary
 	(*BeaconBlockHeader)(nil),                // 17: ethereum.eth.v1alpha1.BeaconBlockHeader
@@ -2741,7 +2741,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*AttestationData)(nil),                  // 21: ethereum.eth.v1alpha1.AttestationData
 	(*v1.ExecutionPayloadHeader)(nil),        // 22: ethereum.engine.v1.ExecutionPayloadHeader
 	(*v1.ExecutionPayloadHeaderCapella)(nil), // 23: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*v1.ExecutionPayloadHeader4844)(nil),    // 24: ethereum.engine.v1.ExecutionPayloadHeader4844
+	(*v1.ExecutionPayloadHeaderDeneb)(nil),    // 24: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 }
 var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	2,  // 0: ethereum.eth.v1alpha1.BeaconState.fork:type_name -> ethereum.eth.v1alpha1.Fork
@@ -2789,18 +2789,18 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	10, // 42: ethereum.eth.v1alpha1.BeaconStateCapella.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	23, // 43: ethereum.eth.v1alpha1.BeaconStateCapella.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
 	16, // 44: ethereum.eth.v1alpha1.BeaconStateCapella.historical_summaries:type_name -> ethereum.eth.v1alpha1.HistoricalSummary
-	2,  // 45: ethereum.eth.v1alpha1.BeaconState4844.fork:type_name -> ethereum.eth.v1alpha1.Fork
-	17, // 46: ethereum.eth.v1alpha1.BeaconState4844.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	18, // 47: ethereum.eth.v1alpha1.BeaconState4844.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	18, // 48: ethereum.eth.v1alpha1.BeaconState4844.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	19, // 49: ethereum.eth.v1alpha1.BeaconState4844.validators:type_name -> ethereum.eth.v1alpha1.Validator
-	20, // 50: ethereum.eth.v1alpha1.BeaconState4844.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	20, // 51: ethereum.eth.v1alpha1.BeaconState4844.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	20, // 52: ethereum.eth.v1alpha1.BeaconState4844.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
-	10, // 53: ethereum.eth.v1alpha1.BeaconState4844.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	10, // 54: ethereum.eth.v1alpha1.BeaconState4844.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	24, // 55: ethereum.eth.v1alpha1.BeaconState4844.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeader4844
-	16, // 56: ethereum.eth.v1alpha1.BeaconState4844.historical_summaries:type_name -> ethereum.eth.v1alpha1.HistoricalSummary
+	2,  // 45: ethereum.eth.v1alpha1.BeaconStateDeneb.fork:type_name -> ethereum.eth.v1alpha1.Fork
+	17, // 46: ethereum.eth.v1alpha1.BeaconStateDeneb.latest_block_header:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	18, // 47: ethereum.eth.v1alpha1.BeaconStateDeneb.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	18, // 48: ethereum.eth.v1alpha1.BeaconStateDeneb.eth1_data_votes:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	19, // 49: ethereum.eth.v1alpha1.BeaconStateDeneb.validators:type_name -> ethereum.eth.v1alpha1.Validator
+	20, // 50: ethereum.eth.v1alpha1.BeaconStateDeneb.previous_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	20, // 51: ethereum.eth.v1alpha1.BeaconStateDeneb.current_justified_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	20, // 52: ethereum.eth.v1alpha1.BeaconStateDeneb.finalized_checkpoint:type_name -> ethereum.eth.v1alpha1.Checkpoint
+	10, // 53: ethereum.eth.v1alpha1.BeaconStateDeneb.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	10, // 54: ethereum.eth.v1alpha1.BeaconStateDeneb.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	24, // 55: ethereum.eth.v1alpha1.BeaconStateDeneb.latest_execution_payload_header:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	16, // 56: ethereum.eth.v1alpha1.BeaconStateDeneb.historical_summaries:type_name -> ethereum.eth.v1alpha1.HistoricalSummary
 	57, // [57:57] is the sub-list for method output_type
 	57, // [57:57] is the sub-list for method input_type
 	57, // [57:57] is the sub-list for extension type_name
@@ -2986,7 +2986,7 @@ func file_proto_prysm_v1alpha1_beacon_state_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_beacon_state_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconState4844); i {
+			switch v := v.(*BeaconStateDeneb); i {
 			case 0:
 				return &v.state
 			case 1:

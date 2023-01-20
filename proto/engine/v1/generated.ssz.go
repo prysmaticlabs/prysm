@@ -846,13 +846,13 @@ func (e *ExecutionPayloadCapella) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the ExecutionPayload4844 object
-func (e *ExecutionPayload4844) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the ExecutionPayloadDeneb object
+func (e *ExecutionPayloadDeneb) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(e)
 }
 
-// MarshalSSZTo ssz marshals the ExecutionPayload4844 object to a target array
-func (e *ExecutionPayload4844) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the ExecutionPayloadDeneb object to a target array
+func (e *ExecutionPayloadDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(544)
 
@@ -987,8 +987,8 @@ func (e *ExecutionPayload4844) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the ExecutionPayload4844 object
-func (e *ExecutionPayload4844) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the ExecutionPayloadDeneb object
+func (e *ExecutionPayloadDeneb) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 544 {
@@ -1138,8 +1138,8 @@ func (e *ExecutionPayload4844) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayload4844 object
-func (e *ExecutionPayload4844) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayloadDeneb object
+func (e *ExecutionPayloadDeneb) SizeSSZ() (size int) {
 	size = 544
 
 	// Field (10) 'ExtraData'
@@ -1157,13 +1157,13 @@ func (e *ExecutionPayload4844) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the ExecutionPayload4844 object
-func (e *ExecutionPayload4844) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the ExecutionPayloadDeneb object
+func (e *ExecutionPayloadDeneb) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
 }
 
-// HashTreeRootWith ssz hashes the ExecutionPayload4844 object with a hasher
-func (e *ExecutionPayload4844) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the ExecutionPayloadDeneb object with a hasher
+func (e *ExecutionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'ParentHash'
@@ -1970,13 +1970,13 @@ func (e *ExecutionPayloadHeaderCapella) HashTreeRootWith(hh *ssz.Hasher) (err er
 	return
 }
 
-// MarshalSSZ ssz marshals the ExecutionPayloadHeader4844 object
-func (e *ExecutionPayloadHeader4844) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the ExecutionPayloadHeaderDeneb object
+func (e *ExecutionPayloadHeaderDeneb) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(e)
 }
 
-// MarshalSSZTo ssz marshals the ExecutionPayloadHeader4844 object to a target array
-func (e *ExecutionPayloadHeader4844) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the ExecutionPayloadHeaderDeneb object to a target array
+func (e *ExecutionPayloadHeaderDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 	offset := int(600)
 
@@ -2083,8 +2083,8 @@ func (e *ExecutionPayloadHeader4844) MarshalSSZTo(buf []byte) (dst []byte, err e
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the ExecutionPayloadHeader4844 object
-func (e *ExecutionPayloadHeader4844) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the ExecutionPayloadHeaderDeneb object
+func (e *ExecutionPayloadHeaderDeneb) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
 	if size < 600 {
@@ -2195,8 +2195,8 @@ func (e *ExecutionPayloadHeader4844) UnmarshalSSZ(buf []byte) error {
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayloadHeader4844 object
-func (e *ExecutionPayloadHeader4844) SizeSSZ() (size int) {
+// SizeSSZ returns the ssz encoded size in bytes for the ExecutionPayloadHeaderDeneb object
+func (e *ExecutionPayloadHeaderDeneb) SizeSSZ() (size int) {
 	size = 600
 
 	// Field (10) 'ExtraData'
@@ -2205,13 +2205,13 @@ func (e *ExecutionPayloadHeader4844) SizeSSZ() (size int) {
 	return
 }
 
-// HashTreeRoot ssz hashes the ExecutionPayloadHeader4844 object
-func (e *ExecutionPayloadHeader4844) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the ExecutionPayloadHeaderDeneb object
+func (e *ExecutionPayloadHeaderDeneb) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(e)
 }
 
-// HashTreeRootWith ssz hashes the ExecutionPayloadHeader4844 object with a hasher
-func (e *ExecutionPayloadHeader4844) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the ExecutionPayloadHeaderDeneb object with a hasher
+func (e *ExecutionPayloadHeaderDeneb) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'ParentHash'
