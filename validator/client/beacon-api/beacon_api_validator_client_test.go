@@ -167,9 +167,6 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 }
 
 func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
