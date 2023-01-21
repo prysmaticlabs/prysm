@@ -82,15 +82,8 @@ var (
 			Buckets: []float64{5, 10, 50, 100, 150, 250, 500, 1000, 2000},
 		},
 	)
-	arrivalBlockPropagationHistogram = promauto.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "block_arrival_latency_milliseconds",
-			Help:    "Captures blocks propagation time. Blocks arrival in milliseconds distribution",
-			Buckets: []float64{100, 200, 300, 400, 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000},
-		},
-	)
 	arrivalBlockPropagationGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "block_arrival_latency_gauge",
+		Name: "block_arrival_latency_milliseconds_gauge",
 		Help: "Captures blocks propagation time. Blocks arrival in milliseconds",
 	})
 

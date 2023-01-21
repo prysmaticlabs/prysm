@@ -351,7 +351,6 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot types.Slot) error 
 		return err
 	}
 	ms := prysmTime.Now().Sub(startTime) / time.Millisecond
-	arrivalBlockPropagationHistogram.Observe(float64(ms))
 	arrivalBlockPropagationGauge.Set(float64(ms))
 
 	return nil
