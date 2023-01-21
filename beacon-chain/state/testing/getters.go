@@ -31,7 +31,6 @@ func VerifyBeaconStateSlotDataRace(t *testing.T, factory getState) {
 }
 
 type getStateWithCurrentJustifiedCheckpoint func(*ethpb.Checkpoint) (state.BeaconState, error)
-type clearInternalState func(state.BeaconState)
 
 func VerifyBeaconStateMatchCurrentJustifiedCheckptNative(t *testing.T, factory getStateWithCurrentJustifiedCheckpoint) {
 	c1 := &ethpb.Checkpoint{Epoch: 1}
