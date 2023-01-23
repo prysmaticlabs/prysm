@@ -1,7 +1,6 @@
 package blstoexec
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
