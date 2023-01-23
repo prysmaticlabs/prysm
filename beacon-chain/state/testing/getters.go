@@ -28,6 +28,7 @@ func VerifyBeaconStateSlotDataRace(t *testing.T, factory getState) {
 	}()
 
 	wg.Wait()
+
 }
 
 type getStateWithCurrentJustifiedCheckpoint func(*ethpb.Checkpoint) (state.BeaconState, error)
