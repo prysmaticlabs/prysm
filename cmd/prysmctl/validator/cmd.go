@@ -41,7 +41,7 @@ var (
 var Commands = []*cli.Command{
 	{
 		Name:    "validator",
-		Aliases: []string{"v"},
+		Aliases: []string{"v", "sign"}, // remove sign command should be depreciated but having as backwards compatability.
 		Usage:   "commands that affect the state of validators such as exiting or withdrawing",
 		Subcommands: []*cli.Command{
 			{
@@ -91,7 +91,7 @@ var Commands = []*cli.Command{
 			},
 			{
 				Name:    "exit",
-				Aliases: []string{"e"},
+				Aliases: []string{"e", "voluntary-exit"},
 				Usage:   "Performs a voluntary exit on selected accounts",
 				Flags: cmd.WrapFlags([]cli.Flag{
 					flags.WalletDirFlag,
