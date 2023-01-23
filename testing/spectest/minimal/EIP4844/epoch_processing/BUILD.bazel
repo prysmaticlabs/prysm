@@ -24,4 +24,5 @@ go_test(
         "minimal",
         "spectest",
     ],
+    deps = ["//testing/spectest/shared/deneb/epoch_processing:go_default_library"],
 )
