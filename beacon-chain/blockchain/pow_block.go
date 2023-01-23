@@ -49,8 +49,12 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	if payload.IsNil() {
 		return errors.New("nil execution payload")
 	}
-	if err := validateTerminalBlockHash(b.Block().Slot(), payload); err != nil {
+	ok, err := canUseValidatedTerminalBlockHash(b.Block().Slot(), payload)
+	if err != nil {
 		return errors.Wrap(err, "could not validate terminal block hash")
+	}
+	if ok {
+		return nil
 	}
 	mergeBlockParentHash, mergeBlockTD, err := s.getBlkParentHashAndTD(ctx, payload.ParentHash())
 	if err != nil {
@@ -105,7 +109,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 	return blk.ParentHash[:], blkTDUint256, nil
 }
 
-// validateTerminalBlockHash validates if the merge block is a valid terminal PoW block.
+// canUseValidatedTerminalBlockHash validates if the merge block is a valid terminal PoW block.
 // spec code:
 // if TERMINAL_BLOCK_HASH != Hash32():
 //
@@ -113,17 +117,17 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 //	assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
 //	assert block.body.execution_payload.parent_hash == TERMINAL_BLOCK_HASH
 //	return
-func validateTerminalBlockHash(blkSlot types.Slot, payload interfaces.ExecutionData) error {
+func canUseValidatedTerminalBlockHash(blkSlot types.Slot, payload interfaces.ExecutionData) (bool, error) {
 	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) == [32]byte{} {
-		return nil
+		return false, nil
 	}
 	if params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(blkSlot) {
-		return errors.New("terminal block hash activation epoch not reached")
+		return false, errors.New("terminal block hash activation epoch not reached")
 	}
 	if !bytes.Equal(payload.ParentHash(), params.BeaconConfig().TerminalBlockHash.Bytes()) {
-		return errors.New("parent hash does not match terminal block hash")
+		return false, errors.New("parent hash does not match terminal block hash")
 	}
-	return nil
+	return true, nil
 }
 
 // validateTerminalBlockDifficulties validates terminal pow block by comparing own total difficulty with parent's total difficulty.
