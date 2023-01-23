@@ -20,17 +20,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type metadata struct {
-	NetworkName           string `json:"network_name,omitempty"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root,omitempty"`
-	DepositCliVersion     string `json:"deposit_cli_version,omitempty"`
-}
-
-type cliStakingWithdrawalMessage struct {
-	apimiddleware.SignedBLSToExecutionChangeJson
-	Metadata *metadata `json:"metadata,omitempty"`
-}
-
 func setWithdrawalAddresses(c *cli.Context) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.setWithdrawalAddresses")
 	defer span.End()
@@ -60,7 +49,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*apimiddleware.SignedB
 		if err != nil {
 			return setWithdrawalAddressJsons, errors.Wrap(err, "failed to open file")
 		}
-		var to []*cliStakingWithdrawalMessage
+		var to []*apimiddleware.SignedBLSToExecutionChangeJson
 		if err := json.Unmarshal(b, &to); err != nil {
 			log.Warnf("provided file: %s, is not a list of signed withdrawal messages", foundFilePath)
 			continue
