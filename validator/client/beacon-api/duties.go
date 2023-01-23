@@ -40,13 +40,12 @@ func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	// Sync committees are an Altair feature
 	fetchSyncDuties := in.Epoch >= params.BeaconConfig().AltairForkEpoch
 
-	currentEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch, multipleValidatorStatus, true, fetchSyncDuties)
+	currentEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch, multipleValidatorStatus, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
 	}
 
-	// We don't fetch proposer duties for epoch+1
-	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, multipleValidatorStatus, false, fetchSyncDuties)
+	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, multipleValidatorStatus, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
@@ -62,7 +61,6 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 	ctx context.Context,
 	epoch types.Epoch,
 	multipleValidatorStatus *ethpb.MultipleValidatorStatusResponse,
-	fetchProposerDuties bool,
 	fetchSyncDuties bool,
 ) ([]*ethpb.DutiesResponse_Duty, error) {
 	attesterDuties, err := c.dutiesProvider.GetAttesterDuties(ctx, epoch, multipleValidatorStatus.Indices)
@@ -78,10 +76,8 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 	}
 
 	var proposerDuties []*apimiddleware.ProposerDutyJson
-	if fetchProposerDuties {
-		if proposerDuties, err = c.dutiesProvider.GetProposerDuties(ctx, epoch); err != nil {
-			return nil, errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
-		}
+	if proposerDuties, err = c.dutiesProvider.GetProposerDuties(ctx, epoch); err != nil {
+		return nil, errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
 	}
 
 	committees, err := c.dutiesProvider.GetCommittees(ctx, epoch)

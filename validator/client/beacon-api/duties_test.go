@@ -759,7 +759,6 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 					},
 				},
 				true,
-				true,
 			)
 			assert.ErrorContains(t, testCase.expectedError, err)
 		})
@@ -768,29 +767,16 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 
 func TestGetDutiesForEpoch_Valid(t *testing.T) {
 	testCases := []struct {
-		name                string
-		fetchSyncDuties     bool
-		fetchProposerDuties bool
+		name            string
+		fetchSyncDuties bool
 	}{
 		{
-			name:                "fetch attester duties",
-			fetchSyncDuties:     false,
-			fetchProposerDuties: false,
+			name:            "fetch attester and proposer duties",
+			fetchSyncDuties: false,
 		},
 		{
-			name:                "fetch attester and sync duties",
-			fetchSyncDuties:     true,
-			fetchProposerDuties: false,
-		},
-		{
-			name:                "fetch attester and proposer duties",
-			fetchSyncDuties:     false,
-			fetchProposerDuties: true,
-		},
-		{
-			name:                "fetch attester and sync and proposer duties",
-			fetchSyncDuties:     true,
-			fetchProposerDuties: true,
+			name:            "fetch attester and sync and proposer duties",
+			fetchSyncDuties: true,
 		},
 	}
 
@@ -860,15 +846,13 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				nil,
 			).Times(1)
 
-			if testCase.fetchProposerDuties {
-				dutiesProvider.EXPECT().GetProposerDuties(
-					ctx,
-					epoch,
-				).Return(
-					generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
-					nil,
-				).Times(1)
-			}
+			dutiesProvider.EXPECT().GetProposerDuties(
+				ctx,
+				epoch,
+			).Return(
+				generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
+				nil,
+			).Times(1)
 
 			if testCase.fetchSyncDuties {
 				dutiesProvider.EXPECT().GetSyncDuties(
@@ -886,26 +870,24 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 			var expectedProposerSlots3 []types.Slot
 			var expectedProposerSlots4 []types.Slot
 
-			if testCase.fetchProposerDuties {
-				expectedProposerSlots1 = []types.Slot{
-					proposerSlots[0],
-					proposerSlots[1],
-				}
+			expectedProposerSlots1 = []types.Slot{
+				proposerSlots[0],
+				proposerSlots[1],
+			}
 
-				expectedProposerSlots2 = []types.Slot{
-					proposerSlots[2],
-					proposerSlots[3],
-				}
+			expectedProposerSlots2 = []types.Slot{
+				proposerSlots[2],
+				proposerSlots[3],
+			}
 
-				expectedProposerSlots3 = []types.Slot{
-					proposerSlots[4],
-					proposerSlots[5],
-				}
+			expectedProposerSlots3 = []types.Slot{
+				proposerSlots[4],
+				proposerSlots[5],
+			}
 
-				expectedProposerSlots4 = []types.Slot{
-					proposerSlots[6],
-					proposerSlots[7],
-				}
+			expectedProposerSlots4 = []types.Slot{
+				proposerSlots[6],
+				proposerSlots[7],
 			}
 
 			expectedDuties := []*ethpb.DutiesResponse_Duty{
@@ -1021,7 +1003,6 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				ctx,
 				epoch,
 				multipleValidatorStatus,
-				testCase.fetchProposerDuties,
 				testCase.fetchSyncDuties,
 			)
 			require.NoError(t, err)
@@ -1144,6 +1125,14 @@ func TestGetDuties_Valid(t *testing.T) {
 				validatorIndices,
 			).Return(
 				reverseSlice(generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)),
+				nil,
+			).Times(2)
+
+			dutiesProvider.EXPECT().GetProposerDuties(
+				ctx,
+				testCase.epoch+1,
+			).Return(
+				generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots),
 				nil,
 			).Times(2)
 
@@ -1278,7 +1267,6 @@ func TestGetDuties_Valid(t *testing.T) {
 				ctx,
 				testCase.epoch,
 				multipleValidatorStatus,
-				true,
 				fetchSyncDuties,
 			)
 			require.NoError(t, err)
@@ -1287,7 +1275,6 @@ func TestGetDuties_Valid(t *testing.T) {
 				ctx,
 				testCase.epoch+1,
 				multipleValidatorStatus,
-				false,
 				fetchSyncDuties,
 			)
 			require.NoError(t, err)
