@@ -113,7 +113,7 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		}
 	}
 
-	// Mapping from a validator index to it's proposal slot
+	// Mapping from a validator index to its proposal slot
 	proposerDutySlots := make(map[types.ValidatorIndex][]types.Slot)
 	for _, proposerDuty := range proposerDuties {
 		validatorIndex, err := strconv.ParseUint(proposerDuty.ValidatorIndex, 10, 64)
@@ -260,6 +260,10 @@ func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch ty
 		return nil, errors.Wrapf(err, "failed to query proposer duties for epoch `%d`", epoch)
 	}
 
+	if proposerDuties.Data == nil {
+		return nil, errors.New("proposer duties data is nil")
+	}
+
 	for index, proposerDuty := range proposerDuties.Data {
 		if proposerDuty == nil {
 			return nil, errors.Errorf("proposer duty at index `%d` is nil", index)
@@ -284,6 +288,10 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch types.
 	syncDuties := apimiddleware.SyncCommitteeDutiesResponseJson{}
 	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), &syncDuties); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+	}
+
+	if syncDuties.Data == nil {
+		return nil, errors.New("sync duties data is nil")
 	}
 
 	for index, syncDuty := range syncDuties.Data {

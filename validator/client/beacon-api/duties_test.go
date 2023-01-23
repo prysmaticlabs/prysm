@@ -204,6 +204,34 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 	assert.ErrorContains(t, "failed to query proposer duties for epoch `1`", err)
 }
 
+func TestGetProposerDuties_NilData(t *testing.T) {
+	const epoch = types.Epoch(1)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
+		gomock.Any(),
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		2,
+		apimiddleware.ProposerDutiesResponseJson{
+			Data: nil,
+		},
+	).Times(1)
+
+	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
+	_, err := dutiesProvider.GetProposerDuties(ctx, epoch)
+	assert.ErrorContains(t, "proposer duties data is nil", err)
+}
+
 func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 	const epoch = types.Epoch(1)
 
@@ -311,6 +339,36 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
 	assert.ErrorContains(t, "foo error", err)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
+}
+
+func TestGetSyncDuties_NilData(t *testing.T) {
+	const epoch = types.Epoch(1)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
+		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		4,
+		apimiddleware.SyncCommitteeDutiesResponseJson{
+			Data: nil,
+		},
+	).Times(1)
+
+	dutiesProvider := &beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler}
+	_, err := dutiesProvider.GetSyncDuties(ctx, epoch, nil)
+	assert.ErrorContains(t, "sync duties data is nil", err)
 }
 
 func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
