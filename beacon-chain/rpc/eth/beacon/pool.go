@@ -319,21 +319,6 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	var failures []*helpers.SingleIndexedVerificationFailure
 	for i, change := range req.GetChanges() {
 		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
-		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
-		if err != nil {
-			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
-				Index:   i,
-				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
-			})
-			continue
-		}
-		if err := blocks.VerifyBLSChangeSignature(st, change); err != nil {
-			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
-				Index:   i,
-				Message: "Could not validate signature: " + err.Error(),
-			})
-			continue
-		}
 		bs.OperationNotifier.OperationFeed().Send(&feed.Event{
 			Type: operation.BLSToExecutionChangeReceived,
 			Data: &operation.BLSToExecutionChangeReceivedData{

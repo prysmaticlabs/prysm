@@ -4,13 +4,11 @@ import (
 	"math"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
-	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -74,18 +72,7 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 			p.lock.RUnlock()
 			return nil, err
 		}
-		_, err = blocks.ValidateBLSToExecutionChange(st, change)
-		if err != nil {
-			logrus.WithError(err).Warning("removing invalid BLSToExecutionChange from pool")
-			// MarkIncluded removes the invalid change from the pool
-			p.lock.RUnlock()
-			if err := p.MarkIncluded(change); err != nil {
-				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-			}
-			p.lock.RLock()
-		} else {
-			result = append(result, change)
-		}
+		result = append(result, change)
 		node, err = node.Prev()
 		if err != nil {
 			p.lock.RUnlock()
@@ -97,35 +84,11 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 		return result, nil
 	}
 	// We now verify the signatures in batches
-	cSet, err := blocks.BLSChangesSignatureBatch(st, result)
+	_, err := blocks.BLSChangesSignatureBatch(st, result)
 	if err != nil {
 		logrus.WithError(err).Warning("could not get BLSToExecutionChanges signatures")
-	} else {
-		ok, err := cSet.Verify()
-		if err != nil {
-			logrus.WithError(err).Warning("could not batch verify BLSToExecutionChanges signatures")
-		} else if ok {
-			return result, nil
-		}
 	}
-	// Batch signature failed, check signatures individually
-	verified := make([]*ethpb.SignedBLSToExecutionChange, 0, length)
-	for i, sig := range cSet.Signatures {
-		signature, err := blst.SignatureFromBytes(sig)
-		if err != nil {
-			logrus.WithError(err).Warning("could not get signature from bytes")
-			continue
-		}
-		if !signature.Verify(cSet.PublicKeys[i], cSet.Messages[i][:]) {
-			logrus.Warning("removing BLSToExecutionChange with invalid signature from pool")
-			if err := p.MarkIncluded(result[i]); err != nil {
-				return nil, errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-			}
-		} else {
-			verified = append(verified, result[i])
-		}
-	}
-	return verified, nil
+	return result, nil
 }
 
 // InsertBLSToExecChange inserts an object into the pool.
