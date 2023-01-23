@@ -4,6 +4,7 @@ import (
 	"math"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -72,7 +73,13 @@ func (p *Pool) BLSToExecChangesForInclusion(st state.BeaconState) ([]*ethpb.Sign
 			p.lock.RUnlock()
 			return nil, err
 		}
-		result = append(result, change)
+		copied := ethpb.CopyBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{change})
+		result = append(result, copied[0])
+		p.lock.RUnlock()
+		if err := p.MarkIncluded(change); err != nil {
+			return nil, errors.Wrap(err, "could not mark included")
+		}
+		p.lock.RLock()
 		node, err = node.Prev()
 		if err != nil {
 			p.lock.RUnlock()
