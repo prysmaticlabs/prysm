@@ -1600,7 +1600,7 @@ type BeaconStateDeneb struct {
 	InactivityScores             []uint64                                                                    `protobuf:"varint,9001,rep,packed,name=inactivity_scores,json=inactivityScores,proto3" json:"inactivity_scores,omitempty" ssz-max:"1099511627776"`
 	CurrentSyncCommittee         *SyncCommittee                                                              `protobuf:"bytes,9002,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
 	NextSyncCommittee            *SyncCommittee                                                              `protobuf:"bytes,9003,opt,name=next_sync_committee,json=nextSyncCommittee,proto3" json:"next_sync_committee,omitempty"`
-	LatestExecutionPayloadHeader *v1.ExecutionPayloadHeaderDeneb                                              `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
+	LatestExecutionPayloadHeader *v1.ExecutionPayloadHeaderDeneb                                             `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
 	NextWithdrawalIndex          uint64                                                                      `protobuf:"varint,11001,opt,name=next_withdrawal_index,json=nextWithdrawalIndex,proto3" json:"next_withdrawal_index,omitempty"`
 	NextWithdrawalValidatorIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,11002,opt,name=next_withdrawal_validator_index,json=nextWithdrawalValidatorIndex,proto3" json:"next_withdrawal_validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	HistoricalSummaries          []*HistoricalSummary                                                        `protobuf:"bytes,11003,rep,name=historical_summaries,json=historicalSummaries,proto3" json:"historical_summaries,omitempty" ssz-max:"16777216"`
@@ -2731,7 +2731,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*SyncAggregatorSelectionData)(nil),      // 11: ethereum.eth.v1alpha1.SyncAggregatorSelectionData
 	(*BeaconStateBellatrix)(nil),             // 12: ethereum.eth.v1alpha1.BeaconStateBellatrix
 	(*BeaconStateCapella)(nil),               // 13: ethereum.eth.v1alpha1.BeaconStateCapella
-	(*BeaconStateDeneb)(nil),                  // 14: ethereum.eth.v1alpha1.BeaconStateDeneb
+	(*BeaconStateDeneb)(nil),                 // 14: ethereum.eth.v1alpha1.BeaconStateDeneb
 	(*PowBlock)(nil),                         // 15: ethereum.eth.v1alpha1.PowBlock
 	(*HistoricalSummary)(nil),                // 16: ethereum.eth.v1alpha1.HistoricalSummary
 	(*BeaconBlockHeader)(nil),                // 17: ethereum.eth.v1alpha1.BeaconBlockHeader
@@ -2741,7 +2741,7 @@ var file_proto_prysm_v1alpha1_beacon_state_proto_goTypes = []interface{}{
 	(*AttestationData)(nil),                  // 21: ethereum.eth.v1alpha1.AttestationData
 	(*v1.ExecutionPayloadHeader)(nil),        // 22: ethereum.engine.v1.ExecutionPayloadHeader
 	(*v1.ExecutionPayloadHeaderCapella)(nil), // 23: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*v1.ExecutionPayloadHeaderDeneb)(nil),    // 24: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	(*v1.ExecutionPayloadHeaderDeneb)(nil),   // 24: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 }
 var file_proto_prysm_v1alpha1_beacon_state_proto_depIdxs = []int32{
 	2,  // 0: ethereum.eth.v1alpha1.BeaconState.fork:type_name -> ethereum.eth.v1alpha1.Fork

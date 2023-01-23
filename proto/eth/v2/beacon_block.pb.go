@@ -840,7 +840,7 @@ type SignedBeaconBlockDeneb struct {
 	unknownFields protoimpl.UnknownFields
 
 	Message   *BeaconBlockDeneb `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte           `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Signature []byte            `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedBeaconBlockDeneb) Reset() {
@@ -1005,7 +1005,7 @@ type SignedBlindedBeaconBlockDeneb struct {
 	unknownFields protoimpl.UnknownFields
 
 	Message   *BlindedBeaconBlockDeneb `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Signature []byte                  `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
+	Signature []byte                   `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty" ssz-size:"96"`
 }
 
 func (x *SignedBlindedBeaconBlockDeneb) Reset() {
@@ -1355,7 +1355,7 @@ type BlindedBeaconBlockDeneb struct {
 	ProposerIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                      `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                      `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BlindedBeaconBlockBodyDeneb                                                 `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body          *BlindedBeaconBlockBodyDeneb                                                `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
 func (x *BlindedBeaconBlockDeneb) Reset() {
@@ -1874,17 +1874,17 @@ type BlindedBeaconBlockBodyDeneb struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	RandaoReveal           []byte                          `protobuf:"bytes,1,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"96"`
-	Eth1Data               *v1.Eth1Data                    `protobuf:"bytes,2,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	Graffiti               []byte                          `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
-	ProposerSlashings      []*v1.ProposerSlashing          `protobuf:"bytes,4,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty" ssz-max:"16"`
-	AttesterSlashings      []*v1.AttesterSlashing          `protobuf:"bytes,5,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty" ssz-max:"2"`
-	Attestations           []*v1.Attestation               `protobuf:"bytes,6,rep,name=attestations,proto3" json:"attestations,omitempty" ssz-max:"128"`
-	Deposits               []*v1.Deposit                   `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
-	VoluntaryExits         []*v1.SignedVoluntaryExit       `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
-	SyncAggregate          *v1.SyncAggregate               `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
+	RandaoReveal           []byte                           `protobuf:"bytes,1,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"96"`
+	Eth1Data               *v1.Eth1Data                     `protobuf:"bytes,2,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
+	Graffiti               []byte                           `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
+	ProposerSlashings      []*v1.ProposerSlashing           `protobuf:"bytes,4,rep,name=proposer_slashings,json=proposerSlashings,proto3" json:"proposer_slashings,omitempty" ssz-max:"16"`
+	AttesterSlashings      []*v1.AttesterSlashing           `protobuf:"bytes,5,rep,name=attester_slashings,json=attesterSlashings,proto3" json:"attester_slashings,omitempty" ssz-max:"2"`
+	Attestations           []*v1.Attestation                `protobuf:"bytes,6,rep,name=attestations,proto3" json:"attestations,omitempty" ssz-max:"128"`
+	Deposits               []*v1.Deposit                    `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
+	VoluntaryExits         []*v1.SignedVoluntaryExit        `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
+	SyncAggregate          *v1.SyncAggregate                `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
 	ExecutionPayloadHeader *v11.ExecutionPayloadHeaderDeneb `protobuf:"bytes,10,opt,name=execution_payload_header,json=executionPayloadHeader,proto3" json:"execution_payload_header,omitempty"`
-	BlsToExecutionChanges  []*SignedBLSToExecutionChange   `protobuf:"bytes,11,rep,name=bls_to_execution_changes,json=blsToExecutionChanges,proto3" json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
+	BlsToExecutionChanges  []*SignedBLSToExecutionChange    `protobuf:"bytes,11,rep,name=bls_to_execution_changes,json=blsToExecutionChanges,proto3" json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
 }
 
 func (x *BlindedBeaconBlockBodyDeneb) Reset() {
@@ -2330,7 +2330,7 @@ type BeaconBlockDeneb struct {
 	ProposerIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                      `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                      `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	Body          *BeaconBlockBodyDeneb                                                        `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Body          *BeaconBlockBodyDeneb                                                       `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
 }
 
 func (x *BeaconBlockDeneb) Reset() {
@@ -2414,7 +2414,7 @@ type BeaconBlockBodyDeneb struct {
 	Deposits              []*v1.Deposit                 `protobuf:"bytes,7,rep,name=deposits,proto3" json:"deposits,omitempty" ssz-max:"16"`
 	VoluntaryExits        []*v1.SignedVoluntaryExit     `protobuf:"bytes,8,rep,name=voluntary_exits,json=voluntaryExits,proto3" json:"voluntary_exits,omitempty" ssz-max:"16"`
 	SyncAggregate         *v1.SyncAggregate             `protobuf:"bytes,9,opt,name=sync_aggregate,json=syncAggregate,proto3" json:"sync_aggregate,omitempty"`
-	ExecutionPayload      *v11.ExecutionPayloadDeneb     `protobuf:"bytes,10,opt,name=execution_payload,json=executionPayload,proto3" json:"execution_payload,omitempty"`
+	ExecutionPayload      *v11.ExecutionPayloadDeneb    `protobuf:"bytes,10,opt,name=execution_payload,json=executionPayload,proto3" json:"execution_payload,omitempty"`
 	BlsToExecutionChanges []*SignedBLSToExecutionChange `protobuf:"bytes,11,rep,name=bls_to_execution_changes,json=blsToExecutionChanges,proto3" json:"bls_to_execution_changes,omitempty" ssz-max:"16"`
 	BlobKzgCommitments    [][]byte                      `protobuf:"bytes,12,rep,name=blob_kzg_commitments,json=blobKzgCommitments,proto3" json:"blob_kzg_commitments,omitempty" ssz-max:"4" ssz-size:"?,48"`
 }
@@ -3305,25 +3305,25 @@ var file_proto_eth_v2_beacon_block_proto_goTypes = []interface{}{
 	(*SignedBlindedBeaconBlockContainer)(nil), // 6: ethereum.eth.v2.SignedBlindedBeaconBlockContainer
 	(*SignedBeaconBlockBellatrix)(nil),        // 7: ethereum.eth.v2.SignedBeaconBlockBellatrix
 	(*SignedBeaconBlockCapella)(nil),          // 8: ethereum.eth.v2.SignedBeaconBlockCapella
-	(*SignedBeaconBlockDeneb)(nil),             // 9: ethereum.eth.v2.SignedBeaconBlockDeneb
+	(*SignedBeaconBlockDeneb)(nil),            // 9: ethereum.eth.v2.SignedBeaconBlockDeneb
 	(*SignedBlindedBeaconBlockBellatrix)(nil), // 10: ethereum.eth.v2.SignedBlindedBeaconBlockBellatrix
 	(*SignedBlindedBeaconBlockCapella)(nil),   // 11: ethereum.eth.v2.SignedBlindedBeaconBlockCapella
-	(*SignedBlindedBeaconBlockDeneb)(nil),      // 12: ethereum.eth.v2.SignedBlindedBeaconBlockDeneb
+	(*SignedBlindedBeaconBlockDeneb)(nil),     // 12: ethereum.eth.v2.SignedBlindedBeaconBlockDeneb
 	(*SignedBeaconBlockAltair)(nil),           // 13: ethereum.eth.v2.SignedBeaconBlockAltair
 	(*BeaconBlockBellatrix)(nil),              // 14: ethereum.eth.v2.BeaconBlockBellatrix
 	(*BlindedBeaconBlockBellatrix)(nil),       // 15: ethereum.eth.v2.BlindedBeaconBlockBellatrix
 	(*BlindedBeaconBlockCapella)(nil),         // 16: ethereum.eth.v2.BlindedBeaconBlockCapella
-	(*BlindedBeaconBlockDeneb)(nil),            // 17: ethereum.eth.v2.BlindedBeaconBlockDeneb
+	(*BlindedBeaconBlockDeneb)(nil),           // 17: ethereum.eth.v2.BlindedBeaconBlockDeneb
 	(*BeaconBlockAltair)(nil),                 // 18: ethereum.eth.v2.BeaconBlockAltair
 	(*BeaconBlockBodyBellatrix)(nil),          // 19: ethereum.eth.v2.BeaconBlockBodyBellatrix
 	(*BlindedBeaconBlockBodyBellatrix)(nil),   // 20: ethereum.eth.v2.BlindedBeaconBlockBodyBellatrix
 	(*BlindedBeaconBlockBodyCapella)(nil),     // 21: ethereum.eth.v2.BlindedBeaconBlockBodyCapella
-	(*BlindedBeaconBlockBodyDeneb)(nil),        // 22: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb
+	(*BlindedBeaconBlockBodyDeneb)(nil),       // 22: ethereum.eth.v2.BlindedBeaconBlockBodyDeneb
 	(*BeaconBlockBodyAltair)(nil),             // 23: ethereum.eth.v2.BeaconBlockBodyAltair
 	(*BeaconBlockCapella)(nil),                // 24: ethereum.eth.v2.BeaconBlockCapella
 	(*BeaconBlockBodyCapella)(nil),            // 25: ethereum.eth.v2.BeaconBlockBodyCapella
-	(*BeaconBlockDeneb)(nil),                   // 26: ethereum.eth.v2.BeaconBlockDeneb
-	(*BeaconBlockBodyDeneb)(nil),               // 27: ethereum.eth.v2.BeaconBlockBodyDeneb
+	(*BeaconBlockDeneb)(nil),                  // 26: ethereum.eth.v2.BeaconBlockDeneb
+	(*BeaconBlockBodyDeneb)(nil),              // 27: ethereum.eth.v2.BeaconBlockBodyDeneb
 	(Version)(0),                              // 28: ethereum.eth.v2.Version
 	(*v1.BeaconBlock)(nil),                    // 29: ethereum.eth.v1.BeaconBlock
 	(*v1.Eth1Data)(nil),                       // 30: ethereum.eth.v1.Eth1Data
@@ -3337,9 +3337,9 @@ var file_proto_eth_v2_beacon_block_proto_goTypes = []interface{}{
 	(*v11.ExecutionPayloadHeader)(nil),        // 38: ethereum.engine.v1.ExecutionPayloadHeader
 	(*v11.ExecutionPayloadHeaderCapella)(nil), // 39: ethereum.engine.v1.ExecutionPayloadHeaderCapella
 	(*SignedBLSToExecutionChange)(nil),        // 40: ethereum.eth.v2.SignedBLSToExecutionChange
-	(*v11.ExecutionPayloadHeaderDeneb)(nil),    // 41: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	(*v11.ExecutionPayloadHeaderDeneb)(nil),   // 41: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(*v11.ExecutionPayloadCapella)(nil),       // 42: ethereum.engine.v1.ExecutionPayloadCapella
-	(*v11.ExecutionPayloadDeneb)(nil),          // 43: ethereum.engine.v1.ExecutionPayloadDeneb
+	(*v11.ExecutionPayloadDeneb)(nil),         // 43: ethereum.engine.v1.ExecutionPayloadDeneb
 }
 var file_proto_eth_v2_beacon_block_proto_depIdxs = []int32{
 	28, // 0: ethereum.eth.v2.BlockResponseV2.version:type_name -> ethereum.eth.v2.Version

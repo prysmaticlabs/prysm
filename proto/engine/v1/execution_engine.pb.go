@@ -1910,10 +1910,10 @@ var file_proto_engine_v1_execution_engine_proto_goTypes = []interface{}{
 	(PayloadStatus_Status)(0),             // 0: ethereum.engine.v1.PayloadStatus.Status
 	(*ExecutionPayload)(nil),              // 1: ethereum.engine.v1.ExecutionPayload
 	(*ExecutionPayloadCapella)(nil),       // 2: ethereum.engine.v1.ExecutionPayloadCapella
-	(*ExecutionPayloadDeneb)(nil),          // 3: ethereum.engine.v1.ExecutionPayloadDeneb
+	(*ExecutionPayloadDeneb)(nil),         // 3: ethereum.engine.v1.ExecutionPayloadDeneb
 	(*ExecutionPayloadHeader)(nil),        // 4: ethereum.engine.v1.ExecutionPayloadHeader
 	(*ExecutionPayloadHeaderCapella)(nil), // 5: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*ExecutionPayloadHeaderDeneb)(nil),    // 6: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	(*ExecutionPayloadHeaderDeneb)(nil),   // 6: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(*TransitionConfiguration)(nil),       // 7: ethereum.engine.v1.TransitionConfiguration
 	(*PayloadAttributes)(nil),             // 8: ethereum.engine.v1.PayloadAttributes
 	(*PayloadAttributesV2)(nil),           // 9: ethereum.engine.v1.PayloadAttributesV2

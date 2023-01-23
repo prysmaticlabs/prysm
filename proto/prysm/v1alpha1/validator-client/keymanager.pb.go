@@ -725,8 +725,8 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_goTypes = []inte
 	(*v1alpha1.ValidatorRegistrationV1)(nil),      // 13: ethereum.eth.v1alpha1.ValidatorRegistrationV1
 	(*v1alpha1.BeaconBlockCapella)(nil),           // 14: ethereum.eth.v1alpha1.BeaconBlockCapella
 	(*v1alpha1.BlindedBeaconBlockCapella)(nil),    // 15: ethereum.eth.v1alpha1.BlindedBeaconBlockCapella
-	(*v1alpha1.BeaconBlockDeneb)(nil),              // 16: ethereum.eth.v1alpha1.BeaconBlockDeneb
-	(*v1alpha1.BlindedBeaconBlockDeneb)(nil),       // 17: ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb
+	(*v1alpha1.BeaconBlockDeneb)(nil),             // 16: ethereum.eth.v1alpha1.BeaconBlockDeneb
+	(*v1alpha1.BlindedBeaconBlockDeneb)(nil),      // 17: ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb
 	(*empty.Empty)(nil),                           // 18: google.protobuf.Empty
 }
 var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_depIdxs = []int32{

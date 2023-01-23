@@ -3598,7 +3598,7 @@ var file_proto_prysm_v1alpha1_validator_proto_goTypes = []interface{}{
 	(*SignedBeaconBlockAltair)(nil),                            // 45: ethereum.eth.v1alpha1.SignedBeaconBlockAltair
 	(*SignedBeaconBlockBellatrix)(nil),                         // 46: ethereum.eth.v1alpha1.SignedBeaconBlockBellatrix
 	(*SignedBeaconBlockCapella)(nil),                           // 47: ethereum.eth.v1alpha1.SignedBeaconBlockCapella
-	(*SignedBeaconBlockDeneb)(nil),                              // 48: ethereum.eth.v1alpha1.SignedBeaconBlockDeneb
+	(*SignedBeaconBlockDeneb)(nil),                             // 48: ethereum.eth.v1alpha1.SignedBeaconBlockDeneb
 	(*AggregateAttestationAndProof)(nil),                       // 49: ethereum.eth.v1alpha1.AggregateAttestationAndProof
 	(*SignedAggregateAttestationAndProof)(nil),                 // 50: ethereum.eth.v1alpha1.SignedAggregateAttestationAndProof
 	(*empty.Empty)(nil),                                        // 51: google.protobuf.Empty

@@ -843,7 +843,7 @@ type BeaconStateDeneb struct {
 	InactivityScores             []uint64                                                                    `protobuf:"varint,9001,rep,packed,name=inactivity_scores,json=inactivityScores,proto3" json:"inactivity_scores,omitempty" ssz-max:"1099511627776"`
 	CurrentSyncCommittee         *SyncCommittee                                                              `protobuf:"bytes,9002,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
 	NextSyncCommittee            *SyncCommittee                                                              `protobuf:"bytes,9003,opt,name=next_sync_committee,json=nextSyncCommittee,proto3" json:"next_sync_committee,omitempty"`
-	LatestExecutionPayloadHeader *v11.ExecutionPayloadHeaderDeneb                                             `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
+	LatestExecutionPayloadHeader *v11.ExecutionPayloadHeaderDeneb                                            `protobuf:"bytes,10001,opt,name=latest_execution_payload_header,json=latestExecutionPayloadHeader,proto3" json:"latest_execution_payload_header,omitempty"`
 	NextWithdrawalIndex          uint64                                                                      `protobuf:"varint,11001,opt,name=next_withdrawal_index,json=nextWithdrawalIndex,proto3" json:"next_withdrawal_index,omitempty"`
 	NextWithdrawalValidatorIndex github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.ValidatorIndex `protobuf:"varint,11002,opt,name=next_withdrawal_validator_index,json=nextWithdrawalValidatorIndex,proto3" json:"next_withdrawal_validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
@@ -2253,7 +2253,7 @@ var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconStateBellatrix)(nil),              // 1: ethereum.eth.v2.BeaconStateBellatrix
 	(*BeaconStateCapella)(nil),                // 2: ethereum.eth.v2.BeaconStateCapella
 	(*HistoricalSummary)(nil),                 // 3: ethereum.eth.v2.HistoricalSummary
-	(*BeaconStateDeneb)(nil),                   // 4: ethereum.eth.v2.BeaconStateDeneb
+	(*BeaconStateDeneb)(nil),                  // 4: ethereum.eth.v2.BeaconStateDeneb
 	(*BeaconStateRequestV2)(nil),              // 5: ethereum.eth.v2.BeaconStateRequestV2
 	(*BeaconStateResponseV2)(nil),             // 6: ethereum.eth.v2.BeaconStateResponseV2
 	(*BeaconStateSSZResponseV2)(nil),          // 7: ethereum.eth.v2.BeaconStateSSZResponseV2
@@ -2271,7 +2271,7 @@ var file_proto_eth_v2_beacon_state_proto_goTypes = []interface{}{
 	(*SyncCommittee)(nil),                     // 19: ethereum.eth.v2.SyncCommittee
 	(*v11.ExecutionPayloadHeader)(nil),        // 20: ethereum.engine.v1.ExecutionPayloadHeader
 	(*v11.ExecutionPayloadHeaderCapella)(nil), // 21: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*v11.ExecutionPayloadHeaderDeneb)(nil),    // 22: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	(*v11.ExecutionPayloadHeaderDeneb)(nil),   // 22: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	(Version)(0),                              // 23: ethereum.eth.v2.Version
 	(*v1.BeaconState)(nil),                    // 24: ethereum.eth.v1.BeaconState
 }
