@@ -182,12 +182,9 @@ func (s Uint64String) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d", s)), nil
 }
 
-type VersionResponse struct {
-	Version string `json:"version"`
-}
-
 type ExecHeaderResponse struct {
-	Data struct {
+	Version string `json:"version"`
+	Data    struct {
 		Signature hexutil.Bytes `json:"signature"`
 		Message   *BuilderBid   `json:"message"`
 	} `json:"data"`

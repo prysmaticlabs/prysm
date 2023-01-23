@@ -83,6 +83,7 @@ var _ observer = &requestLogger{}
 type BuilderClient interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error)
+	GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBidCapella, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
 	SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	SubmitBlindedBlockCapella(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error)
@@ -213,24 +214,28 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
-	v := &VersionResponse{}
-	if err := json.Unmarshal(hb, v); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader version, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+	hr := &ExecHeaderResponse{}
+	if err := json.Unmarshal(hb, hr); err != nil {
+		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
-	switch v.Version {
-	case "bellatrix":
-		hr := &ExecHeaderResponse{}
-		if err := json.Unmarshal(hb, hr); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
-		}
-		return hr.ToProto()
-	case "capella":
-		hr := &ExecHeaderResponse{}
-		if err := json.Unmarshal(hb, hr); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
-		}
-		return hr.ToProto()
+	return hr.ToProto()
+}
+
+// GetHeaderCapella is used by a proposing validator to request an ExecutionPayloadHeaderCapella from the Builder node.
+func (c *Client) GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBidCapella, error) {
+	path, err := execHeaderPath(slot, parentHash, pubkey)
+	if err != nil {
+		return nil, err
 	}
+	hb, err := c.do(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	hr := &ExecHeaderResponseCapella{}
+	if err := json.Unmarshal(hb, hr); err != nil {
+		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+	}
+	return hr.ToProto()
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte

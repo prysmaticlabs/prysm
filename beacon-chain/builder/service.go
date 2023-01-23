@@ -23,7 +23,9 @@ var ErrNoBuilder = errors.New("builder endpoint not configured")
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
+	SubmitBlindedBlockCapella(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
+	GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBidCapella, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
@@ -115,6 +117,18 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 	}()
 
 	return s.c.GetHeader(ctx, slot, parentHash, pubKey)
+}
+
+// GetHeaderCapella retrieves the header for a given slot and parent hash from the builder relay network.
+func (s *Service) GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBidCapella, error) {
+	ctx, span := trace.StartSpan(ctx, "builder.GetHeaderCapella")
+	defer span.End()
+	start := time.Now()
+	defer func() {
+		getHeaderLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
+	return s.c.GetHeaderCapella(ctx, slot, parentHash, pubKey)
 }
 
 // Status retrieves the status of the builder relay network.
