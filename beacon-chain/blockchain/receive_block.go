@@ -10,6 +10,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -150,9 +151,28 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
+	// Mark block BLS changes as seen so we don't include same ones in future blocks.
+	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+		return errors.Wrap(err, "could not process BLSToExecutionChanges")
+	}
+
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
 	for _, as := range b.Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
+	}
+	return nil
+}
+
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
+	if blk.Version() < version.Capella {
+		return nil
+	}
+	changes, err := blk.Body().BLSToExecutionChanges()
+	if err != nil {
+		return errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		s.cfg.BLSToExecPool.MarkIncluded(change)
 	}
 	return nil
 }
