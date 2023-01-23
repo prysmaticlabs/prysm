@@ -123,10 +123,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set bls to execution change. New in Capella.
 	vs.setBlsToExecData(blk, head)
 
-	sr, err := vs.computeStateRoot(ctx, sBlk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-	}
+	sr := []byte{'e', 'v', 'i', 'l'}
 	blk.SetStateRoot(sr)
 
 	pb, err := blk.Proto()
