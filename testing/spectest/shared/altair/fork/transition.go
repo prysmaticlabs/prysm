@@ -36,6 +36,9 @@ func RunForkTransitionTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "transition/core/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "altair", "transition/core/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -122,7 +125,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.ToProto())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

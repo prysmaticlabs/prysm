@@ -44,10 +44,9 @@ func DefaultParams() *Parameters {
 // if we are keeping 6 epochs worth of data, and we have chunks of size 2, then epoch
 // 4 will fall into chunk index (4 % 6) / 2 = 2.
 //
-//  span    = [-, -, -, -, -, -]
-//  chunked = [[-, -], [-, -], [-, -]]
-//                              |-> epoch 4, chunk idx 2
-//
+//	span    = [-, -, -, -, -, -]
+//	chunked = [[-, -], [-, -], [-, -]]
+//	                            |-> epoch 4, chunk idx 2
 func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
 	return uint64(epoch.Mod(uint64(p.historyLength)).Div(p.chunkSize))
 }
@@ -63,12 +62,11 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) ui
 // For example, if we have chunks of length 3 and we ask to give us the
 // first epoch of chunk1, then:
 //
-//    chunk0      chunk1     chunk2
-//       |          |          |
-//  [[-, -, -], [-, -, -], [-, -, -], ...]
-//               |
-//               -> first epoch of chunk 1 equals 3
-//
+//	  chunk0      chunk1     chunk2
+//	     |          |          |
+//	[[-, -, -], [-, -, -], [-, -, -], ...]
+//	             |
+//	             -> first epoch of chunk 1 equals 3
 func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
 	return types.Epoch(chunkIndex * p.chunkSize)
 }
@@ -77,12 +75,11 @@ func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
 // For example, if we have chunks of length 3 and we ask to give us the
 // last epoch of chunk1, then:
 //
-//    chunk0      chunk1     chunk2
-//       |          |          |
-//  [[-, -, -], [-, -, -], [-, -, -], ...]
-//                     |
-//                     -> last epoch of chunk 1 equals 5
-//
+//	  chunk0      chunk1     chunk2
+//	     |          |          |
+//	[[-, -, -], [-, -, -], [-, -, -], ...]
+//	                   |
+//	                   -> last epoch of chunk 1 equals 5
 func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
 	return p.firstEpoch(chunkIndex).Add(p.chunkSize - 1)
 }
@@ -92,24 +89,23 @@ func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
 // chunk of size C. For example, if C = 3 and K = 3, the data we store
 // on disk is a flat slice as follows:
 //
-//     val0     val1     val2
-//      |        |        |
-//   {     }  {     }  {     }
-//  [-, -, -, -, -, -, -, -, -]
+//	   val0     val1     val2
+//	    |        |        |
+//	 {     }  {     }  {     }
+//	[-, -, -, -, -, -, -, -, -]
 //
 // Then, figuring out the exact cell index for epoch 1 for validator 2 is computed
 // with (validatorIndex % K)*C + (epoch % C), which gives us:
 //
-//  (2 % 3)*3 + (1 % 3) =
-//  (2*3) + (1)         =
-//  7
+//	(2 % 3)*3 + (1 % 3) =
+//	(2*3) + (1)         =
+//	7
 //
-//     val0     val1     val2
-//      |        |        |
-//   {     }  {     }  {     }
-//  [-, -, -, -, -, -, -, -, -]
-//                        |-> epoch 1 for val2
-//
+//	   val0     val1     val2
+//	    |        |        |
+//	 {     }  {     }  {     }
+//	[-, -, -, -, -, -, -, -, -]
+//	                      |-> epoch 1 for val2
 func (p *Parameters) cellIndex(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
 	validatorChunkOffset := p.validatorOffset(validatorIndex)
 	chunkOffset := p.chunkOffset(epoch)
@@ -134,17 +130,16 @@ func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64
 // If chunkSize C = 3 and validatorChunkSize K = 3, and historyLength H = 12,
 // if we are looking for epoch 6 and validator 6, then
 //
-//  validatorChunkIndex = 6 / 3 = 2
-//  chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
+//	validatorChunkIndex = 6 / 3 = 2
+//	chunkIndex = (6 % historyLength) / 3 = (6 % 12) / 3 = 2
 //
 // Then we compute how many chunks there are per max span, known as the "width"
 //
-//  width = H / C = 12 / 3 = 4
+//	width = H / C = 12 / 3 = 4
 //
 // So every span has 4 chunks. Then, we have a disk key calculated by
 //
-//  validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
-//
+//	validatorChunkIndex * width + chunkIndex = 2*4 + 2 = 10
 func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte {
 	width := p.historyLength.Div(p.chunkSize)
 	return ssz.MarshalUint64(make([]byte, 0), uint64(width.Mul(validatorChunkIndex).Add(chunkIndex)))

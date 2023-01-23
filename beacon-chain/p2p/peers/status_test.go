@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
@@ -603,10 +603,10 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 
 	expectedTarget := types.Epoch(2)
 	maxPeers := 3
-	mockroot2 := [32]byte{}
-	mockroot3 := [32]byte{}
-	mockroot4 := [32]byte{}
-	mockroot5 := [32]byte{}
+	var mockroot2 [32]byte
+	var mockroot3 [32]byte
+	var mockroot4 [32]byte
+	var mockroot5 [32]byte
 	copy(mockroot2[:], "two")
 	copy(mockroot3[:], "three")
 	copy(mockroot4[:], "four")

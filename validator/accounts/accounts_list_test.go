@@ -349,7 +349,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
@@ -608,7 +608,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	require.NoError(t, err)
 	os.Stdout = writer
 
-	m := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	m := mock.NewMockValidatorClient(ctrl)
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
 	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}

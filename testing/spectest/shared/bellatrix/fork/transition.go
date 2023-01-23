@@ -31,6 +31,9 @@ func RunForkTransitionTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "transition/core/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "bellatrix", "transition/core/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -117,7 +120,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateBellatrix{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(beaconState.ToProto())
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, pbState, postBeaconState)
 		})

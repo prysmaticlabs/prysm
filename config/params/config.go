@@ -94,11 +94,14 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplier uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER" spec:"true"` // ProportionalSlashingMultiplier is used as a multiplier on slashed penalties.
 
 	// Max operations per block constants.
-	MaxProposerSlashings uint64 `yaml:"MAX_PROPOSER_SLASHINGS" spec:"true"` // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxAttesterSlashings uint64 `yaml:"MAX_ATTESTER_SLASHINGS" spec:"true"` // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
-	MaxAttestations      uint64 `yaml:"MAX_ATTESTATIONS" spec:"true"`       // MaxAttestations defines the maximum allowed attestations in a beacon block.
-	MaxDeposits          uint64 `yaml:"MAX_DEPOSITS" spec:"true"`           // MaxDeposits defines the maximum number of validator deposits in a block.
-	MaxVoluntaryExits    uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`    // MaxVoluntaryExits defines the maximum number of validator exits in a block.
+	MaxProposerSlashings             uint64 `yaml:"MAX_PROPOSER_SLASHINGS" spec:"true"`               // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
+	MaxAttesterSlashings             uint64 `yaml:"MAX_ATTESTER_SLASHINGS" spec:"true"`               // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttestations                  uint64 `yaml:"MAX_ATTESTATIONS" spec:"true"`                     // MaxAttestations defines the maximum allowed attestations in a beacon block.
+	MaxDeposits                      uint64 `yaml:"MAX_DEPOSITS" spec:"true"`                         // MaxDeposits defines the maximum number of validator deposits in a block.
+	MaxVoluntaryExits                uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`                  // MaxVoluntaryExits defines the maximum number of validator exits in a block.
+	MaxWithdrawalsPerPayload         uint64 `yaml:"MAX_WITHDRAWALS_PER_PAYLOAD" spec:"true"`          // MaxWithdrawalsPerPayload defines the maximum number of withdrawals in a block.
+	MaxBlsToExecutionChanges         uint64 `yaml:"MAX_BLS_TO_EXECUTION_CHANGES" spec:"true"`         // MaxBlsToExecutionChanges defines the maximum number of BLS-to-execution-change objects in a block.
+	MaxValidatorsPerWithdrawalsSweep uint64 `yaml:"MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP" spec:"true"` //MaxValidatorsPerWithdrawalsSweep bounds the size of the sweep searching for withdrawals per slot.
 
 	// BLS domain values.
 	DomainBeaconProposer              [4]byte `yaml:"DOMAIN_BEACON_PROPOSER" spec:"true"`                // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.
@@ -128,12 +131,13 @@ type BeaconChainConfig struct {
 	MaxPeersToSync                 int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 	SlotsPerArchivedPoint          types.Slot    // SlotsPerArchivedPoint defines the number of slots per one archived point.
 	GenesisCountdownInterval       time.Duration // How often to log the countdown until the genesis time is reached.
-	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in beacon state.
-	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in beacon state hard fork 1.
-	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to the Bellatrix.
 	OrphanLateBlockFirstThreshold  uint64        // OrphanLateBlockFirstThreshold defines the maximum time we wait for a block without considering it a candidate to being orphaned.
 	OrphanLateBlockBalanceFraction uint64        // OrphanLateBlockBalanceFraction defines the maximum fraction of the committee vote that a block should have to be considered as a candidate to being orphaned.
 	ProcessAttestationsThreshold   uint64        // ProcessAttestationsThreshold defines the time within a slot in which we process attestations.
+	BeaconStateFieldCount          int           // BeaconStateFieldCount defines how many fields are in the Phase0 beacon state.
+	BeaconStateAltairFieldCount    int           // BeaconStateAltairFieldCount defines how many fields are in the beacon state post upgrade to Altair.
+	BeaconStateBellatrixFieldCount int           // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to Bellatrix.
+	BeaconStateCapellaFieldCount   int           // BeaconStateCapellaFieldCount defines how many fields are in beacon state post upgrade to Capella.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    types.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -148,8 +152,6 @@ type BeaconChainConfig struct {
 	AltairForkEpoch      types.Epoch `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	BellatrixForkVersion []byte      `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	BellatrixForkEpoch   types.Epoch `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
-	ShardingForkVersion  []byte      `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch    types.Epoch `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	CapellaForkVersion   []byte      `yaml:"CAPELLA_FORK_VERSION" spec:"true"`   // CapellaForkVersion is used to represent the fork version for capella.
 	CapellaForkEpoch     types.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
 
@@ -220,22 +222,18 @@ func (b *BeaconChainConfig) InitializeForkSchedule() {
 
 func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
 	fvs := map[[fieldparams.VersionLength]byte]types.Epoch{}
-	// Set Genesis fork data.
 	fvs[bytesutil.ToBytes4(b.GenesisForkVersion)] = b.GenesisEpoch
-	// Set Altair fork data.
 	fvs[bytesutil.ToBytes4(b.AltairForkVersion)] = b.AltairForkEpoch
-	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
+	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	return fvs
 }
 
 func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
 	fvn := map[[fieldparams.VersionLength]byte]string{}
-	// Set Genesis fork data.
 	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
-	// Set Altair fork data.
 	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
-	// Set Bellatrix fork data.
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
 }

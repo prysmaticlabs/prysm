@@ -120,7 +120,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("dummy_test_data"))
-	mockRoot := [32]byte{}
+	var mockRoot [32]byte
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
@@ -162,7 +162,7 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("dummy_test_data"))
-	mockRoot := [32]byte{}
+	var mockRoot [32]byte
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
@@ -186,7 +186,7 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("dummy_test_data"))
-	mockRoot := [32]byte{}
+	var mockRoot [32]byte
 	d := &ethpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
@@ -227,7 +227,9 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	sort.Slice(received, func(i, j int) bool {
 		return received[i].Data.Slot < received[j].Data.Slot
 	})
-	assert.DeepEqual(t, wanted, received)
+	for i, a := range wanted {
+		assert.Equal(t, true, proto.Equal(a, received[i]))
+	}
 }
 
 func TestSeenAttestations_PresentInCache(t *testing.T) {

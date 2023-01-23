@@ -12,9 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	libp2ptest "github.com/libp2p/go-libp2p-peerstore/test"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	libp2ptest "github.com/libp2p/go-libp2p/p2p/host/peerstore/test"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
@@ -208,7 +208,7 @@ func TestGetPeer(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, rawId, resp.Data.PeerId)
 		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
-		assert.Equal(t, "enr:yoABgmlwhAcHBwc=", resp.Data.Enr)
+		assert.Equal(t, "enr:yoABgmlwhAcHBwc", resp.Data.Enr)
 		assert.Equal(t, ethpb.ConnectionState_DISCONNECTED, resp.Data.State)
 		assert.Equal(t, ethpb.PeerDirection_INBOUND, resp.Data.Direction)
 	})

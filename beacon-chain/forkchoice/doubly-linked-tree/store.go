@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -78,7 +79,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedNode = s.treeRootNode
 		} else {
-			return [32]byte{}, errUnknownJustifiedRoot
+			return [32]byte{}, errors.WithMessage(errUnknownJustifiedRoot, fmt.Sprintf("%#x", s.justifiedCheckpoint.Root))
 		}
 	}
 
@@ -246,7 +247,7 @@ func (s *Store) prune(ctx context.Context) error {
 
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
-		return errUnknownFinalizedRoot
+		return errors.WithMessage(errUnknownFinalizedRoot, fmt.Sprintf("%#x", finalizedRoot))
 	}
 	// return early if we haven't changed the finalized checkpoint
 	if finalizedNode.parent == nil {

@@ -857,7 +857,7 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 	for i := uint64(0); i < numAtts; i++ {
 		source := types.Epoch(i)
 		target := types.Epoch(i + 1)
-		signingRoot := [32]byte{}
+		var signingRoot [32]byte
 		copy(signingRoot[:], fmt.Sprintf("%d", i))
 		atts[i] = createAttestationWrapper(
 			b,

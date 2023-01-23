@@ -215,8 +215,9 @@ func TestStore_Prune_ReturnEarly(t *testing.T) {
 
 // This unit tests starts with a simple branch like this
 //
-//       - 1
+//   - 1
 //     /
+//
 // -- 0 -- 2
 //
 // And we finalize 1. As a result only 1 should survive
@@ -237,17 +238,15 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 }
 
 // This test starts with the following branching diagram
-/// We start with the following diagram
+// / We start with the following diagram
 //
-//                E -- F
-//               /
-//         C -- D
-//        /      \
-//  A -- B        G -- H -- I
-//        \        \
-//         J        -- K -- L
-//
-//
+//	              E -- F
+//	             /
+//	       C -- D
+//	      /      \
+//	A -- B        G -- H -- I
+//	      \        \
+//	       J        -- K -- L
 func TestStore_tips(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
@@ -361,7 +360,7 @@ func TestForkChoice_HighestReceivedBlockSlotRoot(t *testing.T) {
 func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	f := setup(1, 1)
 	s := f.store
-	b := [32]byte{}
+	var b [32]byte
 
 	// Make sure it doesn't underflow
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())

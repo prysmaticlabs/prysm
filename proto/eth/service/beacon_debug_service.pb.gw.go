@@ -511,7 +511,7 @@ var (
 
 	pattern_BeaconDebug_ListForkChoiceHeadsV2_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v2", "debug", "beacon", "heads"}, ""))
 
-	pattern_BeaconDebug_GetForkChoice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"internal", "eth", "v1", "debug", "beacon", "forkchoice"}, ""))
+	pattern_BeaconDebug_GetForkChoice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "debug", "forkchoice"}, ""))
 )
 
 var (

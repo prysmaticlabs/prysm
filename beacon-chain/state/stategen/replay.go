@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
@@ -35,11 +36,12 @@ func (_ *State) replayBlocks(
 	var err error
 
 	start := time.Now()
-	log.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"startSlot": state.Slot(),
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
-	}).Debug("Replaying state")
+	})
+	log.Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -80,8 +82,8 @@ func (_ *State) replayBlocks(
 // The Blocks are returned in slot-descending order.
 func (s *State) loadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
-	if endSlot < startSlot {
-		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
+	if startSlot > endSlot {
+		return nil, fmt.Errorf("start slot %d > end slot %d", startSlot, endSlot)
 	}
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, blockRoots, err := s.beaconDB.Blocks(ctx, filter)
@@ -203,7 +205,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix:
+			case version.Altair, version.Bellatrix, version.Capella:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -228,6 +230,14 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 
 		if prysmtime.CanUpgradeToBellatrix(state.Slot()) {
 			state, err = execution.UpgradeToBellatrix(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToCapella(state.Slot()) {
+			state, err = capella.UpgradeToCapella(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

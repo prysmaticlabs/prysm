@@ -26,7 +26,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAggregateAndProof(context.Background(), 0, pubKey)
 
@@ -36,7 +36,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -75,7 +75,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
 		Duties: []*ethpb.DutiesResponse_Duty{
@@ -150,7 +150,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

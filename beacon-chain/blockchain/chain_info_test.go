@@ -125,7 +125,10 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
-	c.head = &head{slot: 100, state: s}
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	b.Block().SetSlot(100)
+	c.head = &head{block: b, state: s}
 	assert.Equal(t, types.Slot(100), c.HeadSlot())
 }
 
@@ -198,7 +201,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	c.head = &head{state: s}
 	headState, err := c.HeadState(context.Background())
 	require.NoError(t, err)
-	assert.DeepEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Incorrect head state received")
+	assert.DeepEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Incorrect head state received")
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {
@@ -304,31 +307,6 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	root = c.HeadGenesisValidatorsRoot()
 	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
-func TestService_ChainHeads_ProtoArray(t *testing.T) {
-	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}}
-	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	st, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, ojc, ofc)
-	require.NoError(t, err)
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-
-	roots, slots := c.ChainHeads()
-	require.DeepEqual(t, [][32]byte{{'c'}, {'d'}, {'e'}}, roots)
-	require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
-}
 
 //
 //  A <- B <- C
@@ -353,7 +331,7 @@ func TestService_ChainHeads(t *testing.T) {
 	st, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	st, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, ojc, ofc)
@@ -437,7 +415,7 @@ func TestService_IsOptimistic(t *testing.T) {
 	ctx := context.Background()
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
 	st, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
@@ -460,7 +438,7 @@ func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {
 
 func TestService_IsOptimisticForRoot(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	st, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
@@ -478,7 +456,7 @@ func TestService_IsOptimisticForRoot(t *testing.T) {
 func TestService_IsOptimisticForRoot_DB(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
-	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 10
@@ -536,7 +514,7 @@ func TestService_IsOptimisticForRoot_DB(t *testing.T) {
 func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
-	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{slot: 101, root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
 	c.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 10

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
@@ -299,9 +299,10 @@ func validateSelectionIndex(
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{proof},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{proof},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.SelectionProof},
 	}, nil
 }
 
@@ -326,8 +327,9 @@ func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationA
 		return nil, err
 	}
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{a.Signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{a.Signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{signing.AggregatorSignature},
 	}, nil
 }

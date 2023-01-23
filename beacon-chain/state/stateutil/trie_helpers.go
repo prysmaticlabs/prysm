@@ -173,12 +173,12 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	// only its branch up the tree.
 	currentIndex := idx
 	// Allocate only once.
-	combinedChunks := [64]byte{}
+	var combinedChunks [64]byte
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := [32]byte{}
+		var neighbor [32]byte
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = *layers[i][neighborIdx]
 		}
@@ -224,8 +224,8 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	currentIndex := idx
 	root := item
 	// Allocate only once.
-	neighbor := [32]byte{}
-	combinedChunks := [64]byte{}
+	var neighbor [32]byte
+	var combinedChunks [64]byte
 
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0

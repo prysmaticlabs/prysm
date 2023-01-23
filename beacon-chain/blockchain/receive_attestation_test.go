@@ -159,7 +159,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, service.saveInitSyncBlock(ctx, r1, wsb))
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
-		slot:  1,
 		root:  r1,
 		block: wsb,
 		state: st,
@@ -177,7 +176,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, err)
 	st, _ = util.DeterministicGenesisState(t, 1)
 	service.head = &head{
-		slot:  1,
 		root:  r1,
 		block: wsb,
 		state: st,
@@ -226,11 +224,11 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.Equal(t, 2, fcs.NodeCount())
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 
-	// Generate attestatios for this block in Slot 1
+	// Generate attestations for this block in Slot 1
 	atts, err := util.GenerateAttestations(copied, pks, 1, 1, false)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
-	// Verify the target is in forchoice
+	// Verify the target is in forkchoice
 	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot)))
 
 	// Insert a new block to forkchoice

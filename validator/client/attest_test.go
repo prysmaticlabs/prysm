@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/grpc"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -37,7 +36,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not fetch validator assignment")
@@ -48,7 +47,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 
 	validator, _, validatorKey, finish := setup(t)
 	defer finish()
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -90,7 +89,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.SubmitAttestation(context.Background(), 30, pubKey)
 	require.LogsContain(t, hook, "Could not submit attestation to beacon node")
@@ -102,7 +101,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -134,7 +133,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Do(func(_ context.Context, att *ethpb.Attestation, opts ...grpc.CallOption) {
+	).Do(func(_ context.Context, att *ethpb.Attestation) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 
@@ -175,7 +174,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -227,7 +226,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -278,7 +277,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	validatorIndex := types.ValidatorIndex(7)
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -332,13 +331,12 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	m.validatorClient.EXPECT().GetDuties(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
-		gomock.Any(),
 	).Times(0)
 
 	m.validatorClient.EXPECT().GetAttestationData(
@@ -367,7 +365,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(prysmTime.Now().Unix())
 	validatorIndex := types.ValidatorIndex(5)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -384,7 +382,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRoot: bytesutil.PadTo([]byte("A"), 32),
 		Target:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("B"), 32)},
 		Source:          &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("C"), 32), Epoch: 3},
-	}, nil).Do(func(arg0, arg1 interface{}, arg2 ...grpc.CallOption) {
+	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
 
@@ -406,7 +404,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := types.ValidatorIndex(2)
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	pubKey := [fieldparams.BLSPubkeyLength]byte{}
+	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -433,7 +431,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
-	).Do(func(_ context.Context, att *ethpb.Attestation, arg2 ...grpc.CallOption) {
+	).Do(func(_ context.Context, att *ethpb.Attestation) {
 		generatedAttestation = att
 	}).Return(&ethpb.AttestResponse{}, nil /* error */)
 

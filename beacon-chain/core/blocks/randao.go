@@ -17,15 +17,16 @@ import (
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//   def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
-//    epoch = get_current_epoch(state)
-//    # Verify RANDAO reveal
-//    proposer = state.validators[get_beacon_proposer_index(state)]
-//    signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
-//    assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
-//    # Mix in RANDAO reveal
-//    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
-//    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
+//
+//	def process_randao(state: BeaconState, body: BeaconBlockBody) -> None:
+//	 epoch = get_current_epoch(state)
+//	 # Verify RANDAO reveal
+//	 proposer = state.validators[get_beacon_proposer_index(state)]
+//	 signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
+//	 assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+//	 # Mix in RANDAO reveal
+//	 mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
+//	 state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
 	ctx context.Context,
 	beaconState state.BeaconState,
@@ -56,11 +57,12 @@ func ProcessRandao(
 // in the beacon state's latest randao mixes slice.
 //
 // Spec pseudocode definition:
-//     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
-//         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(body.randao_reveal))
-//     )
+//
+//	# Mix it in
+//	state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
+//	    xor(get_randao_mix(state, get_current_epoch(state)),
+//	        hash(body.randao_reveal))
+//	)
 func ProcessRandaoNoVerify(
 	beaconState state.BeaconState,
 	randaoReveal []byte,

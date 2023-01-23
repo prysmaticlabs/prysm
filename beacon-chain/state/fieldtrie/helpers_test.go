@@ -46,13 +46,13 @@ func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 	roots, err := handleBalanceSlice(balances, []uint64{}, true)
 	assert.NoError(t, err)
 
-	root1 := [32]byte{}
+	var root1 [32]byte
 	binary.LittleEndian.PutUint64(root1[:8], balances[0])
 	binary.LittleEndian.PutUint64(root1[8:16], balances[1])
 	binary.LittleEndian.PutUint64(root1[16:24], balances[2])
 	binary.LittleEndian.PutUint64(root1[24:32], balances[3])
 
-	root2 := [32]byte{}
+	var root2 [32]byte
 	binary.LittleEndian.PutUint64(root2[:8], balances[4])
 
 	assert.DeepEqual(t, roots, [][32]byte{root1, root2})
@@ -63,7 +63,7 @@ func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 	roots, err := handleBalanceSlice(balances, []uint64{2, 3}, false)
 	assert.NoError(t, err)
 
-	root1 := [32]byte{}
+	var root1 [32]byte
 	binary.LittleEndian.PutUint64(root1[:8], balances[0])
 	binary.LittleEndian.PutUint64(root1[8:16], balances[1])
 	binary.LittleEndian.PutUint64(root1[16:24], balances[2])

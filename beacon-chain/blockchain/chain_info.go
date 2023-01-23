@@ -328,6 +328,11 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
 		return true
 	}
+	// If node exists in our store, then it is not
+	// finalized.
+	if s.ForkChoicer().HasNode(root) {
+		return false
+	}
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
 }
 

@@ -20,7 +20,7 @@ func (s *Simulator) generateBlockHeadersForSlot(
 	slashings := make([]*ethpb.ProposerSlashing, 0)
 	proposer := rand.NewGenerator().Uint64() % s.srvConfig.Params.NumValidators
 
-	parentRoot := [32]byte{}
+	var parentRoot [32]byte
 	beaconState, err := s.srvConfig.StateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
 		return nil, nil, err

@@ -247,8 +247,9 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index t
 }
 
 // waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:
-//   (a) the validator has received a valid block that is the same slot as input slot
-//   (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
+//
+//	(a) the validator has received a valid block that is the same slot as input slot
+//	(b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot)
 func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validator.waitOneThirdOrValidBlock")
 	defer span.End()

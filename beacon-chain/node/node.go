@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -94,6 +95,7 @@ type BeaconNode struct {
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
 	syncCommitteePool       synccommittee.Pool
+	blsToExecPool           blstoexec.PoolManager
 	depositCache            *depositcache.DepositCache
 	proposerIdsCache        *cache.ProposerPayloadIDsCache
 	stateFeed               *event.Feed
@@ -117,6 +119,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
+	if hasNetworkFlag(cliCtx) && cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		return nil, fmt.Errorf("%s cannot be passed concurrently with network flag", cmd.ChainConfigFileFlag.Name)
+	}
 	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
 		return nil, err
 	}
@@ -168,6 +173,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),
+		blsToExecPool:           blstoexec.NewPool(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
@@ -442,6 +448,11 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		return nil
 	}
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+
+	if cliCtx.IsSet(flags.SlasherDirFlag.Name) {
+		baseDir = cliCtx.String(flags.SlasherDirFlag.Name)
+	}
+
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
@@ -593,6 +604,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer) error 
 		blockchain.WithAttestationPool(b.attestationPool),
 		blockchain.WithExitPool(b.exitPool),
 		blockchain.WithSlashingPool(b.slashingsPool),
+		blockchain.WithBLSToExecPool(b.blsToExecPool),
 		blockchain.WithP2PBroadcaster(b.fetchP2P()),
 		blockchain.WithStateNotifier(b),
 		blockchain.WithAttestationService(attService),
@@ -671,6 +683,7 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithExitPool(b.exitPool),
 		regularsync.WithSlashingPool(b.slashingsPool),
 		regularsync.WithSyncCommsPool(b.syncCommitteePool),
+		regularsync.WithBlsToExecPool(b.blsToExecPool),
 		regularsync.WithStateGen(b.stateGen),
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
@@ -807,6 +820,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:              b.attestationPool,
 		ExitPool:                      b.exitPool,
 		SlashingsPool:                 b.slashingsPool,
+		BLSChangesPool:                b.blsToExecPool,
 		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
 		ExecutionChainService:         web3Service,
@@ -969,4 +983,15 @@ func (b *BeaconNode) registerBuilderService() error {
 		return err
 	}
 	return b.services.RegisterService(svc)
+}
+
+func hasNetworkFlag(cliCtx *cli.Context) bool {
+	for _, flag := range features.NetworkFlags {
+		for _, name := range flag.Names() {
+			if cliCtx.IsSet(name) {
+				return true
+			}
+		}
+	}
+	return false
 }

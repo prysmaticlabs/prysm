@@ -204,7 +204,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 
 			atts, attSlashings, err := s.generateAttestationsForSlot(ctx, slot)
 			if err != nil {
-				log.WithError(err).Fatal("Could not generate block headers for slot")
+				log.WithError(err).Fatal("Could not generate attestations for slot")
 			}
 			log.WithFields(logrus.Fields{
 				"numAtts":      len(atts),

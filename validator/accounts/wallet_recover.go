@@ -45,7 +45,7 @@ func (acm *AccountsCLIManager) WalletRecover(ctx context.Context) (*wallet.Walle
 	if err != nil {
 		return nil, errors.Wrap(err, "could not make keymanager for given phrase")
 	}
-	if err := km.RecoverAccountsFromMnemonic(ctx, acm.mnemonic, acm.mnemonic25thWord, acm.numAccounts); err != nil {
+	if err := km.RecoverAccountsFromMnemonic(ctx, acm.mnemonic, acm.mnemonicLanguage, acm.mnemonic25thWord, acm.numAccounts); err != nil {
 		return nil, err
 	}
 	log.WithField("wallet-path", w.AccountsDir()).Infof(

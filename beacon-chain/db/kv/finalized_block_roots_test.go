@@ -76,7 +76,9 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 // Example:
 // 0    1  2  3   4     5   6     slot
 // a <- b <-- d <- e <- f <- g    roots
-//      ^- c
+//
+//	^- c
+//
 // Imagine that epochs are 2 slots and that epoch 1, 2, and 3 are finalized. Checkpoint roots would
 // be c, e, and g. In this scenario, c was a finalized checkpoint root but no block built upon it so
 // it should not be considered "final and canonical" in the view at slot 6.

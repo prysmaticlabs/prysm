@@ -49,12 +49,18 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedBlock := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
+		blk := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{
 			Block: &eth.BeaconBlock{
 				Slot: 8,
 			},
 		})
-		wantedBlockRoot, err := wantedBlock.HashTreeRoot()
+		bodyRoot, err := blk.Block.Body.HashTreeRoot()
+		require.NoError(t, err)
+		wantedHeader := util.HydrateBeaconHeader(&eth.BeaconBlockHeader{
+			Slot:     8,
+			BodyRoot: bodyRoot[:],
+		})
+		wantedBlockRoot, err := wantedHeader.HashTreeRoot()
 		require.NoError(t, err)
 		genericResponse, err := anypb.New(&ethpb.EventBlock{
 			Slot:                8,
@@ -66,7 +72,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			Event: BlockTopic,
 			Data:  genericResponse,
 		}
-		wsb, err := blocks.NewSignedBeaconBlock(wantedBlock)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,
@@ -227,6 +233,43 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Type: operation.SyncCommitteeContributionReceived,
 				Data: &operation.SyncCommitteeContributionReceivedData{
 					Contribution: wantedContributionV1alpha1,
+				},
+			},
+			feed: srv.OperationNotifier.OperationFeed(),
+		})
+	})
+	t.Run(BLSToExecutionChangeTopic, func(t *testing.T) {
+		ctx := context.Background()
+		srv, ctrl, mockStream := setupServer(ctx, t)
+		defer ctrl.Finish()
+
+		wantedChangeV1alpha1 := &eth.SignedBLSToExecutionChange{
+			Message: &eth.BLSToExecutionChange{
+				ValidatorIndex:     1,
+				FromBlsPubkey:      []byte("from"),
+				ToExecutionAddress: []byte("to"),
+			},
+			Signature: make([]byte, 96),
+		}
+		wantedChange := migration.V1Alpha1SignedBLSToExecChangeToV2(wantedChangeV1alpha1)
+		genericResponse, err := anypb.New(wantedChange)
+		require.NoError(t, err)
+
+		wantedMessage := &gateway.EventSource{
+			Event: BLSToExecutionChangeTopic,
+			Data:  genericResponse,
+		}
+
+		assertFeedSendAndReceive(ctx, &assertFeedArgs{
+			t:             t,
+			srv:           srv,
+			topics:        []string{BLSToExecutionChangeTopic},
+			stream:        mockStream,
+			shouldReceive: wantedMessage,
+			itemToSend: &feed.Event{
+				Type: operation.BLSToExecutionChangeReceived,
+				Data: &operation.BLSToExecutionChangeReceivedData{
+					Change: wantedChangeV1alpha1,
 				},
 			},
 			feed: srv.OperationNotifier.OperationFeed(),

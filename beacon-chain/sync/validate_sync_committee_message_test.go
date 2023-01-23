@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	testingdb "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
@@ -40,7 +40,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 		Genesis:        time.Now(),
 		ValidatorsRoot: [32]byte{'A'},
 	}
-	emptySig := [96]byte{}
+	var emptySig [96]byte
 	type args struct {
 		ctx   context.Context
 		pid   peer.ID

@@ -45,6 +45,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -95,7 +96,7 @@ type validator struct {
 	beaconClient                       ethpb.BeaconChainClient
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
-	validatorClient                    ethpb.BeaconNodeValidatorClient
+	validatorClient                    iface.ValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
@@ -236,16 +237,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
 	// First, check if the beacon chain has started.
-	stream, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err != nil {
-		return errors.Wrap(
-			iface.ErrConnectionIssue,
-			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
-		)
-	}
-
 	log.Info("Syncing with beacon node to align on chain genesis info")
-	chainStartRes, err := stream.Recv()
+	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err != io.EOF {
 		if ctx.Err() == context.Canceled {
 			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
@@ -353,6 +346,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			blk, err = blocks.NewSignedBeaconBlock(b.AltairBlock)
 		case *ethpb.StreamBlocksResponse_BellatrixBlock:
 			blk, err = blocks.NewSignedBeaconBlock(b.BellatrixBlock)
+		case *ethpb.StreamBlocksResponse_CapellaBlock:
+			blk, err = blocks.NewSignedBeaconBlock(b.CapellaBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")
@@ -523,7 +518,7 @@ func buildDuplicateError(response []*ethpb.DoppelGangerResponse_ValidatorRespons
 	duplicates := make([][]byte, 0)
 	for _, valRes := range response {
 		if valRes.DuplicateExists {
-			copiedKey := [fieldparams.BLSPubkeyLength]byte{}
+			var copiedKey [fieldparams.BLSPubkeyLength]byte
 			copy(copiedKey[:], valRes.PublicKey)
 			duplicates = append(duplicates, copiedKey[:])
 		}
@@ -612,8 +607,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot types.Slot) error {
 	v.logDuties(slot, v.duties.CurrentEpochDuties)
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
+	// Make sure to copy metadata into a new context
+	md, exists := metadata.FromOutgoingContext(ctx)
+	ctx = context.Background()
+	if exists {
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
 	go func() {
-		if err := v.subscribeToSubnets(context.Background(), resp); err != nil {
+		if err := v.subscribeToSubnets(ctx, resp); err != nil {
 			log.WithError(err).Error("Failed to subscribe to subnets")
 		}
 	}()
@@ -627,6 +628,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 	subscribeSlots := make([]types.Slot, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeCommitteeIndices := make([]types.CommitteeIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
+	subscribeValidatorIndices := make([]types.ValidatorIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	for _, duty := range res.CurrentEpochDuties {
@@ -634,6 +636,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
+			validatorIndex := duty.ValidatorIndex
 
 			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
@@ -651,6 +654,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
 		}
 	}
 
@@ -658,6 +662,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
 			attesterSlot := duty.AttesterSlot
 			committeeIndex := duty.CommitteeIndex
+			validatorIndex := duty.ValidatorIndex
 
 			alreadySubscribedKey := validatorSubscribeKey(attesterSlot, committeeIndex)
 			if _, ok := alreadySubscribed[alreadySubscribedKey]; ok {
@@ -675,14 +680,18 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 			subscribeSlots = append(subscribeSlots, attesterSlot)
 			subscribeCommitteeIndices = append(subscribeCommitteeIndices, committeeIndex)
 			subscribeIsAggregator = append(subscribeIsAggregator, aggregator)
+			subscribeValidatorIndices = append(subscribeValidatorIndices, validatorIndex)
 		}
 	}
 
-	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx, &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        subscribeSlots,
-		CommitteeIds: subscribeCommitteeIndices,
-		IsAggregator: subscribeIsAggregator,
-	})
+	_, err := v.validatorClient.SubscribeCommitteeSubnets(ctx,
+		&ethpb.CommitteeSubnetsSubscribeRequest{
+			Slots:        subscribeSlots,
+			CommitteeIds: subscribeCommitteeIndices,
+			IsAggregator: subscribeIsAggregator,
+		},
+		subscribeValidatorIndices,
+	)
 
 	return err
 }
@@ -923,6 +932,9 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 			if v.emitAccountMetrics {
 				ValidatorNextAttestationSlotGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(duty.AttesterSlot))
 			}
+		}
+		if v.emitAccountMetrics && duty.IsSyncCommittee {
+			ValidatorInSyncCommitteeGaugeVec.WithLabelValues(validatorNotTruncatedKey).Set(float64(1))
 		}
 
 		for _, proposerSlot := range duty.ProposerSlots {

@@ -3,7 +3,7 @@ package p2p
 import (
 	"context"
 
-	libp2pcore "github.com/libp2p/go-libp2p-core"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"

@@ -7,9 +7,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -17,6 +16,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -54,7 +54,7 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID(p2p.RPCPingTopicV1)
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
@@ -123,7 +123,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/ping/1/ssz_snappy")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -183,7 +183,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	// Setup streams
 	pcl := protocol.ID("/testing")
 	topic := string(pcl)
-	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, false)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {

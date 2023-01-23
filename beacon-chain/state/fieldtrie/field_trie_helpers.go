@@ -369,7 +369,7 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 			// are compressed according to 4 values -> 1 chunk.
 			startIdx := idx / numOfElems
 			startGroup := startIdx * numOfElems
-			chunk := [32]byte{}
+			var chunk [32]byte
 			sizeOfElem := len(chunk) / iNumOfElems
 			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
 				wantedVal := uint64(0)

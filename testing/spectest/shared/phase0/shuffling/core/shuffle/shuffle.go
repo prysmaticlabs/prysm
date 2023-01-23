@@ -21,6 +21,9 @@ func RunShuffleTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "phase0", "shuffling/core/shuffle")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			testCaseFile, err := util.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))

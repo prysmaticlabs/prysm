@@ -11,7 +11,8 @@ import (
 
 // A basic tool to extract genesis.ssz from existing beaconchain.db.
 // ex:
-//   bazel run //tools/interop/export-genesis:export-genesis -- /tmp/data/beaconchaindata /tmp/genesis.ssz
+//
+//	bazel run //tools/interop/export-genesis:export-genesis -- /tmp/data/beaconchaindata /tmp/genesis.ssz
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("Usage: ./main /path/to/datadir /path/to/output/genesis.ssz")

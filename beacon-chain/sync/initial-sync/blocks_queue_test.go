@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -134,6 +134,11 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 }
 
 func TestBlocksQueue_Loop(t *testing.T) {
+	currentPeriod := blockLimiterPeriod
+	blockLimiterPeriod = 1 * time.Second
+	defer func() {
+		blockLimiterPeriod = currentPeriod
+	}()
 	tests := []struct {
 		name                string
 		highestExpectedSlot types.Slot
@@ -844,7 +849,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		})
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 		}
@@ -872,7 +877,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		var machineSlots []types.Slot
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -923,7 +928,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		var machineSlots []types.Slot
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -1075,7 +1080,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
@@ -1113,7 +1118,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		p2p.Peers().SetChainState(emptyPeer, chainState)
 
 		startSlot := mc.HeadSlot() + 1
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		machineSlots := make([]types.Slot, 0)
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -1163,7 +1168,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		// its claims with actual blocks.
 		forkedPeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
 		startSlot := mc.HeadSlot() + 1
-		blocksPerRequest := queue.blocksFetcher.blocksPerSecond
+		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
 		machineSlots := make([]types.Slot, 0)
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
@@ -1295,7 +1300,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			db:    beaconDB,
 		},
 	)
-	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
 
 	// Connect peer that has all the blocks available.
 	allBlocksPeer := connectPeerHavingBlocks(t, p2p, chain, finalizedSlot, p2p.Peers())

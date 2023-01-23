@@ -21,6 +21,32 @@ const DomainByteLength = 4
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
+// List of descriptions for different kinds of signatures
+const (
+	// UnknownSignature represents all signatures other than below types
+	UnknownSignature string = "unknown signature"
+	// BlockSignature represents the block signature from block proposer
+	BlockSignature = "block signature"
+	// RandaoSignature represents randao specific signature
+	RandaoSignature = "randao signature"
+	// SelectionProof represents selection proof
+	SelectionProof = "selection proof"
+	// AggregatorSignature represents aggregator's signature
+	AggregatorSignature = "aggregator signature"
+	// AttestationSignature represents aggregated attestation signature
+	AttestationSignature = "attestation signature"
+	// BlsChangeSignature represents signature to BLSToExecutionChange
+	BlsChangeSignature = "blschange signature"
+	// SyncCommitteeSignature represents sync committee signature
+	SyncCommitteeSignature = "sync committee signature"
+	// SyncSelectionProof represents sync committee selection proof
+	SyncSelectionProof = "sync selection proof"
+	// ContributionSignature represents sync committee contributor's signature
+	ContributionSignature = "sync committee contribution signature"
+	// SyncAggregateSignature represents sync committee aggregator's signature
+	SyncAggregateSignature = "sync committee aggregator signature"
+)
+
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
 	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
@@ -37,21 +63,22 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch types.Epoch, obj f
 // ComputeSigningRoot computes the root of the object by calculating the hash tree root of the signing data with the given domain.
 //
 // Spec pseudocode definition:
-//	def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
-//    """
-//    Return the signing root for the corresponding signing data.
-//    """
-//    return hash_tree_root(SigningData(
-//        object_root=hash_tree_root(ssz_object),
-//        domain=domain,
-//    ))
+//
+//		def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
+//	   """
+//	   Return the signing root for the corresponding signing data.
+//	   """
+//	   return hash_tree_root(SigningData(
+//	       object_root=hash_tree_root(ssz_object),
+//	       domain=domain,
+//	   ))
 func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
-	return signingData(object.HashTreeRoot, domain)
+	return SigningData(object.HashTreeRoot, domain)
 }
 
 // Computes the signing data by utilising the provided root function and then
 // returning the signing data of the container object.
-func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
 	if err != nil {
 		return [32]byte{}, err
@@ -106,7 +133,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := signingData(blkHdr.HashTreeRoot, domain)
+	root, err := SigningData(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -145,14 +172,16 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	// utilize custom block hashing function
-	root, err := signingData(rootFunc, domain)
+	root, err := SigningData(rootFunc, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
+	desc := BlockSignature
 	return &bls.SignatureBatch{
-		Signatures: [][]byte{signature},
-		PublicKeys: []bls.PublicKey{publicKey},
-		Messages:   [][32]byte{root},
+		Signatures:   [][]byte{signature},
+		PublicKeys:   []bls.PublicKey{publicKey},
+		Messages:     [][32]byte{root},
+		Descriptions: []string{desc},
 	}, nil
 }
 
@@ -160,15 +189,16 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 // array as the fork version.
 //
 // def compute_domain(domain_type: DomainType, fork_version: Version=None, genesis_validators_root: Root=None) -> Domain:
-//    """
-//    Return the domain for the ``domain_type`` and ``fork_version``.
-//    """
-//    if fork_version is None:
-//        fork_version = GENESIS_FORK_VERSION
-//    if genesis_validators_root is None:
-//        genesis_validators_root = Root()  # all bytes zero by default
-//    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
-//    return Domain(domain_type + fork_data_root[:28])
+//
+//	"""
+//	Return the domain for the ``domain_type`` and ``fork_version``.
+//	"""
+//	if fork_version is None:
+//	    fork_version = GENESIS_FORK_VERSION
+//	if genesis_validators_root is None:
+//	    genesis_validators_root = Root()  # all bytes zero by default
+//	fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
+//	return Domain(domain_type + fork_data_root[:28])
 func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValidatorsRoot []byte) ([]byte, error) {
 	if forkVersion == nil {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
@@ -176,7 +206,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion, genesisValida
 	if genesisValidatorsRoot == nil {
 		genesisValidatorsRoot = params.BeaconConfig().ZeroHash[:]
 	}
-	forkBytes := [ForkVersionByteLength]byte{}
+	var forkBytes [ForkVersionByteLength]byte
 	copy(forkBytes[:], forkVersion)
 
 	forkDataRoot, err := computeForkDataRoot(forkBytes[:], genesisValidatorsRoot)
@@ -195,19 +225,20 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 	return b
 }
 
-// this returns the 32byte fork data root for the ``current_version`` and ``genesis_validators_root``.
+// this returns the 32byte fork data root for the “current_version“ and “genesis_validators_root“.
 // This is used primarily in signature domains to avoid collisions across forks/chains.
 //
 // Spec pseudocode definition:
-//	def compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root:
-//    """
-//    Return the 32-byte fork data root for the ``current_version`` and ``genesis_validators_root``.
-//    This is used primarily in signature domains to avoid collisions across forks/chains.
-//    """
-//    return hash_tree_root(ForkData(
-//        current_version=current_version,
-//        genesis_validators_root=genesis_validators_root,
-//    ))
+//
+//		def compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root:
+//	   """
+//	   Return the 32-byte fork data root for the ``current_version`` and ``genesis_validators_root``.
+//	   This is used primarily in signature domains to avoid collisions across forks/chains.
+//	   """
+//	   return hash_tree_root(ForkData(
+//	       current_version=current_version,
+//	       genesis_validators_root=genesis_validators_root,
+//	   ))
 func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
@@ -222,13 +253,14 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 // ComputeForkDigest returns the fork for the current version and genesis validators root
 //
 // Spec pseudocode definition:
-//	def compute_fork_digest(current_version: Version, genesis_validators_root: Root) -> ForkDigest:
-//    """
-//    Return the 4-byte fork digest for the ``current_version`` and ``genesis_validators_root``.
-//    This is a digest primarily used for domain separation on the p2p layer.
-//    4-bytes suffices for practical separation of forks/chains.
-//    """
-//    return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
+//
+//		def compute_fork_digest(current_version: Version, genesis_validators_root: Root) -> ForkDigest:
+//	   """
+//	   Return the 4-byte fork digest for the ``current_version`` and ``genesis_validators_root``.
+//	   This is a digest primarily used for domain separation on the p2p layer.
+//	   4-bytes suffices for practical separation of forks/chains.
+//	   """
+//	   return ForkDigest(compute_fork_data_root(current_version, genesis_validators_root)[:4])
 func ComputeForkDigest(version, genesisValidatorsRoot []byte) ([4]byte, error) {
 	dataRoot, err := computeForkDataRoot(version, genesisValidatorsRoot)
 	if err != nil {

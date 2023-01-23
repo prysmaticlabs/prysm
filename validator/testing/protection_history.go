@@ -68,7 +68,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)
 		for i := types.Epoch(1); i < latestTarget; i++ {
-			signingRoot := [32]byte{}
+			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
@@ -79,7 +79,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 			})
 		}
 		for i := types.Epoch(1); i <= latestTarget; i++ {
-			signingRoot := [32]byte{}
+			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{

@@ -36,7 +36,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)
@@ -77,7 +77,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		data := depositDataItems[i]
-		dataRoot := [32]byte{}
+		var dataRoot [32]byte
 		copy(dataRoot[:], depositDataRoots[i])
 
 		_, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, dataRoot)

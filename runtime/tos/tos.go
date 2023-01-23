@@ -37,10 +37,6 @@ var (
 
 // VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept.
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
-	if ctx.Bool(cmd.E2EConfigFlag.Name) {
-		return nil
-	}
-
 	if file.FileExists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
 		return nil
 	}

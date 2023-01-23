@@ -89,16 +89,16 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
 	// Define the following tree:
-	//                                0
-	//                               / \
+	//                                  0
+	//                                 / \
 	//  justified: 0, finalized: 0 -> 1   2 <- justified: 0, finalized: 0
-	//                              |   |
+	//                                |   |
 	//  justified: 1, finalized: 0 -> 3   4 <- justified: 0, finalized: 0
-	//                              |   |
+	//                                |   |
 	//  justified: 1, finalized: 0 -> 5   6 <- justified: 0, finalized: 0
-	//                              |   |
+	//                                |   |
 	//  justified: 1, finalized: 0 -> 7   8 <- justified: 1, finalized: 0
-	//                              |   |
+	//                                |   |
 	//  justified: 2, finalized: 0 -> 9  10 <- justified: 2, finalized: 0
 	// Left branch.
 	state, blkRoot, err := prepareForkchoiceState(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)

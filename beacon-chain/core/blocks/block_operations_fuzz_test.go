@@ -55,9 +55,9 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	var ba []byte
-	pubkey := [fieldparams.BLSPubkeyLength]byte{}
-	sig := [96]byte{}
-	domain := [4]byte{}
+	var pubkey [fieldparams.BLSPubkeyLength]byte
+	var sig [96]byte
+	var domain [4]byte
 	var p []byte
 	var s []byte
 	var d []byte

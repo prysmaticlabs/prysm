@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"

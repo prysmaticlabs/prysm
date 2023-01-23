@@ -20,16 +20,16 @@ import (
 
 // eth1DataMajorityVote determines the appropriate eth1data for a block proposal using
 // an algorithm called Voting with the Majority. The algorithm works as follows:
-//  - Determine the timestamp for the start slot for the eth1 voting period.
-//  - Determine the earliest and latest timestamps that a valid block can have.
-//  - Determine the first block not before the earliest timestamp. This block is the lower bound.
-//  - Determine the last block not after the latest timestamp. This block is the upper bound.
-//  - If the last block is too early, use current eth1data from the beacon state.
-//  - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
-//  - If no blocks are left after filtering votes, use eth1data from the latest valid block.
-//  - Otherwise:
-//    - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
-//    - This vote's block is the eth1 block to use for the block proposal.
+//   - Determine the timestamp for the start slot for the eth1 voting period.
+//   - Determine the earliest and latest timestamps that a valid block can have.
+//   - Determine the first block not before the earliest timestamp. This block is the lower bound.
+//   - Determine the last block not after the latest timestamp. This block is the upper bound.
+//   - If the last block is too early, use current eth1data from the beacon state.
+//   - Filter out votes on unknown blocks and blocks which are outside of the range determined by the lower and upper bounds.
+//   - If no blocks are left after filtering votes, use eth1data from the latest valid block.
+//   - Otherwise:
+//   - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
+//   - This vote's block is the eth1 block to use for the block proposal.
 func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.BeaconState) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
@@ -45,9 +45,18 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	}
 	eth1DataNotification = false
 
-	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
-	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
-	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
+	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	latestValidTime := votingPeriodStartTime - followDistanceSeconds
+	earliestValidTime := votingPeriodStartTime - 2*followDistanceSeconds
+
+	// Special case for starting from a pre-mined genesis: the eth1 vote should be genesis until the chain has advanced
+	// by ETH1_FOLLOW_DISTANCE. The head state should maintain the same ETH1Data until this condition has passed, so
+	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
+	if latestValidTime < genesisTime+followDistanceSeconds {
+		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Warn("voting period before genesis + follow distance, using eth1data from head")
+		return vs.HeadFetcher.HeadETH1Data(), nil
+	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {

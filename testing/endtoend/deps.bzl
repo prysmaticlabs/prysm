@@ -1,6 +1,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 
-lighthouse_version = "v3.0.0"
+lighthouse_version = "v3.1.2"
 lighthouse_archive_name = "lighthouse-%s-x86_64-unknown-linux-gnu-portable.tar.gz" % lighthouse_version
 
 def e2e_deps():
@@ -14,7 +14,7 @@ def e2e_deps():
 
     http_archive(
         name = "lighthouse",
-        sha256 = "6e0164d8f5074e083b55a161f3e6ecf1038e505334033ceaca37d6c491436d5d",
+        sha256 = "172bb132d5fdc5bd257d5a66e98d0799498f08cb60502f93a5f4437a70d9c5e0",
         build_file = "@prysm//testing/endtoend:lighthouse.BUILD",
         url = ("https://github.com/sigp/lighthouse/releases/download/%s/" + lighthouse_archive_name) % lighthouse_version,
     )

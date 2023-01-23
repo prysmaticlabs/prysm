@@ -292,4 +292,20 @@ service BeaconValidator {
       body: "*"
     };
   }
+
+  // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
+  // The beacon node might detect liveness by observing messages from the validator on the network,
+  // in the beacon chain, from its API or from any other source.
+  // A beacon node SHOULD support the current and previous epoch, however it MAY support earlier epoch.
+  // It is important to note that the values returned by the beacon node are not canonical;
+  // they are best-effort and based upon a subjective view of the network.
+  // A beacon node that was recently started or suffered a network partition may indicate that a validator is not live when it actually is.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getLiveness
+  rpc GetLiveness(v2.GetLivenessRequest) returns (v2.GetLivenessResponse) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/liveness/{epoch}"
+      body: "*"
+    };
+  }
 }

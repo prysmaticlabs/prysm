@@ -3,19 +3,19 @@ Package features defines which features are enabled for runtime
 in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:
-	1. Add a new CMD flag in flags.go, and place it in the proper list(s) var for its client.
-	2. Add a condition for the flag in the proper Configure function(s) below.
-	3. Place any "new" behavior in the `if flagEnabled` statement.
-	4. Place any "previous" behavior in the `else` statement.
-	5. Ensure any tests using the new feature fail if the flag isn't enabled.
-	5a. Use the following to enable your flag for tests:
-	cfg := &featureconfig.Flags{
-		VerifyAttestationSigs: true,
-	}
-	resetCfg := featureconfig.InitWithReset(cfg)
-	defer resetCfg()
-	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
-	and E2EBeaconChainFlags.
+ 1. Add a new CMD flag in flags.go, and place it in the proper list(s) var for its client.
+ 2. Add a condition for the flag in the proper Configure function(s) below.
+ 3. Place any "new" behavior in the `if flagEnabled` statement.
+ 4. Place any "previous" behavior in the `else` statement.
+ 5. Ensure any tests using the new feature fail if the flag isn't enabled.
+    5a. Use the following to enable your flag for tests:
+    cfg := &featureconfig.Flags{
+    VerifyAttestationSigs: true,
+    }
+    resetCfg := featureconfig.InitWithReset(cfg)
+    defer resetCfg()
+ 6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
+    and E2EBeaconChainFlags.
 */
 package features
 
@@ -47,8 +47,10 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
+	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
+	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
 
 	// Slasher toggles.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
@@ -69,6 +71,8 @@ type Flags struct {
 	EnableStartOptimistic             bool // EnableStartOptimistic treats every block as optimistic at startup.
 
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
+
+	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -251,6 +255,14 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableStartupOptimistic)
 		cfg.EnableStartOptimistic = true
 	}
+	if ctx.IsSet(enableFullSSZDataLogging.Name) {
+		logEnabled(enableFullSSZDataLogging)
+		cfg.EnableFullSSZDataLogging = true
+	}
+	if ctx.IsSet(enableVerboseSigVerification.Name) {
+		logEnabled(enableVerboseSigVerification)
+		cfg.EnableVerboseSigVerification = true
+	}
 	Init(cfg)
 	return nil
 }
@@ -284,6 +296,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
 		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
+	}
+	if ctx.Bool(EnableBeaconRESTApi.Name) {
+		logEnabled(EnableBeaconRESTApi)
+		cfg.EnableBeaconRESTApi = true
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)

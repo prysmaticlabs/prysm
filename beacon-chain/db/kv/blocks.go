@@ -328,8 +328,8 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBl
 func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
+	hasStateSummary := s.HasStateSummary(ctx, blockRoot)
 	return s.db.Update(func(tx *bolt.Tx) error {
-		hasStateSummary := s.hasStateSummaryBytes(tx, blockRoot)
 		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
 		if !(hasStateInDB || hasStateSummary) {
 			return errors.New("no state or state summary found with head block root")
@@ -789,6 +789,16 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
+	case hasCapellaKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal Capella block")
+		}
+	case hasCapellaBlindKey(enc):
+		rawBlock = &ethpb.SignedBlindedBeaconBlockCapella{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(capellaBlindKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal blinded Capella block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -828,6 +838,11 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		}
 	}
 	switch blockToSave.Version() {
+	case version.Capella:
+		if blockToSave.IsBlinded() {
+			return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
+		}
+		return snappy.Encode(nil, append(capellaKey, encodedBlock...)), nil
 	case version.Bellatrix:
 		if blockToSave.IsBlinded() {
 			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil

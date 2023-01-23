@@ -235,6 +235,25 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
 }
 
+func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerHistoricalRoot + 1,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	require.NoError(t, err)
+	_, _, err = CommitteeAssignments(context.Background(), state, 0)
+	require.ErrorContains(t, "start slot 0 is smaller than the minimum valid start slot 1", err)
+}
+
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)

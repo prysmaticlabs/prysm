@@ -14,12 +14,13 @@ import (
 // It returns an error if the requested block root is not within the slot range.
 //
 // Spec pseudocode definition:
-//  def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
-//    """
-//    Return the block root at a recent ``slot``.
-//    """
-//    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
-//    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
+//
+//	def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
+//	  """
+//	  Return the block root at a recent ``slot``.
+//	  """
+//	  assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
+//	  return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
 func BlockRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, error) {
 	if math.MaxUint64-slot < params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.New("slot overflows uint64")
@@ -42,11 +43,12 @@ func StateRootAtSlot(state state.ReadOnlyBeaconState, slot types.Slot) ([]byte, 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
 //
 // Spec pseudocode definition:
-//  def get_block_root(state: BeaconState, epoch: Epoch) -> Root:
-//    """
-//    Return the block root at the start of a recent ``epoch``.
-//    """
-//    return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
+//
+//	def get_block_root(state: BeaconState, epoch: Epoch) -> Root:
+//	  """
+//	  Return the block root at the start of a recent ``epoch``.
+//	  """
+//	  return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
 func BlockRoot(state state.ReadOnlyBeaconState, epoch types.Epoch) ([]byte, error) {
 	s, err := slots.EpochStart(epoch)
 	if err != nil {

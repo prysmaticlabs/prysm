@@ -18,6 +18,7 @@ package ethereum.eth.v1alpha1;
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
+import "proto/prysm/v1alpha1/blobs.proto";
 import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
@@ -434,6 +435,15 @@ message BlindedBeaconBlockBodyBellatrix {
 
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
     ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
+}
+
+// This contains beacon block and the blob sidecar objects under single container.
+// It is to be gossip'ed over p2p to peers to validate and process.
+message SignedBeaconBlockAndBlobsSidecar {
+    // The block of the beacon chain.
+    SignedBeaconBlockCapella beacon_block = 1;
+    // The blob sidecar which corresponds to the block itself.
+    BlobsSidecar blobs_sidecar = 2;
 }
 
 message SignedBeaconBlockCapella {

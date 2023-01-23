@@ -4,8 +4,10 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/checkpointsync"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/db"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/deprecated"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/signing"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/testnet"
 	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/weaksubjectivity"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +32,9 @@ func init() {
 	prysmctlCommands = append(prysmctlCommands, deprecated.Commands...)
 
 	prysmctlCommands = append(prysmctlCommands, checkpointsync.Commands...)
+	prysmctlCommands = append(prysmctlCommands, db.Commands...)
 	prysmctlCommands = append(prysmctlCommands, p2p.Commands...)
 	prysmctlCommands = append(prysmctlCommands, testnet.Commands...)
 	prysmctlCommands = append(prysmctlCommands, weaksubjectivity.Commands...)
+	prysmctlCommands = append(prysmctlCommands, signing.Commands...)
 }

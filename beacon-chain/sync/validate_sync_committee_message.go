@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -243,9 +243,10 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 		// the signature to a G2 point if batch verification is
 		// enabled.
 		set := &bls.SignatureBatch{
-			Messages:   [][32]byte{sigRoot},
-			PublicKeys: []bls.PublicKey{pKey},
-			Signatures: [][]byte{m.Signature},
+			Messages:     [][32]byte{sigRoot},
+			PublicKeys:   []bls.PublicKey{pKey},
+			Signatures:   [][]byte{m.Signature},
+			Descriptions: []string{signing.SyncCommitteeSignature},
 		}
 		return s.validateWithBatchVerifier(ctx, "sync committee message", set)
 	}

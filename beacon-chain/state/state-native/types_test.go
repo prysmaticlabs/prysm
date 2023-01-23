@@ -26,7 +26,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
-	custom := customState.CloneInnerState()
+	custom := customState.ToProto()
 	assert.DeepSSZEqual(t, cloned, custom)
 
 	r1, err := customState.HashTreeRoot(ctx)
@@ -55,8 +55,8 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, count)
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
-		someRoot := [32]byte{}
-		someKey := [fieldparams.BLSPubkeyLength]byte{}
+		var someRoot [32]byte
+		var someKey [fieldparams.BLSPubkeyLength]byte
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &ethpb.Validator{
@@ -141,7 +141,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = st.CloneInnerState()
+		_ = st.ToProto()
 	}
 }
 
@@ -225,7 +225,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	}
 	require.NoError(t, a.SetFork(wantedFork))
 
-	pbState, err := statenative.ProtobufBeaconStatePhase0(a.InnerStateUnsafe())
+	pbState, err := statenative.ProtobufBeaconStatePhase0(a.ToProtoUnsafe())
 	require.NoError(t, err)
 	require.DeepEqual(t, pbState.Fork, wantedFork)
 }

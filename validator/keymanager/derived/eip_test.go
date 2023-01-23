@@ -16,13 +16,14 @@ import (
 func TestDerivationFromMnemonic(t *testing.T) {
 	mnemonic := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 	passphrase := "TREZOR"
+	lang := "english"
 	seed := "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04"
 	masterSK := "6083874454709270928345386274498605044986640685124978867557563392430687146096"
 	childIndex := 0
 	childSK := "20397789859736650942317412262472558107875392172444076792671091975210932703118"
 	seedBytes, err := hex.DecodeString(seed)
 	require.NoError(t, err)
-	derivedSeed, err := seedFromMnemonic(mnemonic, passphrase)
+	derivedSeed, err := seedFromMnemonic(mnemonic, lang, passphrase)
 	require.NoError(t, err)
 	assert.DeepEqual(t, seedBytes, derivedSeed)
 

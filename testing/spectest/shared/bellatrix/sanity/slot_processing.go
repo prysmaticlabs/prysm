@@ -25,7 +25,9 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "sanity/slots/pyspec_tests")
-
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "bellatrix", "sanity/slots/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			preBeaconStateFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
@@ -52,7 +54,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(slotsCount))
 			require.NoError(t, err)
 
-			pbState, err := state_native.ProtobufBeaconStateBellatrix(postState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(postState.ToProto())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)

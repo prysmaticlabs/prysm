@@ -36,6 +36,14 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testi
 	})
 }
 
+func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Capella(t *testing.T) {
+	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
+		return statenative.InitializeFromProtoUnsafeCapella(&ethpb.BeaconStateCapella{
+			Validators: nil,
+		})
+	})
+}
+
 func TestValidatorIndexOutOfRangeError(t *testing.T) {
 	err := statenative.NewValidatorIndexOutOfRangeError(1)
 	require.Equal(t, err.Error(), "index 1 out of range")

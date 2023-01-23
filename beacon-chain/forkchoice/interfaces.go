@@ -69,7 +69,9 @@ type Getter interface {
 	HighestReceivedBlockSlot() types.Slot
 	HighestReceivedBlockRoot() [32]byte
 	ReceivedBlocksLastEpoch() (uint64, error)
-	ForkChoiceDump(context.Context) (*v1.ForkChoiceResponse, error)
+	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
+	Weight(root [32]byte) (uint64, error)
+	VotedFraction(root [32]byte) (uint64, error)
 }
 
 // Setter allows to set forkchoice information

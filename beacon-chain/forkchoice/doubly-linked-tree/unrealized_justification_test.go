@@ -53,17 +53,18 @@ func TestStore_UpdateUnrealizedCheckpoints(t *testing.T) {
 
 }
 
+// Epoch 2    |   Epoch 3
 //
-//  Epoch 2    |   Epoch 3
-//             |
-//           C |
-//         /   |
-//  A <-- B    |
-//         \   |
-//           ---- D
+//	    |
+//	  C |
+//	/   |
 //
-//  B is the first block that justifies A.
+// A <-- B    |
 //
+//	\   |
+//	  ---- D
+//
+// B is the first block that justifies A.
 func TestStore_LongFork(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
@@ -104,18 +105,17 @@ func TestStore_LongFork(t *testing.T) {
 	require.Equal(t, [32]byte{'c'}, headRoot)
 }
 
+//	Epoch 1                Epoch 2               Epoch 3
+//	                |                      |
+//	                |                      |
 //
+// A <-- B <-- C <-- D <-- E <-- F <-- G <-- H |
 //
-//        Epoch 1                Epoch 2               Epoch 3
-//                        |                      |
-//                        |                      |
-//   A <-- B <-- C <-- D <-- E <-- F <-- G <-- H |
-//                        |        \             |
-//                        |         --------------- I
-//                        |                      |
+//	|        \             |
+//	|         --------------- I
+//	|                      |
 //
-//   E justifies A. G justifies E.
-//
+// E justifies A. G justifies E.
 func TestStore_NoDeadLock(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
@@ -187,17 +187,16 @@ func TestStore_NoDeadLock(t *testing.T) {
 	require.Equal(t, types.Epoch(1), f.FinalizedCheckpoint().Epoch)
 }
 
-//    Epoch  1       |         Epoch 2
-//                   |
-//              -- D (late)
-//             /     |
-//  A <- B <- C      |
-//             \     |
-//              -- -- -- E <- F <- G <- H
-//                   |
+//	  Epoch  1       |         Epoch 2
+//	                 |
+//	            -- D (late)
+//	           /     |
+//	A <- B <- C      |
+//	           \     |
+//	            -- -- -- E <- F <- G <- H
+//	                 |
 //
 // D justifies and comes late.
-//
 func TestStore_ForkNextEpoch(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnableDefensivePull: true,

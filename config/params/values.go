@@ -9,6 +9,7 @@ const (
 	MainnetTestName     = "mainnet-test"
 	MinimalName         = "minimal"
 	PraterName          = "prater"
+	GoerliName          = "goerli"
 	RopstenName         = "ropsten"
 	SepoliaName         = "sepolia"
 )

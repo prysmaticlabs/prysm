@@ -31,6 +31,9 @@ func RunFinalityTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "finality/finality/pyspec_tests")
+	if len(testFolders) == 0 {
+		t.Fatalf("No test folders found for %s/%s/%s", config, "altair", "finality/finality/pyspec_tests")
+	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
@@ -73,7 +76,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.ToProtoUnsafe())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

@@ -33,6 +33,8 @@ const (
 	ChainReorgTopic = "chain_reorg"
 	// SyncCommitteeContributionTopic represents a new sync committee contribution event topic.
 	SyncCommitteeContributionTopic = "contribution_and_proof"
+	// BLSToExecutionChangeTopic represents a new received BLS to execution change event topic.
+	BLSToExecutionChangeTopic = "bls_to_execution_change"
 )
 
 var casesHandled = map[string]bool{
@@ -43,6 +45,7 @@ var casesHandled = map[string]bool{
 	FinalizedCheckpointTopic:       true,
 	ChainReorgTopic:                true,
 	SyncCommitteeContributionTopic: true,
+	BLSToExecutionChangeTopic:      true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -119,7 +122,7 @@ func handleBlockEvents(
 		if err != nil {
 			return err
 		}
-		item, err := v1Data.HashTreeRoot()
+		item, err := v1Data.Message.HashTreeRoot()
 		if err != nil {
 			return errors.Wrap(err, "could not hash tree root block")
 		}
@@ -178,6 +181,16 @@ func handleBlockOperationEvents(
 		}
 		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
 		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
+	case operation.BLSToExecutionChangeReceived:
+		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
+			return nil
+		}
+		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
+		if !ok {
+			return nil
+		}
+		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
+		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
 	default:
 		return nil
 	}

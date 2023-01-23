@@ -249,7 +249,7 @@ type VoluntaryExit struct {
 
 // BeaconBlockAltairBlockV2 a sub property of BlockAltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
-	Version string             `json:"version"`
+	Version string             `json:"version" enum:"true"`
 	Block   *BeaconBlockAltair `json:"block"`
 }
 
@@ -277,7 +277,7 @@ type BeaconBlockBodyAltair struct {
 
 // BeaconBlockBellatrixBlockV2 a field of BlockBellatrixSignRequest.
 type BeaconBlockBellatrixBlockV2 struct {
-	Version     string             `json:"version"`
+	Version     string             `json:"version" enum:"true"`
 	BlockHeader *BeaconBlockHeader `json:"block_header"`
 }
 
@@ -289,7 +289,7 @@ type SyncAggregate struct {
 
 // BeaconBlockBlockV2 a sub property of BlockV2SignRequest.
 type BeaconBlockBlockV2 struct {
-	Version string       `json:"version"`
+	Version string       `json:"version" enum:"true"`
 	Block   *BeaconBlock `json:"beacon_block"`
 }
 

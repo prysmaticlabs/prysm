@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -72,6 +73,7 @@ type Server struct {
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
+	BLSChangesPool         blstoexec.PoolManager
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

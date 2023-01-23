@@ -130,6 +130,7 @@ var appFlags = []cli.Flag{
 	checkpoint.RemoteURL,
 	genesis.StatePath,
 	genesis.BeaconAPIURL,
+	flags.SlasherDirFlag,
 }
 
 func init() {
@@ -140,7 +141,12 @@ func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum"
-	app.Action = startNode
+	app.Action = func(ctx *cli.Context) error {
+		if err := startNode(ctx); err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		return nil
+	}
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		dbcommands.Commands,

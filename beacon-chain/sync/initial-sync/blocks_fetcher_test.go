@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
-	libp2pcore "github.com/libp2p/go-libp2p-core"
-	"github.com/libp2p/go-libp2p-core/network"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	p2pm "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -547,7 +547,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
-	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), false)
+	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 1*time.Second, false)
 	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
@@ -588,6 +588,42 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	}
 	// Make sure that p2 has been rate limited.
 	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" peer=%s", p2.PeerID()))
+}
+
+func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
+	p1 := p2pt.NewTestP2P(t)
+	p2 := p2pt.NewTestP2P(t)
+	p1.Connect(p2)
+	require.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
+	req := &ethpb.BeaconBlocksByRangeRequest{
+		StartSlot: 100,
+		Step:      1,
+		Count:     64,
+	}
+
+	topic := p2pm.RPCBlocksByRangeTopicV1
+	protocol := libp2pcore.ProtocolID(topic + p2.Encoding().ProtocolSuffix())
+	streamHandlerFn := func(stream network.Stream) {
+		assert.NoError(t, stream.Close())
+	}
+	p2.BHost.SetStreamHandler(protocol, streamHandlerFn)
+
+	burstFactor := uint64(flags.Get().BlockBatchLimitBurstFactor)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1})
+	fetcher.rateLimiter = leakybucket.NewCollector(float64(req.Count), int64(req.Count*burstFactor), 5*time.Second, false)
+	fetcher.chain = &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	start := time.Now()
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10))
+	dur := time.Since(start)
+	assert.Equal(t, true, dur < time.Millisecond, "waited excessively for bandwidth")
+	fetcher.rateLimiter.Add(p2.PeerID().String(), int64(req.Count*burstFactor))
+	start = time.Now()
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), req.Count))
+	dur = time.Since(start)
+	assert.Equal(t, float64(5), dur.Truncate(1*time.Second).Seconds(), "waited excessively for bandwidth")
 }
 
 func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T) {
@@ -842,7 +878,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{p2p: p1, chain: &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}})
-	fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 640, false)
+	fetcher.rateLimiter = leakybucket.NewCollector(0.000001, 640, 1*time.Second, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -856,6 +892,49 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			} else {
 				assert.NoError(t, err)
 				tt.validate(tt.req, blocks)
+			}
+		})
+	}
+}
+
+func TestTimeToWait(t *testing.T) {
+	tests := []struct {
+		name          string
+		wanted        int64
+		rem           int64
+		capacity      int64
+		timeTillEmpty time.Duration
+		want          time.Duration
+	}{
+		{
+			name:          "Limiter has sufficient blocks",
+			wanted:        64,
+			rem:           64,
+			capacity:      320,
+			timeTillEmpty: 200 * time.Second,
+			want:          0 * time.Second,
+		},
+		{
+			name:          "Limiter has reached full capacity",
+			wanted:        64,
+			rem:           0,
+			capacity:      640,
+			timeTillEmpty: 60 * time.Second,
+			want:          6 * time.Second,
+		},
+		{
+			name:          "Requesting full capacity from peer",
+			wanted:        640,
+			rem:           0,
+			capacity:      640,
+			timeTillEmpty: 60 * time.Second,
+			want:          60 * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := timeToWait(tt.wanted, tt.rem, tt.capacity, tt.timeTillEmpty); got != tt.want {
+				t.Errorf("timeToWait() = %v, want %v", got, tt.want)
 			}
 		})
 	}

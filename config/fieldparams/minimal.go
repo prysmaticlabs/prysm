@@ -25,4 +25,5 @@ const (
 	SlotsPerEpoch                         = 8             // SlotsPerEpoch defines the number of slots per epoch.
 	SyncCommitteeAggregationBytesLength   = 1             // SyncCommitteeAggregationBytesLength defines the sync committee aggregate bytes.
 	SyncAggregateSyncCommitteeBytesLength = 4             // SyncAggregateSyncCommitteeBytesLength defines the length of sync committee bytes in a sync aggregate.
+	MaxWithdrawalsPerPayload              = 4             // MaxWithdrawalsPerPayloadLength defines the maximum number of withdrawals that can be included in a payload.
 )

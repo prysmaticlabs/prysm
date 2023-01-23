@@ -85,8 +85,11 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context, _ chan [][fieldparams.BLSPubkeyLength]byte) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [][fieldparams.BLSPubkeyLength]byte) error {
 	fv.WaitForActivationCalled++
+	if accountChan == nil {
+		return nil
+	}
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
 		return iface.ErrConnectionIssue
 	}

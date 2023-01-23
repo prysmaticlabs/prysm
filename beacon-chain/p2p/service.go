@@ -11,13 +11,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -29,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	prysmnetwork "github.com/prysmaticlabs/prysm/v3/network"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
@@ -123,7 +123,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		log.WithError(err).Error("Failed to create address filter")
 		return nil, err
 	}
-	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, true /* deleteEmptyBuckets */)
+	s.ipLimiter = leakybucket.NewCollector(ipLimit, ipBurst, 30*time.Second, true /* deleteEmptyBuckets */)
 
 	opts := s.buildOptions(ipAddr, s.privKey)
 	h, err := libp2p.New(opts...)
