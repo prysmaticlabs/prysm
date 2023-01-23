@@ -778,12 +778,12 @@ func prepareBlobsResponse(body []byte, responseContainer interface{}) (apimiddle
 	if err := json.Unmarshal(body, tempContainer); err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
 	}
-	container, ok := responseContainer.(*blobsSidecarResponseJson)
+	container, ok := responseContainer.(*BlobsSidecarResponseJson)
 	if !ok {
 		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
 	}
 
-	container.Data = &blobsSidecarJson{
+	container.Data = &BlobsSidecarJson{
 		BeaconBlockRoot: tempContainer.BeaconBlockRoot,
 		BeaconBlockSlot: tempContainer.BeaconBlockSlot,
 		Blobs:           make([]string, len(tempContainer.Blobs)),

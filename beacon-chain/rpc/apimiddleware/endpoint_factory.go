@@ -138,7 +138,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
 	case " eth/v1/beacon/blobs_sidecars/{block_id}":
-		endpoint.GetResponse = &blobsSidecarResponseJson{}
+		endpoint.GetResponse = &BlobsSidecarResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBlobsSidecarSSZ}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareBlobsResponse,

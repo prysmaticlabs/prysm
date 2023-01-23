@@ -1305,13 +1305,13 @@ type EventErrorJson struct {
 	Message    string `json:"message"`
 }
 
-type blobsSidecarJson struct {
+type BlobsSidecarJson struct {
 	BeaconBlockRoot string   `json:"beacon_block_root" hex:"true"`
 	BeaconBlockSlot string   `json:"beacon_block_slot"`
 	Blobs           []string `json:"blobs" hex:"true"`
 	AggregatedProof string   `json:"kzg_aggregated_proof" hex:"true"`
 }
 
-type blobsSidecarResponseJson struct {
-	Data *blobsSidecarJson `json:"data"`
+type BlobsSidecarResponseJson struct {
+	Data *BlobsSidecarJson `json:"data"`
 }
