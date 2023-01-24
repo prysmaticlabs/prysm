@@ -1,6 +1,7 @@
 package builder
 
 import (
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -20,6 +21,8 @@ type Bid interface {
 	Pubkey() []byte
 	Version() int
 	IsNil() bool
+	HashTreeRoot() ([32]byte, error)
+	HashTreeRootWith(hh *ssz.Hasher) error
 }
 
 type signedBuilderBid struct {
@@ -126,6 +129,16 @@ func (b builderBid) IsNil() bool {
 	return b.p == nil
 }
 
+// HashTreeRoot --
+func (b builderBid) HashTreeRoot() ([32]byte, error) {
+	return b.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (b builderBid) HashTreeRootWith(hh *ssz.Hasher) error {
+	return b.p.HashTreeRootWith(hh)
+}
+
 type builderBidCapella struct {
 	p *ethpb.BuilderBidCapella
 }
@@ -162,4 +175,14 @@ func (b builderBidCapella) Pubkey() []byte {
 // IsNil --
 func (b builderBidCapella) IsNil() bool {
 	return b.p == nil
+}
+
+// HashTreeRoot --
+func (b builderBidCapella) HashTreeRoot() ([32]byte, error) {
+	return b.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (b builderBidCapella) HashTreeRootWith(hh *ssz.Hasher) error {
+	return b.p.HashTreeRootWith(hh)
 }

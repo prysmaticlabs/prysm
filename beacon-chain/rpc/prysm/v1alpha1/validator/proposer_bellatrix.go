@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -98,7 +99,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Message().Value())
 	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
@@ -108,20 +109,28 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, err
 	}
 
-	if bytesutil.ToBytes32(bid.Message.Header.TransactionsRoot) == emptyRoot {
+	header, err := bid.Message().Header()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get bid header")
+	}
+	txRoot, err := header.TransactionsRoot()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get transaction root")
+	}
+	if bytesutil.ToBytes32(txRoot) == emptyRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
-	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
 		return nil, err
 	}
-	if bid.Message.Header.Timestamp != uint64(t.Unix()) {
-		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
+	if header.Timestamp() != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
 	if err := validateBuilderSignature(bid); err != nil {
@@ -130,10 +139,10 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 
 	log.WithFields(logrus.Fields{
 		"value":         v.String(),
-		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
-		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Message().Pubkey()),
+		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
 	}).Info("Received header with bid")
-	return consensusblocks.WrappedExecutionPayloadHeader(bid.Message.Header)
+	return header, nil
 }
 
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
@@ -248,15 +257,15 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(bid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
-	if bid == nil || bid.Message == nil {
+	if bid == nil || bid.Message() == nil {
 		return errors.New("nil builder bid")
 	}
-	return signing.VerifySigningRoot(bid.Message, bid.Message.Pubkey, bid.Signature, d)
+	return signing.VerifySigningRoot(bid.Message(), bid.Message().Pubkey(), bid.Signature(), d)
 }
