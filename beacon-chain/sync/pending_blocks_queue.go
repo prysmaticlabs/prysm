@@ -214,10 +214,15 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			pb, err := b.Proto()
-			if err != nil {
-				log.WithError(err).Debug("Could not get protobuf block")
+			if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch {
+				if err := s.broadcastBlockAndBlobsSidecar(ctx, b, blobs[i]); err != nil {
+					log.WithError(err).Debug("Could not broadcast block and blobs sidecar")
+				}
 			} else {
+				pb, err := b.Proto()
+				if err != nil {
+					log.WithError(err).Debug("Could not get protobuf block")
+				}
 				if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
 					log.WithError(err).Debug("Could not broadcast block")
 				}
@@ -240,6 +245,18 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	}
 
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
+}
+
+func (s *Service) broadcastBlockAndBlobsSidecar(ctx context.Context, b interfaces.SignedBeaconBlock, blobs *ethpb.BlobsSidecar) error {
+	blkPb, err := b.PbDenebBlock()
+	if err != nil {
+		return err
+	}
+	pb := &ethpb.SignedBeaconBlockAndBlobsSidecar{
+		BeaconBlock:  blkPb,
+		BlobsSidecar: blobs,
+	}
+	return s.cfg.p2p.Broadcast(ctx, pb)
 }
 
 func (s *Service) checkIfBlockIsBad(
