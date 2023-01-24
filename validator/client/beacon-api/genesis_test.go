@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -16,16 +17,19 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.GenesisResponseJson{
 			Data: &rpcmiddleware.GenesisResponse_GenesisJson{
 				GenesisTime:           "1234",
@@ -35,7 +39,7 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	resp, httpError, err := genesisProvider.GetGenesis()
+	resp, httpError, err := genesisProvider.GetGenesis(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	require.NotNil(t, resp)
@@ -47,21 +51,24 @@ func TestGetGenesis_NilData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.GenesisResponseJson{Data: nil},
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	_, httpError, err := genesisProvider.GetGenesis()
+	_, httpError, err := genesisProvider.GetGenesis(ctx)
 	assert.Equal(t, (*apimiddleware.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "genesis data is nil", err)
 }
@@ -69,6 +76,8 @@ func TestGetGenesis_NilData(t *testing.T) {
 func TestGetGenesis_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	ctx := context.Background()
 
 	expectedHttpErrorJson := &apimiddleware.DefaultErrorJson{
 		Message: "http error message",
@@ -78,6 +87,7 @@ func TestGetGenesis_JsonResponseError(t *testing.T) {
 	genesisResponseJson := rpcmiddleware.GenesisResponseJson{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
@@ -86,7 +96,7 @@ func TestGetGenesis_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	_, httpError, err := genesisProvider.GetGenesis()
+	_, httpError, err := genesisProvider.GetGenesis(ctx)
 	assert.ErrorContains(t, "failed to get json response", err)
 	assert.ErrorContains(t, "some specific json response error", err)
 	assert.DeepEqual(t, expectedHttpErrorJson, httpError)

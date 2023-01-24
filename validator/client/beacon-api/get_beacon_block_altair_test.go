@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -28,12 +29,15 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 	randaoReveal := []byte{2}
 	graffiti := []byte{3}
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v2/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&abstractProduceBlockResponseJson{},
 	).SetArg(
-		1,
+		2,
 		abstractProduceBlockResponseJson{
 			Version: "altair",
 			Data:    altairBeaconBlockBytes,
@@ -46,7 +50,7 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 	expectedBeaconBlock := generateProtoAltairBlock(altairProtoBeaconBlock)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
 }
@@ -112,12 +116,15 @@ func TestGetBeaconBlock_AltairError(t *testing.T) {
 			dataBytes, err := json.Marshal(testCase.generateData())
 			require.NoError(t, err)
 
+			ctx := context.Background()
+
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
 				gomock.Any(),
 				&abstractProduceBlockResponseJson{},
 			).SetArg(
-				1,
+				2,
 				abstractProduceBlockResponseJson{
 					Version: "altair",
 					Data:    dataBytes,
@@ -128,7 +135,7 @@ func TestGetBeaconBlock_AltairError(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err = validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+			_, err = validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 			assert.ErrorContains(t, "failed to get altair block", err)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})

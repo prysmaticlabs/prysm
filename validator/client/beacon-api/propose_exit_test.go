@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -34,8 +35,11 @@ func TestProposeExit_Valid(t *testing.T) {
 	marshalledVoluntaryExit, err := json.Marshal(jsonSignedVoluntaryExit)
 	require.NoError(t, err)
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		proposeExitTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledVoluntaryExit),
@@ -60,20 +64,20 @@ func TestProposeExit_Valid(t *testing.T) {
 	require.NoError(t, err)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	exitResponse, err := validatorClient.proposeExit(protoSignedVoluntaryExit)
+	exitResponse, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedExitRoot[:], exitResponse.ExitRoot)
 }
 
 func TestProposeExit_NilSignedVoluntaryExit(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{}
-	_, err := validatorClient.proposeExit(nil)
+	_, err := validatorClient.proposeExit(context.Background(), nil)
 	assert.ErrorContains(t, "signed voluntary exit is nil", err)
 }
 
 func TestProposeExit_NilExit(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{}
-	_, err := validatorClient.proposeExit(&ethpb.SignedVoluntaryExit{})
+	_, err := validatorClient.proposeExit(context.Background(), &ethpb.SignedVoluntaryExit{})
 	assert.ErrorContains(t, "exit is nil", err)
 }
 
@@ -81,8 +85,11 @@ func TestProposeExit_BadRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		proposeExitTestEndpoint,
 		nil,
 		gomock.Any(),
@@ -101,7 +108,7 @@ func TestProposeExit_BadRequest(t *testing.T) {
 	}
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.proposeExit(protoSignedVoluntaryExit)
+	_, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }

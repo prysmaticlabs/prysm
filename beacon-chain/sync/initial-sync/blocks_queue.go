@@ -179,7 +179,7 @@ func (q *blocksQueue) loop() {
 	if startSlot > startBackSlots {
 		startSlot -= startBackSlots
 	}
-	blocksPerRequest := q.blocksFetcher.blocksPerSecond
+	blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 	for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
 		q.smm.addStateMachine(i)
 	}
@@ -294,7 +294,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 			m.setState(stateSkipped)
 			return m.state, errSlotIsTooHigh
 		}
-		blocksPerRequest := q.blocksFetcher.blocksPerSecond
+		blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, blocksPerRequest); err != nil {
 			return m.state, err
 		}

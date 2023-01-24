@@ -28,6 +28,12 @@ func (s *Service) forkWatcher() {
 				log.WithError(err).Error("Unable to check for fork in the previous epoch")
 				continue
 			}
+			// Broadcast BLS changes at the Capella fork boundary
+			if err := s.broadcastBLSChanges(currSlot); err != nil {
+				log.WithError(err).Error("Unable to broadcast BLS to execution changes")
+				continue
+			}
+
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			slotTicker.Done()

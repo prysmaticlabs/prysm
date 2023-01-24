@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -26,6 +27,8 @@ func TestGetRestJsonResponse_Valid(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc(endpoint, func(w http.ResponseWriter, r *http.Request) {
 		// Make sure the url parameters match
@@ -47,7 +50,7 @@ func TestGetRestJsonResponse_Valid(t *testing.T) {
 	}
 
 	responseJson := &rpcmiddleware.GenesisResponseJson{}
-	_, err := jsonRestHandler.GetRestJsonResponse(endpoint+"?arg1=abc&arg2=def", responseJson)
+	_, err := jsonRestHandler.GetRestJsonResponse(ctx, endpoint+"?arg1=abc&arg2=def", responseJson)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, genesisJson, responseJson)
 }
@@ -144,11 +147,13 @@ func TestGetRestJsonResponse_Error(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
+			ctx := context.Background()
+
 			jsonRestHandler := beaconApiJsonRestHandler{
 				httpClient: http.Client{Timeout: testCase.timeout},
 				host:       server.URL,
 			}
-			errorJson, err := jsonRestHandler.GetRestJsonResponse(endpoint, testCase.responseJson)
+			errorJson, err := jsonRestHandler.GetRestJsonResponse(ctx, endpoint, testCase.responseJson)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 			assert.DeepEqual(t, testCase.expectedErrorJson, errorJson)
 		})
@@ -218,12 +223,15 @@ func TestPostRestJson_Valid(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
+			ctx := context.Background()
+
 			jsonRestHandler := beaconApiJsonRestHandler{
 				httpClient: http.Client{Timeout: time.Second * 5},
 				host:       server.URL,
 			}
 
 			_, err := jsonRestHandler.PostRestJson(
+				ctx,
 				endpoint,
 				testCase.headers,
 				testCase.data,
@@ -334,12 +342,15 @@ func TestPostRestJson_Error(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
+			ctx := context.Background()
+
 			jsonRestHandler := beaconApiJsonRestHandler{
 				httpClient: http.Client{Timeout: testCase.timeout},
 				host:       server.URL,
 			}
 
 			errorJson, err := jsonRestHandler.PostRestJson(
+				ctx,
 				endpoint,
 				map[string]string{},
 				testCase.data,
@@ -350,6 +361,43 @@ func TestPostRestJson_Error(t *testing.T) {
 			assert.DeepEqual(t, testCase.expectedErrorJson, errorJson)
 		})
 	}
+}
+
+func TestJsonHandler_ContextError(t *testing.T) {
+	const endpoint = "/example/rest/api/endpoint"
+	mux := http.NewServeMux()
+	mux.HandleFunc(endpoint, func(writer http.ResponseWriter, request *http.Request) {})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	// Instantiate a cancellable context.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Cancel the context which results in "context canceled" error.
+	cancel()
+
+	jsonRestHandler := beaconApiJsonRestHandler{
+		httpClient: http.Client{},
+		host:       server.URL,
+	}
+
+	_, err := jsonRestHandler.PostRestJson(
+		ctx,
+		endpoint,
+		map[string]string{},
+		&bytes.Buffer{},
+		nil,
+	)
+
+	assert.ErrorContains(t, context.Canceled.Error(), err)
+
+	_, err = jsonRestHandler.GetRestJsonResponse(
+		ctx,
+		endpoint,
+		&rpcmiddleware.GenesisResponseJson{},
+	)
+
+	assert.ErrorContains(t, context.Canceled.Error(), err)
 }
 
 func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {

@@ -2,12 +2,14 @@ package kv
 
 import (
 	"context"
+	"encoding/hex"
 	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -48,6 +50,37 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	require.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
 }
 
+func TestLoadCapellaFromFile(t *testing.T) {
+	cfg, err := params.ByName(params.MainnetName)
+	require.NoError(t, err)
+	// This state fixture is from a hive testnet, `0a` is the suffix they are using in their fork versions.
+	suffix, err := hex.DecodeString("0a")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(suffix))
+	reversioned := cfg.Copy()
+	params.FillTestVersions(reversioned, suffix[0])
+	reversioned.CapellaForkEpoch = 0
+	require.Equal(t, [4]byte{3, 0, 0, 10}, bytesutil.ToBytes4(reversioned.CapellaForkVersion))
+	reversioned.ConfigName = "capella-genesis-test"
+	undo, err := params.SetActiveWithUndo(reversioned)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+
+	fp := "testdata/capella_genesis.ssz"
+	rfp, err := bazel.Runfile(fp)
+	if err == nil {
+		fp = rfp
+	}
+	sb, err := os.ReadFile(fp)
+	require.NoError(t, err)
+
+	db := setupDB(t)
+	require.NoError(t, db.LoadGenesis(context.Background(), sb))
+	testGenesisDataSaved(t, db)
+}
+
 func TestLoadGenesisFromFile(t *testing.T) {
 	// for this test to work, we need the active config to have these properties:
 	// - fork version schedule that matches mainnnet.genesis.ssz
@@ -57,7 +90,7 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	// uses the mainnet fork schedule. construct the differently named mainnet config and set it active.
 	// finally, revert all this at the end of the test.
 
-	// first get the real mainnet out of the way by overwriting it schedule.
+	// first get the real mainnet out of the way by overwriting its schedule.
 	cfg, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
 	cfg = cfg.Copy()

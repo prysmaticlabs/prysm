@@ -22,7 +22,7 @@ func (q *blocksQueue) resetFromFork(fork *forkData) error {
 		return errors.New("invalid first block in fork data")
 	}
 
-	blocksPerRequest := q.blocksFetcher.blocksPerSecond
+	blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (q *blocksQueue) resetFromFork(fork *forkData) error {
 // long periods with skipped slots).
 func (q *blocksQueue) resetFromSlot(ctx context.Context, startSlot types.Slot) error {
 	// Shift start position of all the machines except for the last one.
-	blocksPerRequest := q.blocksFetcher.blocksPerSecond
+	blocksPerRequest := q.blocksFetcher.blocksPerPeriod
 	if err := q.smm.removeAllStateMachines(); err != nil {
 		return err
 	}

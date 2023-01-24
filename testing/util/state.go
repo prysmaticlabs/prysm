@@ -260,7 +260,7 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 			CurrentVersion:  make([]byte, 4),
 		},
 		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
-		HistoricalRoots:             make([][]byte, 0),
+		HistoricalSummaries:         make([]*ethpb.HistoricalSummary, 0),
 		JustificationBits:           bitfield.Bitvector4{0x0},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),

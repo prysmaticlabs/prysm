@@ -757,3 +757,24 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestWeight(t *testing.T) {
+	ctx := context.Background()
+	f := setup(0, 0)
+
+	root := [32]byte{'a'}
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, root, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
+
+	n, ok := f.store.nodeByRoot[root]
+	require.Equal(t, true, ok)
+	n.weight = 10
+	w, err := f.Weight(root)
+	require.NoError(t, err)
+	require.Equal(t, uint64(10), w)
+
+	w, err = f.Weight([32]byte{'b'})
+	require.ErrorIs(t, err, ErrNilNode)
+	require.Equal(t, uint64(0), w)
+}

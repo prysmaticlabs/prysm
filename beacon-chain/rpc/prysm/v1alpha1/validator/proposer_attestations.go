@@ -85,10 +85,9 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	invalidAtts := make([]*ethpb.Attestation, 0, len(a))
 	var attestationProcessor func(context.Context, state.BeaconState, *ethpb.Attestation) (state.BeaconState, error)
 
-	switch st.Version() {
-	case version.Phase0:
+	if st.Version() == version.Phase0 {
 		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
-	case version.Altair, version.Bellatrix:
+	} else if st.Version() >= version.Altair {
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)
@@ -97,10 +96,11 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 			}
 			return altair.ProcessAttestationNoVerifySignature(ctx, st, attestation, totalBalance)
 		}
-	default:
+	} else {
 		// Exit early if there is an unknown state type.
 		return validAtts, invalidAtts
 	}
+
 	for _, att := range a {
 		if _, err := attestationProcessor(ctx, st, att); err == nil {
 			validAtts = append(validAtts, att)

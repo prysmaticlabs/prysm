@@ -11,6 +11,7 @@ go_library(
     visibility = [
         "//beacon-chain/core/blocks:__subpackages__",
         "//beacon-chain/operations/blstoexec:__pkg__",
+        "//beacon-chain/rpc/eth/beacon:__subpackages__",
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",
     ],

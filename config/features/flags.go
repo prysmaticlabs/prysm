@@ -174,6 +174,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
+	disableStakinContractCheck,
 	disablePullTips,
 	disableVecHTR,
 	disableForkChoiceDoublyLinkedTree,
