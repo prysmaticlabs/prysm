@@ -50,3 +50,48 @@ func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(ctx, epoch, validato
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttesterDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetAttesterDuties), ctx, epoch, validatorIndices)
 }
+
+// GetCommittees mocks base method.
+func (m *MockdutiesProvider) GetCommittees(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCommittees", ctx, epoch)
+	ret0, _ := ret[0].([]*apimiddleware.CommitteeJson)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommittees indicates an expected call of GetCommittees.
+func (mr *MockdutiesProviderMockRecorder) GetCommittees(ctx, epoch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittees", reflect.TypeOf((*MockdutiesProvider)(nil).GetCommittees), ctx, epoch)
+}
+
+// GetProposerDuties mocks base method.
+func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch types.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProposerDuties", ctx, epoch)
+	ret0, _ := ret[0].([]*apimiddleware.ProposerDutyJson)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProposerDuties indicates an expected call of GetProposerDuties.
+func (mr *MockdutiesProviderMockRecorder) GetProposerDuties(ctx, epoch interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposerDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetProposerDuties), ctx, epoch)
+}
+
+// GetSyncDuties mocks base method.
+func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch types.Epoch, validatorIndices []types.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSyncDuties", ctx, epoch, validatorIndices)
+	ret0, _ := ret[0].([]*apimiddleware.SyncCommitteeDuty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSyncDuties indicates an expected call of GetSyncDuties.
+func (mr *MockdutiesProviderMockRecorder) GetSyncDuties(ctx, epoch, validatorIndices interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSyncDuties", reflect.TypeOf((*MockdutiesProvider)(nil).GetSyncDuties), ctx, epoch, validatorIndices)
+}

@@ -166,6 +166,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/pool/bls_to_execution_changes":
 		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
 		endpoint.GetResponse = &BLSToExecutionChangesPoolResponseJson{}
+		endpoint.Err = &IndexedVerificationFailureErrorJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
 		}
