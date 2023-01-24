@@ -5,9 +5,9 @@ package stategen
 
 import (
 	"context"
-	"errors"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -113,7 +113,16 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	fRoot := bytesutil.ToBytes32(c.Root)
 	// Resume as genesis state if last finalized root is zero hashes.
 	if fRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.GenesisState(ctx)
+		st, err := s.beaconDB.GenesisState(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get genesis state")
+		}
+		// Save genesis state in the hot state cache.
+		gbr, err := s.beaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get genesis block root")
+		}
+		return st, s.SaveState(ctx, gbr, st)
 	}
 
 	if fState == nil || fState.IsNil() {
