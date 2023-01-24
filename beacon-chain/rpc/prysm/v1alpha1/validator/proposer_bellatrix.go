@@ -179,7 +179,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	randaoReveal := b.Block().Body().RandaoReveal()
 	graffiti := b.Block().Body().Graffiti()
 	sig := b.Signature()
-	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
+	psb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
 			Slot:          b.Block().Slot(),
 			ProposerIndex: b.Block().ProposerIndex(),
@@ -201,6 +201,10 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 		Signature: sig[:],
 	}
 
+	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not create signed block")
+	}
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
 		return nil, err
@@ -219,38 +223,46 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 			"%#x != %#x", headerRoot, payloadRoot)
 	}
 
+	pbPayload, err := payload.PbBellatrix()
+	if err != nil {
+		errors.Wrapf(err, "could not get payload")
+	}
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          sb.Block.Slot,
-			ProposerIndex: sb.Block.ProposerIndex,
-			ParentRoot:    sb.Block.ParentRoot,
-			StateRoot:     sb.Block.StateRoot,
+			Slot:          psb.Block.Slot,
+			ProposerIndex: psb.Block.ProposerIndex,
+			ParentRoot:    psb.Block.ParentRoot,
+			StateRoot:     psb.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
+				RandaoReveal:      psb.Block.Body.RandaoReveal,
+				Eth1Data:          psb.Block.Body.Eth1Data,
+				Graffiti:          psb.Block.Body.Graffiti,
+				ProposerSlashings: psb.Block.Body.ProposerSlashings,
+				AttesterSlashings: psb.Block.Body.AttesterSlashings,
+				Attestations:      psb.Block.Body.Attestations,
+				Deposits:          psb.Block.Body.Deposits,
+				VoluntaryExits:    psb.Block.Body.VoluntaryExits,
 				SyncAggregate:     agg,
-				ExecutionPayload:  payload,
+				ExecutionPayload:  pbPayload,
 			},
 		},
-		Signature: sb.Signature,
+		Signature: psb.Signature,
 	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
 		return nil, err
 	}
 
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get transactions from payload")
+	}
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
-		"txs":          len(payload.Transactions),
+		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
 
 	return wb, nil

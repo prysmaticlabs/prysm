@@ -24,7 +24,6 @@ var ErrNoBuilder = errors.New("builder endpoint not configured")
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
-	GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBidCapella, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
