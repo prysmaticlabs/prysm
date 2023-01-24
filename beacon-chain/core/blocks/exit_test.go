@@ -216,7 +216,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				require.NoError(t, err)
 				signedExit.Signature = sig.Marshal()
 				genesisRoot := [32]byte{'a'}
-				//use wrong genesis root and don't update validator
+				// use wrong genesis root and don't update validator
 				return validator, signedExit, fork, genesisRoot[:], nil
 			},
 			wantErr: "signature did not verify",
@@ -235,7 +235,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				tt.args.currentSlot,
 				fork,
 				signedExit,
-				genesisRoot[:],
+				genesisRoot,
 			)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
