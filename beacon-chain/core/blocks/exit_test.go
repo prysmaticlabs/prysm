@@ -131,3 +131,118 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			helpers.ActivationExitEpoch(types.Epoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch)), newRegistry[0].ExitEpoch)
 	}
 }
+
+func TestVerifyExitAndSignature(t *testing.T) {
+	type args struct {
+		currentSlot types.Slot
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		setup   func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error)
+		wantErr string
+	}{
+		{
+			name: "Empty Exit",
+			args: args{
+				currentSlot: 0,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				genesisRoot := [32]byte{'a'}
+				return &ethpb.Validator{}, &ethpb.SignedVoluntaryExit{}, fork, genesisRoot[:], nil
+			},
+			wantErr: "nil exit",
+		},
+		{
+			name: "Happy Path",
+			args: args{
+				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          2,
+						ValidatorIndex: 0,
+					},
+				}
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+				err := bs.UpdateValidatorAtIndex(0, validator)
+				require.NoError(t, err)
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+				return validator, signedExit, fork, bs.GenesisValidatorsRoot(), nil
+			},
+		},
+		{
+			name: "bad signature",
+			args: args{
+				currentSlot: (params.BeaconConfig().SlotsPerEpoch * 2) + 1,
+			},
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, *ethpb.Fork, []byte, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+					Epoch:           0,
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          2,
+						ValidatorIndex: 0,
+					},
+				}
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+				genesisRoot := [32]byte{'a'}
+				// use wrong genesis root and don't update validator
+				return validator, signedExit, fork, genesisRoot[:], nil
+			},
+			wantErr: "signature did not verify",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := params.BeaconConfig().ShardCommitteePeriod
+			params.BeaconConfig().ShardCommitteePeriod = 0
+			validator, signedExit, fork, genesisRoot, err := tt.setup()
+			require.NoError(t, err)
+			rvalidator, err := state_native.NewValidator(validator)
+			require.NoError(t, err)
+			err = blocks.VerifyExitAndSignature(
+				rvalidator,
+				tt.args.currentSlot,
+				fork,
+				signedExit,
+				genesisRoot,
+			)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, tt.wantErr, err)
+			}
+			params.BeaconConfig().ShardCommitteePeriod = c // prevent contamination
+		})
+	}
+}
