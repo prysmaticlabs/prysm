@@ -614,13 +614,13 @@ func (vs *Server) PrepareBeaconProposer(
 	if len(newRecipients) == 0 {
 		return &emptypb.Empty{}, nil
 	}
-	for i, recipientContainer := range newRecipients {
+	for _, recipientContainer := range newRecipients {
 		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
-		feeRecipients = append(feeRecipients, common.BytesToAddress(newRecipients[i].FeeRecipient))
-		validatorIndices = append(validatorIndices, newRecipients[i].ValidatorIndex)
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
 	}
 	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
