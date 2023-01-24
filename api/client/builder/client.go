@@ -9,16 +9,20 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/network"
 	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -82,11 +86,9 @@ var _ observer = &requestLogger{}
 // BuilderClient provides a collection of helper methods for calling Builder API endpoints.
 type BuilderClient interface {
 	NodeURL() string
-	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error)
-	GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBidCapella, error)
+	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
-	SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
-	SubmitBlindedBlockCapella(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockCapella) (*v1.ExecutionPayloadCapella, error)
+	SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error)
 	Status(ctx context.Context) error
 }
 
@@ -204,8 +206,8 @@ func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (stri
 	return b.String(), nil
 }
 
-// GetHeader is used by a proposing validator to request an ExecutionPayloadHeader from the Builder node.
-func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error) {
+// GetHeader is used by a proposing validator to request an execution payload header from the Builder node.
+func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error) {
 	path, err := execHeaderPath(slot, parentHash, pubkey)
 	if err != nil {
 		return nil, err
@@ -214,28 +216,35 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
-	hr := &ExecHeaderResponse{}
-	if err := json.Unmarshal(hb, hr); err != nil {
+	v := &VersionResponse{}
+	if err := json.Unmarshal(hb, v); err != nil {
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
-	return hr.ToProto()
-}
+	switch strings.ToLower(v.Version) {
+	case strings.ToLower(version.String(version.Capella)):
+		hr := &ExecHeaderResponseCapella{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		p, err := hr.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from header")
+		}
+		return WrappedSignedBuilderBidCapella(p)
+	case strings.ToLower(version.String(version.Bellatrix)):
+		hr := &ExecHeaderResponse{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		p, err := hr.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from header")
+		}
+		return WrappedSignedBuilderBid(p)
+	default:
+		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
+	}
 
-// GetHeaderCapella is used by a proposing validator to request an ExecutionPayloadHeaderCapella from the Builder node.
-func (c *Client) GetHeaderCapella(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBidCapella, error) {
-	path, err := execHeaderPath(slot, parentHash, pubkey)
-	if err != nil {
-		return nil, err
-	}
-	hb, err := c.do(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	hr := &ExecHeaderResponseCapella{}
-	if err := json.Unmarshal(hb, hr); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
-	}
-	return hr.ToProto()
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
@@ -266,26 +275,69 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 }
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
-// The response is the full ExecutionPayload used to create the blinded block.
-func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
-	v := &SignedBlindedBeaconBlockBellatrix{SignedBlindedBeaconBlockBellatrix: sb}
-	body, err := json.Marshal(v)
-	if err != nil {
-		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
+// The response is the full execution payload used to create the blinded block.
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
+	if !sb.IsBlinded() {
+		return nil, errors.New("submitted block is not blinded")
 	}
+	switch sb.Version() {
+	case version.Bellatrix:
+		psb, err := sb.PbBlindedBellatrixBlock()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get protobuf block")
+		}
+		b := &SignedBlindedBeaconBlockBellatrix{SignedBlindedBeaconBlockBellatrix: psb}
+		body, err := json.Marshal(b)
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
+		}
 
-	ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-	defer cancel()
-	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
+		defer cancel()
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
 
-	if err != nil {
-		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+		if err != nil {
+			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+		}
+		ep := &ExecPayloadResponse{}
+		if err := json.Unmarshal(rb, ep); err != nil {
+			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+		}
+		p, err := ep.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from payload")
+		}
+		return blocks.WrappedExecutionPayload(p)
+	case version.Capella:
+		psb, err := sb.PbBlindedCapellaBlock()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get protobuf block")
+		}
+		b := &SignedBlindedBeaconBlockCapella{SignedBlindedBeaconBlockCapella: psb}
+		body, err := json.Marshal(b)
+		if err != nil {
+			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
+		defer cancel()
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+
+		if err != nil {
+			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+		}
+		ep := &ExecPayloadResponseCapella{}
+		if err := json.Unmarshal(rb, ep); err != nil {
+			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
+		}
+		p, err := ep.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from payload")
+		}
+		return blocks.WrappedExecutionPayloadCapella(p)
+	default:
+		return nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}
-	ep := &ExecPayloadResponse{}
-	if err := json.Unmarshal(rb, ep); err != nil {
-		return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
-	}
-	return ep.ToProto()
 }
 
 // SubmitBlindedBlockCapella calls the builder API endpoint that binds the validator to the builder and submits the block.
