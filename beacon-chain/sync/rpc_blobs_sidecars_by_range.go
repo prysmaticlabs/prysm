@@ -7,14 +7,13 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
-
-// We assume a cost of 512kB  per sidecar responded to a range request.
-const avgSidecarBlobsTransferBytes = 2 << 18
 
 type BlobsSidecarProcessor func(sidecar *pb.BlobsSidecar) error
 
@@ -35,10 +34,11 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 	count := r.Count
 	endSlot := startSlot.Add(count)
 
+	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
 	var numBlobs uint64
 	maxRequestBlobsSidecars := params.BeaconNetworkConfig().MaxRequestBlobsSidecars
 	for slot := startSlot; slot < endSlot && numBlobs < maxRequestBlobsSidecars; slot = slot.Add(1) {
-		if err := s.rateLimiter.validateRequest(stream, uint64(avgSidecarBlobsTransferBytes)); err != nil {
+		if err := s.rateLimiter.validateRequest(stream, allowedBlocksPerSecond); err != nil {
 			return err
 		}
 
@@ -52,9 +52,11 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 			continue
 		}
 
-		var outLen int
+		var respondedBlobs int64
 		for _, sidecar := range sidecars {
-			outLen += estimateBlobsSidecarCost(sidecar)
+			if bytesutil.ToBytes32(sidecar.BeaconBlockRoot) == params.BeaconConfig().ZeroHash {
+				continue
+			}
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobsSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sidecar); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
@@ -62,9 +64,10 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 				tracing.AnnotateError(span, chunkErr)
 				return chunkErr
 			}
+			respondedBlobs++
 		}
 		numBlobs++
-		s.rateLimiter.add(stream, int64(outLen))
+		s.rateLimiter.add(stream, respondedBlobs)
 
 		// Short-circuit immediately once we've sent the last blob.
 		if slot.Add(1) >= endSlot {
@@ -77,7 +80,9 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 			return err
 		}
 		// Throttling - wait until we have enough tokens to send the next blobs
-		if sidecarLimiter.Remaining(key) < avgSidecarBlobsTransferBytes {
+
+		allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
+		if sidecarLimiter.Remaining(key) < allowedBlocksBurst {
 			timer := time.NewTimer(sidecarLimiter.TillEmpty(key))
 			select {
 			case <-ctx.Done():

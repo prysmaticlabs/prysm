@@ -25,12 +25,6 @@ const blockBucketPeriod = 5 * time.Second
 // Dummy topic to validate all incoming rpc requests.
 const rpcLimiterTopic = "rpc-limiter-topic"
 
-const (
-	// TODO: make this configurable
-	blobsTransferByteRate          = 1 << 18
-	blobsTransferThresholdByteRate = 1 << 20
-)
-
 type limiter struct {
 	limiterMap map[string]*leakybucket.Collector
 	p2p        p2p.P2P
@@ -65,7 +59,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// Collector for V2
 	blockCollectorV2 := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, blockBucketPeriod, false /* deleteEmptyBuckets */)
 
-	blobCollector := leakybucket.NewCollector(blobsTransferByteRate, blobsTransferThresholdByteRate, blockBucketPeriod, false /* deleteEmptyBuckets */)
+	blobCollector := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, blockBucketPeriod, false /* deleteEmptyBuckets */)
 
 	// BlocksByRoots requests
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV1)] = blockCollector
