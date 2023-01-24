@@ -13,6 +13,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -179,13 +180,19 @@ func TestClient_GetHeader(t *testing.T) {
 	h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
 	require.NoError(t, err)
 	expectedSig := ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505")
-	require.Equal(t, true, bytes.Equal(expectedSig, h.Signature))
+	require.Equal(t, true, bytes.Equal(expectedSig, h.Signature()))
 	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
-	require.Equal(t, true, bytes.Equal(expectedTxRoot, h.Message.Header.TransactionsRoot))
-	require.Equal(t, uint64(1), h.Message.Header.GasUsed)
+	bid, err := h.Message()
+	require.NoError(t, err)
+	bidHeader, err := bid.Header()
+	require.NoError(t, err)
+	txRoot, err := bidHeader.TransactionsRoot()
+	require.NoError(t, err)
+	require.Equal(t, true, bytes.Equal(expectedTxRoot, txRoot))
+	require.Equal(t, uint64(1), bidHeader.GasUsed())
 	value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", h.Message.Value))
+	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -204,14 +211,15 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
-	sbbb := testSignedBlindedBeaconBlockBellatrix(t)
+	sbbb, err := blocks.NewSignedBeaconBlock(testSignedBlindedBeaconBlockBellatrix(t))
+	require.NoError(t, err)
 	ep, err := c.SubmitBlindedBlock(ctx, sbbb)
 	require.NoError(t, err)
-	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash))
+	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash()))
 	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
 	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas))
-	require.Equal(t, uint64(1), ep.GasLimit)
+	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas()))
+	require.Equal(t, uint64(1), ep.GasLimit())
 }
 
 func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaconBlockBellatrix {
