@@ -10,7 +10,7 @@ import (
 
 // SignedBid is an interface describing the method set of a signed builder bid.
 type SignedBid interface {
-	Message() Bid
+	Message() (Bid, error)
 	Signature() []byte
 	Version() int
 	IsNil() bool
@@ -41,8 +41,8 @@ func WrappedSignedBuilderBid(p *ethpb.SignedBuilderBid) (SignedBid, error) {
 }
 
 // Message --
-func (b signedBuilderBid) Message() Bid {
-	return b.Message()
+func (b signedBuilderBid) Message() (Bid, error) {
+	return WrappedBuilderBid(b.p.Message)
 }
 
 // Signature --
@@ -74,8 +74,8 @@ func WrappedSignedBuilderBidCapella(p *ethpb.SignedBuilderBidCapella) (SignedBid
 }
 
 // Message --
-func (b signedBuilderBidCapella) Message() Bid {
-	return b.Message()
+func (b signedBuilderBidCapella) Message() (Bid, error) {
+	return WrappedBuilderBidCapella(b.p.Message)
 }
 
 // Signature --

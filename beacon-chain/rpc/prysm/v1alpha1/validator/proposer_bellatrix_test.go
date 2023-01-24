@@ -82,6 +82,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			name: "get header failed",
 			mock: &builderTest.MockBuilderService{
 				ErrGetHeader: errors.New("can't get header"),
+				Bid:          sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
@@ -225,6 +226,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				return wb
 			}(),
 			mock: &builderTest.MockBuilderService{
+				Payload:               &v1.ExecutionPayload{},
 				HasConfigured:         true,
 				ErrSubmitBlindedBlock: errors.New("can't submit"),
 			},

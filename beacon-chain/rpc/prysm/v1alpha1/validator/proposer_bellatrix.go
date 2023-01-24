@@ -91,15 +91,22 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
 	defer cancel()
 
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
-	if bid == nil || bid.Message() == nil {
+	if signedBid.IsNil() {
+		return nil, errors.New("builder returned nil bid")
+	}
+	bid, err := signedBid.Message()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get bid")
+	}
+	if bid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
 
-	v := bytesutil.LittleEndianBytesToBigInt(bid.Message().Value())
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
 	if v.String() == "0" {
 		return nil, errors.New("builder returned header with 0 bid amount")
 	}
@@ -109,7 +116,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, err
 	}
 
-	header, err := bid.Message().Header()
+	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get bid header")
 	}
@@ -133,13 +140,13 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
-	if err := validateBuilderSignature(bid); err != nil {
+	if err := validateBuilderSignature(signedBid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
 	log.WithFields(logrus.Fields{
 		"value":         v.String(),
-		"builderPubKey": fmt.Sprintf("%#x", bid.Message().Pubkey()),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
 	}).Info("Received header with bid")
 	return header, nil
@@ -269,15 +276,22 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func validateBuilderSignature(bid builder.SignedBid) error {
+func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
-	if bid == nil || bid.Message() == nil {
+	if signedBid.IsNil() {
 		return errors.New("nil builder bid")
 	}
-	return signing.VerifySigningRoot(bid.Message(), bid.Message().Pubkey(), bid.Signature(), d)
+	bid, err := signedBid.Message()
+	if err != nil {
+		return errors.Wrapf(err, "could not get bid")
+	}
+	if bid.IsNil() {
+		return errors.New("builder returned nil bid")
+	}
+	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
 }
