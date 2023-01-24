@@ -253,9 +253,16 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	blk, err = vs.unblindBuilderBlock(ctx, blk)
-	if err != nil {
-		return nil, err
+	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
+		blk, err = vs.unblindBuilderCapellaBlock(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		blk, err = vs.unblindBuilderBlock(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.

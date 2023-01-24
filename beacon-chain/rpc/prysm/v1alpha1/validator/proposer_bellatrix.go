@@ -278,6 +278,114 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	return wb, nil
 }
 
+func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
+		return nil, err
+	}
+
+	// No-op if the input block is not version blind and bellatrix.
+	if b.Version() != version.Capella || !b.IsBlinded() {
+		return b, nil
+	}
+	// No-op nothing if the builder has not been configured.
+	if !vs.BlockBuilder.Configured() {
+		return b, nil
+	}
+
+	agg, err := b.Block().Body().SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	h, err := b.Block().Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+	if !ok {
+		return nil, errors.New("execution data must be execution payload header")
+	}
+	parentRoot := b.Block().ParentRoot()
+	stateRoot := b.Block().StateRoot()
+	randaoReveal := b.Block().Body().RandaoReveal()
+	graffiti := b.Block().Body().Graffiti()
+	sig := b.Signature()
+	sb := &ethpb.SignedBlindedBeaconBlockCapella{
+		Block: &ethpb.BlindedBeaconBlockCapella{
+			Slot:          b.Block().Slot(),
+			ProposerIndex: b.Block().ProposerIndex(),
+			ParentRoot:    parentRoot[:],
+			StateRoot:     stateRoot[:],
+			Body: &ethpb.BlindedBeaconBlockBodyCapella{
+				RandaoReveal:           randaoReveal[:],
+				Eth1Data:               b.Block().Body().Eth1Data(),
+				Graffiti:               graffiti[:],
+				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
+				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
+				Attestations:           b.Block().Body().Attestations(),
+				Deposits:               b.Block().Body().Deposits(),
+				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
+				SyncAggregate:          agg,
+				ExecutionPayloadHeader: header,
+			},
+		},
+		Signature: sig[:],
+	}
+
+	payload, err := vs.BlockBuilder.SubmitBlindedBlockCapella(ctx, sb)
+	if err != nil {
+		return nil, err
+	}
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	payloadRoot, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	if headerRoot != payloadRoot {
+		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
+			"%#x != %#x", headerRoot, payloadRoot)
+	}
+
+	bb := &ethpb.SignedBeaconBlockCapella{
+		Block: &ethpb.BeaconBlockCapella{
+			Slot:          sb.Block.Slot,
+			ProposerIndex: sb.Block.ProposerIndex,
+			ParentRoot:    sb.Block.ParentRoot,
+			StateRoot:     sb.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyCapella{
+				RandaoReveal:      sb.Block.Body.RandaoReveal,
+				Eth1Data:          sb.Block.Body.Eth1Data,
+				Graffiti:          sb.Block.Body.Graffiti,
+				ProposerSlashings: sb.Block.Body.ProposerSlashings,
+				AttesterSlashings: sb.Block.Body.AttesterSlashings,
+				Attestations:      sb.Block.Body.Attestations,
+				Deposits:          sb.Block.Body.Deposits,
+				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
+				SyncAggregate:     agg,
+				ExecutionPayload:  payload,
+			},
+		},
+		Signature: sb.Signature,
+	}
+	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
+	if err != nil {
+		return nil, err
+	}
+
+	log.WithFields(logrus.Fields{
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
+		"gasUsed":      h.GasUsed,
+		"slot":         b.Block().Slot(),
+		"txs":          len(payload.Transactions),
+	}).Info("Retrieved full capella payload from builder")
+
+	return wb, nil
+}
+
 // Validates builder signature and returns an error if the signature is invalid.
 func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
