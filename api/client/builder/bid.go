@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
+// SignedBid is an interface describing the method set of a signed builder bid.
 type SignedBid interface {
 	Message() Bid
 	Signature() []byte
@@ -15,6 +16,7 @@ type SignedBid interface {
 	IsNil() bool
 }
 
+// Bid is an interface describing the method set of a builder bid.
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
 	Value() []byte
