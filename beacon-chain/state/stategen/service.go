@@ -117,6 +117,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
+		// Save genesis state in the hot state cache.
 		gbr, err := s.beaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get genesis block root")
