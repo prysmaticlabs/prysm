@@ -123,8 +123,9 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		}
 	}
 	var nextValidatorIndex types.ValidatorIndex
+	var err error
 	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
-		nextValidatorIndex, err := st.NextWithdrawalValidatorIndex()
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}

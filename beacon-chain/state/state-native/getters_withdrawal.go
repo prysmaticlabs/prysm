@@ -1,10 +1,9 @@
 package state_native
 
 import (
-	"math/rand"
-
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -60,13 +59,14 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	for i := uint64(0); i < bound; i++ {
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
-		wirand := uint64((rand.Uint32() % 2)) * rand.Uint64()
-		virand := uint64((rand.Uint32() % 2)) * rand.Uint64()
-		balrand := uint64((rand.Uint32() % 2)) * rand.Uint64()
+		source := rand.NewGenerator()
+		wirand := uint64((source.Uint32() % 2)) * source.Uint64()
+		virand := uint64((source.Uint32() % 2)) * source.Uint64()
+		balrand := uint64((source.Uint32() % 2)) * source.Uint64()
 
 		address := bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:])
 		if wirand == 0 && virand == 0 && balrand == 0 {
-			addrand := rand.Uint32() % 2
+			addrand := source.Uint32() % 2
 			if addrand == 0 {
 				address[4] = 0
 			}
