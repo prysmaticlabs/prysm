@@ -525,8 +525,9 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 					StateSummaryRoot: sr[:],
 				}
 				require.DeepEqual(t, b, summaries[0])
-				_, err = st.HistoricalRoots()
-				require.ErrorContains(t, "HistoricalRoots is not supported for capella", err)
+				hrs, err := st.HistoricalRoots()
+				require.NoError(t, err)
+				require.DeepEqual(t, hrs, [][]byte{})
 			},
 		},
 	}

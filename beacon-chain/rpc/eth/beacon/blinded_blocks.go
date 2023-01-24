@@ -142,32 +142,25 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlock")
 	defer span.End()
 
-	capellaBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock)
-	if ok {
-		if err := bs.submitBlindedCapellaBlock(ctx, capellaBlkContainer.CapellaBlock, req.Signature); err != nil {
+	switch blkContainer := req.Message.(type) {
+	case *ethpbv2.SignedBlindedBeaconBlockContainer_CapellaBlock:
+		if err := bs.submitBlindedCapellaBlock(ctx, blkContainer.CapellaBlock, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock)
-	if ok {
-		if err := bs.submitBlindedBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
+	case *ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock:
+		if err := bs.submitBlindedBellatrixBlock(ctx, blkContainer.BellatrixBlock, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-
-	// At the end we check forks that don't have blinded blocks.
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block)
-	if ok {
-		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
+	case *ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block:
+		if err := bs.submitPhase0Block(ctx, blkContainer.Phase0Block, req.Signature); err != nil {
 			return nil, err
 		}
-	}
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock)
-	if ok {
-		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
+	case *ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock:
+		if err := bs.submitAltairBlock(ctx, blkContainer.AltairBlock, req.Signature); err != nil {
 			return nil, err
 		}
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported block container type %T", blkContainer)
 	}
 
 	return &emptypb.Empty{}, nil

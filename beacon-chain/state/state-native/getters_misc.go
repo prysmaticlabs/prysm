@@ -69,10 +69,6 @@ func (b *BeaconState) forkVal() *ethpb.Fork {
 
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() ([][]byte, error) {
-	if b.version > version.Bellatrix {
-		return nil, errNotSupported("HistoricalRoots", b.version)
-	}
-
 	if b.historicalRoots == nil {
 		return nil, nil
 	}

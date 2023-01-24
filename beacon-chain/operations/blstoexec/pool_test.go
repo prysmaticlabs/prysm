@@ -130,7 +130,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		// We want FIFO semantics, which means validator with index 16 shouldn't be returned
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		for _, ch := range changes {
-			assert.NotEqual(t, types.ValidatorIndex(16), ch.Message.ValidatorIndex)
+			assert.NotEqual(t, types.ValidatorIndex(15), ch.Message.ValidatorIndex)
 		}
 	})
 	t.Run("One Bad change", func(t *testing.T) {
@@ -143,19 +143,19 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
-		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
 		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
 	})
 	t.Run("One Bad Signature", func(t *testing.T) {
 		pool := NewPool()
-		copy(signedChanges[1].Signature, signedChanges[2].Signature)
+		copy(signedChanges[30].Signature, signedChanges[31].Signature)
 		for i := uint64(0); i < numValidators; i++ {
 			pool.InsertBLSToExecChange(signedChanges[i])
 		}
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
-		assert.Equal(t, types.ValidatorIndex(2), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, types.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
 	})
 }
 
@@ -237,7 +237,7 @@ func TestMarkIncluded(t *testing.T) {
 				ValidatorIndex: types.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		assert.Equal(t, 0, pool.pending.Len())
 		_, ok := pool.m[0]
 		assert.Equal(t, false, ok)
@@ -259,7 +259,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(first))
+		pool.MarkIncluded(first)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[0]
 		assert.Equal(t, false, ok)
@@ -281,7 +281,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(third))
+		pool.MarkIncluded(third)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[2]
 		assert.Equal(t, false, ok)
@@ -303,7 +303,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
 		pool.InsertBLSToExecChange(third)
-		require.NoError(t, pool.MarkIncluded(second))
+		pool.MarkIncluded(second)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[1]
 		assert.Equal(t, false, ok)
@@ -324,7 +324,7 @@ func TestMarkIncluded(t *testing.T) {
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		require.Equal(t, 2, pool.pending.Len())
 		_, ok := pool.m[0]
 		require.Equal(t, true, ok)
@@ -378,7 +378,7 @@ func TestValidatorExists(t *testing.T) {
 				ValidatorIndex: types.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
-		require.NoError(t, pool.MarkIncluded(change))
+		pool.MarkIncluded(change)
 		assert.Equal(t, false, pool.ValidatorExists(0))
 	})
 	t.Run("multiple validators added to pool and removed", func(t *testing.T) {
@@ -399,8 +399,8 @@ func TestValidatorExists(t *testing.T) {
 			}}
 		pool.InsertBLSToExecChange(thirdChange)
 
-		assert.NoError(t, pool.MarkIncluded(firstChange))
-		assert.NoError(t, pool.MarkIncluded(thirdChange))
+		pool.MarkIncluded(firstChange)
+		pool.MarkIncluded(thirdChange)
 
 		assert.Equal(t, false, pool.ValidatorExists(0))
 		assert.Equal(t, true, pool.ValidatorExists(10))

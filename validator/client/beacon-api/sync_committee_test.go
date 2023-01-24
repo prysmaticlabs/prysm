@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -87,4 +88,168 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 	_, err := validatorClient.SubmitSyncMessage(context.Background(), &ethpb.SyncCommitteeMessage{})
 	assert.ErrorContains(t, "failed to send POST data to `/eth/v1/beacon/pool/sync_committees` REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
+}
+
+func TestGetSyncMessageBlockRoot(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const blockRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+	tests := []struct {
+		name                 string
+		endpointError        error
+		expectedErrorMessage string
+		expectedResponse     apimiddleware.BlockRootResponseJson
+	}{
+		{
+			name: "valid request",
+			expectedResponse: apimiddleware.BlockRootResponseJson{
+				Data: &apimiddleware.BlockRootContainerJson{
+					Root: blockRoot,
+				},
+			},
+		},
+		{
+			name:                 "internal server error",
+			expectedErrorMessage: "internal server error",
+			endpointError:        errors.New("internal server error"),
+		},
+		{
+			name: "execution optimistic",
+			expectedResponse: apimiddleware.BlockRootResponseJson{
+				ExecutionOptimistic: true,
+			},
+			expectedErrorMessage: "the node is currently optimistic and cannot serve validators",
+		},
+		{
+			name:                 "no data",
+			expectedResponse:     apimiddleware.BlockRootResponseJson{},
+			expectedErrorMessage: "no data returned",
+		},
+		{
+			name: "no root",
+			expectedResponse: apimiddleware.BlockRootResponseJson{
+				Data: new(apimiddleware.BlockRootContainerJson),
+			},
+			expectedErrorMessage: "no root returned",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				"/eth/v1/beacon/blocks/head/root",
+				&apimiddleware.BlockRootResponseJson{},
+			).SetArg(
+				2,
+				test.expectedResponse,
+			).Return(
+				nil,
+				test.endpointError,
+			).Times(1)
+
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			actualResponse, err := validatorClient.getSyncMessageBlockRoot(ctx)
+			if test.expectedErrorMessage != "" {
+				require.ErrorContains(t, test.expectedErrorMessage, err)
+				return
+			}
+
+			require.NoError(t, err)
+
+			expectedRootBytes, err := hexutil.Decode(test.expectedResponse.Data.Root)
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.DeepEqual(t, expectedRootBytes, actualResponse.Root)
+		})
+	}
+}
+
+func TestGetSyncCommitteeContribution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const blockRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+
+	request := &ethpb.SyncCommitteeContributionRequest{
+		Slot:      types.Slot(1),
+		PublicKey: nil,
+		SubnetId:  1,
+	}
+
+	contributionJson := &apimiddleware.SyncCommitteeContributionJson{
+		Slot:              "1",
+		BeaconBlockRoot:   blockRoot,
+		SubcommitteeIndex: "1",
+		AggregationBits:   "0x01",
+		Signature:         "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+	}
+
+	tests := []struct {
+		name           string
+		contribution   apimiddleware.ProduceSyncCommitteeContributionResponseJson
+		endpointErr    error
+		expectedErrMsg string
+	}{
+		{
+			name:         "valid request",
+			contribution: apimiddleware.ProduceSyncCommitteeContributionResponseJson{Data: contributionJson},
+		},
+		{
+			name:           "bad request",
+			endpointErr:    errors.New("internal server error"),
+			expectedErrMsg: "internal server error",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				"/eth/v1/beacon/blocks/head/root",
+				&apimiddleware.BlockRootResponseJson{},
+			).SetArg(
+				2,
+				apimiddleware.BlockRootResponseJson{
+					Data: &apimiddleware.BlockRootContainerJson{
+						Root: blockRoot,
+					},
+				},
+			).Return(
+				nil,
+				nil,
+			).Times(1)
+
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?slot=%d&subcommittee_index=%d&beacon_block_root=%s",
+					uint64(request.Slot), request.SubnetId, blockRoot),
+				&apimiddleware.ProduceSyncCommitteeContributionResponseJson{},
+			).SetArg(
+				2,
+				test.contribution,
+			).Return(
+				nil,
+				test.endpointErr,
+			).Times(1)
+
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			actualResponse, err := validatorClient.getSyncCommitteeContribution(ctx, request)
+			if test.expectedErrMsg != "" {
+				require.ErrorContains(t, test.expectedErrMsg, err)
+				return
+			}
+			require.NoError(t, err)
+
+			expectedResponse, err := convertSyncContributionJsonToProto(test.contribution.Data)
+			require.NoError(t, err)
+			assert.DeepEqual(t, expectedResponse, actualResponse)
+		})
+	}
 }

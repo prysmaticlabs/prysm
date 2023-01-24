@@ -22,10 +22,6 @@ func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
-func (SignedBeaconBlock) SetBlock(interfaces.BeaconBlock) error {
-	panic("implement me")
-}
-
 func (SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
@@ -113,22 +109,6 @@ func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) 
 	panic("implement me")
 }
 
-func (BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
-	panic("implement me")
-}
-
-func (BeaconBlock) SetSlot(types.Slot) {
-	panic("implement me")
-}
-
-func (BeaconBlock) SetProposerIndex(types.ValidatorIndex) {
-	panic("implement me")
-}
-
-func (BeaconBlock) SetParentRoot([]byte) {
-	panic("implement me")
-}
-
 func (m BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	return m.Htr, m.HtrErr
 }
@@ -161,10 +141,6 @@ func (BeaconBlock) IsBlinded() bool {
 	return false
 }
 
-func (BeaconBlock) SetBlinded(bool) {
-	panic("implement me")
-}
-
 func (BeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
@@ -193,13 +169,33 @@ func (BeaconBlock) Version() int {
 	panic("implement me")
 }
 
-type BeaconBlockBody struct{}
-
-func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
+func (BeaconBlock) ToBlinded() (interfaces.BeaconBlock, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetRandaoReveal([]byte) {
+func (BeaconBlock) SetSlot(_ types.Slot) {
+	panic("implement me")
+}
+
+func (BeaconBlock) SetProposerIndex(_ types.ValidatorIndex) {
+	panic("implement me")
+}
+
+func (BeaconBlock) SetParentRoot(_ []byte) {
+	panic("implement me")
+}
+
+func (BeaconBlock) SetBlinded(_ bool) {
+	panic("implement me")
+}
+
+func (BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
+	panic("implement me")
+}
+
+type BeaconBlockBody struct{}
+
+func (BeaconBlockBody) RandaoReveal() [field_params.BLSSignatureLength]byte {
 	panic("implement me")
 }
 
@@ -207,15 +203,7 @@ func (BeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetEth1Data(*eth.Eth1Data) {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) Graffiti() [field_params.RootLength]byte {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) SetGraffiti([]byte) {
 	panic("implement me")
 }
 
@@ -223,15 +211,7 @@ func (BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetProposerSlashings([]*eth.ProposerSlashing) {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) SetAttesterSlashings([]*eth.AttesterSlashing) {
 	panic("implement me")
 }
 
@@ -239,15 +219,7 @@ func (BeaconBlockBody) Attestations() []*eth.Attestation {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetAttestations([]*eth.Attestation) {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) Deposits() []*eth.Deposit {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) SetDeposits([]*eth.Deposit) {
 	panic("implement me")
 }
 
@@ -255,15 +227,7 @@ func (BeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetVoluntaryExits([]*eth.SignedVoluntaryExit) {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) SetSyncAggregate(*eth.SyncAggregate) error {
 	panic("implement me")
 }
 
@@ -283,19 +247,55 @@ func (BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetExecution(interfaces.ExecutionData) error {
-	panic("implement me")
-}
-
 func (BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionChange, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionChange) error {
+func (b *BeaconBlock) SetStateRoot(root []byte) {
 	panic("implement me")
 }
 
-func (b *BeaconBlock) SetStateRoot(root []byte) {
+func (b *BeaconBlockBody) SetRandaoReveal([]byte) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetEth1Data(*eth.Eth1Data) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetGraffiti([]byte) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetProposerSlashings([]*eth.ProposerSlashing) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetAttesterSlashings([]*eth.AttesterSlashing) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetAttestations([]*eth.Attestation) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetDeposits([]*eth.Deposit) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetVoluntaryExits([]*eth.SignedVoluntaryExit) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetSyncAggregate(*eth.SyncAggregate) error {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetExecution(interfaces.ExecutionData) error {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionChange) error {
 	panic("implement me")
 }
 
