@@ -95,7 +95,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
-	if bid == nil || bid.Message == nil {
+	if bid == nil || bid.Message() == nil {
 		return nil, errors.New("builder returned nil bid")
 	}
 
@@ -225,7 +225,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 
 	pbPayload, err := payload.PbBellatrix()
 	if err != nil {
-		errors.Wrapf(err, "could not get payload")
+		return nil, errors.Wrapf(err, "could not get payload")
 	}
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
