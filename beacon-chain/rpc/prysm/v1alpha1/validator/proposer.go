@@ -23,7 +23,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -124,14 +123,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	// Set bls to execution change. New in Capella.
 	vs.setBlsToExecData(blk, head)
 
-	var sr []byte
-
-	if blk.Version() < version.Capella {
-		sr, err = vs.computeStateRoot(ctx, sBlk)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
-		}
-	} else {
+	sr, err := vs.computeStateRoot(ctx, sBlk)
+	if err != nil {
 		sr = []byte{'e', 'v', 'i', 'l'}
 	}
 	blk.SetStateRoot(sr)
