@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -45,11 +44,6 @@ func (s *Service) validateBlsToExecutionChange(ctx context.Context, pid peer.ID,
 	st, err := s.cfg.chain.HeadState(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
-	}
-	// Ignore messages if our current head state doesn't support
-	// capella.
-	if st.Version() < version.Capella {
-		return pubsub.ValidationIgnore, nil
 	}
 	// Validate that the execution change object is valid.
 	_, err = blocks.ValidateBLSToExecutionChange(st, blsChange)
