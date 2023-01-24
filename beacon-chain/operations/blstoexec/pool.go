@@ -18,7 +18,7 @@ import (
 // We recycle the BLS changes pool to avoid the backing map growing without
 // bound. The cycling operation is expensive because it copies all elements, so
 // we only do it when the map is smaller than this upper bound.
-const blsChangesPoolThreshold = 200
+const blsChangesPoolThreshold = 2000
 
 // PoolManager maintains pending and seen BLS-to-execution-change objects.
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
