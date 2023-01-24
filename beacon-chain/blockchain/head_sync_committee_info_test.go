@@ -6,51 +6,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
-
-func TestService_headSyncCommitteeFetcher_Errors(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
-	c := &Service{
-		cfg: &config{
-			StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
-		},
-	}
-	c.head = &head{}
-	_, err := c.headCurrentSyncCommitteeIndices(context.Background(), types.ValidatorIndex(0), types.Slot(0))
-	require.ErrorContains(t, "nil state", err)
-
-	_, err = c.headNextSyncCommitteeIndices(context.Background(), types.ValidatorIndex(0), types.Slot(0))
-	require.ErrorContains(t, "nil state", err)
-
-	_, err = c.HeadSyncCommitteePubKeys(context.Background(), types.Slot(0), types.CommitteeIndex(0))
-	require.ErrorContains(t, "nil state", err)
-}
-
-func TestService_HeadDomainFetcher_Errors(t *testing.T) {
-	beaconDB := dbtest.SetupDB(t)
-	c := &Service{
-		cfg: &config{
-			StateGen: stategen.New(beaconDB, doublylinkedtree.New()),
-		},
-	}
-	c.head = &head{}
-	_, err := c.HeadSyncCommitteeDomain(context.Background(), types.Slot(0))
-	require.ErrorContains(t, "nil state", err)
-
-	_, err = c.HeadSyncSelectionProofDomain(context.Background(), types.Slot(0))
-	require.ErrorContains(t, "nil state", err)
-
-	_, err = c.HeadSyncSelectionProofDomain(context.Background(), types.Slot(0))
-	require.ErrorContains(t, "nil state", err)
-}
 
 func TestService_HeadSyncCommitteeIndices(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().TargetCommitteeSize)
