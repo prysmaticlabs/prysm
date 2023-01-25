@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -77,8 +77,13 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	}
 
 	blockRoot := hexutil.Encode(blockRootResponse.Root)
-	url := fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?slot=%d&subcommittee_index=%d&beacon_block_root=%s",
-		uint64(req.Slot), req.SubnetId, blockRoot)
+
+	params := url.Values{}
+	params.Add("slot", strconv.FormatUint(uint64(req.Slot), 10))
+	params.Add("subcommittee_index", strconv.FormatUint(req.SubnetId, 10))
+	params.Add("beacon_block_root", blockRoot)
+
+	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
 
 	var resp apimiddleware.ProduceSyncCommitteeContributionResponseJson
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, &resp); err != nil {
