@@ -1,4 +1,4 @@
-package types_test
+package primitives_test
 
 import (
 	"reflect"
