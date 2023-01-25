@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	params "github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -19,7 +19,7 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64) ([32]byte, error) {
 }
 
 func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
-	max := uint64(fieldparams.CurrentEpochAttestationsLength)
+	max := uint64(params.BeaconConfig().CurrentEpochAttestationsLength())
 	if uint64(len(atts)) > max {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
 	}
@@ -38,7 +38,7 @@ func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 		hasher,
 		roots,
 		uint64(len(roots)),
-		fieldparams.CurrentEpochAttestationsLength,
+		params.BeaconConfig().CurrentEpochAttestationsLength(),
 	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
