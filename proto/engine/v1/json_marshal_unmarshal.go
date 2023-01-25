@@ -489,11 +489,16 @@ func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON --
 func (p *PayloadAttributesV2) MarshalJSON() ([]byte, error) {
+	withdrawals := p.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+
 	return json.Marshal(payloadAttributesV2JSON{
 		Timestamp:             hexutil.Uint64(p.Timestamp),
 		PrevRandao:            p.PrevRandao,
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
-		Withdrawals:           p.Withdrawals,
+		Withdrawals:           withdrawals,
 	})
 }
 
@@ -519,7 +524,11 @@ func (p *PayloadAttributesV2) UnmarshalJSON(enc []byte) error {
 	p.Timestamp = uint64(dec.Timestamp)
 	p.PrevRandao = dec.PrevRandao
 	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
-	p.Withdrawals = dec.Withdrawals
+	withdrawals := dec.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+	p.Withdrawals = withdrawals
 	return nil
 }
 
