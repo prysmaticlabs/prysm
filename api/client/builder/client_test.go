@@ -120,79 +120,129 @@ func TestClient_RegisterValidator(t *testing.T) {
 func TestClient_GetHeader(t *testing.T) {
 	ctx := context.Background()
 	expectedPath := "/eth/v1/builder/header/23/0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2/0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
-	hc := &http.Client{
-		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
-			require.Equal(t, expectedPath, r.URL.Path)
-			message := ErrorMessage{
-				Code:    500,
-				Message: "Internal server error",
-			}
-			resp, err := json.Marshal(message)
-			require.NoError(t, err)
-			return &http.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer(resp)),
-				Request:    r.Clone(ctx),
-			}, nil
-		}),
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
 	var slot types.Slot = 23
 	parentHash := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	pubkey := ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
-	require.ErrorIs(t, err, ErrNotOK)
 
-	hc = &http.Client{
-		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
-			require.Equal(t, expectedPath, r.URL.Path)
-			return &http.Response{
-				StatusCode: http.StatusNoContent,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte("No header is available."))),
-				Request:    r.Clone(ctx),
-			}, nil
-		}),
-	}
-	c = &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-	_, err = c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
-	require.ErrorIs(t, err, ErrNoContent)
+	t.Run("server error", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				message := ErrorMessage{
+					Code:    500,
+					Message: "Internal server error",
+				}
+				resp, err := json.Marshal(message)
+				require.NoError(t, err)
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       io.NopCloser(bytes.NewBuffer(resp)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
 
-	hc = &http.Client{
-		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
-			require.Equal(t, expectedPath, r.URL.Path)
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
-				Request:    r.Clone(ctx),
-			}, nil
-		}),
-	}
-	c = &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-	h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
-	require.NoError(t, err)
-	expectedSig := ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505")
-	require.Equal(t, true, bytes.Equal(expectedSig, h.Signature()))
-	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
-	bid, err := h.Message()
-	require.NoError(t, err)
-	bidHeader, err := bid.Header()
-	require.NoError(t, err)
-	txRoot, err := bidHeader.TransactionsRoot()
-	require.NoError(t, err)
-	require.Equal(t, true, bytes.Equal(expectedTxRoot, txRoot))
-	require.Equal(t, uint64(1), bidHeader.GasUsed())
-	value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
-	require.NoError(t, err)
-	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+		_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.ErrorIs(t, err, ErrNotOK)
+	})
+	t.Run("header not available", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusNoContent,
+					Body:       io.NopCloser(bytes.NewBuffer([]byte("No header is available."))),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.ErrorIs(t, err, ErrNoContent)
+	})
+	t.Run("bellatrix", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.NoError(t, err)
+		expectedSig := ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505")
+		require.Equal(t, true, bytes.Equal(expectedSig, h.Signature()))
+		expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+		bid, err := h.Message()
+		require.NoError(t, err)
+		bidHeader, err := bid.Header()
+		require.NoError(t, err)
+		withdrawalsRoot, err := bidHeader.TransactionsRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, bytes.Equal(expectedTxRoot, withdrawalsRoot))
+		require.Equal(t, uint64(1), bidHeader.GasUsed())
+		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+	})
+	t.Run("capella", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponseCapella)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.NoError(t, err)
+		expectedWithdrawalsRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+		bid, err := h.Message()
+		require.NoError(t, err)
+		bidHeader, err := bid.Header()
+		require.NoError(t, err)
+		withdrawalsRoot, err := bidHeader.WithdrawalsRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, bytes.Equal(expectedWithdrawalsRoot, withdrawalsRoot))
+	})
+	t.Run("unsupported version", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponseUnknownVersion)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.ErrorContains(t, "unsupported header version", err)
+	})
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
