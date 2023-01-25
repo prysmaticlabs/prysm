@@ -53,12 +53,11 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*apimiddleware.
 
 	stateForkResponseJson := &apimiddleware.StateForkResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		stateForkResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 
@@ -70,12 +69,11 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*apimiddlewa
 
 	blockHeadersResponseJson := &apimiddleware.BlockHeadersResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		blockHeadersResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 
@@ -105,12 +103,11 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddlewa
 
 	syncingResponseJson := &apimiddleware.SyncingResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		syncingResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 
