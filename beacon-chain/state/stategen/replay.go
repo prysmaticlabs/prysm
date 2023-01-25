@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/pkg/errors"
@@ -41,7 +42,8 @@ func (_ *State) replayBlocks(
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
 	})
-	log.Debug("Replaying state")
+	log.Debugf("Replaying state at %s", debug.Stack())
+
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
