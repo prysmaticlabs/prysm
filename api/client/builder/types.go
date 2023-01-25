@@ -940,7 +940,7 @@ func (b *BlindedBeaconBlockBodyCapella) MarshalJSON() ([]byte, error) {
 		VoluntaryExits         []*SignedVoluntaryExit         `json:"voluntary_exits"`
 		BLSToExecutionChanges  []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes"`
 		SyncAggregate          *SyncAggregate                 `json:"sync_aggregate"`
-		ExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"execution_payload_header"` // TODO: Change name to ExecutionPayloadHeaderCapella?
+		ExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"execution_payload_header"`
 	}{
 		RandaoReveal:           b.RandaoReveal,
 		Eth1Data:               &Eth1Data{b.Eth1Data},

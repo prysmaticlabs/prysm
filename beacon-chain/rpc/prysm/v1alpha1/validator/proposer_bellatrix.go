@@ -100,7 +100,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get bid")
+		return nil, errors.Wrap(err, "could not get bid")
 	}
 	if bid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
@@ -118,11 +118,11 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 
 	header, err := bid.Header()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get bid header")
+		return nil, errors.Wrap(err, "could not get bid header")
 	}
 	txRoot, err := header.TransactionsRoot()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get transaction root")
+		return nil, errors.Wrap(err, "could not get transaction root")
 	}
 	if bytesutil.ToBytes32(txRoot) == emptyRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
@@ -210,7 +210,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 
 	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not create signed block")
+		return nil, errors.Wrap(err, "could not create signed block")
 	}
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
@@ -232,7 +232,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 
 	pbPayload, err := payload.PbBellatrix()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get payload")
+		return nil, errors.Wrap(err, "could not get payload")
 	}
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
@@ -262,7 +262,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 
 	txs, err := payload.Transactions()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get transactions from payload")
+		return nil, errors.Wrap(err, "could not get transactions from payload")
 	}
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
@@ -288,7 +288,7 @@ func validateBuilderSignature(signedBid builder.SignedBid) error {
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
-		return errors.Wrapf(err, "could not get bid")
+		return errors.Wrap(err, "could not get bid")
 	}
 	if bid.IsNil() {
 		return errors.New("builder returned nil bid")

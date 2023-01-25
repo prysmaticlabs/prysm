@@ -239,7 +239,7 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 		}
 		p, err := hr.ToProto()
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not extract proto message from header")
+			return nil, errors.Wrap(err, "could not extract proto message from header")
 		}
 		return WrappedSignedBuilderBid(p)
 	default:
@@ -325,7 +325,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBea
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
 
 		if err != nil {
-			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockCapella to the builder api")
 		}
 		ep := &ExecPayloadResponseCapella{}
 		if err := json.Unmarshal(rb, ep); err != nil {
