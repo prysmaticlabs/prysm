@@ -13,5 +13,4 @@ go_test(
         "minimal",
         "spectest",
     ],
-    deps = ["//testing/spectest/shared/deneb/finality:go_default_library"],
 )
