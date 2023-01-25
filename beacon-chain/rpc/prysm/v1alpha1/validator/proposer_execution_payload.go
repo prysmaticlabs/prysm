@@ -141,19 +141,34 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		SafeBlockHash:      finalizedBlockHash,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
-
-	p := &enginev1.PayloadAttributes{
-		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            random,
-		SuggestedFeeRecipient: feeRecipient.Bytes(),
+	var attr payloadattribute.Attributer
+	switch st.Version() {
+	case version.Capella:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+		})
+		if err != nil {
+			return nil, err
+		}
+	case version.Bellatrix:
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// This will change in subsequent hardforks like Capella.
-	pa, err := payloadattribute.New(p)
-	if err != nil {
-		return nil, err
-	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, pa)
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
