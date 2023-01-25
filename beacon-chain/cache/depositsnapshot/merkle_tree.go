@@ -1,9 +1,5 @@
 package depositsnapshot
 
-const (
-	DepositContractDepth = 32 // Maximum tree depth as defined by EIP-4881.
-)
-
 // MerkleTreeNode is the interface for a Merkle tree.
 type MerkleTreeNode interface {
 	// GetRoot returns the root of the Merkle tree.
