@@ -234,3 +234,23 @@ func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]s
 	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
 }
+
+// Eth1DataVotesLength returns the maximum length of the votes on the Eth1 data,
+// computed from the parameters in BeaconChainConfig.
+func (b *BeaconChainConfig) Eth1DataVotesLength() uint64 {
+	return uint64(b.EpochsPerEth1VotingPeriod.Mul(uint64(b.SlotsPerEpoch)))
+}
+
+// PreviousEpochAttestationsLength returns the maximum length of the pending
+// attestation list for the previous epoch, computed from the parameters in
+// BeaconChainConfig.
+func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// CurrentEpochAttestationsLength returns the maximum length of the pending
+// attestation list for the current epoch, computed from the parameters in
+// BeaconChainConfig.
+func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
