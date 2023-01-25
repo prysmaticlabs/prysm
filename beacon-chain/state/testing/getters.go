@@ -31,20 +31,6 @@ func VerifyBeaconStateSlotDataRace(t *testing.T, factory getState) {
 }
 
 type getStateWithCurrentJustifiedCheckpoint func(*ethpb.Checkpoint) (state.BeaconState, error)
-type clearInternalState func(state.BeaconState)
-
-func VerifyBeaconStateMatchCurrentJustifiedCheckpt(t *testing.T, factory getStateWithCurrentJustifiedCheckpoint, clear clearInternalState) {
-	c1 := &ethpb.Checkpoint{Epoch: 1}
-	c2 := &ethpb.Checkpoint{Epoch: 2}
-	beaconState, err := factory(c1)
-	require.NoError(t, err)
-	require.Equal(t, true, beaconState.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	clear(beaconState)
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
-}
 
 func VerifyBeaconStateMatchCurrentJustifiedCheckptNative(t *testing.T, factory getStateWithCurrentJustifiedCheckpoint) {
 	c1 := &ethpb.Checkpoint{Epoch: 1}
@@ -57,19 +43,6 @@ func VerifyBeaconStateMatchCurrentJustifiedCheckptNative(t *testing.T, factory g
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
 }
 
-func VerifyBeaconStateMatchPreviousJustifiedCheckpt(t *testing.T, factory getStateWithCurrentJustifiedCheckpoint, clear clearInternalState) {
-	c1 := &ethpb.Checkpoint{Epoch: 1}
-	c2 := &ethpb.Checkpoint{Epoch: 2}
-	beaconState, err := factory(c1)
-	require.NoError(t, err)
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
-	require.Equal(t, true, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-	clear(beaconState)
-	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c1))
-}
-
 func VerifyBeaconStateMatchPreviousJustifiedCheckptNative(t *testing.T, factory getStateWithCurrentJustifiedCheckpoint) {
 	c1 := &ethpb.Checkpoint{Epoch: 1}
 	c2 := &ethpb.Checkpoint{Epoch: 2}
@@ -79,14 +52,6 @@ func VerifyBeaconStateMatchPreviousJustifiedCheckptNative(t *testing.T, factory 
 	require.Equal(t, false, beaconState.MatchCurrentJustifiedCheckpoint(c2))
 	require.Equal(t, true, beaconState.MatchPreviousJustifiedCheckpoint(c1))
 	require.Equal(t, false, beaconState.MatchPreviousJustifiedCheckpoint(c2))
-}
-
-func VerifyBeaconStateMarshalSSZNilState(t *testing.T, factory getState, clear clearInternalState) {
-	s, err := factory()
-	require.NoError(t, err)
-	clear(s)
-	_, err = s.MarshalSSZ()
-	require.ErrorContains(t, "nil beacon state", err)
 }
 
 func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
