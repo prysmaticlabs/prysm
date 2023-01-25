@@ -171,8 +171,9 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
+	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* root */)
 	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot && !ok {
 		s.headLock.RUnlock()
 		return nil
 	}
