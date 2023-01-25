@@ -36,6 +36,7 @@ const (
 
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
+var errNotBlinded = errors.New("submitted block is not blinded")
 var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
@@ -278,7 +279,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 // The response is the full execution payload used to create the blinded block.
 func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
 	if !sb.IsBlinded() {
-		return nil, errors.New("submitted block is not blinded")
+		return nil, errNotBlinded
 	}
 	switch sb.Version() {
 	case version.Bellatrix:
