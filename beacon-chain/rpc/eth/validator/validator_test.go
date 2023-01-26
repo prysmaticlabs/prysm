@@ -3808,6 +3808,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
+			hook := logTest.NewGlobal()
 			v1Server := &v1alpha1validator.Server{
 				BeaconDB: db,
 			}
@@ -3823,6 +3824,11 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			address, err := server.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
 			require.NoError(t, err)
 			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+			indexs := make([]types.ValidatorIndex, len(tt.args.request.Recipients))
+			for i, recipient := range tt.args.request.Recipients {
+				indexs[i] = recipient.ValidatorIndex
+			}
+			require.LogsContain(t, hook, fmt.Sprintf(`validatorIndices="%v"`, indexs))
 		})
 	}
 }

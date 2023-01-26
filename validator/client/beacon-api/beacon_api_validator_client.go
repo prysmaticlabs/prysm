@@ -22,10 +22,6 @@ type beaconApiValidatorClient struct {
 	fallbackClient          iface.ValidatorClient
 }
 
-func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
-	return NewBeaconApiValidatorClientWithFallback(host, timeout, nil)
-}
-
 func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
@@ -42,12 +38,7 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetDuties(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.GetDuties is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.getDuties(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
