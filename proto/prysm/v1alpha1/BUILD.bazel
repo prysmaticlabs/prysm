@@ -120,6 +120,7 @@ ssz_gen_marshal(
         "BLSToExecutionChange",
         "SignedBLSToExecutionChange",
         "BuilderBid",
+        "BuilderBidCapella",
     ],
 )
 
@@ -211,9 +212,9 @@ ssz_proto_files(
         "attestation.proto",
         "beacon_block.proto",
         "beacon_state.proto",
+        "blobs.proto",
         "sync_committee.proto",
         "withdrawals.proto",
-        "blobs.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
