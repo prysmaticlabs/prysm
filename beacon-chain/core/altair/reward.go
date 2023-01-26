@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 )
 
@@ -24,7 +24,7 @@ import (
 //	  """
 //	  increments = state.validators[index].effective_balance // EFFECTIVE_BALANCE_INCREMENT
 //	  return Gwei(increments * get_base_reward_per_increment(state))
-func BaseReward(s state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64, error) {
+func BaseReward(s state.ReadOnlyBeaconState, index primitives.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
@@ -33,7 +33,7 @@ func BaseReward(s state.ReadOnlyBeaconState, index types.ValidatorIndex) (uint64
 }
 
 // BaseRewardWithTotalBalance calculates the base reward with the provided total balance.
-func BaseRewardWithTotalBalance(s state.ReadOnlyBeaconState, index types.ValidatorIndex, totalBalance uint64) (uint64, error) {
+func BaseRewardWithTotalBalance(s state.ReadOnlyBeaconState, index primitives.ValidatorIndex, totalBalance uint64) (uint64, error) {
 	val, err := s.ValidatorAtIndexReadOnly(index)
 	if err != nil {
 		return 0, err

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -71,7 +71,7 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not fetch beacon state using request: %v", err)
 	}
 
-	var committeeIndices []types.ValidatorIndex
+	var committeeIndices []primitives.ValidatorIndex
 	var committee *ethpbalpha.SyncCommittee
 	if requestNextCommittee {
 		// Get the next sync committee and sync committee indices from the state.
@@ -105,8 +105,8 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	}, nil
 }
 
-func committeeIndicesFromState(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
-	committeeIndices := make([]types.ValidatorIndex, len(committee.Pubkeys))
+func committeeIndicesFromState(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([]primitives.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+	committeeIndices := make([]primitives.ValidatorIndex, len(committee.Pubkeys))
 	for i, key := range committee.Pubkeys {
 		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 		if !ok {
@@ -120,7 +120,7 @@ func committeeIndicesFromState(st state.BeaconState, committee *ethpbalpha.SyncC
 	return committeeIndices, committee, nil
 }
 
-func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+func currentCommitteeIndicesFromState(st state.BeaconState) ([]primitives.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
 	committee, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
@@ -131,7 +131,7 @@ func currentCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIn
 	return committeeIndicesFromState(st, committee)
 }
 
-func nextCommitteeIndicesFromState(st state.BeaconState) ([]types.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
+func nextCommitteeIndicesFromState(st state.BeaconState) ([]primitives.ValidatorIndex, *ethpbalpha.SyncCommittee, error) {
 	committee, err := st.NextSyncCommittee()
 	if err != nil {
 		return nil, nil, fmt.Errorf(
@@ -146,13 +146,13 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCo
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	subcommittees := make([]*ethpbv2.SyncSubcommitteeValidators, subcommitteeCount)
 	for i := uint64(0); i < subcommitteeCount; i++ {
-		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, types.CommitteeIndex(i))
+		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, primitives.CommitteeIndex(i))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to get subcommittee pubkeys: %v", err,
 			)
 		}
-		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]types.ValidatorIndex, len(pubkeys))}
+		subcommittee := &ethpbv2.SyncSubcommitteeValidators{Validators: make([]primitives.ValidatorIndex, len(pubkeys))}
 		for j, key := range pubkeys {
 			index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(key))
 			if !ok {

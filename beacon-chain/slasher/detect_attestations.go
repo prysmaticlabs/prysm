@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -16,7 +16,7 @@ import (
 // Takes in a list of indexed attestation wrappers and returns any
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
-	ctx context.Context, currentEpoch types.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
+	ctx context.Context, currentEpoch primitives.Epoch, atts []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
@@ -209,7 +209,7 @@ func (s *Service) epochUpdateForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
 	updatedChunks map[uint64]Chunker,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 ) error {
 	epoch := s.latestEpochWrittenForValidator[validatorIndex]
 	if epoch == 0 {
@@ -261,7 +261,7 @@ func (s *Service) updateSpans(
 	for _, attestationBatch := range attestationsByChunkIdx {
 		for _, att := range attestationBatch {
 			for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-				validatorIndex := types.ValidatorIndex(validatorIdx)
+				validatorIndex := primitives.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
 				// Every validator chunk index represents a range of validators.
@@ -308,7 +308,7 @@ func (s *Service) updateSpans(
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
 	args *chunkUpdateArgs,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {

@@ -3,7 +3,7 @@ package testing
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -29,7 +29,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(context.Context, *ethpb.SignedBl
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (s *MockBuilderService) GetHeader(context.Context, primitives.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
 	return s.Bid, s.ErrGetHeader
 }
 

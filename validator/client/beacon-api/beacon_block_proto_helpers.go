@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -79,8 +79,8 @@ func convertProposerSlashingSignedHeaderToProto(signedHeader *apimiddleware.Sign
 
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:          types.Slot(slot),
-			ProposerIndex: types.ValidatorIndex(proposerIndex),
+			Slot:          primitives.Slot(slot),
+			ProposerIndex: primitives.ValidatorIndex(proposerIndex),
 			ParentRoot:    parentRoot,
 			StateRoot:     stateRoot,
 			BodyRoot:      bodyRoot,
@@ -165,7 +165,7 @@ func convertCheckpointToProto(jsonCheckpoint *apimiddleware.CheckpointJson) (*et
 	}
 
 	return &ethpb.Checkpoint{
-		Epoch: types.Epoch(epoch),
+		Epoch: primitives.Epoch(epoch),
 		Root:  root,
 	}, nil
 }
@@ -234,8 +234,8 @@ func convertAttestationDataToProto(jsonAttestationData *apimiddleware.Attestatio
 	}
 
 	return &ethpb.AttestationData{
-		Slot:            types.Slot(slot),
-		CommitteeIndex:  types.CommitteeIndex(committeeIndex),
+		Slot:            primitives.Slot(slot),
+		CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
 		BeaconBlockRoot: beaconBlockRoot,
 		Source:          sourceCheckpoint,
 		Target:          targetCheckpoint,
@@ -327,8 +327,8 @@ func convertVoluntaryExitsToProto(jsonVoluntaryExits []*apimiddleware.SignedVolu
 
 		attestingIndices[index] = &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          types.Epoch(epoch),
-				ValidatorIndex: types.ValidatorIndex(validatorIndex),
+				Epoch:          primitives.Epoch(epoch),
+				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
 			},
 			Signature: signature,
 		}
@@ -382,7 +382,7 @@ func convertWithdrawalsToProto(jsonWithdrawals []*apimiddleware.WithdrawalJson) 
 
 		withdrawals[index] = &enginev1.Withdrawal{
 			Index:          withdrawalIndex,
-			ValidatorIndex: types.ValidatorIndex(validatorIndex),
+			ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
 			Address:        executionAddress,
 			Amount:         amount,
 		}
@@ -425,7 +425,7 @@ func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*apim
 
 		signedBlsToExecutionChanges[index] = &ethpb.SignedBLSToExecutionChange{
 			Message: &ethpb.BLSToExecutionChange{
-				ValidatorIndex:     types.ValidatorIndex(validatorIndex),
+				ValidatorIndex:     primitives.ValidatorIndex(validatorIndex),
 				FromBlsPubkey:      fromBlsPubkey,
 				ToExecutionAddress: toExecutionAddress,
 			},

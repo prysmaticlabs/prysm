@@ -16,7 +16,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -113,7 +113,7 @@ func TestService_InitStartStop(t *testing.T) {
 				// Set to some future slot, and then make sure that current head matches it.
 				st, err := util.NewBeaconState()
 				require.NoError(t, err)
-				futureSlot := types.Slot(27354)
+				futureSlot := primitives.Slot(27354)
 				require.NoError(t, st.SetSlot(futureSlot))
 				return &mock.ChainService{
 					State: st,
@@ -125,7 +125,7 @@ func TestService_InitStartStop(t *testing.T) {
 				}
 			},
 			methodRuns: func(fd *event.Feed) {
-				futureSlot := types.Slot(27354)
+				futureSlot := primitives.Slot(27354)
 				// Send valid event.
 				fd.Send(&feed.Event{
 					Type: statefeed.Initialized,
@@ -398,7 +398,7 @@ func TestService_Resync(t *testing.T) {
 			chainService: func() *mock.ChainService {
 				st, err := util.NewBeaconState()
 				require.NoError(t, err)
-				futureSlot := types.Slot(160)
+				futureSlot := primitives.Slot(160)
 				require.NoError(t, st.SetGenesisTime(uint64(makeGenesisTime(futureSlot).Unix())))
 				return &mock.ChainService{
 					State: st,
@@ -413,7 +413,7 @@ func TestService_Resync(t *testing.T) {
 			},
 			assert: func(s *Service) {
 				assert.LogsContain(t, hook, "Resync attempt complete")
-				assert.Equal(t, types.Slot(160), s.cfg.Chain.HeadSlot())
+				assert.Equal(t, primitives.Slot(160), s.cfg.Chain.HeadSlot())
 			},
 		},
 	}
@@ -434,7 +434,7 @@ func TestService_Resync(t *testing.T) {
 				StateNotifier: mc.StateNotifier(),
 			})
 			assert.NotNil(t, s)
-			assert.Equal(t, types.Slot(0), s.cfg.Chain.HeadSlot())
+			assert.Equal(t, primitives.Slot(0), s.cfg.Chain.HeadSlot())
 			err := s.Resync()
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)

@@ -6,7 +6,7 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -18,7 +18,7 @@ func Test_ValidatorStatus(t *testing.T) {
 
 	type args struct {
 		validator *ethpb.Validator
-		epoch     types.Epoch
+		epoch     primitives.Epoch
 	}
 	tests := []struct {
 		name    string
@@ -33,7 +33,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					ActivationEpoch:            farFutureEpoch,
 					ActivationEligibilityEpoch: farFutureEpoch,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_PENDING,
 		},
@@ -44,7 +44,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					ActivationEpoch:            10,
 					ActivationEligibilityEpoch: 2,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_PENDING,
 		},
@@ -55,7 +55,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					ActivationEpoch: 3,
 					ExitEpoch:       farFutureEpoch,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE,
 		},
@@ -67,7 +67,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					ExitEpoch:       30,
 					Slashed:         true,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE,
 		},
@@ -79,7 +79,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					ExitEpoch:       30,
 					Slashed:         false,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE,
 		},
@@ -92,7 +92,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					WithdrawableEpoch: 40,
 					Slashed:           true,
 				},
-				epoch: types.Epoch(35),
+				epoch: primitives.Epoch(35),
 			},
 			want: ethpb.ValidatorStatus_EXITED,
 		},
@@ -105,7 +105,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					WithdrawableEpoch: 40,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(35),
+				epoch: primitives.Epoch(35),
 			},
 			want: ethpb.ValidatorStatus_EXITED,
 		},
@@ -119,7 +119,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(45),
+				epoch: primitives.Epoch(45),
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL,
 		},
@@ -133,7 +133,7 @@ func Test_ValidatorStatus(t *testing.T) {
 					EffectiveBalance:  0,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(45),
+				epoch: primitives.Epoch(45),
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL,
 		},
@@ -156,7 +156,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 
 	type args struct {
 		validator *ethpb.Validator
-		epoch     types.Epoch
+		epoch     primitives.Epoch
 	}
 	tests := []struct {
 		name    string
@@ -171,7 +171,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					ActivationEpoch:            farFutureEpoch,
 					ActivationEligibilityEpoch: farFutureEpoch,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_PENDING_INITIALIZED,
 		},
@@ -182,7 +182,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					ActivationEpoch:            10,
 					ActivationEligibilityEpoch: 2,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_PENDING_QUEUED,
 		},
@@ -193,7 +193,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					ActivationEpoch: 3,
 					ExitEpoch:       farFutureEpoch,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE_ONGOING,
 		},
@@ -205,7 +205,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					ExitEpoch:       30,
 					Slashed:         true,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE_SLASHED,
 		},
@@ -217,7 +217,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					ExitEpoch:       30,
 					Slashed:         false,
 				},
-				epoch: types.Epoch(5),
+				epoch: primitives.Epoch(5),
 			},
 			want: ethpb.ValidatorStatus_ACTIVE_EXITING,
 		},
@@ -230,7 +230,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					WithdrawableEpoch: 40,
 					Slashed:           true,
 				},
-				epoch: types.Epoch(35),
+				epoch: primitives.Epoch(35),
 			},
 			want: ethpb.ValidatorStatus_EXITED_SLASHED,
 		},
@@ -243,7 +243,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					WithdrawableEpoch: 40,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(35),
+				epoch: primitives.Epoch(35),
 			},
 			want: ethpb.ValidatorStatus_EXITED_UNSLASHED,
 		},
@@ -257,7 +257,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(45),
+				epoch: primitives.Epoch(45),
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL_POSSIBLE,
 		},
@@ -271,7 +271,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 					EffectiveBalance:  0,
 					Slashed:           false,
 				},
-				epoch: types.Epoch(45),
+				epoch: primitives.Epoch(45),
 			},
 			want: ethpb.ValidatorStatus_WITHDRAWAL_DONE,
 		},

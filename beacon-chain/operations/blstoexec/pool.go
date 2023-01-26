@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -21,21 +21,21 @@ type PoolManager interface {
 	BLSToExecChangesForInclusion(beaconState state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange)
-	ValidatorExists(idx types.ValidatorIndex) bool
+	ValidatorExists(idx primitives.ValidatorIndex) bool
 }
 
 // Pool is a concrete implementation of PoolManager.
 type Pool struct {
 	lock    sync.RWMutex
 	pending doublylinkedlist.List[*ethpb.SignedBLSToExecutionChange]
-	m       map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange]
+	m       map[primitives.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange]
 }
 
 // NewPool returns an initialized pool.
 func NewPool() *Pool {
 	return &Pool{
 		pending: doublylinkedlist.List[*ethpb.SignedBLSToExecutionChange]{},
-		m:       make(map[types.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange]),
+		m:       make(map[primitives.ValidatorIndex]*doublylinkedlist.Node[*ethpb.SignedBLSToExecutionChange]),
 	}
 }
 
@@ -154,7 +154,7 @@ func (p *Pool) MarkIncluded(change *ethpb.SignedBLSToExecutionChange) {
 
 // ValidatorExists checks if the bls to execution change object exists
 // for that particular validator.
-func (p *Pool) ValidatorExists(idx types.ValidatorIndex) bool {
+func (p *Pool) ValidatorExists(idx primitives.ValidatorIndex) bool {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 

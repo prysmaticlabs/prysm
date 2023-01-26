@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-yaml/yaml"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -45,12 +45,12 @@ func runShuffleTest(t *testing.T, testCase *ShuffleTestCase) error {
 	}
 
 	seed := common.BytesToHash(baseSeed)
-	testIndices := make([]types.ValidatorIndex, testCase.Count)
-	for i := types.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
+	testIndices := make([]primitives.ValidatorIndex, testCase.Count)
+	for i := primitives.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
 		testIndices[i] = i
 	}
-	shuffledList := make([]types.ValidatorIndex, testCase.Count)
-	for i := types.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
+	shuffledList := make([]primitives.ValidatorIndex, testCase.Count)
+	for i := primitives.ValidatorIndex(0); uint64(i) < testCase.Count; i++ {
 		si, err := helpers.ShuffledIndex(i, testCase.Count, seed)
 		if err != nil {
 			return err

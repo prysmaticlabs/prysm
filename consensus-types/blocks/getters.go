@@ -7,7 +7,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
@@ -454,12 +454,12 @@ func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 }
 
 // Slot returns the respective slot of the block.
-func (b *BeaconBlock) Slot() types.Slot {
+func (b *BeaconBlock) Slot() primitives.Slot {
 	return b.slot
 }
 
 // ProposerIndex returns the proposer index of the beacon block.
-func (b *BeaconBlock) ProposerIndex() types.ValidatorIndex {
+func (b *BeaconBlock) ProposerIndex() primitives.ValidatorIndex {
 	return b.proposerIndex
 }
 

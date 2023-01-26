@@ -6,7 +6,7 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -17,7 +17,7 @@ func TestInfostream_EpochToTimestamp(t *testing.T) {
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	tests := []struct {
 		name      string
-		epoch     types.Epoch
+		epoch     primitives.Epoch
 		timestamp uint64
 	}{
 		{

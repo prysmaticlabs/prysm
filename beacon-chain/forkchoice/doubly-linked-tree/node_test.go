@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -143,8 +143,8 @@ func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 func TestNode_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
-		justifiedEpoch types.Epoch
-		finalizedEpoch types.Epoch
+		justifiedEpoch primitives.Epoch
+		finalizedEpoch primitives.Epoch
 		want           bool
 	}{
 		{&Node{}, 0, 0, true},

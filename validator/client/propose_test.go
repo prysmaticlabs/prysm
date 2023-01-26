@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -151,7 +151,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 
 	tests := []struct {
 		name string
-		slot types.Slot
+		slot primitives.Slot
 	}{
 		{
 			name: "phase 0",
@@ -431,7 +431,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		pastSlot types.Slot
+		pastSlot primitives.Slot
 	}{
 		{
 			name:     "400 slots ago",
@@ -949,7 +949,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Default: "c",
 					Random:  []string{"d", "e"},
-					Specific: map[types.ValidatorIndex]string{
+					Specific: map[primitives.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},
@@ -982,7 +982,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				graffitiStruct: &graffiti.Graffiti{
 					Random:  []string{"d"},
 					Default: "c",
-					Specific: map[types.ValidatorIndex]string{
+					Specific: map[primitives.ValidatorIndex]string{
 						1: "f",
 						2: "g",
 					},

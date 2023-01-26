@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -327,7 +327,7 @@ func (s *State) CombinedCache() *CombinedCache {
 	return &CombinedCache{getters: getters}
 }
 
-func (s *State) slotAvailable(slot types.Slot) bool {
+func (s *State) slotAvailable(slot primitives.Slot) bool {
 	// default to assuming node was initialized from genesis - backfill only needs to be specified for checkpoint sync
 	if s.backfillStatus == nil {
 		return true

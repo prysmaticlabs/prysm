@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -503,31 +503,31 @@ func TestSplitOffset_OK(t *testing.T) {
 
 func TestIntersectionSlot(t *testing.T) {
 	testCases := []struct {
-		setA []types.Slot
-		setB []types.Slot
-		setC []types.Slot
-		out  []types.Slot
+		setA []primitives.Slot
+		setB []primitives.Slot
+		setC []primitives.Slot
+		out  []primitives.Slot
 	}{
-		{[]types.Slot{2, 3, 5}, []types.Slot{3}, []types.Slot{3}, []types.Slot{3}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{3, 5}, []types.Slot{5}, []types.Slot{5}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{3, 5}, []types.Slot{3, 5}, []types.Slot{3, 5}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{2, 3, 5}},
-		{[]types.Slot{3, 2, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{2, 3, 5}},
-		{[]types.Slot{3, 3, 5}, []types.Slot{5, 3, 2}, []types.Slot{3, 2, 5}, []types.Slot{3, 5}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{2, 3}, []types.Slot{2, 3, 5}, []types.Slot{5}, []types.Slot{}},
-		{[]types.Slot{2, 2, 2}, []types.Slot{2, 2, 2}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{}, []types.Slot{2, 3, 5}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{}, []types.Slot{}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{1}, []types.Slot{1}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{1, 1, 1}, []types.Slot{1, 1}, []types.Slot{1, 2, 3}, []types.Slot{1}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{3}, []primitives.Slot{3}, []primitives.Slot{3}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{3, 5}, []primitives.Slot{5}, []primitives.Slot{5}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{3, 5}, []primitives.Slot{3, 5}, []primitives.Slot{3, 5}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{5, 3, 2}, []primitives.Slot{3, 2, 5}, []primitives.Slot{2, 3, 5}},
+		{[]primitives.Slot{3, 2, 5}, []primitives.Slot{5, 3, 2}, []primitives.Slot{3, 2, 5}, []primitives.Slot{2, 3, 5}},
+		{[]primitives.Slot{3, 3, 5}, []primitives.Slot{5, 3, 2}, []primitives.Slot{3, 2, 5}, []primitives.Slot{3, 5}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{2, 3}, []primitives.Slot{2, 3, 5}, []primitives.Slot{5}, []primitives.Slot{}},
+		{[]primitives.Slot{2, 2, 2}, []primitives.Slot{2, 2, 2}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{}, []primitives.Slot{2, 3, 5}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{}, []primitives.Slot{}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{1}, []primitives.Slot{1}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{1, 1, 1}, []primitives.Slot{1, 1}, []primitives.Slot{1, 2, 3}, []primitives.Slot{1}},
 	}
 	for _, tt := range testCases {
-		setA := append([]types.Slot{}, tt.setA...)
-		setB := append([]types.Slot{}, tt.setB...)
-		setC := append([]types.Slot{}, tt.setC...)
+		setA := append([]primitives.Slot{}, tt.setA...)
+		setB := append([]primitives.Slot{}, tt.setB...)
+		setC := append([]primitives.Slot{}, tt.setC...)
 		result := slice.IntersectionSlot(setA, setB, setC)
 		sort.Slice(result, func(i, j int) bool {
 			return result[i] < result[j]
@@ -549,17 +549,17 @@ func TestIntersectionSlot(t *testing.T) {
 
 func TestNotSlot(t *testing.T) {
 	testCases := []struct {
-		setA []types.Slot
-		setB []types.Slot
-		out  []types.Slot
+		setA []primitives.Slot
+		setB []primitives.Slot
+		out  []primitives.Slot
 	}{
-		{[]types.Slot{4, 6}, []types.Slot{2, 3, 5, 4, 6}, []types.Slot{2, 3, 5}},
-		{[]types.Slot{3, 5}, []types.Slot{2, 3, 5}, []types.Slot{2}},
-		{[]types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}, []types.Slot{}},
-		{[]types.Slot{2}, []types.Slot{2, 3, 5}, []types.Slot{3, 5}},
-		{[]types.Slot{}, []types.Slot{2, 3, 5}, []types.Slot{2, 3, 5}},
-		{[]types.Slot{}, []types.Slot{}, []types.Slot{}},
-		{[]types.Slot{1}, []types.Slot{1}, []types.Slot{}},
+		{[]primitives.Slot{4, 6}, []primitives.Slot{2, 3, 5, 4, 6}, []primitives.Slot{2, 3, 5}},
+		{[]primitives.Slot{3, 5}, []primitives.Slot{2, 3, 5}, []primitives.Slot{2}},
+		{[]primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}, []primitives.Slot{}},
+		{[]primitives.Slot{2}, []primitives.Slot{2, 3, 5}, []primitives.Slot{3, 5}},
+		{[]primitives.Slot{}, []primitives.Slot{2, 3, 5}, []primitives.Slot{2, 3, 5}},
+		{[]primitives.Slot{}, []primitives.Slot{}, []primitives.Slot{}},
+		{[]primitives.Slot{1}, []primitives.Slot{1}, []primitives.Slot{}},
 	}
 	for _, tt := range testCases {
 		result := slice.NotSlot(tt.setA, tt.setB)
@@ -571,14 +571,14 @@ func TestNotSlot(t *testing.T) {
 
 func TestIsInSlots(t *testing.T) {
 	testCases := []struct {
-		a      types.Slot
-		b      []types.Slot
+		a      primitives.Slot
+		b      []primitives.Slot
 		result bool
 	}{
-		{0, []types.Slot{}, false},
-		{0, []types.Slot{0}, true},
-		{4, []types.Slot{2, 3, 5, 4, 6}, true},
-		{100, []types.Slot{2, 3, 5, 4, 6}, false},
+		{0, []primitives.Slot{}, false},
+		{0, []primitives.Slot{0}, true},
+		{4, []primitives.Slot{2, 3, 5, 4, 6}, true},
+		{100, []primitives.Slot{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
 		result := slice.IsInSlots(tt.a, tt.b)

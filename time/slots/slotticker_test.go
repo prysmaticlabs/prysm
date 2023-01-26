@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 var _ Ticker = (*SlotTicker)(nil)
 
 func TestSlotTicker(t *testing.T) {
 	ticker := &SlotTicker{
-		c:    make(chan types.Slot),
+		c:    make(chan primitives.Slot),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()
@@ -66,7 +66,7 @@ func TestSlotTicker(t *testing.T) {
 
 func TestSlotTickerGenesis(t *testing.T) {
 	ticker := &SlotTicker{
-		c:    make(chan types.Slot),
+		c:    make(chan primitives.Slot),
 		done: make(chan struct{}),
 	}
 	defer ticker.Done()

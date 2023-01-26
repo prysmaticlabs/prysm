@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -66,7 +66,7 @@ type modifiedState struct {
 
 // used to parallelize state summary bucket processing
 type modifiedStateSummary struct {
-	slot      types.Slot
+	slot      primitives.Slot
 	root      []byte
 	key       []byte
 	valueSize uint64

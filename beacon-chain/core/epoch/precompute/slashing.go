@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -49,7 +49,7 @@ func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
-			if err := helpers.DecreaseBalance(s, types.ValidatorIndex(idx), penalty); err != nil {
+			if err := helpers.DecreaseBalance(s, primitives.ValidatorIndex(idx), penalty); err != nil {
 				return false, val, err
 			}
 			return true, val, nil

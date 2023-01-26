@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -22,8 +22,8 @@ type WeakSubjectivityVerifier struct {
 	enabled  bool
 	verified bool
 	root     [32]byte
-	epoch    types.Epoch
-	slot     types.Slot
+	epoch    primitives.Epoch
+	slot     primitives.Slot
 	db       weakSubjectivityDB
 }
 
@@ -51,7 +51,7 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 
 // VerifyWeakSubjectivity verifies the weak subjectivity root in the service struct.
 // Reference design: https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#weak-subjectivity-sync-procedure
-func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, finalizedEpoch types.Epoch) error {
+func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, finalizedEpoch primitives.Epoch) error {
 	if v.verified || !v.enabled {
 		return nil
 	}

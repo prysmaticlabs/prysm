@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
@@ -16,7 +16,7 @@ func TestOrderedConfigSchedule(t *testing.T) {
 			prevVersion := [4]byte{0, 0, 0, 0}
 			// epoch 0 is genesis, and it's a uint so can't make it -1
 			// so we use a pointer to detect the boundary condition and skip it
-			var prevEpoch *types.Epoch
+			var prevEpoch *primitives.Epoch
 			for _, fse := range NewOrderedSchedule(cfg) {
 				// copy loop variable so we can take the address of fields
 				f := fse
@@ -37,8 +37,8 @@ func TestOrderedConfigSchedule(t *testing.T) {
 	bc := testForkVersionBCC()
 	ofs := NewOrderedSchedule(bc)
 	for i := range ofs {
-		if ofs[i].Epoch != types.Epoch(math.Pow(2, float64(i))) {
-			t.Errorf("expected %dth element of list w/ epoch=%d, got=%d. list=%v", i, types.Epoch(2^i), ofs[i].Epoch, ofs)
+		if ofs[i].Epoch != primitives.Epoch(math.Pow(2, float64(i))) {
+			t.Errorf("expected %dth element of list w/ epoch=%d, got=%d. list=%v", i, primitives.Epoch(2^i), ofs[i].Epoch, ofs)
 		}
 	}
 }
@@ -49,32 +49,32 @@ func TestVersionForEpoch(t *testing.T) {
 	testCases := []struct {
 		name    string
 		version [4]byte
-		epoch   types.Epoch
+		epoch   primitives.Epoch
 		err     error
 	}{
 		{
 			name:    "found between versions",
 			version: [4]byte{2, 1, 2, 3},
-			epoch:   types.Epoch(7),
+			epoch:   primitives.Epoch(7),
 		},
 		{
 			name:    "found at end",
 			version: [4]byte{4, 1, 2, 3},
-			epoch:   types.Epoch(100),
+			epoch:   primitives.Epoch(100),
 		},
 		{
 			name:    "found at start",
 			version: [4]byte{0, 1, 2, 3},
-			epoch:   types.Epoch(1),
+			epoch:   primitives.Epoch(1),
 		},
 		{
 			name:    "found at boundary",
 			version: [4]byte{1, 1, 2, 3},
-			epoch:   types.Epoch(2),
+			epoch:   primitives.Epoch(2),
 		},
 		{
 			name:  "not found before",
-			epoch: types.Epoch(0),
+			epoch: primitives.Epoch(0),
 			err:   ErrVersionNotFound,
 		},
 	}
@@ -131,12 +131,12 @@ func TestVersionForName(t *testing.T) {
 
 func testForkVersionBCC() *params.BeaconChainConfig {
 	return &params.BeaconChainConfig{
-		ForkVersionSchedule: map[[4]byte]types.Epoch{
-			{1, 1, 2, 3}: types.Epoch(2),
-			{0, 1, 2, 3}: types.Epoch(1),
-			{4, 1, 2, 3}: types.Epoch(16),
-			{3, 1, 2, 3}: types.Epoch(8),
-			{2, 1, 2, 3}: types.Epoch(4),
+		ForkVersionSchedule: map[[4]byte]primitives.Epoch{
+			{1, 1, 2, 3}: primitives.Epoch(2),
+			{0, 1, 2, 3}: primitives.Epoch(1),
+			{4, 1, 2, 3}: primitives.Epoch(16),
+			{3, 1, 2, 3}: primitives.Epoch(8),
+			{2, 1, 2, 3}: primitives.Epoch(4),
 		},
 		ForkVersionNames: map[[4]byte]string{
 			{1, 1, 2, 3}: "second",

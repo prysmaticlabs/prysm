@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -44,7 +44,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	ds.GenesisTimeFetcher.CurrentSlot()
 
 	// Attestation has one epoch to get included in the chain. This blocks users from requesting too soon.
-	epochBack := types.Slot(0)
+	epochBack := primitives.Slot(0)
 	if ds.GenesisTimeFetcher.CurrentSlot() > params.BeaconConfig().SlotsPerEpoch {
 		epochBack = ds.GenesisTimeFetcher.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
 	}
@@ -62,7 +62,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 		return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
 	}
 
-	inclusionSlot := types.Slot(math.MaxUint64)
+	inclusionSlot := primitives.Slot(math.MaxUint64)
 	targetStates := make(map[[32]byte]state.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block().Body().Attestations() {
