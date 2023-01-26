@@ -133,7 +133,7 @@ func saveBlobs(d iface.Database, req *ethpb.BlobsSidecarsByRangeRequest, blobsPe
 				BeaconBlockRoot: make([]byte, fieldparams.RootLength),
 				AggregatedProof: make([]byte, 48),
 			}
-			// non-blobs to ensure that blobs are always sent
+			// always non-empty to ensure that blobs are always sent
 			blob.BeaconBlockRoot[0] = 0x1
 			blob.BeaconBlockRoot[1] = byte(j)
 			d.SaveBlobsSidecar(context.Background(), blob)
