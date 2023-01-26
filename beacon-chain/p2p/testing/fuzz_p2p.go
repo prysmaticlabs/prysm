@@ -145,7 +145,6 @@ func (_ *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *
 
 // BroadcastBLSChanges mocks a broadcast BLS change ocurred
 func (_ *FakeP2P) BroadcastBLSChanges(_ context.Context, _ []*ethpb.SignedBLSToExecutionChange) {
-	return
 }
 
 // InterceptPeerDial -- fake.
