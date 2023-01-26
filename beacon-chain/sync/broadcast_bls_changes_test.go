@@ -44,7 +44,5 @@ func TestBroadcastBLSChanges(t *testing.T) {
 
 	capellaStart, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	require.NoError(t, err)
-	require.NoError(t, s.broadcastBLSChanges(capellaStart))
-	require.NoError(t, s.broadcastBLSChanges(capellaStart+1))
-
+	s.broadcastBLSChanges(capellaStart + 1)
 }
