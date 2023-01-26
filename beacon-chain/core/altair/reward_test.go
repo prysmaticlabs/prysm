@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -21,7 +21,7 @@ func Test_BaseReward(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
-		valIdx    types.ValidatorIndex
+		valIdx    primitives.ValidatorIndex
 		st        state.ReadOnlyBeaconState
 		want      uint64
 		errString string
@@ -72,7 +72,7 @@ func Test_BaseRewardWithTotalBalance(t *testing.T) {
 	s, _ := util.DeterministicGenesisStateAltair(t, 1)
 	tests := []struct {
 		name          string
-		valIdx        types.ValidatorIndex
+		valIdx        primitives.ValidatorIndex
 		activeBalance uint64
 		want          uint64
 		errString     string

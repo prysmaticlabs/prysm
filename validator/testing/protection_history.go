@@ -5,7 +5,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -59,7 +59,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 	proposalData := make([]kv.ProposalHistoryForPubkey, numValidators)
 	gen := rand.NewGenerator()
 	for v := 0; v < numValidators; v++ {
-		latestTarget := types.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
+		latestTarget := primitives.Epoch(gen.Intn(int(params.BeaconConfig().WeakSubjectivityPeriod) / 1000))
 		// If 0, we change the value to 1 as the we compute source by doing (target-1)
 		// to prevent any underflows in this setup helper.
 		if latestTarget == 0 {
@@ -67,7 +67,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 		}
 		historicalAtts := make([]*kv.AttestationRecord, 0)
 		proposals := make([]kv.Proposal, 0)
-		for i := types.Epoch(1); i < latestTarget; i++ {
+		for i := primitives.Epoch(1); i < latestTarget; i++ {
 			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
@@ -78,12 +78,12 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 				PubKey:      pubkeys[v],
 			})
 		}
-		for i := types.Epoch(1); i <= latestTarget; i++ {
+		for i := primitives.Epoch(1); i <= latestTarget; i++ {
 			var signingRoot [32]byte
 			signingRootStr := fmt.Sprintf("%d", i)
 			copy(signingRoot[:], signingRootStr)
 			proposals = append(proposals, kv.Proposal{
-				Slot:        types.Slot(i),
+				Slot:        primitives.Slot(i),
 				SigningRoot: signingRoot[:],
 			})
 		}

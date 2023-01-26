@@ -8,14 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 func (c beaconApiValidatorClient) getAttestationData(
 	ctx context.Context,
-	reqSlot types.Slot,
-	reqCommitteeIndex types.CommitteeIndex,
+	reqSlot primitives.Slot,
+	reqCommitteeIndex primitives.CommitteeIndex,
 ) (*ethpb.AttestationData, error) {
 	params := url.Values{}
 	params.Add("slot", strconv.FormatUint(uint64(reqSlot), 10))
@@ -90,14 +90,14 @@ func (c beaconApiValidatorClient) getAttestationData(
 
 	response := &ethpb.AttestationData{
 		BeaconBlockRoot: beaconBlockRoot,
-		CommitteeIndex:  types.CommitteeIndex(committeeIndex),
-		Slot:            types.Slot(slot),
+		CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
+		Slot:            primitives.Slot(slot),
 		Source: &ethpb.Checkpoint{
-			Epoch: types.Epoch(sourceEpoch),
+			Epoch: primitives.Epoch(sourceEpoch),
 			Root:  sourceRoot,
 		},
 		Target: &ethpb.Checkpoint{
-			Epoch: types.Epoch(targetEpoch),
+			Epoch: primitives.Epoch(targetEpoch),
 			Root:  targetRoot,
 		},
 	}

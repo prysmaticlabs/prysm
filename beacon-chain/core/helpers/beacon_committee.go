@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -75,7 +75,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //	     index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
 //	     count=committees_per_slot * SLOTS_PER_EPOCH,
 //	 )
-func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot types.Slot, committeeIndex types.CommitteeIndex) ([]types.ValidatorIndex, error) {
+func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
 	epoch := slots.ToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -118,11 +118,11 @@ func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconSta
 //	 )
 func BeaconCommittee(
 	ctx context.Context,
-	validatorIndices []types.ValidatorIndex,
+	validatorIndices []primitives.ValidatorIndex,
 	seed [32]byte,
-	slot types.Slot,
-	committeeIndex types.CommitteeIndex,
-) ([]types.ValidatorIndex, error) {
+	slot primitives.Slot,
+	committeeIndex primitives.CommitteeIndex,
+) ([]primitives.ValidatorIndex, error) {
 	committee, err := committeeCache.Committee(ctx, slot, seed, committeeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
@@ -144,9 +144,9 @@ func BeaconCommittee(
 
 // CommitteeAssignmentContainer represents a committee list, committee index, and to be attested slot for a given epoch.
 type CommitteeAssignmentContainer struct {
-	Committee      []types.ValidatorIndex
-	AttesterSlot   types.Slot
-	CommitteeIndex types.CommitteeIndex
+	Committee      []primitives.ValidatorIndex
+	AttesterSlot   primitives.Slot
+	CommitteeIndex primitives.CommitteeIndex
 }
 
 // CommitteeAssignments is a map of validator indices pointing to the appropriate committee
@@ -159,8 +159,8 @@ type CommitteeAssignmentContainer struct {
 func CommitteeAssignments(
 	ctx context.Context,
 	state state.BeaconState,
-	epoch types.Epoch,
-) (map[types.ValidatorIndex]*CommitteeAssignmentContainer, map[types.ValidatorIndex][]types.Slot, error) {
+	epoch primitives.Epoch,
+) (map[primitives.ValidatorIndex]*CommitteeAssignmentContainer, map[primitives.ValidatorIndex][]primitives.Slot, error) {
 	nextEpoch := time.NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
@@ -177,7 +177,7 @@ func CommitteeAssignments(
 	if err != nil {
 		return nil, nil, err
 	}
-	minValidStartSlot := types.Slot(0)
+	minValidStartSlot := primitives.Slot(0)
 	if state.Slot() >= params.BeaconConfig().SlotsPerHistoricalRoot {
 		minValidStartSlot = state.Slot() - params.BeaconConfig().SlotsPerHistoricalRoot
 	}
@@ -185,7 +185,7 @@ func CommitteeAssignments(
 		return nil, nil, fmt.Errorf("start slot %d is smaller than the minimum valid start slot %d", startSlot, minValidStartSlot)
 	}
 
-	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
+	proposerIndexToSlots := make(map[primitives.ValidatorIndex][]primitives.Slot, params.BeaconConfig().SlotsPerEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
@@ -217,21 +217,21 @@ func CommitteeAssignments(
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
 	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
-	validatorIndexToCommittee := make(map[types.ValidatorIndex]*CommitteeAssignmentContainer, len(activeValidatorIndices))
+	validatorIndexToCommittee := make(map[primitives.ValidatorIndex]*CommitteeAssignmentContainer, len(activeValidatorIndices))
 
 	// Compute all committees for all slots.
-	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
-			committee, err := BeaconCommitteeFromState(ctx, state, slot, types.CommitteeIndex(j) /*committee index*/)
+			committee, err := BeaconCommitteeFromState(ctx, state, slot, primitives.CommitteeIndex(j) /*committee index*/)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			cac := &CommitteeAssignmentContainer{
 				Committee:      committee,
-				CommitteeIndex: types.CommitteeIndex(j),
+				CommitteeIndex: primitives.CommitteeIndex(j),
 				AttesterSlot:   slot,
 			}
 			for _, vIndex := range committee {
@@ -274,16 +274,16 @@ func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyB
 
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
-func ShuffledIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	seed, err := Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
-	indices := make([]types.ValidatorIndex, 0, s.NumValidators())
+	indices := make([]primitives.ValidatorIndex, 0, s.NumValidators())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
-			indices = append(indices, types.ValidatorIndex(idx))
+			indices = append(indices, primitives.ValidatorIndex(idx))
 		}
 		return nil
 	}); err != nil {
@@ -296,8 +296,8 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.Va
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch types.Epoch) error {
-	for _, e := range []types.Epoch{epoch, epoch + 1} {
+func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
+	for _, e := range []primitives.Epoch{epoch, epoch + 1} {
 		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
@@ -316,7 +316,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 		// Store the sorted indices as well as shuffled indices. In current spec,
 		// sorted indices is required to retrieve proposer index. This is also
 		// used for failing verify signature fallback.
-		sortedIndices := make([]types.ValidatorIndex, len(shuffledIndices))
+		sortedIndices := make([]primitives.ValidatorIndex, len(shuffledIndices))
 		copy(sortedIndices, shuffledIndices)
 		sort.Slice(sortedIndices, func(i, j int) bool {
 			return sortedIndices[i] < sortedIndices[j]
@@ -404,10 +404,10 @@ func ClearCache() {
 //	  end = (len(indices) * uint64(index + 1)) // count
 //	  return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
 func computeCommittee(
-	indices []types.ValidatorIndex,
+	indices []primitives.ValidatorIndex,
 	seed [32]byte,
 	index, count uint64,
-) ([]types.ValidatorIndex, error) {
+) ([]primitives.ValidatorIndex, error) {
 	validatorCount := uint64(len(indices))
 	start := slice.SplitOffset(validatorCount, count, index)
 	end := slice.SplitOffset(validatorCount, count, index+1)
@@ -417,7 +417,7 @@ func computeCommittee(
 	}
 
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
-	shuffledIndices := make([]types.ValidatorIndex, len(indices))
+	shuffledIndices := make([]primitives.ValidatorIndex, len(indices))
 	copy(shuffledIndices, indices)
 	// UnshuffleList is used here as it is an optimized implementation created
 	// for fast computation of committees.
@@ -432,9 +432,9 @@ func computeCommittee(
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []types.ValidatorIndex) ([]types.ValidatorIndex, error) {
+func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
-	proposerIndices := make([]types.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
+	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 
 	e := time.CurrentEpoch(state)
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)

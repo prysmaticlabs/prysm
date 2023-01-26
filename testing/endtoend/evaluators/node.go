@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
@@ -128,7 +128,7 @@ func finishedSyncing(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) e
 }
 
 func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	headEpochs := make([]types.Epoch, len(conns))
+	headEpochs := make([]primitives.Epoch, len(conns))
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))

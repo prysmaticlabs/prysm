@@ -28,7 +28,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -995,7 +995,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 
 	perSlot := params.BeaconConfig().SecondsPerSlot
 	// current slot time
-	slotsSinceGenesis := types.Slot(1000)
+	slotsSinceGenesis := primitives.Slot(1000)
 	// max uint, divided by slot time. But avoid losing precision too much.
 	overflowBase := (1 << 63) / (perSlot >> 1)
 	msg.Block.Slot = slotsSinceGenesis.Add(overflowBase)
@@ -1064,7 +1064,7 @@ func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 func TestService_isBlockQueueable(t *testing.T) {
 	currentTime := time.Now().Round(time.Second)
 	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
-	blockSlot := types.Slot(1)
+	blockSlot := primitives.Slot(1)
 
 	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so don't queue the block.
 	receivedTime := currentTime.Add(-400 * time.Millisecond)

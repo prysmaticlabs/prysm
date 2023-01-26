@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -20,7 +20,7 @@ var (
 
 // slotRootInfo specifies the slot root info in the epoch boundary state cache.
 type slotRootInfo struct {
-	slot      types.Slot
+	slot      primitives.Slot
 	blockRoot [32]byte
 }
 
@@ -106,7 +106,7 @@ func (e *epochBoundaryState) getByBlockRootLockFree(r [32]byte) (*rootStateInfo,
 }
 
 // get epoch boundary state by its slot. Returns copied state in state info object if exists. Otherwise returns nil.
-func (e *epochBoundaryState) getBySlot(s types.Slot) (*rootStateInfo, bool, error) {
+func (e *epochBoundaryState) getBySlot(s primitives.Slot) (*rootStateInfo, bool, error) {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 
@@ -175,6 +175,6 @@ func popProcessNoopFunc(_ interface{}) error {
 }
 
 // Converts input uint64 to string. To be used as key for slot to get root.
-func slotToString(s types.Slot) string {
+func slotToString(s primitives.Slot) string {
 	return strconv.FormatUint(uint64(s), 10)
 }

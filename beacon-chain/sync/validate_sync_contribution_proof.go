@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -82,7 +82,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	if err := s.setSyncContributionBits(con); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(con.SubcommitteeIndex))
+	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, primitives.CommitteeIndex(con.SubcommitteeIndex))
 
 	msg.ValidatorData = m
 
@@ -151,7 +151,7 @@ func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
-		seen = s.hasSeenSyncContributionIndexSlot(c.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(c.SubcommitteeIndex))
+		seen = s.hasSeenSyncContributionIndexSlot(c.Slot, m.Message.AggregatorIndex, primitives.CommitteeIndex(c.SubcommitteeIndex))
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
@@ -253,7 +253,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
 		var activePubkeys []bls.PublicKey
 		var activeRawPubkeys [][]byte
-		syncPubkeys, err := s.cfg.chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		syncPubkeys, err := s.cfg.chain.HeadSyncCommitteePubKeys(ctx, m.Message.Contribution.Slot, primitives.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -303,7 +303,7 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 }
 
 // Returns true if the node has received sync contribution for the aggregator with index, slot and subcommittee index.
-func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) bool {
+func (s *Service) hasSeenSyncContributionIndexSlot(slot primitives.Slot, aggregatorIndex primitives.ValidatorIndex, subComIdx primitives.CommitteeIndex) bool {
 	s.seenSyncContributionLock.RLock()
 	defer s.seenSyncContributionLock.RUnlock()
 
@@ -314,7 +314,7 @@ func (s *Service) hasSeenSyncContributionIndexSlot(slot types.Slot, aggregatorIn
 }
 
 // Set sync contributor's aggregate index, slot and subcommittee index as seen.
-func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIndex types.ValidatorIndex, subComIdx types.CommitteeIndex) {
+func (s *Service) setSyncContributionIndexSlotSeen(slot primitives.Slot, aggregatorIndex primitives.ValidatorIndex, subComIdx primitives.CommitteeIndex) {
 	s.seenSyncContributionLock.Lock()
 	defer s.seenSyncContributionLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)

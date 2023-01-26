@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -44,7 +44,7 @@ func (s *Service) forkWatcher() {
 
 // Checks if there is a fork in the next epoch and if there is
 // it registers the appropriate gossip and rpc topics.
-func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
+func (s *Service) registerForUpcomingFork(currEpoch primitives.Epoch) error {
 	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.chain.GenesisTime(), genRoot[:])
 	if err != nil {
@@ -72,7 +72,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 
 // Checks if there was a fork in the previous epoch, and if there
 // was then we deregister the topics from that particular fork.
-func (s *Service) deregisterFromPastFork(currEpoch types.Epoch) error {
+func (s *Service) deregisterFromPastFork(currEpoch primitives.Epoch) error {
 	genRoot := s.cfg.chain.GenesisValidatorsRoot()
 	// This method takes care of the de-registration of
 	// old gossip pubsub handlers. Once we are at the epoch

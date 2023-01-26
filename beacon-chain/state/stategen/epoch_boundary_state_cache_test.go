@@ -3,7 +3,7 @@ package stategen
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -61,8 +61,8 @@ func TestEpochBoundaryStateCache_CanSaveAndDelete(t *testing.T) {
 
 func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {
 	e := newBoundaryStateCache()
-	offSet := types.Slot(10)
-	for i := types.Slot(0); i < offSet.Add(maxCacheSize); i++ {
+	offSet := primitives.Slot(10)
+	for i := primitives.Slot(0); i < offSet.Add(maxCacheSize); i++ {
 		s, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, s.SetSlot(i))

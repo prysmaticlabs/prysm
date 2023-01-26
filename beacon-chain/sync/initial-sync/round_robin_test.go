@@ -12,7 +12,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -29,9 +29,9 @@ func TestService_roundRobinSync(t *testing.T) {
 	}()
 	tests := []struct {
 		name                string
-		currentSlot         types.Slot
-		availableBlockSlots []types.Slot
-		expectedBlockSlots  []types.Slot
+		currentSlot         primitives.Slot
+		availableBlockSlots []primitives.Slot
+		expectedBlockSlots  []primitives.Slot
 		peers               []*peerData
 	}{
 		{
@@ -313,7 +313,7 @@ func TestService_roundRobinSync(t *testing.T) {
 				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), tt.currentSlot)
 			}
 			assert.Equal(t, true, len(tt.expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-			var receivedBlockSlots []types.Slot
+			var receivedBlockSlots []primitives.Slot
 			for _, blk := range mc.BlocksReceived {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
@@ -389,7 +389,7 @@ func TestService_processBlock(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, primitives.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -420,7 +420,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	t.Run("process non-linear batch", func(t *testing.T) {
 		var batch []interfaces.SignedBeaconBlock
 		currBlockRoot := genesisBlkRoot
-		for i := types.Slot(1); i < 10; i++ {
+		for i := primitives.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
@@ -435,7 +435,7 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		var batch2 []interfaces.SignedBeaconBlock
-		for i := types.Slot(10); i < 20; i++ {
+		for i := primitives.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
 			blk1.Block.Slot = i
@@ -488,7 +488,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, types.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
+		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
 }
 
@@ -506,13 +506,13 @@ func TestService_blockProviderScoring(t *testing.T) {
 	peerData := []*peerData{
 		{
 			// The slowest peer, only a single block in couple of epochs.
-			blocks:         []types.Slot{1, 65, 129},
+			blocks:         []primitives.Slot{1, 65, 129},
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
 		{
 			// A relatively slow peer, still should perform better than the slowest peer.
-			blocks:         append([]types.Slot{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
+			blocks:         append([]primitives.Slot{1, 2, 3, 4, 65, 66, 67, 68, 129, 130}, makeSequence(131, 160)...),
 			finalizedEpoch: 5,
 			headSlot:       160,
 		},
@@ -556,7 +556,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 	}
 	scorer := s.cfg.P2P.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
-	currentSlot := types.Slot(160)
+	currentSlot := primitives.Slot(160)
 
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer1))
 	assert.Equal(t, scorer.MaxScore(), scorer.Score(peer2))
@@ -567,7 +567,7 @@ func TestService_blockProviderScoring(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []types.Slot
+	var receivedBlockSlots []primitives.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}
@@ -620,7 +620,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 	}
 	expectedBlockSlots := makeSequence(1, 191)
-	currentSlot := types.Slot(191)
+	currentSlot := primitives.Slot(191)
 
 	// Sync to finalized epoch.
 	hook := logTest.NewGlobal()
@@ -635,7 +635,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), currentSlot)
 	}
 	assert.Equal(t, true, len(expectedBlockSlots) <= len(mc.BlocksReceived), "Processes wrong number of blocks")
-	var receivedBlockSlots []types.Slot
+	var receivedBlockSlots []primitives.Slot
 	for _, blk := range mc.BlocksReceived {
 		receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 	}

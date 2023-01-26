@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -17,7 +17,7 @@ import (
 func validAttesterSlashingForValIdx(t *testing.T, beaconState state.BeaconState, privs []bls.SecretKey, valIdx ...uint64) *ethpb.AttesterSlashing {
 	var slashings []*ethpb.AttesterSlashing
 	for _, idx := range valIdx {
-		slashing, err := util.GenerateAttesterSlashingForValidator(beaconState, privs[idx], types.ValidatorIndex(idx))
+		slashing, err := util.GenerateAttesterSlashingForValidator(beaconState, privs[idx], primitives.ValidatorIndex(idx))
 		require.NoError(t, err)
 		slashings = append(slashings, slashing)
 	}
@@ -60,14 +60,14 @@ func attesterSlashingForValIdx(valIdx ...uint64) *ethpb.AttesterSlashing {
 func pendingSlashingForValIdx(valIdx ...uint64) *PendingAttesterSlashing {
 	return &PendingAttesterSlashing{
 		attesterSlashing: attesterSlashingForValIdx(valIdx...),
-		validatorToSlash: types.ValidatorIndex(valIdx[0]),
+		validatorToSlash: primitives.ValidatorIndex(valIdx[0]),
 	}
 }
 
 func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
-		included map[types.ValidatorIndex]bool
+		included map[primitives.ValidatorIndex]bool
 		wantErr  []bool
 	}
 	type args struct {
@@ -78,33 +78,33 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		slashings[i] = sl
 	}
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	// We mark the following validators with some preconditions.
-	exitedVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(2))
+	exitedVal, err := beaconState.ValidatorAtIndex(primitives.ValidatorIndex(2))
 	require.NoError(t, err)
 	exitedVal.WithdrawableEpoch = 0
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(2), exitedVal))
-	futureWithdrawVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(4))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(primitives.ValidatorIndex(2), exitedVal))
+	futureWithdrawVal, err := beaconState.ValidatorAtIndex(primitives.ValidatorIndex(4))
 	require.NoError(t, err)
 	futureWithdrawVal.WithdrawableEpoch = 17
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(4), futureWithdrawVal))
-	slashedVal, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(5))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(primitives.ValidatorIndex(4), futureWithdrawVal))
+	slashedVal, err := beaconState.ValidatorAtIndex(primitives.ValidatorIndex(5))
 	require.NoError(t, err)
 	slashedVal.Slashed = true
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(5), slashedVal))
-	slashedVal2, err := beaconState.ValidatorAtIndex(types.ValidatorIndex(21))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(primitives.ValidatorIndex(5), slashedVal))
+	slashedVal2, err := beaconState.ValidatorAtIndex(primitives.ValidatorIndex(21))
 	require.NoError(t, err)
 	slashedVal2.Slashed = true
-	require.NoError(t, beaconState.UpdateValidatorAtIndex(types.ValidatorIndex(21), slashedVal2))
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(primitives.ValidatorIndex(21), slashedVal2))
 
 	aggSlashing1 := validAttesterSlashingForValIdx(t, beaconState, privKeys, 0, 1, 2)
 	aggSlashing2 := validAttesterSlashingForValIdx(t, beaconState, privKeys, 5, 9, 13)
@@ -122,7 +122,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Empty list",
 			fields: fields{
 				pending:  make([]*PendingAttesterSlashing, 0),
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{false},
 			},
 			args: args{
@@ -139,7 +139,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Empty list two validators slashed",
 			fields: fields{
 				pending:  make([]*PendingAttesterSlashing, 0),
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{false, false},
 			},
 			args: args{
@@ -153,7 +153,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				pending: []*PendingAttesterSlashing{
 					pendingSlashings[1],
 				},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{true},
 			},
 			args: args{
@@ -165,7 +165,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Slashing for already exit validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{true},
 			},
 			args: args{
@@ -177,7 +177,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Slashing for withdrawable validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{true},
 			},
 			args: args{
@@ -189,7 +189,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Slashing for slashed validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{false},
 			},
 			args: args{
@@ -201,7 +201,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Already included",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					1: true,
 				},
 				wantErr: []bool{true},
@@ -218,7 +218,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 					pendingSlashings[0],
 					pendingSlashings[2],
 				},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{false},
 			},
 			args: args{
@@ -230,7 +230,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Doesn't reject partially slashed slashings",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 				wantErr:  []bool{false, false, false, true},
 			},
 			args: args{
@@ -303,11 +303,11 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 2)
 	slashings := make([]*ethpb.AttesterSlashing, 2)
 	for i := 0; i < 2; i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		slashings[i] = sl
 	}
@@ -328,7 +328,7 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
-		included map[types.ValidatorIndex]bool
+		included map[primitives.ValidatorIndex]bool
 	}
 	type args struct {
 		slashing *ethpb.AttesterSlashing
@@ -348,7 +348,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 						validatorToSlash: 1,
 					},
 				},
-				included: make(map[types.ValidatorIndex]bool),
+				included: make(map[primitives.ValidatorIndex]bool),
 			},
 			args: args{
 				slashing: attesterSlashingForValIdx(3),
@@ -357,7 +357,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 				pending: []*PendingAttesterSlashing{
 					pendingSlashingForValIdx(1),
 				},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					3: true,
 				},
 			},
@@ -370,7 +370,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 					pendingSlashingForValIdx(2),
 					pendingSlashingForValIdx(3),
 				},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					0: true,
 				},
 			},
@@ -382,7 +382,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 					pendingSlashingForValIdx(1),
 					pendingSlashingForValIdx(3),
 				},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					0: true,
 					2: true,
 				},
@@ -404,7 +404,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 					pendingSlashingForValIdx(10),
 					pendingSlashingForValIdx(11),
 				},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					0: true,
 				},
 			},
@@ -424,7 +424,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 					pendingSlashingForValIdx(10),
 					pendingSlashingForValIdx(11),
 				},
-				included: map[types.ValidatorIndex]bool{
+				included: map[primitives.ValidatorIndex]bool{
 					0: true,
 					6: true,
 				},
@@ -457,11 +457,11 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		slashings[i] = sl
 	}
@@ -532,15 +532,15 @@ func TestPool_PendingAttesterSlashings_Slashed(t *testing.T) {
 	pendingSlashings2 := make([]*PendingAttesterSlashing, 20)
 	slashings := make([]*ethpb.AttesterSlashing, 20)
 	for i := 0; i < len(pendingSlashings); i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		pendingSlashings2[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		slashings[i] = sl
 	}
@@ -590,11 +590,11 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	pendingSlashings := make([]*PendingAttesterSlashing, 3)
 	slashings := make([]*ethpb.AttesterSlashing, 3)
 	for i := 0; i < 2; i++ {
-		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], types.ValidatorIndex(i))
+		sl, err := util.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		pendingSlashings[i] = &PendingAttesterSlashing{
 			attesterSlashing: sl,
-			validatorToSlash: types.ValidatorIndex(i),
+			validatorToSlash: primitives.ValidatorIndex(i),
 		}
 		slashings[i] = sl
 	}

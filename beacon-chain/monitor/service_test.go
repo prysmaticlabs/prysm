@@ -15,7 +15,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -45,13 +45,13 @@ func setupService(t *testing.T) *Service {
 		ValidatorsRoot: [32]byte{},
 	}
 
-	trackedVals := map[types.ValidatorIndex]bool{
+	trackedVals := map[primitives.ValidatorIndex]bool{
 		1:  true,
 		2:  true,
 		12: true,
 		15: true,
 	}
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
 			balance: 32000000000,
 		},
@@ -65,7 +65,7 @@ func setupService(t *testing.T) *Service {
 			balance: 31900000000,
 		},
 	}
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
 		1: {
 			startEpoch:                      0,
 			startBalance:                    31700000000,
@@ -83,7 +83,7 @@ func setupService(t *testing.T) *Service {
 		12: {},
 		15: {},
 	}
-	trackedSyncCommitteeIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+	trackedSyncCommitteeIndices := map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 		1:  {0, 1, 2, 3},
 		12: {4, 5},
 	}
@@ -106,13 +106,13 @@ func setupService(t *testing.T) *Service {
 
 func TestTrackedIndex(t *testing.T) {
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},
 	}
-	require.Equal(t, s.trackedIndex(types.ValidatorIndex(1)), true)
-	require.Equal(t, s.trackedIndex(types.ValidatorIndex(3)), false)
+	require.Equal(t, s.trackedIndex(primitives.ValidatorIndex(1)), true)
+	require.Equal(t, s.trackedIndex(primitives.ValidatorIndex(3)), false)
 }
 
 func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
@@ -122,7 +122,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 
 	s.updateSyncCommitteeTrackedVals(state)
 	require.LogsDoNotContain(t, hook, "Sync committee assignments will not be reported")
-	newTrackedSyncIndices := map[types.ValidatorIndex][]types.CommitteeIndex{
+	newTrackedSyncIndices := map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 		1: {1, 3, 4},
 		2: {2},
 	}
@@ -131,7 +131,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 
 func TestNewService(t *testing.T) {
 	config := &ValidatorMonitorConfig{}
-	var tracked []types.ValidatorIndex
+	var tracked []primitives.ValidatorIndex
 	ctx := context.Background()
 	_, err := NewService(ctx, config, tracked)
 	require.NoError(t, err)
@@ -187,7 +187,7 @@ func TestInitializePerformanceStructures(t *testing.T) {
 	epoch := slots.ToEpoch(state.Slot())
 	s.initializePerformanceStructures(state, epoch)
 	require.LogsDoNotContain(t, hook, "Could not fetch starting balance")
-	latestPerformance := map[types.ValidatorIndex]ValidatorLatestPerformance{
+	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
 		1: {
 			balance: 32000000000,
 		},
@@ -201,7 +201,7 @@ func TestInitializePerformanceStructures(t *testing.T) {
 			balance: 32000000000,
 		},
 	}
-	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
+	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
 		1: {
 			startBalance: 32000000000,
 		},

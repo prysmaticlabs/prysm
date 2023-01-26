@@ -3,7 +3,7 @@ package time
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -18,7 +18,7 @@ import (
 //	  Return the current epoch.
 //	  """
 //	  return compute_epoch_at_slot(state.slot)
-func CurrentEpoch(state state.ReadOnlyBeaconState) types.Epoch {
+func CurrentEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 	return slots.ToEpoch(state.Slot())
 }
 
@@ -34,7 +34,7 @@ func CurrentEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 //	  """
 //	  current_epoch = get_current_epoch(state)
 //	  return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state state.ReadOnlyBeaconState) types.Epoch {
+func PrevEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -44,19 +44,19 @@ func PrevEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
+func NextEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 	return slots.ToEpoch(state.Slot()) + 1
 }
 
 // HigherEqualThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
-func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e types.Epoch) bool {
+func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e primitives.Epoch) bool {
 	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
 // CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
-func CanUpgradeToAltair(slot types.Slot) bool {
+func CanUpgradeToAltair(slot primitives.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
 	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
 	return epochStart && altairEpoch
@@ -66,7 +66,7 @@ func CanUpgradeToAltair(slot types.Slot) bool {
 //
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == BELLATRIX_FORK_EPOCH
-func CanUpgradeToBellatrix(slot types.Slot) bool {
+func CanUpgradeToBellatrix(slot primitives.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
 	bellatrixEpoch := slots.ToEpoch(slot) == params.BeaconConfig().BellatrixForkEpoch
 	return epochStart && bellatrixEpoch
@@ -75,7 +75,7 @@ func CanUpgradeToBellatrix(slot types.Slot) bool {
 // CanUpgradeToCapella returns true if the input `slot` can upgrade to Capella.
 // Spec code:
 // If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == CAPELLA_FORK_EPOCH
-func CanUpgradeToCapella(slot types.Slot) bool {
+func CanUpgradeToCapella(slot primitives.Slot) bool {
 	epochStart := slots.IsEpochStart(slot)
 	capellaEpoch := slots.ToEpoch(slot) == params.BeaconConfig().CapellaForkEpoch
 	return epochStart && capellaEpoch

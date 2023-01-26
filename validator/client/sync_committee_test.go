@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -42,8 +42,8 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -74,8 +74,8 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -115,8 +115,8 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
 	hook := logTest.NewGlobal()
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -153,7 +153,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 	validator.SubmitSyncCommitteeMessage(context.Background(), 1, pubKey)
 
 	require.LogsDoNotContain(t, hook, "Could not")
-	require.Equal(t, types.Slot(1), generatedMsg.Slot)
+	require.Equal(t, primitives.Slot(1), generatedMsg.Slot)
 	require.Equal(t, validatorIndex, generatedMsg.ValidatorIndex)
 	require.DeepEqual(t, bytesutil.PadTo(r, 32), generatedMsg.BlockRoot)
 }
@@ -173,8 +173,8 @@ func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testi
 func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -201,8 +201,8 @@ func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *tes
 func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -220,7 +220,7 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{}}, nil)
 
 	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
 	require.LogsContain(t, hook, "Empty subcommittee index list, do nothing")
@@ -229,8 +229,8 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, validatorKey, finish := setup(t)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -248,7 +248,7 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -271,8 +271,8 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 	assert.NoError(t, err)
 
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -290,7 +290,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -321,8 +321,8 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	assert.NoError(t, err)
 
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -340,7 +340,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx
@@ -399,8 +399,8 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	assert.NoError(t, err)
 
 	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
-	validatorIndex := types.ValidatorIndex(7)
-	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validatorIndex := primitives.ValidatorIndex(7)
+	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
@@ -418,7 +418,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 			Slot:      1,
 			PublicKey: pubKey[:],
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{1}}, nil)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{1}}, nil)
 
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), // ctx

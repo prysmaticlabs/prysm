@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -113,7 +113,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	require.NoError(t, err)
 
 	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
-	if val, err := beaconState.ValidatorAtIndexReadOnly(types.ValidatorIndex(slashableIndices[0])); err != nil || !val.Slashed() {
+	if val, err := beaconState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(slashableIndices[0])); err != nil || !val.Slashed() {
 		require.NoError(t, err)
 		t.Fatal("expected validator to be slashed")
 	}

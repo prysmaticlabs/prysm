@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -29,7 +29,7 @@ func GenerateFullBlockCapella(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot types.Slot,
+	slot primitives.Slot,
 ) (*ethpb.SignedBeaconBlockCapella, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -174,7 +174,7 @@ func GenerateFullBlockCapella(
 
 	changes := make([]*ethpb.SignedBLSToExecutionChange, conf.NumBLSChanges)
 	for i := uint64(0); i < conf.NumBLSChanges; i++ {
-		changes[i], err = GenerateBLSToExecutionChange(bState, privs[i+1], types.ValidatorIndex(i))
+		changes[i], err = GenerateBLSToExecutionChange(bState, privs[i+1], primitives.ValidatorIndex(i))
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +209,7 @@ func GenerateFullBlockCapella(
 }
 
 // GenerateBLSToExecutionChange generates a valid bls to exec changae for validator `val` and its private key `priv` with the given beacon state `st`.
-func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val types.ValidatorIndex) (*ethpb.SignedBLSToExecutionChange, error) {
+func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val primitives.ValidatorIndex) (*ethpb.SignedBLSToExecutionChange, error) {
 	cred := indexToHash(uint64(val))
 	pubkey := priv.PublicKey().Marshal()
 	message := &ethpb.BLSToExecutionChange{

@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -21,11 +21,11 @@ import (
 const subscribeCommitteeSubnetsTestEndpoint = "/eth/v1/validator/beacon_committee_subscriptions"
 
 func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
-	subscribeSlots := []types.Slot{0, 1, 100}
-	validatorIndices := []types.ValidatorIndex{2, 3, 4}
+	subscribeSlots := []primitives.Slot{0, 1, 100}
+	validatorIndices := []primitives.ValidatorIndex{2, 3, 4}
 	committeesAtSlot := []uint64{5, 6, 7}
 	isAggregator := []bool{false, true, false}
-	committeeIndices := []types.CommitteeIndex{8, 9, 10}
+	committeeIndices := []primitives.CommitteeIndex{8, 9, 10}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -124,7 +124,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		subscribeRequest        *ethpb.CommitteeSubnetsSubscribeRequest
-		validatorIndices        []types.ValidatorIndex
+		validatorIndices        []primitives.ValidatorIndex
 		attesterDuty            *apimiddleware.AttesterDutyJson
 		dutiesError             error
 		expectGetDutiesQuery    bool
@@ -139,51 +139,51 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 		{
 			name: "CommitteeIds size mismatch",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				CommitteeIds: []types.CommitteeIndex{1},
-				Slots:        []types.Slot{1, 2},
+				CommitteeIds: []primitives.CommitteeIndex{1},
+				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []types.ValidatorIndex{1, 2},
+			validatorIndices:     []primitives.ValidatorIndex{1, 2},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
 			name: "Slots size mismatch",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				CommitteeIds: []types.CommitteeIndex{1, 2},
-				Slots:        []types.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{1, 2},
+				Slots:        []primitives.Slot{1},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []types.ValidatorIndex{1, 2},
+			validatorIndices:     []primitives.ValidatorIndex{1, 2},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
 			name: "IsAggregator size mismatch",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				CommitteeIds: []types.CommitteeIndex{1, 2},
-				Slots:        []types.Slot{1, 2},
+				CommitteeIds: []primitives.CommitteeIndex{1, 2},
+				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices:     []types.ValidatorIndex{1, 2},
+			validatorIndices:     []primitives.ValidatorIndex{1, 2},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
 			name: "ValidatorIndices size mismatch",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				CommitteeIds: []types.CommitteeIndex{1, 2},
-				Slots:        []types.Slot{1, 2},
+				CommitteeIds: []primitives.CommitteeIndex{1, 2},
+				Slots:        []primitives.Slot{1, 2},
 				IsAggregator: []bool{false, true},
 			},
-			validatorIndices:     []types.ValidatorIndex{1},
+			validatorIndices:     []primitives.ValidatorIndex{1},
 			expectedErrorMessage: arraySizeMismatchErrorMessage,
 		},
 		{
 			name: "bad duties query",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []types.Slot{1},
-				CommitteeIds: []types.CommitteeIndex{2},
+				Slots:        []primitives.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices:     []types.ValidatorIndex{3},
+			validatorIndices:     []primitives.ValidatorIndex{3},
 			dutiesError:          errors.New("foo error"),
 			expectGetDutiesQuery: true,
 			expectedErrorMessage: "failed to get duties for epoch `0`: foo error",
@@ -191,11 +191,11 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 		{
 			name: "bad duty slot",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []types.Slot{1},
-				CommitteeIds: []types.CommitteeIndex{2},
+				Slots:        []primitives.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices: []types.ValidatorIndex{3},
+			validatorIndices: []primitives.ValidatorIndex{3},
 			attesterDuty: &apimiddleware.AttesterDutyJson{
 				Slot:             "foo",
 				CommitteesAtSlot: "1",
@@ -206,11 +206,11 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 		{
 			name: "bad duty committees at slot",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []types.Slot{1},
-				CommitteeIds: []types.CommitteeIndex{2},
+				Slots:        []primitives.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices: []types.ValidatorIndex{3},
+			validatorIndices: []primitives.ValidatorIndex{3},
 			attesterDuty: &apimiddleware.AttesterDutyJson{
 				Slot:             "1",
 				CommitteesAtSlot: "foo",
@@ -221,11 +221,11 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 		{
 			name: "missing slot in duties",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []types.Slot{1},
-				CommitteeIds: []types.CommitteeIndex{2},
+				Slots:        []primitives.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices: []types.ValidatorIndex{3},
+			validatorIndices: []primitives.ValidatorIndex{3},
 			attesterDuty: &apimiddleware.AttesterDutyJson{
 				Slot:             "2",
 				CommitteesAtSlot: "3",
@@ -236,11 +236,11 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 		{
 			name: "bad POST request",
 			subscribeRequest: &ethpb.CommitteeSubnetsSubscribeRequest{
-				Slots:        []types.Slot{1},
-				CommitteeIds: []types.CommitteeIndex{2},
+				Slots:        []primitives.Slot{1},
+				CommitteeIds: []primitives.CommitteeIndex{2},
 				IsAggregator: []bool{false},
 			},
-			validatorIndices: []types.ValidatorIndex{3},
+			validatorIndices: []primitives.ValidatorIndex{3},
 			attesterDuty: &apimiddleware.AttesterDutyJson{
 				Slot:             "1",
 				CommitteesAtSlot: "2",

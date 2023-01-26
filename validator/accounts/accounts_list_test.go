@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -611,7 +611,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	m := mock.NewMockValidatorClient(ctrl)
 
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
-	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
+	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []primitives.ValidatorIndex{1, math.MaxUint64, 2}}
 
 	m.
 		EXPECT().
