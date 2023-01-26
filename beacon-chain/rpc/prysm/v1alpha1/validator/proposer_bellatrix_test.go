@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -81,6 +82,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			name: "get header failed",
 			mock: &builderTest.MockBuilderService{
 				ErrGetHeader: errors.New("can't get header"),
+				Bid:          sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
@@ -224,6 +226,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				return wb
 			}(),
 			mock: &builderTest.MockBuilderService{
+				Payload:               &v1.ExecutionPayload{},
 				HasConfigured:         true,
 				ErrSubmitBlindedBlock: errors.New("can't submit"),
 			},
@@ -331,12 +334,16 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
-	sBid := &ethpb.SignedBuilderBid{
+	pbBid := &ethpb.SignedBuilderBid{
 		Message:   bid,
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
+	sBid, err := builder.WrappedSignedBuilderBid(pbBid)
+	require.NoError(t, err)
 	require.NoError(t, validateBuilderSignature(sBid))
 
-	sBid.Message.Value = make([]byte, 32)
+	pbBid.Message.Value = make([]byte, 32)
+	sBid, err = builder.WrappedSignedBuilderBid(pbBid)
+	require.NoError(t, err)
 	require.ErrorIs(t, validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
 }
