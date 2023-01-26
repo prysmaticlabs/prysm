@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -62,7 +62,7 @@ func IdFromRoot(r [32]byte) StateOrBlockId {
 
 // IdFromSlot encodes a Slot in the format expected by the API in places where a slot can be used to identify
 // a BeaconState or SignedBeaconBlock.
-func IdFromSlot(s types.Slot) StateOrBlockId {
+func IdFromSlot(s primitives.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
 }
 
@@ -337,7 +337,7 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 		return nil, err
 	}
 	return &WeakSubjectivityData{
-		Epoch:     types.Epoch(epoch),
+		Epoch:     primitives.Epoch(epoch),
 		BlockRoot: bytesutil.ToBytes32(blockRoot),
 		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
@@ -442,7 +442,7 @@ func (f *forkResponse) Fork() (*ethpb.Fork, error) {
 	return &ethpb.Fork{
 		CurrentVersion:  cSlice,
 		PreviousVersion: pSlice,
-		Epoch:           types.Epoch(epoch),
+		Epoch:           primitives.Epoch(epoch),
 	}, nil
 }
 
@@ -467,7 +467,7 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, e
 		version := bytesutil.ToBytes4(vSlice)
 		ofs = append(ofs, forks.ForkScheduleEntry{
 			Version: version,
-			Epoch:   types.Epoch(uint64(epoch)),
+			Epoch:   primitives.Epoch(uint64(epoch)),
 		})
 	}
 	sort.Sort(ofs)

@@ -2,7 +2,7 @@ package state_native
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -27,7 +27,7 @@ func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
 
 // NextWithdrawalValidatorIndex returns the index of the validator which is
 // next in line for a withdrawal.
-func (b *BeaconState) NextWithdrawalValidatorIndex() (types.ValidatorIndex, error) {
+func (b *BeaconState) NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error) {
 	if b.version < version.Capella {
 		return 0, errNotSupported("NextWithdrawalValidatorIndex", b.version)
 	}
@@ -99,7 +99,7 @@ func hasETH1WithdrawalCredential(val *ethpb.Validator) bool {
 // isFullyWithdrawableValidator returns whether the validator is able to perform a full
 // withdrawal. This differ from the spec helper in that the balance > 0 is not
 // checked. This function assumes that the caller holds a lock on the state
-func isFullyWithdrawableValidator(val *ethpb.Validator, epoch types.Epoch) bool {
+func isFullyWithdrawableValidator(val *ethpb.Validator, epoch primitives.Epoch) bool {
 	if val == nil {
 		return false
 	}

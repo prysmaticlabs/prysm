@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ var ErrNoBuilder = errors.New("builder endpoint not configured")
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error)
-	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
+	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error)
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
@@ -94,7 +94,7 @@ func (s *Service) SubmitBlindedBlock(ctx context.Context, b interfaces.SignedBea
 }
 
 // GetHeader retrieves the header for a given slot and parent hash from the builder relay network.
-func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error) {
+func (s *Service) GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubKey [48]byte) (builder.SignedBid, error) {
 	ctx, span := trace.StartSpan(ctx, "builder.GetHeader")
 	defer span.End()
 	start := time.Now()
@@ -125,7 +125,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		registerValidatorLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	idxs := make([]types.ValidatorIndex, 0)
+	idxs := make([]primitives.ValidatorIndex, 0)
 	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
 	valid := make([]*ethpb.SignedValidatorRegistrationV1, 0)
 	for i := 0; i < len(reg); i++ {

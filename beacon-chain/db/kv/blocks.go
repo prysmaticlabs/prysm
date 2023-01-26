@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -186,7 +186,7 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // BlocksBySlot retrieves a list of beacon blocks and its respective roots by slot.
-func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (s *Store) BlocksBySlot(ctx context.Context, slot primitives.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
 
@@ -211,7 +211,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces
 }
 
 // BlockRootsBySlot retrieves a list of beacon block roots by slot
-func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, [][32]byte, error) {
+func (s *Store) BlockRootsBySlot(ctx context.Context, slot primitives.Slot) (bool, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockRootsBySlot")
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
@@ -414,7 +414,7 @@ func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) e
 // calling code can make decisions based on the slot without resolving the blocks to discover their slot (for instance
 // checking which root is canonical in fork choice, which operates purely on roots,
 // then if no canonical block is found, continuing to search through lower slots).
-func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs types.Slot, roots [][32]byte, err error) {
+func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (fs primitives.Slot, roots [][32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestRootsBelowSlot")
 	defer span.End()
 
@@ -470,7 +470,7 @@ func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs 
 
 // FeeRecipientByValidatorID returns the fee recipient for a validator id.
 // `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
-func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error) {
+func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FeeRecipientByValidatorID")
 	defer span.End()
 	var addr []byte
@@ -499,7 +499,7 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id types.Validato
 
 // SaveFeeRecipientsByValidatorIDs saves the fee recipients for validator ids.
 // Error is returned if `ids` and `recipients` are not the same length.
-func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, feeRecipients []common.Address) error {
+func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, feeRecipients []common.Address) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFeeRecipientByValidatorID")
 	defer span.End()
 
@@ -520,7 +520,7 @@ func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types
 
 // RegistrationByValidatorID returns the validator registration object for a validator id.
 // `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
-func (s *Store) RegistrationByValidatorID(ctx context.Context, id types.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+func (s *Store) RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.RegistrationByValidatorID")
 	defer span.End()
 	reg := &ethpb.ValidatorRegistrationV1{}
@@ -537,7 +537,7 @@ func (s *Store) RegistrationByValidatorID(ctx context.Context, id types.Validato
 
 // SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.
 // Error is returned if `ids` and `registrations` are not the same length.
-func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error {
+func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveRegistrationsByValidatorIDs")
 	defer span.End()
 
@@ -633,20 +633,20 @@ func blockRootsBySlotRange(
 		return [][]byte{}, nil
 	}
 
-	var startSlot, endSlot types.Slot
+	var startSlot, endSlot primitives.Slot
 	var step uint64
 	var ok bool
-	if startSlot, ok = startSlotEncoded.(types.Slot); !ok {
+	if startSlot, ok = startSlotEncoded.(primitives.Slot); !ok {
 		startSlot = 0
 	}
-	if endSlot, ok = endSlotEncoded.(types.Slot); !ok {
+	if endSlot, ok = endSlotEncoded.(primitives.Slot); !ok {
 		endSlot = 0
 	}
 	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
 		step = 1
 	}
-	startEpoch, startEpochOk := startEpochEncoded.(types.Epoch)
-	endEpoch, endEpochOk := endEpochEncoded.(types.Epoch)
+	startEpoch, startEpochOk := startEpochEncoded.(primitives.Epoch)
+	endEpoch, endEpochOk := endEpochEncoded.(primitives.Epoch)
 	var err error
 	if startEpochOk && endEpochOk {
 		startSlot, err = slots.EpochStart(startEpoch)
@@ -689,7 +689,7 @@ func blockRootsBySlotRange(
 }
 
 // blockRootsBySlot retrieves the block roots by slot
-func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][32]byte, error) {
+func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 

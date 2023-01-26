@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -30,7 +30,7 @@ import (
 
 func TestBlocksQueue_InitStartStop(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -44,7 +44,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
 	})
@@ -54,7 +54,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 	})
@@ -64,7 +64,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		defer cancel()
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.ErrorContains(t, errQueueTakesTooLongToStop.Error(), queue.stop())
@@ -76,7 +76,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		assert.NoError(t, queue.start())
@@ -100,7 +100,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.NoError(t, queue.stop())
@@ -113,7 +113,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		assert.NoError(t, queue.stop())
@@ -125,7 +125,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		assert.NoError(t, queue.start())
 		cancel()
@@ -141,8 +141,8 @@ func TestBlocksQueue_Loop(t *testing.T) {
 	}()
 	tests := []struct {
 		name                string
-		highestExpectedSlot types.Slot
-		expectedBlockSlots  []types.Slot
+		highestExpectedSlot primitives.Slot
+		expectedBlockSlots  []primitives.Slot
 		peers               []*peerData
 	}{
 		{
@@ -287,7 +287,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 					len(tt.expectedBlockSlots), queue.chain.HeadSlot())
 			}
 			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
-			var receivedBlockSlots []types.Slot
+			var receivedBlockSlots []primitives.Slot
 			for _, blk := range blocks {
 				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
 			}
@@ -301,7 +301,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 
 func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -315,7 +315,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
 		cancel()
@@ -330,7 +330,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateScheduled, stateDataParsed, stateSkipped, stateSent}
@@ -350,7 +350,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onScheduleEvent(ctx)
@@ -366,7 +366,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		// Cancel to make fetcher spit error when trying to schedule next FSM.
 		requestCtx, requestCtxCancel := context.WithCancel(context.Background())
@@ -383,7 +383,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onScheduleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -396,7 +396,7 @@ func TestBlocksQueue_onScheduleEvent(t *testing.T) {
 
 func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -410,7 +410,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		cancel()
@@ -425,7 +425,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateDataParsed, stateSkipped, stateSent}
@@ -445,7 +445,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -460,7 +460,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onDataReceivedEvent(ctx)
@@ -478,7 +478,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		// Mark previous machine as skipped - to test effect of re-requesting.
@@ -503,7 +503,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		hook := logTest.NewGlobal()
@@ -524,7 +524,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -553,7 +553,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 
 func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -567,7 +567,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onReadyToSendEvent(ctx)
 		cancel()
@@ -582,7 +582,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateSkipped, stateSent}
@@ -602,7 +602,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -623,7 +623,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -650,7 +650,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -683,7 +683,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -705,7 +705,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 
 func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -719,7 +719,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onProcessSkippedEvent(ctx)
 		cancel()
@@ -734,7 +734,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSent}
@@ -754,7 +754,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(256)
@@ -773,7 +773,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(256)
@@ -792,7 +792,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(192)
@@ -811,7 +811,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		queue.smm.addStateMachine(192)
@@ -845,17 +845,17 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 		}
 
 		handlerFn := queue.onProcessSkippedEvent(ctx)
-		updatedState, err := handlerFn(queue.smm.machines[types.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
+		updatedState, err := handlerFn(queue.smm.machines[primitives.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
 		assert.ErrorContains(t, "invalid range for non-skipped slot", err)
 		assert.Equal(t, stateSkipped, updatedState)
 	})
@@ -872,14 +872,14 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
-		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
+		assert.Equal(t, primitives.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
-		var machineSlots []types.Slot
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+		var machineSlots []primitives.Slot
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 			machineSlots = append(machineSlots, i)
 		}
@@ -889,14 +889,14 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		}
 		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
-		updatedSlot := types.Slot(100)
+		updatedSlot := primitives.Slot(100)
 		defer func() {
 			require.NoError(t, mc.State.SetSlot(0))
 		}()
 		require.NoError(t, mc.State.SetSlot(updatedSlot))
 
 		handlerFn := queue.onProcessSkippedEvent(ctx)
-		updatedState, err := handlerFn(queue.smm.machines[types.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
+		updatedState, err := handlerFn(queue.smm.machines[primitives.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
 		assert.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
 		// Assert that machines have been re-arranged.
@@ -907,7 +907,7 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			assert.Equal(t, true, ok)
 		}
 		// Assert highest expected slot is extended.
-		assert.Equal(t, types.Slot(blocksPerRequest*lookaheadSteps), queue.highestExpectedSlot)
+		assert.Equal(t, primitives.Slot(blocksPerRequest*lookaheadSteps), queue.highestExpectedSlot)
 	})
 
 	t.Run("ready to update machines - unconstrained mode", func(t *testing.T) {
@@ -922,15 +922,15 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		queue.mode = modeNonConstrained
-		assert.Equal(t, types.Slot(blockBatchLimit), queue.highestExpectedSlot)
+		assert.Equal(t, primitives.Slot(blockBatchLimit), queue.highestExpectedSlot)
 
 		startSlot := queue.chain.HeadSlot()
 		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
-		var machineSlots []types.Slot
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+		var machineSlots []primitives.Slot
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 			machineSlots = append(machineSlots, i)
 		}
@@ -940,11 +940,11 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 		}
 		// Update head slot, so that machines are re-arranged starting from the next slot i.e.
 		// there's no point to reset machines for some slot that has already been processed.
-		updatedSlot := types.Slot(100)
+		updatedSlot := primitives.Slot(100)
 		require.NoError(t, mc.State.SetSlot(updatedSlot))
 
 		handlerFn := queue.onProcessSkippedEvent(ctx)
-		updatedState, err := handlerFn(queue.smm.machines[types.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
+		updatedState, err := handlerFn(queue.smm.machines[primitives.Slot(blocksPerRequest*(lookaheadSteps-1))], nil)
 		assert.NoError(t, err)
 		assert.Equal(t, stateSkipped, updatedState)
 		// Assert that machines have been re-arranged.
@@ -955,13 +955,13 @@ func TestBlocksQueue_onProcessSkippedEvent(t *testing.T) {
 			assert.Equal(t, true, ok)
 		}
 		// Assert highest expected slot is extended.
-		assert.Equal(t, types.Slot(blocksPerRequest*(lookaheadSteps+1)), queue.highestExpectedSlot)
+		assert.Equal(t, primitives.Slot(blocksPerRequest*(lookaheadSteps+1)), queue.highestExpectedSlot)
 	})
 }
 
 func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 	blockBatchLimit := flags.Get().BlockBatchLimit
-	mc, p2p, _ := initializeTestServices(t, []types.Slot{}, []*peerData{})
+	mc, p2p, _ := initializeTestServices(t, []primitives.Slot{}, []*peerData{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -975,7 +975,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		cancel()
@@ -990,7 +990,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 
 		invalidStates := []stateID{stateNew, stateScheduled, stateDataParsed, stateSkipped}
@@ -1010,7 +1010,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -1026,7 +1026,7 @@ func TestBlocksQueue_onCheckStaleEvent(t *testing.T) {
 		queue := newBlocksQueue(ctx, &blocksQueueConfig{
 			blocksFetcher:       fetcher,
 			chain:               mc,
-			highestExpectedSlot: types.Slot(blockBatchLimit),
+			highestExpectedSlot: primitives.Slot(blockBatchLimit),
 		})
 		handlerFn := queue.onCheckStaleEvent(ctx)
 		updatedState, err := handlerFn(&stateMachine{
@@ -1046,9 +1046,9 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	// The chain1 contains 250 blocks and is a dead end.
 	// The chain2 contains 296 blocks, with fork started at slot 128 of chain1.
 	chain1 := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 250)
-	forkedSlot := types.Slot(201)
+	forkedSlot := primitives.Slot(201)
 	chain2 := extendBlockSequence(t, chain1[:forkedSlot], 100)
-	finalizedSlot := types.Slot(63)
+	finalizedSlot := primitives.Slot(63)
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
@@ -1085,7 +1085,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
 		chain:               mc,
-		highestExpectedSlot: types.Slot(len(chain2) - 1),
+		highestExpectedSlot: primitives.Slot(len(chain2) - 1),
 		mode:                modeNonConstrained,
 	})
 
@@ -1098,7 +1098,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
-	require.Equal(t, types.Slot(len(chain1)-1), mc.HeadSlot())
+	require.Equal(t, primitives.Slot(len(chain1)-1), mc.HeadSlot())
 	hook := logTest.NewGlobal()
 
 	t.Run("unfavourable fork and no alternative branches", func(t *testing.T) {
@@ -1119,8 +1119,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 
 		startSlot := mc.HeadSlot() + 1
 		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
-		machineSlots := make([]types.Slot, 0)
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+		machineSlots := make([]primitives.Slot, 0)
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 			machineSlots = append(machineSlots, i)
 		}
@@ -1169,8 +1169,8 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		forkedPeer := connectPeerHavingBlocks(t, p2p, chain2, finalizedSlot, p2p.Peers())
 		startSlot := mc.HeadSlot() + 1
 		blocksPerRequest := queue.blocksFetcher.blocksPerPeriod
-		machineSlots := make([]types.Slot, 0)
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += types.Slot(blocksPerRequest) {
+		machineSlots := make([]primitives.Slot, 0)
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*lookaheadSteps); i += primitives.Slot(blocksPerRequest) {
 			queue.smm.addStateMachine(i).setState(stateSkipped)
 			machineSlots = append(machineSlots, i)
 		}
@@ -1233,7 +1233,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 
 		// Assert that machines are in the expected state.
 		startSlot = forkedEpochStartSlot.Add(1 + uint64(len(firstFSM.blocks)))
-		for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += types.Slot(blocksPerRequest) {
+		for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += primitives.Slot(blocksPerRequest) {
 			fsm, ok := queue.smm.findStateMachine(i)
 			require.Equal(t, true, ok)
 			assert.Equal(t, stateSkipped, fsm.state)
@@ -1249,7 +1249,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	p2p := p2pt.NewTestP2P(t)
 
 	chain := extendBlockSequence(t, []*eth.SignedBeaconBlock{}, 128)
-	finalizedSlot := types.Slot(82)
+	finalizedSlot := primitives.Slot(82)
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
@@ -1280,7 +1280,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
-	require.Equal(t, types.Slot(83), mc.HeadSlot())
+	require.Equal(t, primitives.Slot(83), mc.HeadSlot())
 	require.Equal(t, chain[83].Block.Slot, mc.HeadSlot())
 
 	// Set head to slot 85, while we do not have block with slot 84 in DB, so block is orphaned.
@@ -1290,7 +1290,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
 	util.SaveBlock(t, ctx, beaconDB, orphanedBlock)
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))
-	require.Equal(t, types.Slot(85), mc.HeadSlot())
+	require.Equal(t, primitives.Slot(85), mc.HeadSlot())
 
 	fetcher := newBlocksFetcher(
 		ctx,
@@ -1312,7 +1312,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		blocksFetcher:       fetcher,
 		chain:               mc,
-		highestExpectedSlot: types.Slot(len(chain) - 1),
+		highestExpectedSlot: primitives.Slot(len(chain) - 1),
 		mode:                modeNonConstrained,
 	})
 

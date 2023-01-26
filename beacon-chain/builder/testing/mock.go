@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -37,7 +37,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (builder.SignedBid, error) {
+func (s *MockBuilderService) GetHeader(context.Context, primitives.Slot, [32]byte, [48]byte) (builder.SignedBid, error) {
 	w, err := builder.WrappedSignedBuilderBid(s.Bid)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap bid")

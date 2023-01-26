@@ -2,7 +2,7 @@ package signing
 
 import (
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -18,7 +18,7 @@ import (
 //	  epoch = get_current_epoch(state) if epoch is None else epoch
 //	  fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //	  return compute_domain(domain_type, fork_version, state.genesis_validators_root)
-func Domain(fork *eth.Fork, epoch types.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
+func Domain(fork *eth.Fork, epoch primitives.Epoch, domainType [bls.DomainByteLength]byte, genesisRoot []byte) ([]byte, error) {
 	if fork == nil {
 		return []byte{}, errors.New("nil fork or domain type")
 	}

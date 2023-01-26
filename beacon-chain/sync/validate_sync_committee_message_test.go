@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -217,7 +217,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				hState, err := beaconDB.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				s.cfg.chain = &mockChain.ChainService{
-					SyncCommitteeIndices: []types.CommitteeIndex{0},
+					SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 					ValidatorsRoot:       [32]byte{'A'},
 					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 				}
@@ -226,7 +226,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				chosenVal := numOfVals - 10
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
-				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
+				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				// Set Bad Topic and Subnet
@@ -274,7 +274,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				chosenVal := numOfVals + 10
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
-				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
+				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				digest, err := s.currentForkDigest()
@@ -317,14 +317,14 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				chosenVal := numOfVals - 10
 				msg.Signature = emptySig[:]
 				msg.BlockRoot = headRoot[:]
-				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
+				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				d, err := signing.Domain(hState.Fork(), slots.ToEpoch(hState.Slot()), params.BeaconConfig().DomainSyncCommittee, hState.GenesisValidatorsRoot())
 				assert.NoError(t, err)
 				subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 				s.cfg.chain = &mockChain.ChainService{
-					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
+					SyncCommitteeIndices: []primitives.CommitteeIndex{primitives.CommitteeIndex(subCommitteeSize)},
 					ValidatorsRoot:       [32]byte{'A'},
 					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:  d,
@@ -378,7 +378,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				assert.NoError(t, err)
 
 				s.cfg.chain = &mockChain.ChainService{
-					SyncCommitteeIndices: []types.CommitteeIndex{types.CommitteeIndex(subCommitteeSize)},
+					SyncCommitteeIndices: []primitives.CommitteeIndex{primitives.CommitteeIndex(subCommitteeSize)},
 					ValidatorsRoot:       [32]byte{'A'},
 					Genesis:              time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(hState.Slot()-1)),
 					SyncCommitteeDomain:  d,
@@ -387,7 +387,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 
 				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()
 				msg.BlockRoot = headRoot[:]
-				msg.ValidatorIndex = types.ValidatorIndex(chosenVal)
+				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())
 
 				// Set Topic and Subnet
@@ -437,7 +437,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 		name      string
 		setupSvc  func(s *Service, msg *ethpb.SyncCommitteeMessage, topic string) (*Service, string)
 		msg       *ethpb.SyncCommitteeMessage
-		committee []types.CommitteeIndex
+		committee []primitives.CommitteeIndex
 		want      pubsub.ValidationResult
 	}{
 		{
@@ -448,7 +448,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 				return s, ""
 			},
 			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 0, Slot: 1},
-			committee: []types.CommitteeIndex{1, 2, 3},
+			committee: []primitives.CommitteeIndex{1, 2, 3},
 			want:      pubsub.ValidationIgnore,
 		},
 		{
@@ -459,7 +459,7 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 				return s, ""
 			},
 			msg:       &ethpb.SyncCommitteeMessage{ValidatorIndex: 1, Slot: 1},
-			committee: []types.CommitteeIndex{1, 2, 3},
+			committee: []primitives.CommitteeIndex{1, 2, 3},
 			want:      pubsub.ValidationAccept,
 		},
 	}
@@ -480,7 +480,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 		name             string
 		cfg              *config
 		setupTopic       func(s *Service) string
-		committeeIndices []types.CommitteeIndex
+		committeeIndices []primitives.CommitteeIndex
 		want             pubsub.ValidationResult
 	}{
 		{
@@ -491,7 +491,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 					ValidatorsRoot: [32]byte{1},
 				},
 			},
-			committeeIndices: []types.CommitteeIndex{0},
+			committeeIndices: []primitives.CommitteeIndex{0},
 			setupTopic: func(_ *Service) string {
 				return "foobar"
 			},
@@ -505,7 +505,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 					ValidatorsRoot: [32]byte{1},
 				},
 			},
-			committeeIndices: []types.CommitteeIndex{0},
+			committeeIndices: []primitives.CommitteeIndex{0},
 			setupTopic: func(s *Service) string {
 				format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 				digest, err := s.currentForkDigest()
@@ -534,7 +534,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 func Test_ignoreEmptyCommittee(t *testing.T) {
 	tests := []struct {
 		name      string
-		committee []types.CommitteeIndex
+		committee []primitives.CommitteeIndex
 		want      pubsub.ValidationResult
 	}{
 		{
@@ -544,12 +544,12 @@ func Test_ignoreEmptyCommittee(t *testing.T) {
 		},
 		{
 			name:      "empty",
-			committee: []types.CommitteeIndex{},
+			committee: []primitives.CommitteeIndex{},
 			want:      pubsub.ValidationIgnore,
 		},
 		{
 			name:      "non-empty",
-			committee: []types.CommitteeIndex{1},
+			committee: []primitives.CommitteeIndex{1},
 			want:      pubsub.ValidationAccept,
 		},
 	}

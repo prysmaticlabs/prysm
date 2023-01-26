@@ -21,7 +21,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -60,7 +60,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	var startSlot types.Slot
+	var startSlot primitives.Slot
 	if req.Epoch == currentEpoch+1 {
 		startSlot, err = slots.EpochStart(currentEpoch)
 	} else {
@@ -96,12 +96,12 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		if committee == nil {
 			continue
 		}
-		var valIndexInCommittee types.CommitteeIndex
+		var valIndexInCommittee primitives.CommitteeIndex
 		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
 		// however it's an impossible condition because every validator must be assigned to a committee.
 		for cIndex, vIndex := range committee.Committee {
 			if vIndex == index {
-				valIndexInCommittee = types.CommitteeIndex(uint64(cIndex))
+				valIndexInCommittee = primitives.CommitteeIndex(uint64(cIndex))
 				break
 			}
 		}
@@ -164,7 +164,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
 	}
 
-	var proposals map[types.ValidatorIndex][]types.Slot
+	var proposals map[primitives.ValidatorIndex][]primitives.Slot
 	if nextEpochLookahead {
 		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
 	} else {
@@ -458,7 +458,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	}
 
 	// Before Bellatrix, return normal block.
-	if req.Slot < types.Slot(params.BeaconConfig().BellatrixForkEpoch)*params.BeaconConfig().SlotsPerEpoch {
+	if req.Slot < primitives.Slot(params.BeaconConfig().BellatrixForkEpoch)*params.BeaconConfig().SlotsPerEpoch {
 		v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 		if err != nil {
 			// We simply return err because it's already of a gRPC error type.
@@ -596,7 +596,7 @@ func (vs *Server) PrepareBeaconProposer(
 	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
-	var validatorIndices []types.ValidatorIndex
+	var validatorIndices []primitives.ValidatorIndex
 	newRecipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
 		f, err := vs.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
@@ -795,7 +795,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 		validators[i] = val
 	}
 
-	fetchValsLen := func(slot types.Slot) (uint64, error) {
+	fetchValsLen := func(slot primitives.Slot) (uint64, error) {
 		wantedEpoch := slots.ToEpoch(slot)
 		vals, err := vs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
@@ -1034,7 +1034,7 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
 	}
 	for i, vi := range req.Index {
-		if vi >= types.ValidatorIndex(len(participation)) {
+		if vi >= primitives.ValidatorIndex(len(participation)) {
 			return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
 		}
 		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
@@ -1048,8 +1048,8 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
-	var dependentRootSlot types.Slot
+func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
 	} else {
@@ -1068,8 +1068,8 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
-	var dependentRootSlot types.Slot
+func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
 	} else {
@@ -1100,7 +1100,7 @@ func v1ValidatorStatusToV1Alpha1(valStatus ethpbv1.ValidatorStatus) ethpbalpha.V
 	}
 }
 
-func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
+func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
 	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
 	// Return the last epoch of the next sync committee.
 	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
@@ -1108,7 +1108,7 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
 }
 
 func syncCommitteeDuties(
-	valIndices []types.ValidatorIndex,
+	valIndices []primitives.ValidatorIndex,
 	st state.BeaconState,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {

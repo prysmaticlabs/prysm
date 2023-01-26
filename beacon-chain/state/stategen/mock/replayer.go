@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 func NewMockReplayerBuilder(opt ...MockReplayerBuilderOption) *MockReplayerBuilder {
@@ -25,31 +25,31 @@ func WithMockState(s state.BeaconState) MockReplayerBuilderOption {
 }
 
 type MockReplayerBuilder struct {
-	forSlot map[types.Slot]*MockReplayer
+	forSlot map[primitives.Slot]*MockReplayer
 }
 
 func (b *MockReplayerBuilder) SetMockState(s state.BeaconState) {
 	if b.forSlot == nil {
-		b.forSlot = make(map[types.Slot]*MockReplayer)
+		b.forSlot = make(map[primitives.Slot]*MockReplayer)
 	}
 	b.forSlot[s.Slot()] = &MockReplayer{State: s}
 }
 
-func (b *MockReplayerBuilder) SetMockStateForSlot(s state.BeaconState, slot types.Slot) {
+func (b *MockReplayerBuilder) SetMockStateForSlot(s state.BeaconState, slot primitives.Slot) {
 	if b.forSlot == nil {
-		b.forSlot = make(map[types.Slot]*MockReplayer)
+		b.forSlot = make(map[primitives.Slot]*MockReplayer)
 	}
 	b.forSlot[slot] = &MockReplayer{State: s}
 }
 
-func (b *MockReplayerBuilder) SetMockSlotError(s types.Slot, e error) {
+func (b *MockReplayerBuilder) SetMockSlotError(s primitives.Slot, e error) {
 	if b.forSlot == nil {
-		b.forSlot = make(map[types.Slot]*MockReplayer)
+		b.forSlot = make(map[primitives.Slot]*MockReplayer)
 	}
 	b.forSlot[s] = &MockReplayer{Err: e}
 }
 
-func (b *MockReplayerBuilder) ReplayerForSlot(target types.Slot) stategen.Replayer {
+func (b *MockReplayerBuilder) ReplayerForSlot(target primitives.Slot) stategen.Replayer {
 	return b.forSlot[target]
 }
 
@@ -64,7 +64,7 @@ func (m *MockReplayer) ReplayBlocks(_ context.Context) (state.BeaconState, error
 	return m.State, m.Err
 }
 
-func (m *MockReplayer) ReplayToSlot(_ context.Context, _ types.Slot) (state.BeaconState, error) {
+func (m *MockReplayer) ReplayToSlot(_ context.Context, _ primitives.Slot) (state.BeaconState, error) {
 	return m.State, m.Err
 }
 
@@ -82,10 +82,10 @@ func (m *MockCanonicalChecker) IsCanonical(_ context.Context, _ [32]byte) (bool,
 var _ stategen.CanonicalChecker = &MockCanonicalChecker{}
 
 type MockCurrentSlotter struct {
-	Slot types.Slot
+	Slot primitives.Slot
 }
 
-func (c *MockCurrentSlotter) CurrentSlot() types.Slot {
+func (c *MockCurrentSlotter) CurrentSlot() primitives.Slot {
 	return c.Slot
 }
 

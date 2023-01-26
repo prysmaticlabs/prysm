@@ -2,7 +2,7 @@ package mock
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -32,6 +32,6 @@ func (*PoolMock) MarkIncluded(_ *eth.SignedBLSToExecutionChange) {
 }
 
 // ValidatorExists --
-func (*PoolMock) ValidatorExists(_ types.ValidatorIndex) bool {
+func (*PoolMock) ValidatorExists(_ primitives.ValidatorIndex) bool {
 	panic("implement me")
 }

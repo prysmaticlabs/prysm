@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -41,12 +41,12 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	})
 	require.NoError(t, err)
 	type put struct {
-		slot  types.Slot
+		slot  primitives.Slot
 		state state.BeaconState
 	}
 	tests := []struct {
 		name       string
-		key        types.Slot
+		key        primitives.Slot
 		put        *put
 		want       state.BeaconState
 		wantErr    bool
@@ -54,9 +54,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	}{
 		{
 			name: "putting error in",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: nil,
 			},
 			wantPutErr: true,
@@ -64,9 +64,9 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 		{
 			name: "putting invalid state in",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: phase0State,
 			},
 			wantPutErr: true,
@@ -74,50 +74,50 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 		},
 		{
 			name:    "not found when empty cache",
-			key:     types.Slot(1),
+			key:     primitives.Slot(1),
 			wantErr: true,
 		},
 		{
 			name: "not found when non-existent key in non-empty cache",
-			key:  types.Slot(2),
+			key:  primitives.Slot(2),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: beaconState,
 			},
 			wantErr: true,
 		},
 		{
 			name: "found with key",
-			key:  types.Slot(1),
+			key:  primitives.Slot(1),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: beaconState,
 			},
 			want: beaconState,
 		},
 		{
 			name: "not found when non-existent key in non-empty cache (bellatrix state)",
-			key:  types.Slot(2),
+			key:  primitives.Slot(2),
 			put: &put{
-				slot:  types.Slot(1),
+				slot:  primitives.Slot(1),
 				state: bellatrixState,
 			},
 			wantErr: true,
 		},
 		{
 			name: "found with key (bellatrix state)",
-			key:  types.Slot(100),
+			key:  primitives.Slot(100),
 			put: &put{
-				slot:  types.Slot(100),
+				slot:  primitives.Slot(100),
 				state: bellatrixState,
 			},
 			want: bellatrixState,
 		},
 		{
 			name: "found with key (capella state)",
-			key:  types.Slot(200),
+			key:  primitives.Slot(200),
 			put: &put{
-				slot:  types.Slot(200),
+				slot:  primitives.Slot(200),
 				state: capellaState,
 			},
 			want: capellaState,

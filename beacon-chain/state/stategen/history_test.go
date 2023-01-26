@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/mock"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -103,7 +103,7 @@ func TestBestForSlot(t *testing.T) {
 // happy path tests
 func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin},
 		{slot: middle, savedState: true},
@@ -115,9 +115,9 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
-		slot    types.Slot
-		highest types.Slot
-		canon   types.Slot
+		slot    primitives.Slot
+		highest primitives.Slot
+		canon   primitives.Slot
 		name    string
 	}{
 		{slot: hist.current, highest: end, canon: end, name: "slot > end"},
@@ -144,7 +144,7 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 
 func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin},
 		{slot: middle, savedState: true},
@@ -154,22 +154,22 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 
 	genesis, err := hist.GenesisBlockRoot(ctx)
 	require.NoError(t, err)
-	slotOrderObserved := make([]types.Slot, 0)
+	slotOrderObserved := make([]primitives.Slot, 0)
 	derp := errors.New("HighestRootsBelowSlot don't work")
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
 		name              string
-		slot              types.Slot
+		slot              primitives.Slot
 		canon             CanonicalChecker
-		overrideHighest   func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
-		slotOrderExpected []types.Slot
+		overrideHighest   func(context.Context, primitives.Slot) (primitives.Slot, [][32]byte, error)
+		slotOrderExpected []primitives.Slot
 		err               error
 		root              [32]byte
 	}{
 		{
 			name: "HighestRootsBelowSlot not called for genesis",
-			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+			overrideHighest: func(_ context.Context, _ primitives.Slot) (primitives.Slot, [][32]byte, error) {
 				return 0, [][32]byte{}, derp
 			},
 			root: hist.slotMap[0],
@@ -177,7 +177,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 		{
 			name: "wrapped error from HighestRootsBelowSlot returned",
 			err:  derp,
-			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+			overrideHighest: func(_ context.Context, _ primitives.Slot) (primitives.Slot, [][32]byte, error) {
 				return 0, [][32]byte{}, derp
 			},
 			slot: end,
@@ -185,7 +185,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 		{
 			name: "HighestRootsBelowSlot empty list",
 			err:  ErrNoBlocksBelowSlot,
-			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+			overrideHighest: func(_ context.Context, _ primitives.Slot) (primitives.Slot, [][32]byte, error) {
 				return 0, [][32]byte{}, nil
 			},
 			slot: end,
@@ -204,13 +204,13 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				}
 				return false, nil
 			}},
-			overrideHighest: func(_ context.Context, s types.Slot) (types.Slot, [][32]byte, error) {
+			overrideHighest: func(_ context.Context, s primitives.Slot) (primitives.Slot, [][32]byte, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
 				// this allows the mock HighestRootsBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
 				return 0, nil, errFallThroughOverride
 			},
-			slotOrderExpected: []types.Slot{156, 155, 150, 100},
+			slotOrderExpected: []primitives.Slot{156, 155, 150, 100},
 			slot:              end,
 			root:              hist.slotMap[0],
 		},
@@ -222,13 +222,13 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				}
 				return false, nil
 			}},
-			overrideHighest: func(_ context.Context, s types.Slot) (types.Slot, [][32]byte, error) {
+			overrideHighest: func(_ context.Context, s primitives.Slot) (primitives.Slot, [][32]byte, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
 				// this allows the mock HighestRootsBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
 				return 0, nil, errFallThroughOverride
 			},
-			slotOrderExpected: []types.Slot{156, 155, 150},
+			slotOrderExpected: []primitives.Slot{156, 155, 150},
 			slot:              end,
 			root:              hist.slotMap[100],
 		},
@@ -256,16 +256,16 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			if c.root != [32]byte{} {
 				require.Equal(t, c.root, r)
 			}
-			slotOrderObserved = make([]types.Slot, 0)
+			slotOrderObserved = make([]primitives.Slot, 0)
 		})
 	}
 }
 
 type mockCurrentSlotter struct {
-	Slot types.Slot
+	Slot primitives.Slot
 }
 
-func (c *mockCurrentSlotter) CurrentSlot() types.Slot {
+func (c *mockCurrentSlotter) CurrentSlot() primitives.Slot {
 	return c.Slot
 }
 
@@ -273,7 +273,7 @@ var _ CurrentSlotter = &mockCurrentSlotter{}
 
 func TestAncestorChainCache(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin, canonicalBlock: true},
 		{slot: middle, canonicalBlock: true},
@@ -346,7 +346,7 @@ func TestAncestorChainCache(t *testing.T) {
 
 func TestAncestorChainOK(t *testing.T) {
 	ctx := context.Background()
-	var begin, middle, end types.Slot = 100, 150, 155
+	var begin, middle, end primitives.Slot = 100, 150, 155
 	specs := []mockHistorySpec{
 		{slot: begin},
 		{slot: middle, savedState: true},
@@ -379,7 +379,7 @@ func TestAncestorChainOK(t *testing.T) {
 
 func TestChainForSlot(t *testing.T) {
 	ctx := context.Background()
-	var zero, one, two, three types.Slot = 50, 51, 150, 151
+	var zero, one, two, three primitives.Slot = 50, 51, 150, 151
 	specs := []mockHistorySpec{
 		{slot: zero, canonicalBlock: true, savedState: true},
 		{slot: one, canonicalBlock: true},
@@ -394,7 +394,7 @@ func TestChainForSlot(t *testing.T) {
 
 	cases := []struct {
 		name       string
-		slot       types.Slot
+		slot       primitives.Slot
 		stateRoot  [32]byte
 		blockRoots [][32]byte
 	}{
@@ -448,7 +448,7 @@ func TestChainForSlot(t *testing.T) {
 
 func TestAncestorChainOrdering(t *testing.T) {
 	ctx := context.Background()
-	var zero, one, two, three, four, five types.Slot = 50, 51, 150, 151, 152, 200
+	var zero, one, two, three, four, five primitives.Slot = 50, 51, 150, 151, 152, 200
 	specs := []mockHistorySpec{
 		{slot: zero},
 		{slot: one, savedState: true},
@@ -474,7 +474,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	// one has the savedState. one is applied to the savedState, so it should be omitted
 	// that means we should get two, three, four, five (length of 4)
 	require.Equal(t, 4, len(bs))
-	for i, slot := range []types.Slot{two, three, four, five} {
+	for i, slot := range []primitives.Slot{two, three, four, five} {
 		require.Equal(t, slot, bs[i].Block().Slot(), fmt.Sprintf("wrong value at index %d", i))
 	}
 
@@ -511,7 +511,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedRoot, actualRoot)
 	require.Equal(t, 3, len(bs))
-	for i, slot := range []types.Slot{two, three, four} {
+	for i, slot := range []primitives.Slot{two, three, four} {
 		require.Equal(t, slot, bs[i].Block().Slot(), fmt.Sprintf("wrong value at index %d", i))
 	}
 }

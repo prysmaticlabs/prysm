@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"gopkg.in/yaml.v2"
 )
@@ -18,10 +18,10 @@ const (
 // Graffiti is a graffiti container.
 type Graffiti struct {
 	Hash     [32]byte
-	Default  string                          `yaml:"default,omitempty"`
-	Ordered  []string                        `yaml:"ordered,omitempty"`
-	Random   []string                        `yaml:"random,omitempty"`
-	Specific map[types.ValidatorIndex]string `yaml:"specific,omitempty"`
+	Default  string                               `yaml:"default,omitempty"`
+	Ordered  []string                             `yaml:"ordered,omitempty"`
+	Random   []string                             `yaml:"random,omitempty"`
+	Specific map[primitives.ValidatorIndex]string `yaml:"specific,omitempty"`
 }
 
 // ParseGraffitiFile parses the graffiti file and returns the graffiti struct.

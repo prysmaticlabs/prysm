@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -27,7 +27,7 @@ import (
 // sortableIndices implements the Sort interface to sort newly activated validator indices
 // by activation epoch and by index number.
 type sortableIndices struct {
-	indices    []types.ValidatorIndex
+	indices    []primitives.ValidatorIndex
 	validators []*ethpb.Validator
 }
 
@@ -101,7 +101,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
 			validator.ActivationEligibilityEpoch = activationEligibilityEpoch
-			if err := state.UpdateValidatorAtIndex(types.ValidatorIndex(idx), validator); err != nil {
+			if err := state.UpdateValidatorAtIndex(primitives.ValidatorIndex(idx), validator); err != nil {
 				return nil, err
 			}
 		}
@@ -110,7 +110,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= ejectionBal
 		if isActive && belowEjectionBalance {
-			state, err = validators.InitiateValidatorExit(ctx, state, types.ValidatorIndex(idx))
+			state, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
@@ -118,10 +118,10 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation.
-	var activationQ []types.ValidatorIndex
+	var activationQ []primitives.ValidatorIndex
 	for idx, validator := range vals {
 		if helpers.IsEligibleForActivation(state, validator) {
-			activationQ = append(activationQ, types.ValidatorIndex(idx))
+			activationQ = append(activationQ, primitives.ValidatorIndex(idx))
 		}
 	}
 
@@ -199,7 +199,7 @@ func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state
 		if val.Slashed && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
-			if err := helpers.DecreaseBalance(state, types.ValidatorIndex(idx), penalty); err != nil {
+			if err := helpers.DecreaseBalance(state, primitives.ValidatorIndex(idx), penalty); err != nil {
 				return false, val, err
 			}
 			return true, val, nil
@@ -460,8 +460,8 @@ func ProcessFinalUpdates(state state.BeaconState) (state.BeaconState, error) {
 //	  for a in attestations:
 //	      output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
 //	  return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) ([]types.ValidatorIndex, error) {
-	var setIndices []types.ValidatorIndex
+func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) ([]primitives.ValidatorIndex, error) {
+	var setIndices []primitives.ValidatorIndex
 	seen := make(map[uint64]bool)
 
 	for _, att := range atts {
@@ -476,7 +476,7 @@ func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconSt
 		// Create a set for attesting indices
 		for _, index := range attestingIndices {
 			if !seen[index] {
-				setIndices = append(setIndices, types.ValidatorIndex(index))
+				setIndices = append(setIndices, primitives.ValidatorIndex(index))
 			}
 			seen[index] = true
 		}

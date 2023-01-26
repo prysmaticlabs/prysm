@@ -13,7 +13,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -87,16 +87,16 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher: &mock.ChainService{
-			SyncCommitteeIndices: []types.CommitteeIndex{0},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 		},
 	}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	// Request slot 0, should get the index 0 for validator 0.
 	res, err := server.GetSyncSubcommitteeIndex(context.Background(), &ethpb.SyncSubcommitteeIndexRequest{
-		PublicKey: pubKey[:], Slot: types.Slot(0),
+		PublicKey: pubKey[:], Slot: primitives.Slot(0),
 	})
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, res.Indices)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, res.Indices)
 }
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
@@ -106,7 +106,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 		P2P:               &mockp2p.MockBroadcaster{},
 		HeadFetcher: &mock.ChainService{
 			State:                st,
-			SyncCommitteeIndices: []types.CommitteeIndex{10},
+			SyncCommitteeIndices: []primitives.CommitteeIndex{10},
 		},
 		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}

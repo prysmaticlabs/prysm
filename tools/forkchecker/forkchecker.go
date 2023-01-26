@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -108,7 +108,7 @@ func compareHeads(clients map[string]pb.BeaconChainClient) {
 			if (head1.HeadSlot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 				p, err := clients[endpt2].GetValidatorParticipation(context.Background(), &pb.GetValidatorParticipationRequest{
 					QueryFilter: &pb.GetValidatorParticipationRequest_Epoch{
-						Epoch: types.Epoch(head2.HeadSlot / params.BeaconConfig().SlotsPerEpoch),
+						Epoch: primitives.Epoch(head2.HeadSlot / params.BeaconConfig().SlotsPerEpoch),
 					},
 				})
 				if err != nil {
