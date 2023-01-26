@@ -20,7 +20,7 @@ func (b *BeaconState) SetNextWithdrawalIndex(i uint64) error {
 	return nil
 }
 
-// SetLastWithdrawalValidatorIndex sets the index of the validator which is
+// SetNextWithdrawalValidatorIndex sets the index of the validator which is
 // next in line for a partial withdrawal.
 func (b *BeaconState) SetNextWithdrawalValidatorIndex(i types.ValidatorIndex) error {
 	if b.version < version.Capella {
