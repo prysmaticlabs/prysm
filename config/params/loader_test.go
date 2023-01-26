@@ -326,6 +326,9 @@ func fieldsFromYamls(t *testing.T, fps []string) []string {
 		require.NoError(t, yaml.Unmarshal(yamlFile, &m))
 
 		for k := range m {
+			if k == "SHARDING_FORK_VERSION" || k == "SHARDING_FORK_EPOCH" {
+				continue
+			}
 			keys = append(keys, k)
 		}
 

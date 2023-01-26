@@ -149,8 +149,6 @@ type BeaconChainConfig struct {
 	AltairForkEpoch      types.Epoch `yaml:"ALTAIR_FORK_EPOCH" spec:"true"`      // AltairForkEpoch is used to represent the assigned fork epoch for altair.
 	BellatrixForkVersion []byte      `yaml:"BELLATRIX_FORK_VERSION" spec:"true"` // BellatrixForkVersion is used to represent the fork version for bellatrix.
 	BellatrixForkEpoch   types.Epoch `yaml:"BELLATRIX_FORK_EPOCH" spec:"true"`   // BellatrixForkEpoch is used to represent the assigned fork epoch for bellatrix.
-	ShardingForkVersion  []byte      `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
-	ShardingForkEpoch    types.Epoch `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	CapellaForkVersion   []byte      `yaml:"CAPELLA_FORK_VERSION" spec:"true"`   // CapellaForkVersion is used to represent the fork version for capella.
 	CapellaForkEpoch     types.Epoch `yaml:"CAPELLA_FORK_EPOCH" spec:"true"`     // CapellaForkEpoch is used to represent the assigned fork epoch for capella.
 
@@ -235,4 +233,24 @@ func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]s
 	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
 	fvn[bytesutil.ToBytes4(b.CapellaForkVersion)] = "capella"
 	return fvn
+}
+
+// Eth1DataVotesLength returns the maximum length of the votes on the Eth1 data,
+// computed from the parameters in BeaconChainConfig.
+func (b *BeaconChainConfig) Eth1DataVotesLength() uint64 {
+	return uint64(b.EpochsPerEth1VotingPeriod.Mul(uint64(b.SlotsPerEpoch)))
+}
+
+// PreviousEpochAttestationsLength returns the maximum length of the pending
+// attestation list for the previous epoch, computed from the parameters in
+// BeaconChainConfig.
+func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// CurrentEpochAttestationsLength returns the maximum length of the pending
+// attestation list for the current epoch, computed from the parameters in
+// BeaconChainConfig.
+func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
+	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
 }

@@ -58,7 +58,7 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 			"currentSlot":                    s,
 			"highestReceivedSlot":            highestReceivedSlot,
 			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
+		}).Warn("Circuit breaker activated due to missing consecutive slot. Ignore if mev-boost is not used")
 		return true, nil
 	}
 
@@ -81,7 +81,7 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 		log.WithFields(logrus.Fields{
 			"totalMissed":              diff,
 			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
-		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
+		}).Warn("Circuit breaker activated due to missing enough slots last epoch. Ignore if mev-boost is not used")
 		return true, nil
 	}
 

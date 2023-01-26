@@ -1236,8 +1236,8 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 	spb := &ethpbv1alpha1.BeaconStateCapella{
 		Fork: &ethpbv1alpha1.Fork{
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           params.BeaconConfig().CapellaForkEpoch,
 		},
 	}
@@ -1373,8 +1373,8 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 	spc := &ethpbv1alpha1.BeaconStateCapella{
 		Fork: &ethpbv1alpha1.Fork{
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           params.BeaconConfig().CapellaForkEpoch,
 		},
 	}
@@ -1436,8 +1436,8 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 	spb := &ethpbv1alpha1.BeaconStateCapella{
 		Fork: &ethpbv1alpha1.Fork{
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			Epoch:           params.BeaconConfig().CapellaForkEpoch,
 		},
 	}

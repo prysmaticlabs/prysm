@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -35,73 +35,41 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	altairBlk, err := vs.BuildAltairBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, err
+// Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlock, headState state.BeaconState) error {
+	idx := blk.ProposerIndex()
+	slot := blk.Slot()
+	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
 	}
 
-	if !req.SkipMevBoost {
-		registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
-		if registered && err == nil {
-			builderReady, b, err := vs.GetAndBuildBlindBlock(ctx, altairBlk)
-			if err != nil {
-				// In the event of an error, the node should fall back to default execution engine for building block.
-				log.WithError(err).Error("Failed to build a block from external builder, falling " +
-					"back to local execution client")
-				builderGetPayloadMissCount.Inc()
-			} else if builderReady {
-				return b, nil
+	canUseBuilder, err := vs.canUseBuilder(ctx, slot, idx)
+	if err != nil {
+		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
+	} else if canUseBuilder {
+		h, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+		if err != nil {
+			builderGetPayloadMissCount.Inc()
+			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
+		} else {
+			blk.SetBlinded(true)
+			if err := blk.Body().SetExecution(h); err != nil {
+				log.WithError(err).Warn("Proposer: failed to set execution payload")
+			} else {
+				return nil
 			}
-		} else if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{
-				"slot":           req.Slot,
-				"validatorIndex": altairBlk.ProposerIndex,
-			}).Error("Could not determine validator has registered. Defaulting to local execution client")
 		}
 	}
-	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "failed to get execution payload")
 	}
-
-	blk := &ethpb.BeaconBlockBellatrix{
-		Slot:          altairBlk.Slot,
-		ProposerIndex: altairBlk.ProposerIndex,
-		ParentRoot:    altairBlk.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BeaconBlockBodyBellatrix{
-			RandaoReveal:      altairBlk.Body.RandaoReveal,
-			Eth1Data:          altairBlk.Body.Eth1Data,
-			Graffiti:          altairBlk.Body.Graffiti,
-			ProposerSlashings: altairBlk.Body.ProposerSlashings,
-			AttesterSlashings: altairBlk.Body.AttesterSlashings,
-			Attestations:      altairBlk.Body.Attestations,
-			Deposits:          altairBlk.Body.Deposits,
-			VoluntaryExits:    altairBlk.Body.VoluntaryExits,
-			SyncAggregate:     altairBlk.Body.SyncAggregate,
-			ExecutionPayload:  payload,
-		},
-	}
-	// Compute state root with the newly constructed block.
-	wsb, err := consensusblocks.NewSignedBeaconBlock(
-		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		interop.WriteBlockToDisk(wsb, true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
-	}
-	blk.StateRoot = stateRoot
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	return blk.Body().SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (interfaces.ExecutionData, error) {
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -118,6 +86,10 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
+
 	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
@@ -161,48 +133,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
 		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
 	}).Info("Received header with bid")
-	return bid.Message.Header, nil
-}
-
-// This function constructs the builder block given the input altair block and the header. It returns a generic beacon block for signing
-func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *enginev1.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
-	if b == nil || b.Body == nil {
-		return nil, errors.New("nil block")
-	}
-	if h == nil {
-		return nil, errors.New("nil header")
-	}
-
-	blk := &ethpb.BlindedBeaconBlockBellatrix{
-		Slot:          b.Slot,
-		ProposerIndex: b.ProposerIndex,
-		ParentRoot:    b.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal:           b.Body.RandaoReveal,
-			Eth1Data:               b.Body.Eth1Data,
-			Graffiti:               b.Body.Graffiti,
-			ProposerSlashings:      b.Body.ProposerSlashings,
-			AttesterSlashings:      b.Body.AttesterSlashings,
-			Attestations:           b.Body.Attestations,
-			Deposits:               b.Body.Deposits,
-			VoluntaryExits:         b.Body.VoluntaryExits,
-			SyncAggregate:          b.Body.SyncAggregate,
-			ExecutionPayloadHeader: h,
-		},
-	}
-	wsb, err := consensusblocks.NewSignedBeaconBlock(
-		&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute state root")
-	}
-	blk.StateRoot = stateRoot
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: blk}}, nil
+	return consensusblocks.WrappedExecutionPayloadHeader(bid.Message.Header)
 }
 
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
@@ -314,68 +245,6 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}).Info("Retrieved full payload from builder")
 
 	return wb, nil
-}
-
-// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
-// first finalized checkpt has been execution-enabled.
-func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
-	cp := vs.FinalizationFetcher.FinalizedCheckpt()
-	// Checkpoint root is zero means we are still at genesis epoch.
-	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
-		return false, nil
-	}
-	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-	if err != nil {
-		return false, err
-	}
-	if err = consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return false, err
-	}
-	return blocks.IsExecutionBlock(b.Block().Body())
-}
-
-// GetAndBuildBlindBlock builds blind block from builder network. Returns a boolean status, built block and error.
-// If the status is false that means builder the header block is disallowed.
-// This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) GetAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
-	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
-	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return false, nil, nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
-	defer cancel()
-	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
-	ready, err := vs.readyForBuilder(ctx)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder is ready")
-	}
-	if !ready {
-		return false, nil, nil
-	}
-
-	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
-	}
-	if circuitBreak {
-		return false, nil, nil
-	}
-
-	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not get payload header")
-	}
-	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
-		"gasUsed":      h.GasUsed,
-		"slot":         b.Slot,
-	}).Info("Retrieved header from builder")
-	gb, err := vs.buildBlindBlock(ctx, b, h)
-	if err != nil {
-		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
-	}
-	return true, gb, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.

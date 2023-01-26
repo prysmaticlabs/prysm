@@ -14,7 +14,6 @@ import (
 // a signed beacon block.
 type SignedBeaconBlock interface {
 	Block() BeaconBlock
-	SetBlock(BeaconBlock) error
 	Signature() [field_params.BLSSignatureLength]byte
 	SetSignature(sig []byte)
 	IsNil() bool

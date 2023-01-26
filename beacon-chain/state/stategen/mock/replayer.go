@@ -24,12 +24,6 @@ func WithMockState(s state.BeaconState) MockReplayerBuilderOption {
 	}
 }
 
-func WithStateError(s types.Slot, e error) MockReplayerBuilderOption {
-	return func(b *MockReplayerBuilder) {
-		b.SetMockSlotError(s, e)
-	}
-}
-
 type MockReplayerBuilder struct {
 	forSlot map[types.Slot]*MockReplayer
 }

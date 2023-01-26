@@ -16,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
-const attestationDataEndpoint = "/eth/v1/validator/attestation_data"
-
 func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	ctx := context.Background()
 	expectedSlot := uint64(5)
