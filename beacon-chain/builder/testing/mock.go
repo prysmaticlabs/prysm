@@ -3,6 +3,10 @@ package testing
 import (
 	"context"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -24,13 +28,21 @@ func (s *MockBuilderService) Configured() bool {
 }
 
 // SubmitBlindedBlock for mocking.
-func (s *MockBuilderService) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
-	return s.Payload, s.ErrSubmitBlindedBlock
+func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
+	w, err := blocks.WrappedExecutionPayload(s.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not wrap payload")
+	}
+	return w, s.ErrSubmitBlindedBlock
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
-	return s.Bid, s.ErrGetHeader
+func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (builder.SignedBid, error) {
+	w, err := builder.WrappedSignedBuilderBid(s.Bid)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not wrap bid")
+	}
+	return w, s.ErrGetHeader
 }
 
 // RegisterValidator for mocking.
