@@ -32,5 +32,5 @@ func (s *Service) broadcastBLSChanges(currSlot types.Slot) {
 		broadcastChanges[i] = changes[idx]
 		changes = append(changes[:idx], changes[idx+1:]...)
 	}
-	s.cfg.p2p.BroadcastBLSChanges(s.ctx, changes)
+	s.cfg.p2p.BroadcastBLSChanges(s.ctx, broadcastChanges)
 }
