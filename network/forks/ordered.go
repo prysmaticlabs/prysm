@@ -8,13 +8,13 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedSchedule
 type ForkScheduleEntry struct {
 	Version [fieldparams.VersionLength]byte
-	Epoch   types.Epoch
+	Epoch   primitives.Epoch
 	Name    string
 }
 
@@ -37,7 +37,7 @@ func (o OrderedSchedule) Less(i, j int) bool {
 }
 
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
-func (o OrderedSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.VersionLength]byte, error) {
+func (o OrderedSchedule) VersionForEpoch(epoch primitives.Epoch) ([fieldparams.VersionLength]byte, error) {
 	for i := len(o) - 1; i >= 0; i-- {
 		if o[i].Epoch <= epoch {
 			return o[i].Version, nil

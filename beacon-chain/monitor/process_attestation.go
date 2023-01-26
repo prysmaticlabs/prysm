@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -21,7 +21,7 @@ import (
 // canUpdateAttestedValidator returns true if the validator is tracked and if the
 // given slot is different than the last attested slot from this validator.
 // It assumes that a read lock is held on the monitor service.
-func (s *Service) canUpdateAttestedValidator(idx types.ValidatorIndex, slot types.Slot) bool {
+func (s *Service) canUpdateAttestedValidator(idx primitives.ValidatorIndex, slot primitives.Slot) bool {
 	if !s.trackedIndex(idx) {
 		return false
 	}
@@ -42,7 +42,7 @@ func attestingIndices(ctx context.Context, state state.BeaconState, att *ethpb.A
 }
 
 // logMessageTimelyFlagsForIndex returns the log message with performance info for the attestation (head, source, target)
-func logMessageTimelyFlagsForIndex(idx types.ValidatorIndex, data *ethpb.AttestationData) logrus.Fields {
+func logMessageTimelyFlagsForIndex(idx primitives.ValidatorIndex, data *ethpb.AttestationData) logrus.Fields {
 	return logrus.Fields{
 		"ValidatorIndex": idx,
 		"Slot":           data.Slot,
@@ -72,19 +72,19 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 	s.Lock()
 	defer s.Unlock()
 	for _, idx := range attestingIndices {
-		if s.canUpdateAttestedValidator(types.ValidatorIndex(idx), att.Data.Slot) {
-			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
-			balance, err := state.BalanceAtIndex(types.ValidatorIndex(idx))
+		if s.canUpdateAttestedValidator(primitives.ValidatorIndex(idx), att.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(primitives.ValidatorIndex(idx), att.Data)
+			balance, err := state.BalanceAtIndex(primitives.ValidatorIndex(idx))
 			if err != nil {
 				log.WithError(err).Error("Could not get balance")
 				return
 			}
 
-			aggregatedPerf := s.aggregatedPerformance[types.ValidatorIndex(idx)]
+			aggregatedPerf := s.aggregatedPerformance[primitives.ValidatorIndex(idx)]
 			aggregatedPerf.totalAttestedCount++
 			aggregatedPerf.totalRequestedCount++
 
-			latestPerf := s.latestPerformance[types.ValidatorIndex(idx)]
+			latestPerf := s.latestPerformance[primitives.ValidatorIndex(idx)]
 			balanceChg := int64(balance - latestPerf.balance)
 			latestPerf.balanceChange = balanceChg
 			latestPerf.balance = balance
@@ -153,8 +153,8 @@ func (s *Service) processIncludedAttestation(ctx context.Context, state state.Be
 			logFields["NewBalance"] = balance
 			logFields["BalanceChange"] = balanceChg
 
-			s.latestPerformance[types.ValidatorIndex(idx)] = latestPerf
-			s.aggregatedPerformance[types.ValidatorIndex(idx)] = aggregatedPerf
+			s.latestPerformance[primitives.ValidatorIndex(idx)] = latestPerf
+			s.aggregatedPerformance[primitives.ValidatorIndex(idx)] = aggregatedPerf
 			log.WithFields(logFields).Info("Attestation included")
 		}
 	}
@@ -177,8 +177,8 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.canUpdateAttestedValidator(types.ValidatorIndex(idx), att.Data.Slot) {
-			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Data)
+		if s.canUpdateAttestedValidator(primitives.ValidatorIndex(idx), att.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(primitives.ValidatorIndex(idx), att.Data)
 			log.WithFields(logFields).Info("Processed unaggregated attestation")
 		}
 	}
@@ -219,8 +219,8 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 		return
 	}
 	for _, idx := range attestingIndices {
-		if s.canUpdateAttestedValidator(types.ValidatorIndex(idx), att.Aggregate.Data.Slot) {
-			logFields := logMessageTimelyFlagsForIndex(types.ValidatorIndex(idx), att.Aggregate.Data)
+		if s.canUpdateAttestedValidator(primitives.ValidatorIndex(idx), att.Aggregate.Data.Slot) {
+			logFields := logMessageTimelyFlagsForIndex(primitives.ValidatorIndex(idx), att.Aggregate.Data)
 			log.WithFields(logFields).Info("Processed aggregated attestation")
 		}
 	}

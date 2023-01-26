@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -65,8 +65,8 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 		name            string
 		modifyFunc      func(b state.BeaconState, k [fieldparams.BLSPubkeyLength]byte)
 		exists          bool
-		expectedIdx     types.ValidatorIndex
-		largestIdxInSet types.ValidatorIndex
+		expectedIdx     primitives.ValidatorIndex
+		largestIdxInSet primitives.ValidatorIndex
 	}{
 		{
 			name: "retrieve validator",

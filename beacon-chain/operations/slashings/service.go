@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/trailofbits/go-mutexasserts"
@@ -23,7 +23,7 @@ func NewPool() *Pool {
 	return &Pool{
 		pendingProposerSlashing: make([]*ethpb.ProposerSlashing, 0),
 		pendingAttesterSlashing: make([]*PendingAttesterSlashing, 0),
-		included:                make(map[types.ValidatorIndex]bool),
+		included:                make(map[primitives.ValidatorIndex]bool),
 	}
 }
 
@@ -39,7 +39,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 	// Update prom metric.
 	numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
 
-	included := make(map[types.ValidatorIndex]bool)
+	included := make(map[primitives.ValidatorIndex]bool)
 
 	// Allocate pending slice with a capacity of maxAttesterSlashings or len(p.pendingAttesterSlashing)) depending on the request.
 	maxSlashings := params.BeaconConfig().MaxAttesterSlashings
@@ -65,7 +65,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 		attSlashing := slashing.attesterSlashing
 		slashedVal := slice.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
 		for _, idx := range slashedVal {
-			included[types.ValidatorIndex(idx)] = true
+			included[primitives.ValidatorIndex(idx)] = true
 		}
 
 		pending = append(pending, attSlashing)
@@ -134,7 +134,7 @@ func (p *Pool) InsertAttesterSlashing(
 	slashingReason := ""
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
-		ok, err := p.validatorSlashingPreconditionCheck(state, types.ValidatorIndex(val))
+		ok, err := p.validatorSlashingPreconditionCheck(state, primitives.ValidatorIndex(val))
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func (p *Pool) InsertAttesterSlashing(
 
 		pendingSlashing := &PendingAttesterSlashing{
 			attesterSlashing: slashing,
-			validatorToSlash: types.ValidatorIndex(val),
+			validatorToSlash: primitives.ValidatorIndex(val),
 		}
 		// Insert into pending list and sort again.
 		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
@@ -240,7 +240,7 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 		if i != len(p.pendingAttesterSlashing) && uint64(p.pendingAttesterSlashing[i].validatorToSlash) == val {
 			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
-		p.included[types.ValidatorIndex(val)] = true
+		p.included[primitives.ValidatorIndex(val)] = true
 		numAttesterSlashingsIncluded.Inc()
 	}
 }
@@ -267,7 +267,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 // Note: this method requires caller to hold the lock.
 func (p *Pool) validatorSlashingPreconditionCheck(
 	state state.ReadOnlyBeaconState,
-	valIdx types.ValidatorIndex,
+	valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	if !mutexasserts.RWMutexLocked(&p.lock) && !mutexasserts.RWMutexRLocked(&p.lock) {
 		return false, errors.New("pool.validatorSlashingPreconditionCheck: caller must hold read/write lock")

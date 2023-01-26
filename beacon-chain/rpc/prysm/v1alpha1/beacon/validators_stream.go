@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -47,7 +47,7 @@ type infostream struct {
 	eth1DepositsMutex   *sync.RWMutex
 	eth1Blocktimes      *cache.Cache
 	eth1BlocktimesMutex *sync.RWMutex
-	currentEpoch        types.Epoch
+	currentEpoch        primitives.Epoch
 	stream              ethpb.BeaconChain_StreamValidatorsInfoServer
 	genesisTime         uint64
 }
@@ -120,7 +120,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 		eth1DepositsMutex:   &sync.RWMutex{},
 		eth1Blocktimes:      cache.New(epochDuration*12, epochDuration*24),
 		eth1BlocktimesMutex: &sync.RWMutex{},
-		currentEpoch:        types.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch),
+		currentEpoch:        primitives.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch),
 		stream:              stream,
 		genesisTime:         headState.GenesisTime(),
 	}
@@ -265,7 +265,7 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 	if headState == nil || headState.IsNil() {
 		return nil, status.Error(codes.Internal, "Not ready to serve information")
 	}
-	epoch := types.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	epoch := primitives.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 	if epoch == 0 {
 		// Not reporting, but no error.
 		return nil, nil
@@ -304,7 +304,7 @@ func (is *infostream) generateValidatorInfo(
 	pubKey []byte,
 	validator state.ReadOnlyValidator,
 	headState state.ReadOnlyBeaconState,
-	epoch types.Epoch,
+	epoch primitives.Epoch,
 ) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
 		PublicKey: pubKey,
@@ -375,7 +375,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	return info, nil
 }
 
-func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState state.ReadOnlyBeaconState, epoch types.Epoch) error {
+func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
 	pendingValidatorsMap := make(map[[fieldparams.BLSPubkeyLength]byte]int)
 	for i, info := range res {
@@ -390,7 +390,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 
 	// Fetch the list of pending validators; count the number of attesting validators.
 	numAttestingValidators := uint64(0)
-	pendingValidators := make([]types.ValidatorIndex, 0, headState.NumValidators())
+	pendingValidators := make([]primitives.ValidatorIndex, 0, headState.NumValidators())
 
 	err := headState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if val.IsNil() {
@@ -456,7 +456,7 @@ func (is *infostream) handleBlockProcessed() {
 		// We aren't ready to serve information
 		return
 	}
-	blockEpoch := types.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	blockEpoch := primitives.Epoch(headState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 	if blockEpoch == is.currentEpoch {
 		// Epoch hasn't changed, nothing to report yet.
 		return
@@ -469,7 +469,7 @@ func (is *infostream) handleBlockProcessed() {
 }
 
 type indicesSorter struct {
-	indices []types.ValidatorIndex
+	indices []primitives.ValidatorIndex
 }
 
 // Len is the number of elements in the collection.
@@ -483,7 +483,7 @@ func (s indicesSorter) Less(i, j int) bool {
 	return s.indices[i] < s.indices[j]
 }
 
-func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValidator, currentEpoch types.Epoch) (ethpb.ValidatorStatus, uint64) {
+func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValidator, currentEpoch primitives.Epoch) (ethpb.ValidatorStatus, uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
 	if validator.IsNil() {
@@ -515,7 +515,7 @@ func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValid
 }
 
 // epochToTimestamp converts an epoch number to a timestamp.
-func (is *infostream) epochToTimestamp(epoch types.Epoch) uint64 {
+func (is *infostream) epochToTimestamp(epoch primitives.Epoch) uint64 {
 	return is.genesisTime + params.BeaconConfig().SecondsPerSlot*uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch)))
 }
 

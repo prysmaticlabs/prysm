@@ -3,11 +3,11 @@ package validator
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (vs *Server) getExits(head state.BeaconState, slot types.Slot) []*ethpb.SignedVoluntaryExit {
+func (vs *Server) getExits(head state.BeaconState, slot primitives.Slot) []*ethpb.SignedVoluntaryExit {
 	exits := vs.ExitPool.PendingExits(head, slot, false /*noLimit*/)
 	validExits := make([]*ethpb.SignedVoluntaryExit, 0, len(exits))
 

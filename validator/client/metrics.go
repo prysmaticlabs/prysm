@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -218,7 +218,7 @@ var (
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.Slot) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primitives.Slot) error {
 	if !slots.IsEpochEnd(slot) || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
@@ -250,9 +250,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 		}
 	}
 
-	prevEpoch := types.Epoch(0)
+	prevEpoch := primitives.Epoch(0)
 	if slot >= params.BeaconConfig().SlotsPerEpoch {
-		prevEpoch = types.Epoch(slot/params.BeaconConfig().SlotsPerEpoch) - 1
+		prevEpoch = primitives.Epoch(slot/params.BeaconConfig().SlotsPerEpoch) - 1
 		if uint64(v.voteStats.startEpoch) == ^uint64(0) { // Handles unknown first epoch.
 			v.voteStats.startEpoch = prevEpoch
 		}
@@ -267,7 +267,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 	return nil
 }
 
-func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.ValidatorPerformanceResponse, slot types.Slot, prevEpoch types.Epoch) {
+func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.ValidatorPerformanceResponse, slot primitives.Slot, prevEpoch primitives.Epoch) {
 	truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 	pubKeyBytes := bytesutil.ToBytes48(pubKey)
 	if slot < params.BeaconConfig().SlotsPerEpoch {
@@ -371,9 +371,9 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
-func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot types.Slot) {
+func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResponse, slot primitives.Slot) {
 	summary := &v.voteStats
-	currentEpoch := types.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	var attested, correctSource, correctTarget, correctHead, inactivityScore int
 
 	for i := range resp.PublicKeys {

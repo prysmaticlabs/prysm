@@ -9,9 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativeStateTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	stateTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -78,8 +77,8 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 		RWMutex:     new(sync.RWMutex),
 		reference:   stateutil.NewRef(0),
 		fieldLayers: nil,
-		field:       stateTypes.Balances,
-		dataType:    stateTypes.CompressedArray,
+		field:       types.Balances,
+		dataType:    types.CompressedArray,
 		length:      params.BeaconConfig().ValidatorRegistryLimit / 4,
 		numOfElems:  0,
 	}
@@ -93,7 +92,7 @@ func TestValidateIndices_CompressedField(t *testing.T) {
 
 func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	type args struct {
-		field      stateTypes.BeaconStateField
+		field      types.FieldIndex
 		indices    []uint64
 		elements   interface{}
 		convertAll bool
@@ -108,7 +107,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "BlockRoots [][]bytes",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(5),
+				field:      types.FieldIndex(5),
 				indices:    []uint64{},
 				elements:   [][]byte{[]byte("dfsadfsadf")},
 				convertAll: true,
@@ -118,7 +117,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "BlockRoots customtypes.BlockRoots",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(5),
+				field:      types.FieldIndex(5),
 				indices:    []uint64{},
 				elements:   &customtypes.BlockRoots{},
 				convertAll: true,
@@ -129,7 +128,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "BlockRoots type not found",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(5),
+				field:      types.FieldIndex(5),
 				indices:    []uint64{},
 				elements:   123,
 				convertAll: true,
@@ -140,7 +139,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "BlockRoots [][]bytes",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(5),
+				field:      types.FieldIndex(5),
 				indices:    []uint64{},
 				elements:   [][]byte{[]byte("dfsadfsadf")},
 				convertAll: true,
@@ -150,7 +149,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "StateRoots [][]bytes",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(6),
+				field:      types.FieldIndex(6),
 				indices:    []uint64{},
 				elements:   [][]byte{[]byte("dfsadfsadf")},
 				convertAll: true,
@@ -160,7 +159,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "StateRoots customtypes.StateRoots",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(6),
+				field:      types.FieldIndex(6),
 				indices:    []uint64{},
 				elements:   &customtypes.StateRoots{},
 				convertAll: true,
@@ -171,7 +170,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "StateRoots type not found",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(6),
+				field:      types.FieldIndex(6),
 				indices:    []uint64{},
 				elements:   123,
 				convertAll: true,
@@ -182,7 +181,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "StateRoots [][]bytes convert all false",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(6),
+				field:      types.FieldIndex(6),
 				indices:    []uint64{},
 				elements:   [][]byte{[]byte("dfsadfsadf")},
 				convertAll: false,
@@ -192,7 +191,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "StateRoots customtypes.StateRoots convert all false",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(6),
+				field:      types.FieldIndex(6),
 				indices:    []uint64{},
 				elements:   &customtypes.StateRoots{},
 				convertAll: false,
@@ -203,7 +202,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "RandaoMixes [][]bytes",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(13),
+				field:      types.FieldIndex(13),
 				indices:    []uint64{},
 				elements:   [][]byte{[]byte("dfsadfsadf")},
 				convertAll: true,
@@ -213,7 +212,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "RandaoMixes customtypes.RandaoMixes",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(13),
+				field:      types.FieldIndex(13),
 				indices:    []uint64{},
 				elements:   &customtypes.RandaoMixes{},
 				convertAll: true,
@@ -224,7 +223,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "RandaoMixes type not found",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(13),
+				field:      types.FieldIndex(13),
 				indices:    []uint64{},
 				elements:   123,
 				convertAll: true,
@@ -235,7 +234,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Eth1DataVotes type not found",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(9),
+				field:   types.FieldIndex(9),
 				indices: []uint64{},
 				elements: []*ethpb.Eth1Data{
 					{
@@ -250,7 +249,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Eth1DataVotes convertAll false",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(9),
+				field:   types.FieldIndex(9),
 				indices: []uint64{1},
 				elements: []*ethpb.Eth1Data{
 					{
@@ -265,7 +264,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Eth1DataVotes type not found",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(9),
+				field:      types.FieldIndex(9),
 				indices:    []uint64{},
 				elements:   123,
 				convertAll: true,
@@ -276,7 +275,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Balance",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(12),
+				field:      types.FieldIndex(12),
 				indices:    []uint64{},
 				elements:   []uint64{12321312321, 12131241234123123},
 				convertAll: true,
@@ -286,7 +285,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Validators",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(11),
+				field:   types.FieldIndex(11),
 				indices: []uint64{},
 				elements: []*ethpb.Validator{
 					{
@@ -300,7 +299,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Validators not found",
 			args: &args{
-				field:      nativeStateTypes.FieldIndex(11),
+				field:      types.FieldIndex(11),
 				indices:    []uint64{},
 				elements:   123,
 				convertAll: true,
@@ -311,7 +310,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Attestations",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(15),
+				field:   types.FieldIndex(15),
 				indices: []uint64{},
 				elements: []*ethpb.PendingAttestation{
 					{
@@ -325,7 +324,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Attestations",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(15),
+				field:   types.FieldIndex(15),
 				indices: []uint64{1},
 				elements: []*ethpb.PendingAttestation{
 					{
@@ -339,7 +338,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		{
 			name: "Type not found",
 			args: &args{
-				field:   nativeStateTypes.FieldIndex(999),
+				field:   types.FieldIndex(999),
 				indices: []uint64{},
 				elements: []*ethpb.PendingAttestation{
 					{
@@ -353,7 +352,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			roots, err := fieldConvertersNative(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
+			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
 			if err != nil && tt.errMsg != "" {
 				require.ErrorContains(t, tt.errMsg, err)
 			} else {

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -54,7 +54,7 @@ func (o *OriginData) BlockBytes() []byte {
 	return o.bb
 }
 
-func fname(prefix string, vu *detect.VersionedUnmarshaler, slot types.Slot, root [32]byte) string {
+func fname(prefix string, vu *detect.VersionedUnmarshaler, slot primitives.Slot, root [32]byte) string {
 	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, vu.Config.ConfigName, version.String(vu.Fork), slot, root)
 }
 
@@ -122,7 +122,7 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 type WeakSubjectivityData struct {
 	BlockRoot [32]byte
 	StateRoot [32]byte
-	Epoch     types.Epoch
+	Epoch     primitives.Epoch
 }
 
 // CheckpointString returns the standard string representation of a Checkpoint.
@@ -238,7 +238,7 @@ func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubje
 
 // this method downloads the head state, which can be used to find the correct chain config
 // and use prysm's helper methods to compute the latest weak subjectivity epoch.
-func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
+func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (primitives.Epoch, error) {
 	headBytes, err := client.GetState(ctx, IdHead)
 	if err != nil {
 		return 0, err

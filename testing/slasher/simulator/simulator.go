@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -33,14 +33,14 @@ type ServiceConfig struct {
 	HeadStateFetcher            blockchain.HeadFetcher
 	StateGen                    stategen.StateManager
 	SlashingsPool               slashings.PoolManager
-	PrivateKeysByValidatorIndex map[types.ValidatorIndex]bls.SecretKey
+	PrivateKeysByValidatorIndex map[primitives.ValidatorIndex]bls.SecretKey
 	SyncChecker                 sync.Checker
 }
 
 // Parameters for a slasher simulator.
 type Parameters struct {
 	SecondsPerSlot         uint64
-	SlotsPerEpoch          types.Slot
+	SlotsPerEpoch          primitives.Slot
 	AggregationPercent     float64
 	ProposerSlashingProbab float64
 	AttesterSlashingProbab float64
@@ -168,7 +168,7 @@ func (s *Simulator) simulateBlocksAndAttestations(ctx context.Context) {
 		select {
 		case slot := <-ticker.C():
 			// We only run the simulator for a specified number of epochs.
-			totalEpochs := types.Epoch(s.srvConfig.Params.NumEpochs)
+			totalEpochs := primitives.Epoch(s.srvConfig.Params.NumEpochs)
 			if slots.ToEpoch(slot) >= totalEpochs {
 				return
 			}
