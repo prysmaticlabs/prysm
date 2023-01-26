@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -207,7 +207,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
@@ -241,13 +241,13 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	// Test that helper can retrieve the index given empty cache.
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
 	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(root, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 }
 
 func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
@@ -274,7 +274,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 129301923)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
+	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
@@ -304,7 +304,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
@@ -330,7 +330,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
+	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 }
 
 func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
@@ -357,7 +357,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 21093019)
 	require.NoError(t, err)
-	require.DeepEqual(t, []types.CommitteeIndex(nil), index)
+	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 
 func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
@@ -378,7 +378,7 @@ func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
 
 func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		Slot:              types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1,
+		Slot:              primitives.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch - 1,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: params.BeaconConfig().ZeroHash[:]},
 	})
 	require.NoError(t, err)
@@ -417,7 +417,7 @@ func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
 	require.NoError(t, err)
 
 	wantedSlot := params.BeaconConfig().EpochsPerSyncCommitteePeriod.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
-	assert.NoError(t, state.SetSlot(types.Slot(wantedSlot)))
+	assert.NoError(t, state.SetSlot(primitives.Slot(wantedSlot)))
 	syncCommittee, err = state.CurrentSyncCommittee()
 	assert.NoError(t, err)
 	rand.Shuffle(len(syncCommittee.Pubkeys), func(i, j int) {

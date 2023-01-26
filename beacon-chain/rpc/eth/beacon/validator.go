@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
@@ -185,7 +185,7 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		if req.Slot != nil && slot != *req.Slot {
 			continue
 		}
-		for index := types.CommitteeIndex(0); index < types.CommitteeIndex(committeesPerSlot); index++ {
+		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
 			if req.Index != nil && index != *req.Index {
 				continue
 			}
@@ -229,7 +229,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 				return nil, errors.Wrap(err, "could not get validator sub status")
 			}
 			valContainers[i] = &ethpb.ValidatorContainer{
-				Index:     types.ValidatorIndex(i),
+				Index:     primitives.ValidatorIndex(i),
 				Balance:   allBalances[i],
 				Status:    subStatus,
 				Validator: migration.V1Alpha1ValidatorToV1(validator),
@@ -238,7 +238,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 	} else {
 		valContainers = make([]*ethpb.ValidatorContainer, 0, len(validatorIds))
 		for _, validatorId := range validatorIds {
-			var valIndex types.ValidatorIndex
+			var valIndex primitives.ValidatorIndex
 			if len(validatorId) == params.BeaconConfig().BLSPubkeyLength {
 				var ok bool
 				valIndex, ok = state.ValidatorIndexByPubkey(bytesutil.ToBytes48(validatorId))
@@ -252,7 +252,7 @@ func valContainersByRequestIds(state state.BeaconState, validatorIds [][]byte) (
 					e := newInvalidValidatorIdError(validatorId, err)
 					return nil, &e
 				}
-				valIndex = types.ValidatorIndex(index)
+				valIndex = primitives.ValidatorIndex(index)
 			}
 			validator, err := state.ValidatorAtIndex(valIndex)
 			if _, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {

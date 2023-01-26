@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -120,7 +120,7 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 	currentTime := time.Now()
-	numOfSlots := types.Slot(4)
+	numOfSlots := primitives.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
@@ -135,7 +135,7 @@ func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 	validator, _, _, finish := setup(t)
 	defer finish()
 	currentTime := time.Now()
-	numOfSlots := types.Slot(4)
+	numOfSlots := primitives.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	expectedTime := time.Now()

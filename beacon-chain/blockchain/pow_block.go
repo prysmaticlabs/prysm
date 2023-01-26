@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -117,7 +117,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 //	assert compute_epoch_at_slot(block.slot) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
 //	assert block.body.execution_payload.parent_hash == TERMINAL_BLOCK_HASH
 //	return
-func canUseValidatedTerminalBlockHash(blkSlot types.Slot, payload interfaces.ExecutionData) (bool, error) {
+func canUseValidatedTerminalBlockHash(blkSlot primitives.Slot, payload interfaces.ExecutionData) (bool, error) {
 	if bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) == [32]byte{} {
 		return false, nil
 	}

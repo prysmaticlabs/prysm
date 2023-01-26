@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -19,7 +19,7 @@ func TestSlotsSinceGenesis(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want types.Slot
+		want primitives.Slot
 	}{
 		{
 			name: "pre-genesis",
@@ -47,8 +47,8 @@ func TestSlotsSinceGenesis(t *testing.T) {
 
 func TestAbsoluteValueSlotDifference(t *testing.T) {
 	type args struct {
-		x types.Slot
-		y types.Slot
+		x primitives.Slot
+		y primitives.Slot
 	}
 	tests := []struct {
 		name string
@@ -58,24 +58,24 @@ func TestAbsoluteValueSlotDifference(t *testing.T) {
 		{
 			name: "x_<_y",
 			args: args{
-				x: types.Slot(3),
-				y: types.Slot(4),
+				x: primitives.Slot(3),
+				y: primitives.Slot(4),
 			},
 			want: 1,
 		},
 		{
 			name: "x_>_y",
 			args: args{
-				x: types.Slot(100),
-				y: types.Slot(4),
+				x: primitives.Slot(100),
+				y: primitives.Slot(4),
 			},
 			want: 96,
 		},
 		{
 			name: "x_==_y",
 			args: args{
-				x: types.Slot(100),
-				y: types.Slot(100),
+				x: primitives.Slot(100),
+				y: primitives.Slot(100),
 			},
 			want: 0,
 		},
@@ -131,8 +131,8 @@ func TestMultiplySlotBy(t *testing.T) {
 
 func TestEpochStartSlot_OK(t *testing.T) {
 	tests := []struct {
-		epoch     types.Epoch
-		startSlot types.Slot
+		epoch     primitives.Epoch
+		startSlot primitives.Slot
 		error     bool
 	}{
 		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch, error: false},
@@ -155,8 +155,8 @@ func TestEpochStartSlot_OK(t *testing.T) {
 
 func TestEpochEndSlot_OK(t *testing.T) {
 	tests := []struct {
-		epoch     types.Epoch
-		startSlot types.Slot
+		epoch     primitives.Epoch
+		startSlot primitives.Slot
 		error     bool
 	}{
 		{epoch: 0, startSlot: 1*params.BeaconConfig().SlotsPerEpoch - 1, error: false},
@@ -181,7 +181,7 @@ func TestIsEpochStart(t *testing.T) {
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
 	tests := []struct {
-		slot   types.Slot
+		slot   primitives.Slot
 		result bool
 	}{
 		{
@@ -211,7 +211,7 @@ func TestIsEpochEnd(t *testing.T) {
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
 	tests := []struct {
-		slot   types.Slot
+		slot   primitives.Slot
 		result bool
 	}{
 		{
@@ -235,8 +235,8 @@ func TestIsEpochEnd(t *testing.T) {
 
 func TestSlotsSinceEpochStarts(t *testing.T) {
 	tests := []struct {
-		slots       types.Slot
-		wantedSlots types.Slot
+		slots       primitives.Slot
+		wantedSlots primitives.Slot
 	}{
 		{slots: 0, wantedSlots: 0},
 		{slots: 1, wantedSlots: 1},
@@ -251,8 +251,8 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 
 func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 	tests := []struct {
-		startSlot     types.Slot
-		roundedUpSlot types.Slot
+		startSlot     primitives.Slot
+		roundedUpSlot primitives.Slot
 	}{
 		{startSlot: 0 * params.BeaconConfig().SlotsPerEpoch, roundedUpSlot: 0},
 		{startSlot: 1*params.BeaconConfig().SlotsPerEpoch - 10, roundedUpSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
@@ -266,7 +266,7 @@ func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 func TestSlotToTime(t *testing.T) {
 	type args struct {
 		genesisTimeSec uint64
-		slot           types.Slot
+		slot           primitives.Slot
 	}
 	tests := []struct {
 		name      string
@@ -323,7 +323,7 @@ func TestSlotToTime(t *testing.T) {
 func TestVerifySlotTime(t *testing.T) {
 	type args struct {
 		genesisTime   int64
-		slot          types.Slot
+		slot          primitives.Slot
 		timeTolerance time.Duration
 	}
 	tests := []struct {
@@ -357,7 +357,7 @@ func TestVerifySlotTime(t *testing.T) {
 			name: "max future slot",
 			args: args{
 				genesisTime: prysmTime.Now().Add(-1 * 5 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(),
-				slot:        types.Slot(MaxSlotBuffer + 6),
+				slot:        primitives.Slot(MaxSlotBuffer + 6),
 			},
 			wantedErr: "exceeds max allowed value relative to the local clock",
 		},
@@ -367,7 +367,7 @@ func TestVerifySlotTime(t *testing.T) {
 				genesisTime: prysmTime.Now().Add(-1 * 24 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix(), // 24 slots in the past
 				// Gets multiplied with slot duration, and results in an overflow. Wraps around to a valid time.
 				// Lower than max signed int. And chosen specifically to wrap to a valid slot 24
-				slot: types.Slot((^uint64(0))/params.BeaconConfig().SecondsPerSlot) + 24,
+				slot: primitives.Slot((^uint64(0))/params.BeaconConfig().SecondsPerSlot) + 24,
 			},
 			wantedErr: "is in the far distant future",
 		},
@@ -387,17 +387,17 @@ func TestVerifySlotTime(t *testing.T) {
 func TestValidateSlotClock_HandlesBadSlot(t *testing.T) {
 	genTime := prysmTime.Now().Add(-1 * time.Duration(MaxSlotBuffer) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second).Unix()
 
-	assert.NoError(t, ValidateClock(types.Slot(MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
-	assert.NoError(t, ValidateClock(types.Slot(2*MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
-	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateClock(types.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
+	assert.NoError(t, ValidateClock(primitives.Slot(MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
+	assert.NoError(t, ValidateClock(primitives.Slot(2*MaxSlotBuffer), uint64(genTime)), "unexpected error validating slot")
+	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateClock(primitives.Slot(2*MaxSlotBuffer+1), uint64(genTime)), "no error from bad slot")
 	assert.ErrorContains(t, "which exceeds max allowed value relative to the local clock", ValidateClock(1<<63, uint64(genTime)), "no error from bad slot")
 }
 
 func TestPrevSlot(t *testing.T) {
 	tests := []struct {
 		name string
-		slot types.Slot
-		want types.Slot
+		slot primitives.Slot
+		want primitives.Slot
 	}{
 		{
 			name: "no underflow",
@@ -431,7 +431,7 @@ func TestPrevSlot(t *testing.T) {
 
 func TestSyncCommitteePeriod(t *testing.T) {
 	tests := []struct {
-		epoch  types.Epoch
+		epoch  primitives.Epoch
 		wanted uint64
 	}{
 		{epoch: 0, wanted: 0},
@@ -446,8 +446,8 @@ func TestSyncCommitteePeriod(t *testing.T) {
 
 func TestSyncCommitteePeriodStartEpoch(t *testing.T) {
 	tests := []struct {
-		epoch  types.Epoch
-		wanted types.Epoch
+		epoch  primitives.Epoch
+		wanted primitives.Epoch
 	}{
 		{epoch: 0, wanted: 0},
 		{epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod + 1, wanted: params.BeaconConfig().EpochsPerSyncCommitteePeriod},

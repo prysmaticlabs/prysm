@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // NewStatus correctly initializes a Status value with the required database value.
@@ -23,8 +23,8 @@ func NewStatus(store BackfillDB) *Status {
 // end of the missing block range via the Advance() method, to check whether a Slot is missing from the database
 // via the SlotCovered() method, and to see the current StartGap() and EndGap().
 type Status struct {
-	start       types.Slot
-	end         types.Slot
+	start       primitives.Slot
+	end         primitives.Slot
 	store       BackfillDB
 	genesisSync bool
 }
@@ -32,7 +32,7 @@ type Status struct {
 // SlotCovered uses StartGap() and EndGap() to determine if the given slot is covered by the current chain history.
 // If the slot is <= StartGap(), or >= EndGap(), the result is true.
 // If the slot is between StartGap() and EndGap(), the result is false.
-func (s *Status) SlotCovered(sl types.Slot) bool {
+func (s *Status) SlotCovered(sl primitives.Slot) bool {
 	// short circuit if the node was synced from genesis
 	if s.genesisSync {
 		return true
@@ -44,12 +44,12 @@ func (s *Status) SlotCovered(sl types.Slot) bool {
 }
 
 // StartGap returns the slot at the beginning of the range that needs to be backfilled.
-func (s *Status) StartGap() types.Slot {
+func (s *Status) StartGap() primitives.Slot {
 	return s.start
 }
 
 // EndGap returns the slot at the end of the range that needs to be backfilled.
-func (s *Status) EndGap() types.Slot {
+func (s *Status) EndGap() primitives.Slot {
 	return s.end
 }
 
@@ -58,7 +58,7 @@ var ErrAdvancePastOrigin = errors.New("cannot advance backfill Status beyond the
 // Advance advances the backfill position to the given slot & root.
 // It updates the backfill block root entry in the database,
 // and also updates the Status value's copy of the backfill position slot.
-func (s *Status) Advance(ctx context.Context, upTo types.Slot, root [32]byte) error {
+func (s *Status) Advance(ctx context.Context, upTo primitives.Slot, root [32]byte) error {
 	if upTo > s.end {
 		return errors.Wrapf(ErrAdvancePastOrigin, "advance slot=%d, origin slot=%d", upTo, s.end)
 	}

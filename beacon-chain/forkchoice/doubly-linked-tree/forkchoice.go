@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -35,8 +35,8 @@ func New() *ForkChoice {
 		proposerBoostRoot:             [32]byte{},
 		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
-		slashedIndices:                make(map[types.ValidatorIndex]bool),
-		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
+		slashedIndices:                make(map[primitives.ValidatorIndex]bool),
+		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]primitives.Slot{},
 	}
 
 	b := make([]uint64, 0)
@@ -92,7 +92,7 @@ func (f *ForkChoice) Head(
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
-func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch primitives.Epoch) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
@@ -274,7 +274,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
-func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error) {
+func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.AncestorRoot")
 	defer span.End()
 
@@ -307,7 +307,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
-		if f.store.slashedIndices[types.ValidatorIndex(index)] {
+		if f.store.slashedIndices[primitives.ValidatorIndex(index)] {
 			continue
 		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
@@ -374,7 +374,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 
 // Tips returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
-func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
+func (f *ForkChoice) Tips() ([][32]byte, []primitives.Slot) {
 	return f.store.tips()
 }
 
@@ -430,7 +430,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 // InsertSlashedIndex adds the given slashed validator index to the
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
-func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index primitives.ValidatorIndex) {
 	f.votesLock.RLock()
 	defer f.votesLock.RUnlock()
 
@@ -444,11 +444,11 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 
 	// Subtract last vote from this equivocating validator
 
-	if index >= types.ValidatorIndex(len(f.balances)) {
+	if index >= primitives.ValidatorIndex(len(f.balances)) {
 		return
 	}
 
-	if index >= types.ValidatorIndex(len(f.votes)) {
+	if index >= primitives.ValidatorIndex(len(f.votes)) {
 		return
 	}
 
@@ -492,7 +492,7 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 }
 
 // CommonAncestor returns the common ancestor root and slot between the two block roots r1 and r2.
-func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, types.Slot, error) {
+func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, primitives.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.CommonAncestorRoot")
 	defer span.End()
 

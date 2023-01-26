@@ -7,9 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/v3/math"
@@ -49,7 +48,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(field types.BeaconStateField, dataType types.DataType, elements interface{}, length uint64) error {
+func validateElements(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
@@ -65,7 +64,7 @@ func validateElements(field types.BeaconStateField, dataType types.DataType, ele
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
@@ -80,28 +79,6 @@ func fieldConverters(field types.BeaconStateField, indices []uint64, elements in
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
-		return convertBalances(indices, elements, convertAll)
-	default:
-		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
-	}
-}
-
-// fieldConvertersNative converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConvertersNative(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	switch field {
-	case nativetypes.BlockRoots:
-		return convertBlockRoots(indices, elements, convertAll)
-	case nativetypes.StateRoots:
-		return convertStateRoots(indices, elements, convertAll)
-	case nativetypes.RandaoMixes:
-		return convertRandaoMixes(indices, elements, convertAll)
-	case nativetypes.Eth1DataVotes:
-		return convertEth1DataVotes(indices, elements, convertAll)
-	case nativetypes.Validators:
-		return convertValidators(indices, elements, convertAll)
-	case nativetypes.PreviousEpochAttestations, nativetypes.CurrentEpochAttestations:
-		return convertAttestations(indices, elements, convertAll)
-	case nativetypes.Balances:
 		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
