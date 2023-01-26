@@ -3,9 +3,10 @@ package testing
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -25,7 +26,7 @@ func (MockClient) NodeURL() string {
 }
 
 // GetHeader --
-func (MockClient) GetHeader(_ context.Context, _ types.Slot, _ [32]byte, _ [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (MockClient) GetHeader(_ context.Context, _ types.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
 	return nil, nil
 }
 
@@ -39,7 +40,7 @@ func (m MockClient) RegisterValidator(_ context.Context, svr []*ethpb.SignedVali
 }
 
 // SubmitBlindedBlock --
-func (MockClient) SubmitBlindedBlock(_ context.Context, _ *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+func (MockClient) SubmitBlindedBlock(_ context.Context, _ interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
 	return nil, nil
 }
 
