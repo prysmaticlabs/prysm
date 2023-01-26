@@ -29,10 +29,7 @@ func (s *Service) forkWatcher() {
 				continue
 			}
 			// Broadcast BLS changes at the Capella fork boundary
-			if err := s.broadcastBLSChanges(currSlot); err != nil {
-				log.WithError(err).Error("Unable to broadcast BLS to execution changes")
-				continue
-			}
+			s.broadcastBLSChanges(currSlot)
 
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
