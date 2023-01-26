@@ -23,8 +23,6 @@ var (
 	ErrInvalidIndex = errors.New("index should be greater than finalizedDeposits - 1")
 	// ErrNoDeposits occurs when the number of deposits is 0.
 	ErrNoDeposits = errors.New("number of deposits should be greater than 0")
-	// ErrNoFinalizedDeposits occurs when the number of finalized deposits is 0.
-	ErrNoFinalizedDeposits = errors.New("number of finalized deposits should be greater than 0")
 	// ErrTooManyDeposits occurs when the number of deposits exceeds the capacity of the tree.
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
@@ -120,9 +118,6 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
 	finalizedDeposits, _ := d.tree.GetFinalized([][32]byte{})
-	if finalizedDeposits == 0 {
-		return [32]byte{}, nil, ErrNoFinalizedDeposits
-	}
 	if finalizedDeposits != 0 {
 		finalizedDeposits = finalizedDeposits - 1
 	}
