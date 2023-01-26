@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -14,8 +14,8 @@ var log = logrus.WithField("prefix", "validator")
 
 type attSubmitted struct {
 	data              *ethpb.AttestationData
-	attesterIndices   []types.ValidatorIndex
-	aggregatorIndices []types.ValidatorIndex
+	attesterIndices   []primitives.ValidatorIndex
+	aggregatorIndices []primitives.ValidatorIndex
 }
 
 // LogAttestationsSubmitted logs info about submitted attestations.

@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
@@ -484,7 +484,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			if err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "Could not parse block ID: %v", err)
 			}
-			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
+			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
 			}
@@ -589,11 +589,11 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 				e := newBlockIdParseError(err)
 				return nil, &e
 			}
-			blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
+			blks, err := bs.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}
-			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, types.Slot(slot))
+			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve block roots for slot %d", slot)
 			}

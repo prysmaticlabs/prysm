@@ -3,7 +3,7 @@ package slice
 import (
 	"strings"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // SubsetUint64 returns true if the first array is
@@ -310,15 +310,15 @@ func SplitOffset(listSize, chunks, index uint64) uint64 {
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func IntersectionSlot(s ...[]types.Slot) []types.Slot {
+func IntersectionSlot(s ...[]primitives.Slot) []primitives.Slot {
 	if len(s) == 0 {
-		return []types.Slot{}
+		return []primitives.Slot{}
 	}
 	if len(s) == 1 {
 		return s[0]
 	}
-	intersect := make([]types.Slot, 0)
-	m := make(map[types.Slot]int)
+	intersect := make([]primitives.Slot, 0)
+	m := make(map[primitives.Slot]int)
 	for _, k := range s[0] {
 		m[k] = 1
 	}
@@ -340,9 +340,9 @@ func IntersectionSlot(s ...[]types.Slot) []types.Slot {
 // not in slice a with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func NotSlot(a, b []types.Slot) []types.Slot {
-	set := make([]types.Slot, 0)
-	m := make(map[types.Slot]bool)
+func NotSlot(a, b []primitives.Slot) []primitives.Slot {
+	set := make([]primitives.Slot, 0)
+	m := make(map[primitives.Slot]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -356,7 +356,7 @@ func NotSlot(a, b []types.Slot) []types.Slot {
 }
 
 // IsInSlots returns true if a is in b and False otherwise.
-func IsInSlots(a types.Slot, b []types.Slot) bool {
+func IsInSlots(a primitives.Slot, b []primitives.Slot) bool {
 	for _, v := range b {
 		if a == v {
 			return true

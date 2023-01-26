@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -130,7 +130,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 
 	type args struct {
-		attSlot     types.Slot
+		attSlot     primitives.Slot
 		genesisTime time.Time
 	}
 	tests := []struct {

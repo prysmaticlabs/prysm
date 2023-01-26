@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -47,7 +47,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 	parentRoot := genesisBlkRoot
 	for i := 0; i < 255; i++ {
 		blk := util.NewBeaconBlock()
-		blk.Block.Slot = types.Slot(i)
+		blk.Block.Slot = primitives.Slot(i)
 		blk.Block.ParentRoot = parentRoot[:]
 		knownBlocks = append(knownBlocks, blk)
 		parentRoot, err = blk.Block.HashTreeRoot()
@@ -63,7 +63,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2pProvider.Encoding().DecodeWithMaxLength(stream, req))
 
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				if processor != nil {
 					wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[i])
 					require.NoError(t, err)
@@ -234,7 +234,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
 
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}
@@ -278,7 +278,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			req := &ethpb.BeaconBlocksByRangeRequest{}
 			assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
 
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				if uint64(i) >= uint64(len(knownBlocks)) {
 					break
 				}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -29,5 +29,5 @@ func (c beaconApiValidatorClient) validatorIndex(ctx context.Context, in *ethpb.
 		return nil, errors.Wrap(err, "failed to parse validator index")
 	}
 
-	return &ethpb.ValidatorIndexResponse{Index: types.ValidatorIndex(index)}, nil
+	return &ethpb.ValidatorIndexResponse{Index: primitives.ValidatorIndex(index)}, nil
 }

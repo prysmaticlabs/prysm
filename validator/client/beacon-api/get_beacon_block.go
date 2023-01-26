@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -23,7 +23,7 @@ type abstractProduceBlockResponseJson struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot types.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
+func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
 	queryParams := neturl.Values{}
 	queryParams.Add("randao_reveal", hexutil.Encode(randaoReveal))
 
@@ -182,8 +182,8 @@ func convertRESTPhase0BlockToProto(block *apimiddleware.BeaconBlockJson) (*ethpb
 
 	return &ethpb.GenericBeaconBlock_Phase0{
 		Phase0: &ethpb.BeaconBlock{
-			Slot:          types.Slot(blockSlot),
-			ProposerIndex: types.ValidatorIndex(blockProposerIndex),
+			Slot:          primitives.Slot(blockSlot),
+			ProposerIndex: primitives.ValidatorIndex(blockProposerIndex),
 			ParentRoot:    parentRoot,
 			StateRoot:     stateRoot,
 			Body: &ethpb.BeaconBlockBody{

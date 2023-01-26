@@ -1,15 +1,15 @@
-package types_test
+package primitives_test
 
 import (
 	"reflect"
 	"strings"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 func TestSSZUint64_Limit(t *testing.T) {
-	sszType := types.SSZUint64(0)
+	sszType := primitives.SSZUint64(0)
 	var serializedObj [7]byte
 	err := sszType.UnmarshalSSZ(serializedObj[:])
 	if err == nil || !strings.Contains(err.Error(), "expected buffer of length") {
@@ -19,13 +19,13 @@ func TestSSZUint64_Limit(t *testing.T) {
 
 func TestSSZUint64_RoundTrip(t *testing.T) {
 	fixedVal := uint64(8)
-	sszVal := types.SSZUint64(fixedVal)
+	sszVal := primitives.SSZUint64(fixedVal)
 
 	marshalledObj, err := sszVal.MarshalSSZ()
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
-	newVal := types.SSZUint64(0)
+	newVal := primitives.SSZUint64(0)
 
 	err = newVal.UnmarshalSSZ(marshalledObj)
 	if err != nil {
@@ -68,7 +68,7 @@ func TestSSZUint64(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var s types.SSZUint64
+			var s primitives.SSZUint64
 			if err := s.UnmarshalSSZ(tt.serializedBytes); (err != nil) != tt.wantErr {
 				t.Errorf("SSZUint64.UnmarshalSSZ() error = %v, wantErr %v", err, tt.wantErr)
 			}

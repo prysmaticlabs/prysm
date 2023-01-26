@@ -9,7 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -418,12 +418,12 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	activeKey := bytesutil.ToBytes48([]byte("active"))
 	km := remotekeymanagermock.NewMock()
 	km.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey, activeKey}
-	slot := types.Slot(0)
+	slot := primitives.Slot(0)
 
 	t.Run("activated", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-		tickerChan := make(chan types.Slot)
+		tickerChan := make(chan primitives.Slot)
 		ticker := &slotutilmock.MockTicker{
 			Channel: tickerChan,
 		}
@@ -458,7 +458,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("cancelled", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
-		tickerChan := make(chan types.Slot)
+		tickerChan := make(chan primitives.Slot)
 		ticker := &slotutilmock.MockTicker{
 			Channel: tickerChan,
 		}
@@ -480,7 +480,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		hook := logTest.NewGlobal()
 		remoteKm := remotekeymanagermock.NewMock()
 		remoteKm.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey}
-		tickerChan := make(chan types.Slot)
+		tickerChan := make(chan primitives.Slot)
 		ticker := &slotutilmock.MockTicker{
 			Channel: tickerChan,
 		}

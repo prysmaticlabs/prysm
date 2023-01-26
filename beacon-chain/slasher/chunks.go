@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -19,7 +19,7 @@ type chunkUpdateArgs struct {
 	kind                slashertypes.ChunkKind
 	chunkIndex          uint64
 	validatorChunkIndex uint64
-	currentEpoch        types.Epoch
+	currentEpoch        primitives.Epoch
 }
 
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
@@ -32,17 +32,17 @@ type Chunker interface {
 	CheckSlashable(
 		ctx context.Context,
 		slasherDB db.SlasherDatabase,
-		validatorIdx types.ValidatorIndex,
+		validatorIdx primitives.ValidatorIndex,
 		attestation *slashertypes.IndexedAttestationWrapper,
 	) (*ethpb.AttesterSlashing, error)
 	Update(
 		args *chunkUpdateArgs,
-		validatorIndex types.ValidatorIndex,
+		validatorIndex primitives.ValidatorIndex,
 		startEpoch,
-		newTargetEpoch types.Epoch,
+		newTargetEpoch primitives.Epoch,
 	) (keepGoing bool, err error)
-	StartEpoch(sourceEpoch, currentEpoch types.Epoch) (epoch types.Epoch, exists bool)
-	NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch
+	StartEpoch(sourceEpoch, currentEpoch primitives.Epoch) (epoch primitives.Epoch, exists bool)
+	NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch
 }
 
 // MinSpanChunksSlice represents a slice containing a chunk for K different validator's min spans.
@@ -184,7 +184,7 @@ func (m *MaxSpanChunksSlice) Chunk() []uint16 {
 func (m *MinSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.SlasherDatabase,
-	validatorIdx types.ValidatorIndex,
+	validatorIdx primitives.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
@@ -231,7 +231,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 func (m *MaxSpanChunksSlice) CheckSlashable(
 	ctx context.Context,
 	slasherDB db.SlasherDatabase,
-	validatorIdx types.ValidatorIndex,
+	validatorIdx primitives.ValidatorIndex,
 	attestation *slashertypes.IndexedAttestationWrapper,
 ) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
@@ -319,12 +319,12 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 // to jump to another min span chunks slice to perform updates.
 func (m *MinSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
-	newTargetEpoch types.Epoch,
+	newTargetEpoch primitives.Epoch,
 ) (keepGoing bool, err error) {
 	// The lowest epoch we need to update.
-	minEpoch := types.Epoch(0)
+	minEpoch := primitives.Epoch(0)
 	if args.currentEpoch > (m.params.historyLength - 1) {
 		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
 	}
@@ -333,7 +333,7 @@ func (m *MinSpanChunksSlice) Update(
 	// As long as the epoch, e, in the same chunk index and e >= min_epoch, we proceed with
 	// a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk >= minEpoch {
-		var chunkTarget types.Epoch
+		var chunkTarget primitives.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
@@ -368,16 +368,16 @@ func (m *MinSpanChunksSlice) Update(
 // MinSpanChunksSlice.
 func (m *MaxSpanChunksSlice) Update(
 	args *chunkUpdateArgs,
-	validatorIndex types.ValidatorIndex,
+	validatorIndex primitives.ValidatorIndex,
 	startEpoch,
-	newTargetEpoch types.Epoch,
+	newTargetEpoch primitives.Epoch,
 ) (keepGoing bool, err error) {
 	epochInChunk := startEpoch
 	// We go down the chunk for the validator, updating every value starting at start_epoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
-		var chunkTarget types.Epoch
+		var chunkTarget primitives.Epoch
 		chunkTarget, err = chunkDataAtEpoch(m.params, m.data, validatorIndex, epochInChunk)
 		if err != nil {
 			err = errors.Wrapf(err, "could not get chunk data at epoch %d", epochInChunk)
@@ -409,8 +409,8 @@ func (m *MaxSpanChunksSlice) Update(
 // then the start epoch is source epoch - 1. Otherwise, we return to the caller a boolean signifying
 // the input argumets are invalid for the chunk and the start epoch does not exist.
 func (m *MinSpanChunksSlice) StartEpoch(
-	sourceEpoch, currentEpoch types.Epoch,
-) (epoch types.Epoch, exists bool) {
+	sourceEpoch, currentEpoch primitives.Epoch,
+) (epoch primitives.Epoch, exists bool) {
 	// Given min span chunks are used for detecting surrounding votes, we have no need
 	// for a start epoch of the chunk if the source epoch is 0 in the input arguments.
 	// To further clarify, min span chunks are updated in reverse order [a, b, c, d] where
@@ -420,7 +420,7 @@ func (m *MinSpanChunksSlice) StartEpoch(
 	if sourceEpoch == 0 {
 		return
 	}
-	var difference types.Epoch
+	var difference primitives.Epoch
 	if currentEpoch > m.params.historyLength {
 		difference = currentEpoch - m.params.historyLength
 	}
@@ -435,8 +435,8 @@ func (m *MinSpanChunksSlice) StartEpoch(
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a max span chunk for use in chunk updates. The source epoch cannot be >= the current epoch.
 func (_ *MaxSpanChunksSlice) StartEpoch(
-	sourceEpoch, currentEpoch types.Epoch,
-) (epoch types.Epoch, exists bool) {
+	sourceEpoch, currentEpoch primitives.Epoch,
+) (epoch primitives.Epoch, exists bool) {
 	if sourceEpoch >= currentEpoch {
 		return
 	}
@@ -463,7 +463,7 @@ func (_ *MaxSpanChunksSlice) StartEpoch(
 //	last_epoch(1 - 1)
 //	last_epoch(0)
 //	2
-func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
+func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
 	prevChunkIdx := m.params.chunkIndex(startEpoch)
 	if prevChunkIdx > 0 {
 		prevChunkIdx--
@@ -486,15 +486,15 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.E
 //	first_epoch(1 + 1)
 //	first_epoch(2)
 //	4
-func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch types.Epoch) types.Epoch {
+func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)
 }
 
 // Given a validator index and epoch, retrieves the target epoch at its specific
 // index for the validator index and epoch in a min/max span chunk.
 func chunkDataAtEpoch(
-	params *Parameters, chunk []uint16, validatorIdx types.ValidatorIndex, epoch types.Epoch,
-) (types.Epoch, error) {
+	params *Parameters, chunk []uint16, validatorIdx primitives.ValidatorIndex, epoch primitives.Epoch,
+) (primitives.Epoch, error) {
 	requiredLen := params.chunkSize * params.validatorChunkSize
 	if uint64(len(chunk)) != requiredLen {
 		return 0, fmt.Errorf("chunk has wrong length, %d, expected %d", len(chunk), requiredLen)
@@ -514,9 +514,9 @@ func chunkDataAtEpoch(
 func setChunkDataAtEpoch(
 	params *Parameters,
 	chunk []uint16,
-	validatorIdx types.ValidatorIndex,
+	validatorIdx primitives.ValidatorIndex,
 	epochInChunk,
-	targetEpoch types.Epoch,
+	targetEpoch primitives.Epoch,
 ) error {
 	distance, err := epochDistance(targetEpoch, epochInChunk)
 	if err != nil {
@@ -530,8 +530,8 @@ func setChunkDataAtEpoch(
 func setChunkRawDistance(
 	params *Parameters,
 	chunk []uint16,
-	validatorIdx types.ValidatorIndex,
-	epochInChunk types.Epoch,
+	validatorIdx primitives.ValidatorIndex,
+	epochInChunk primitives.Epoch,
 	distance uint16,
 ) error {
 	cellIdx := params.cellIndex(validatorIdx, epochInChunk)
@@ -545,7 +545,7 @@ func setChunkRawDistance(
 // Computes a distance between two epochs. Given the result stored in
 // min/max spans is at maximum WEAK_SUBJECTIVITY_PERIOD, we are guaranteed the
 // distance can be represented as a uint16 safely.
-func epochDistance(epoch, baseEpoch types.Epoch) (uint16, error) {
+func epochDistance(epoch, baseEpoch primitives.Epoch) (uint16, error) {
 	if baseEpoch > epoch {
 		return 0, fmt.Errorf("base epoch %d cannot be less than epoch %d", baseEpoch, epoch)
 	}

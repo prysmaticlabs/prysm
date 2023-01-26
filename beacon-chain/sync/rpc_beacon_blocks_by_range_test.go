@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -54,7 +54,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	// Populate the database with blocks that would match the request.
 	var prevRoot [32]byte
 	var err error
-	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
 		copy(blk.Block.ParentRoot, prevRoot[:])
@@ -72,7 +72,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 			expectSuccess(t, stream)
 			res := util.NewBeaconBlock()
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -113,7 +113,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 
 	var genRoot [32]byte
 	// Populate the database with blocks that would match the request.
-	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
 		if i == 0 {
@@ -138,7 +138,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		for i := newReq.StartSlot; i < newReq.StartSlot.Add(newReq.Count*newReq.Step); i += types.Slot(newReq.Step) {
+		for i := newReq.StartSlot; i < newReq.StartSlot.Add(newReq.Count*newReq.Step); i += primitives.Slot(newReq.Step) {
 			expectSuccess(t, stream)
 			res := util.NewBeaconBlock()
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -221,7 +221,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 
 	var genRoot [32]byte
 	// Populate the database with blocks that would match the request.
-	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 		blk := util.NewBlindedBeaconBlockBellatrix()
 		blk.Block.Slot = i
 		blk.Block.Body.ExecutionPayloadHeader = header
@@ -255,7 +255,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		for i := newReq.StartSlot; i < newReq.StartSlot.Add(newReq.Count*newReq.Step); i += types.Slot(newReq.Step) {
+		for i := newReq.StartSlot; i < newReq.StartSlot.Add(newReq.Count*newReq.Step); i += primitives.Slot(newReq.Step) {
 			expectSuccess(t, stream)
 			res := util.NewBeaconBlockBellatrix()
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -320,9 +320,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		prevSlot := types.Slot(0)
+		prevSlot := primitives.Slot(0)
 		require.Equal(t, uint64(len(expectedRoots)), req.Count, "Number of roots not expected")
-		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -389,8 +389,8 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		expectSuccess(t, stream)
 		res := &ethpb.SignedBeaconBlock{}
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
-		assert.Equal(t, types.Slot(0), res.Block.Slot, "genesis block was not returned")
-		for i := req.StartSlot.Add(req.Step); i < types.Slot(req.Count*req.Step); i += types.Slot(req.Step) {
+		assert.Equal(t, primitives.Slot(0), res.Block.Slot, "genesis block was not returned")
+		for i := req.StartSlot.Add(req.Step); i < primitives.Slot(req.Count*req.Step); i += primitives.Slot(req.Step) {
 			expectSuccess(t, stream)
 			res := &ethpb.SignedBeaconBlock{}
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
@@ -413,7 +413,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		var parentRoot [32]byte
 		// Default to 1 to be inline with the spec.
 		req.Step = 1
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 			block := util.NewBeaconBlock()
 			block.Block.Slot = i
 			if req.Step == 1 {
@@ -437,7 +437,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			}
 			// Use a step of 1 to be inline with our specs.
 			req.Step = 1
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				if !success {
 					continue
 				}
@@ -552,7 +552,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 }
 
 func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
-	slotsSinceGenesis := types.Slot(1000)
+	slotsSinceGenesis := primitives.Slot(1000)
 	offset := int64(slotsSinceGenesis.Mul(params.BeaconConfig().SecondsPerSlot))
 	r := &Service{
 		cfg: &config{
@@ -676,7 +676,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 	saveBlocks := func(req *ethpb.BeaconBlocksByRangeRequest) {
 		// Populate the database with blocks that would match the request.
 		var parentRoot [32]byte
-		for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+		for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 			block := util.NewBeaconBlock()
 			block.Block.Slot = i
 			block.Block.ParentRoot = parentRoot[:]
@@ -694,7 +694,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				expectSuccess(t, stream)
 				blk := util.NewBeaconBlock()
 				assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, blk))
@@ -759,7 +759,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
 		blks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks that would match the request.
-		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
 			blks[j] = util.NewBeaconBlock()
@@ -807,7 +807,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
 		blks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks with non linear roots.
-		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += primitives.Slot(req.Step) {
 			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
 			blks[j] = util.NewBeaconBlock()
@@ -854,7 +854,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 			defer wg.Done()
 			blocks := make([]*ethpb.SignedBeaconBlock, 0, req.Count)
-			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += primitives.Slot(req.Step) {
 				code, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 				if err != nil && err != io.EOF {
 					t.Fatal(err)
@@ -1085,7 +1085,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	var err error
 	blks := []interfaces.SignedBeaconBlock{}
 	var roots [][32]byte
-	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
 		copy(blk.Block.ParentRoot, prevRoot[:])

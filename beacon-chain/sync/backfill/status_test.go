@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -65,7 +65,7 @@ func (db *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interf
 func TestSlotCovered(t *testing.T) {
 	cases := []struct {
 		name   string
-		slot   types.Slot
+		slot   primitives.Slot
 		status *Status
 		result bool
 	}{
@@ -142,7 +142,7 @@ func goodBlockRoot(root [32]byte) func(ctx context.Context) ([32]byte, error) {
 	}
 }
 
-func setupTestBlock(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
+func setupTestBlock(slot primitives.Slot) (interfaces.SignedBeaconBlock, error) {
 	bRaw := util.NewBeaconBlock()
 	b, err := blocks.NewSignedBeaconBlock(bRaw)
 	if err != nil {
@@ -155,13 +155,13 @@ func TestReload(t *testing.T) {
 	ctx := context.Background()
 	derp := errors.New("derp")
 
-	originSlot := types.Slot(100)
+	originSlot := primitives.Slot(100)
 	var originRoot [32]byte
 	copy(originRoot[:], []byte{0x01})
 	originBlock, err := setupTestBlock(originSlot)
 	require.NoError(t, err)
 
-	backfillSlot := types.Slot(50)
+	backfillSlot := primitives.Slot(50)
 	var backfillRoot [32]byte
 	copy(originRoot[:], []byte{0x02})
 	backfillBlock, err := setupTestBlock(backfillSlot)

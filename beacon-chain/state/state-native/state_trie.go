@@ -9,9 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
@@ -24,65 +23,65 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var phase0Fields = []nativetypes.FieldIndex{
-	nativetypes.GenesisTime,
-	nativetypes.GenesisValidatorsRoot,
-	nativetypes.Slot,
-	nativetypes.Fork,
-	nativetypes.LatestBlockHeader,
-	nativetypes.BlockRoots,
-	nativetypes.StateRoots,
-	nativetypes.HistoricalRoots,
-	nativetypes.Eth1Data,
-	nativetypes.Eth1DataVotes,
-	nativetypes.Eth1DepositIndex,
-	nativetypes.Validators,
-	nativetypes.Balances,
-	nativetypes.RandaoMixes,
-	nativetypes.Slashings,
-	nativetypes.PreviousEpochAttestations,
-	nativetypes.CurrentEpochAttestations,
-	nativetypes.JustificationBits,
-	nativetypes.PreviousJustifiedCheckpoint,
-	nativetypes.CurrentJustifiedCheckpoint,
-	nativetypes.FinalizedCheckpoint,
+var phase0Fields = []types.FieldIndex{
+	types.GenesisTime,
+	types.GenesisValidatorsRoot,
+	types.Slot,
+	types.Fork,
+	types.LatestBlockHeader,
+	types.BlockRoots,
+	types.StateRoots,
+	types.HistoricalRoots,
+	types.Eth1Data,
+	types.Eth1DataVotes,
+	types.Eth1DepositIndex,
+	types.Validators,
+	types.Balances,
+	types.RandaoMixes,
+	types.Slashings,
+	types.PreviousEpochAttestations,
+	types.CurrentEpochAttestations,
+	types.JustificationBits,
+	types.PreviousJustifiedCheckpoint,
+	types.CurrentJustifiedCheckpoint,
+	types.FinalizedCheckpoint,
 }
 
-var altairFields = []nativetypes.FieldIndex{
-	nativetypes.GenesisTime,
-	nativetypes.GenesisValidatorsRoot,
-	nativetypes.Slot,
-	nativetypes.Fork,
-	nativetypes.LatestBlockHeader,
-	nativetypes.BlockRoots,
-	nativetypes.StateRoots,
-	nativetypes.HistoricalRoots,
-	nativetypes.Eth1Data,
-	nativetypes.Eth1DataVotes,
-	nativetypes.Eth1DepositIndex,
-	nativetypes.Validators,
-	nativetypes.Balances,
-	nativetypes.RandaoMixes,
-	nativetypes.Slashings,
-	nativetypes.PreviousEpochParticipationBits,
-	nativetypes.CurrentEpochParticipationBits,
-	nativetypes.JustificationBits,
-	nativetypes.PreviousJustifiedCheckpoint,
-	nativetypes.CurrentJustifiedCheckpoint,
-	nativetypes.FinalizedCheckpoint,
-	nativetypes.InactivityScores,
-	nativetypes.CurrentSyncCommittee,
-	nativetypes.NextSyncCommittee,
+var altairFields = []types.FieldIndex{
+	types.GenesisTime,
+	types.GenesisValidatorsRoot,
+	types.Slot,
+	types.Fork,
+	types.LatestBlockHeader,
+	types.BlockRoots,
+	types.StateRoots,
+	types.HistoricalRoots,
+	types.Eth1Data,
+	types.Eth1DataVotes,
+	types.Eth1DepositIndex,
+	types.Validators,
+	types.Balances,
+	types.RandaoMixes,
+	types.Slashings,
+	types.PreviousEpochParticipationBits,
+	types.CurrentEpochParticipationBits,
+	types.JustificationBits,
+	types.PreviousJustifiedCheckpoint,
+	types.CurrentJustifiedCheckpoint,
+	types.FinalizedCheckpoint,
+	types.InactivityScores,
+	types.CurrentSyncCommittee,
+	types.NextSyncCommittee,
 }
 
-var bellatrixFields = append(altairFields, nativetypes.LatestExecutionPayloadHeader)
+var bellatrixFields = append(altairFields, types.LatestExecutionPayloadHeader)
 
 var capellaFields = append(
 	altairFields,
-	nativetypes.LatestExecutionPayloadHeaderCapella,
-	nativetypes.NextWithdrawalIndex,
-	nativetypes.NextWithdrawalValidatorIndex,
-	nativetypes.HistoricalSummaries,
+	types.LatestExecutionPayloadHeaderCapella,
+	types.NextWithdrawalIndex,
+	types.NextWithdrawalValidatorIndex,
+	types.HistoricalSummaries,
 )
 
 const (
@@ -161,11 +160,11 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		currentJustifiedCheckpoint:  st.CurrentJustifiedCheckpoint,
 		finalizedCheckpoint:         st.FinalizedCheckpoint,
 
-		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount),
-		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
@@ -181,16 +180,16 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.StateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.RandaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.PreviousEpochAttestations] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.CurrentEpochAttestations] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.CurrentEpochAttestations] = stateutil.NewRef(1)
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -250,11 +249,11 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		currentSyncCommittee:        st.CurrentSyncCommittee,
 		nextSyncCommittee:           st.NextSyncCommittee,
 
-		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount),
-		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
@@ -270,17 +269,17 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.StateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.RandaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
-	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
-	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)               // New in Altair.
+	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1) // New in Altair.
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)  // New in Altair.
+	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)               // New in Altair.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -341,11 +340,11 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		nextSyncCommittee:            st.NextSyncCommittee,
 		latestExecutionPayloadHeader: st.LatestExecutionPayloadHeader,
 
-		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount),
-		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
@@ -361,18 +360,18 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.StateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.RandaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
+	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.LatestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -436,11 +435,11 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		nextWithdrawalValidatorIndex:        st.NextWithdrawalValidatorIndex,
 		historicalSummaries:                 st.HistoricalSummaries,
 
-		dirtyFields:           make(map[nativetypes.FieldIndex]bool, fieldCount),
-		dirtyIndices:          make(map[nativetypes.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:      make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		sharedFieldReferences: make(map[nativetypes.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount),
-		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
@@ -456,19 +455,19 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.StateRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.HistoricalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Eth1DataVotes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Validators] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Balances] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.RandaoMixes] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.Slashings] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
-	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
-	b.sharedFieldReferences[nativetypes.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
+	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.StateRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.RandaoMixes] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.LatestExecutionPayloadHeaderCapella] = stateutil.NewRef(1) // New in Capella.
+	b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)                 // New in Capella.
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -496,7 +495,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	dst := &BeaconState{
 		version: b.version,
 
-		// Primitive nativetypes, safe to copy.
+		// Primitive types, safe to copy.
 		genesisTime:                  b.genesisTime,
 		slot:                         b.slot,
 		eth1DepositIndex:             b.eth1DepositIndex,
@@ -535,10 +534,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 		latestExecutionPayloadHeader:        b.latestExecutionPayloadHeaderVal(),
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapellaVal(),
 
-		dirtyFields:      make(map[nativetypes.FieldIndex]bool, fieldCount),
-		dirtyIndices:     make(map[nativetypes.FieldIndex][]uint64, fieldCount),
-		rebuildTrie:      make(map[nativetypes.FieldIndex]bool, fieldCount),
-		stateFieldLeaves: make(map[nativetypes.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Share the reference to validator index map.
 		valMapHandler: b.valMapHandler,
@@ -546,13 +545,13 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	switch b.version {
 	case version.Phase0:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
+		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
 	case version.Altair:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
+		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
 	case version.Bellatrix:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
 	case version.Capella:
-		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
+		dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
 	}
 
 	for field, ref := range b.sharedFieldReferences {
@@ -635,13 +634,13 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	b.merkleLayers = layers
 	switch b.version {
 	case version.Phase0:
-		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateFieldCount)
 	case version.Altair:
-		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateAltairFieldCount)
 	case version.Bellatrix:
-		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateBellatrixFieldCount)
 	case version.Capella:
-		b.dirtyFields = make(map[nativetypes.FieldIndex]bool, params.BeaconConfig().BeaconStateCapellaFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	}
 
 	return nil
@@ -690,26 +689,26 @@ func (b *BeaconState) IsNil() bool {
 	return b == nil
 }
 
-func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldIndex) ([32]byte, error) {
+func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
 
 	hasher := hash.CustomSHA256Hasher()
 	switch field {
-	case nativetypes.GenesisTime:
+	case types.GenesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
-	case nativetypes.GenesisValidatorsRoot:
+	case types.GenesisValidatorsRoot:
 		return b.genesisValidatorsRoot, nil
-	case nativetypes.Slot:
+	case types.Slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil
-	case nativetypes.Eth1DepositIndex:
+	case types.Eth1DepositIndex:
 		return ssz.Uint64Root(b.eth1DepositIndex), nil
-	case nativetypes.Fork:
+	case types.Fork:
 		return ssz.ForkRoot(b.fork)
-	case nativetypes.LatestBlockHeader:
+	case types.LatestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.latestBlockHeader)
-	case nativetypes.BlockRoots:
+	case types.BlockRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.blockRoots, fieldparams.BlockRootsLength)
 			if err != nil {
@@ -719,7 +718,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.blockRoots)
-	case nativetypes.StateRoots:
+	case types.StateRoots:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.stateRoots, fieldparams.StateRootsLength)
 			if err != nil {
@@ -729,15 +728,15 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.stateRoots)
-	case nativetypes.HistoricalRoots:
+	case types.HistoricalRoots:
 		hRoots := make([][]byte, len(b.historicalRoots))
 		for i := range hRoots {
 			hRoots[i] = b.historicalRoots[i][:]
 		}
 		return ssz.ByteArrayRootWithLimit(hRoots, fieldparams.HistoricalRootsLength)
-	case nativetypes.Eth1Data:
+	case types.Eth1Data:
 		return stateutil.Eth1Root(hasher, b.eth1Data)
-	case nativetypes.Eth1DataVotes:
+	case types.Eth1DataVotes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
 				field,
@@ -751,7 +750,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.eth1DataVotes)
-	case nativetypes.Validators:
+	case types.Validators:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.validators, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
@@ -761,7 +760,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(11, b.validators)
-	case nativetypes.Balances:
+	case types.Balances:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.balances, stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
@@ -771,7 +770,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(12, b.balances)
-	case nativetypes.RandaoMixes:
+	case types.RandaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
@@ -781,9 +780,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(13, b.randaoMixes)
-	case nativetypes.Slashings:
+	case types.Slashings:
 		return ssz.SlashingsRoot(b.slashings)
-	case nativetypes.PreviousEpochAttestations:
+	case types.PreviousEpochAttestations:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
 				field,
@@ -797,7 +796,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.previousEpochAttestations)
-	case nativetypes.CurrentEpochAttestations:
+	case types.CurrentEpochAttestations:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(
 				field,
@@ -811,39 +810,39 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(field, b.currentEpochAttestations)
-	case nativetypes.PreviousEpochParticipationBits:
+	case types.PreviousEpochParticipationBits:
 		return stateutil.ParticipationBitsRoot(b.previousEpochParticipation)
-	case nativetypes.CurrentEpochParticipationBits:
+	case types.CurrentEpochParticipationBits:
 		return stateutil.ParticipationBitsRoot(b.currentEpochParticipation)
-	case nativetypes.JustificationBits:
+	case types.JustificationBits:
 		return bytesutil.ToBytes32(b.justificationBits), nil
-	case nativetypes.PreviousJustifiedCheckpoint:
+	case types.PreviousJustifiedCheckpoint:
 		return ssz.CheckpointRoot(hasher, b.previousJustifiedCheckpoint)
-	case nativetypes.CurrentJustifiedCheckpoint:
+	case types.CurrentJustifiedCheckpoint:
 		return ssz.CheckpointRoot(hasher, b.currentJustifiedCheckpoint)
-	case nativetypes.FinalizedCheckpoint:
+	case types.FinalizedCheckpoint:
 		return ssz.CheckpointRoot(hasher, b.finalizedCheckpoint)
-	case nativetypes.InactivityScores:
+	case types.InactivityScores:
 		return stateutil.Uint64ListRootWithRegistryLimit(b.inactivityScores)
-	case nativetypes.CurrentSyncCommittee:
+	case types.CurrentSyncCommittee:
 		return stateutil.SyncCommitteeRoot(b.currentSyncCommittee)
-	case nativetypes.NextSyncCommittee:
+	case types.NextSyncCommittee:
 		return stateutil.SyncCommitteeRoot(b.nextSyncCommittee)
-	case nativetypes.LatestExecutionPayloadHeader:
+	case types.LatestExecutionPayloadHeader:
 		return b.latestExecutionPayloadHeader.HashTreeRoot()
-	case nativetypes.LatestExecutionPayloadHeaderCapella:
+	case types.LatestExecutionPayloadHeaderCapella:
 		return b.latestExecutionPayloadHeaderCapella.HashTreeRoot()
-	case nativetypes.NextWithdrawalIndex:
+	case types.NextWithdrawalIndex:
 		return ssz.Uint64Root(b.nextWithdrawalIndex), nil
-	case nativetypes.NextWithdrawalValidatorIndex:
+	case types.NextWithdrawalValidatorIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalValidatorIndex)), nil
-	case nativetypes.HistoricalSummaries:
+	case types.HistoricalSummaries:
 		return stateutil.HistoricalSummariesRoot(b.historicalSummaries)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
-func (b *BeaconState) recomputeFieldTrie(index nativetypes.FieldIndex, elements interface{}) ([32]byte, error) {
+func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	fTrieMutex := fTrie.RWMutex
 	// We can't lock the trie directly because the trie's variable gets reassigned,
@@ -884,7 +883,7 @@ func (b *BeaconState) recomputeFieldTrie(index nativetypes.FieldIndex, elements 
 	return root, nil
 }
 
-func (b *BeaconState) resetFieldTrie(index nativetypes.FieldIndex, elements interface{}, length uint64) error {
+func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
 	fTrie, err := fieldtrie.NewFieldTrie(index, fieldMap[index], elements, length)
 	if err != nil {
 		return err

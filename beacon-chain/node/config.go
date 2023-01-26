@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
@@ -56,14 +56,14 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
+		c.MaxBuilderConsecutiveMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
 	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
+		c.MaxBuilderEpochMissedSlots = primitives.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 func configureSlotsPerArchivedPoint(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig().Copy()
-		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
+		c.SlotsPerArchivedPoint = primitives.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
@@ -157,7 +157,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
 		c := params.BeaconConfig()
-		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
+		c.TerminalBlockHashActivationEpoch = primitives.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
 		log.WithField("terminal block hash activation epoch", c.TerminalBlockHashActivationEpoch).Warn("Terminal block hash activation epoch overridden")
 		params.OverrideBeaconConfig(c)
 	}
