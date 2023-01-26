@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -183,7 +183,7 @@ func (s *Service) savePendingAtt(att *ethpb.SignedAggregateAttestationAndProof) 
 // If not valid, a node will remove it in the queue in place. The validity
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
-func (s *Service) validatePendingAtts(ctx context.Context, slot types.Slot) {
+func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot) {
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 

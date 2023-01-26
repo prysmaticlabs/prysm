@@ -12,7 +12,7 @@ import (
 	"github.com/holiman/uint256"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -201,7 +201,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.Equal(t, 1, len(payloadPb.Withdrawals))
 		withdrawal := payloadPb.Withdrawals[0]
 		require.Equal(t, uint64(1), withdrawal.Index)
-		require.Equal(t, types.ValidatorIndex(1), withdrawal.ValidatorIndex)
+		require.Equal(t, primitives.ValidatorIndex(1), withdrawal.ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address"), 20), withdrawal.Address)
 		require.Equal(t, uint64(1), withdrawal.Amount)
 	})
@@ -466,11 +466,11 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, want.Nonce, payloadPb.Nonce)
 		require.Equal(t, 2, len(payloadPb.Withdrawals))
 		require.Equal(t, uint64(1), payloadPb.Withdrawals[0].Index)
-		require.Equal(t, types.ValidatorIndex(1), payloadPb.Withdrawals[0].ValidatorIndex)
+		require.Equal(t, primitives.ValidatorIndex(1), payloadPb.Withdrawals[0].ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address1"), 20), payloadPb.Withdrawals[0].Address)
 		require.Equal(t, uint64(100), payloadPb.Withdrawals[0].Amount)
 		require.Equal(t, uint64(2), payloadPb.Withdrawals[1].Index)
-		require.Equal(t, types.ValidatorIndex(2), payloadPb.Withdrawals[1].ValidatorIndex)
+		require.Equal(t, primitives.ValidatorIndex(2), payloadPb.Withdrawals[1].ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address2"), 20), payloadPb.Withdrawals[1].Address)
 		require.Equal(t, uint64(200), payloadPb.Withdrawals[1].Amount)
 	})

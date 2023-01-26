@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -25,8 +25,8 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	}
 
 	tests := []struct {
-		slot         types.Slot
-		stateSlot    types.Slot
+		slot         primitives.Slot
+		stateSlot    primitives.Slot
 		expectedRoot [32]byte
 	}{
 		{
@@ -82,8 +82,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 
 	tests := []struct {
-		slot        types.Slot
-		stateSlot   types.Slot
+		slot        primitives.Slot
+		stateSlot   primitives.Slot
 		expectedErr string
 	}{
 		{

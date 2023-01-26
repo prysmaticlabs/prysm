@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 type DoppelGangerInfo struct {
-	validatorEpoch types.Epoch
+	validatorEpoch primitives.Epoch
 	response       *ethpb.DoppelGangerResponse_ValidatorResponse
 }
 
@@ -102,7 +102,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 		return nil, errors.Wrapf(err, "failed to parse head slot")
 	}
 
-	headSlot := types.Slot(headSlotUint64)
+	headSlot := primitives.Slot(headSlotUint64)
 	currentEpoch := slots.ToEpoch(headSlot)
 
 	// Extract input pubkeys we did not validate for the 2 last epochs.
@@ -218,7 +218,7 @@ func buildResponse(
 	}
 }
 
-func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch types.Epoch, indexes []string) (map[string]bool, error) {
+func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch primitives.Epoch, indexes []string) (map[string]bool, error) {
 	livenessResponse, err := c.getLiveness(ctx, epoch, indexes)
 	if err != nil || livenessResponse.Data == nil {
 		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch %d", epoch))

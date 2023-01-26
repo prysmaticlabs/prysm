@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -41,7 +41,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
-	genData := func(slot types.Slot, committeeIndex types.CommitteeIndex) *ethpb.AttestationData {
+	genData := func(slot primitives.Slot, committeeIndex primitives.CommitteeIndex) *ethpb.AttestationData {
 		return util.HydrateAttestationData(&ethpb.AttestationData{
 			Slot:           slot,
 			CommitteeIndex: committeeIndex,

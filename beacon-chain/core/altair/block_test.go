@@ -13,7 +13,7 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -57,12 +57,12 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Use a non-sync committee index to compare profitability.
-	syncCommittee := make(map[types.ValidatorIndex]bool)
+	syncCommittee := make(map[primitives.ValidatorIndex]bool)
 	for _, index := range indices {
 		syncCommittee[index] = true
 	}
-	nonSyncIndex := types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerCommittee + 1)
-	for i := types.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxValidatorsPerCommittee; i++ {
+	nonSyncIndex := primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerCommittee + 1)
+	for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxValidatorsPerCommittee; i++ {
 		if !syncCommittee[i] {
 			nonSyncIndex = i
 			break

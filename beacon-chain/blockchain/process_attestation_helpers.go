@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -60,9 +60,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
 func verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *ethpb.Checkpoint) error {
-	currentSlot := types.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
+	currentSlot := primitives.Slot((nowTime - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := slots.ToEpoch(currentSlot)
-	var prevEpoch types.Epoch
+	var prevEpoch primitives.Epoch
 	// Prevents previous epoch under flow
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1

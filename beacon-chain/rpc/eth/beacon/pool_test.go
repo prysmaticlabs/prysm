@@ -21,7 +21,7 @@ import (
 	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -159,7 +159,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("slot request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
+		slot := primitives.Slot(2)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot: &slot,
 		}
@@ -172,7 +172,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("index request", func(t *testing.T) {
-		index := eth2types.CommitteeIndex(4)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			CommitteeIndex: &index,
 		}
@@ -185,8 +185,8 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("both slot + index request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
-		index := eth2types.CommitteeIndex(4)
+		slot := primitives.Slot(2)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot:           &slot,
 			CommitteeIndex: &index,
@@ -574,7 +574,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
 		PublicKey:         keys[0].PublicKey().Marshal(),
-		WithdrawableEpoch: eth2types.Epoch(1),
+		WithdrawableEpoch: primitives.Epoch(1),
 	}
 	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
@@ -1230,7 +1230,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1322,7 +1322,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1430,7 +1430,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 

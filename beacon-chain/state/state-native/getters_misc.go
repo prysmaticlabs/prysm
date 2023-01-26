@@ -1,7 +1,7 @@
 package state_native
 
 import (
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -30,7 +30,7 @@ func (b *BeaconState) Version() int {
 }
 
 // Slot of the current beacon chain state.
-func (b *BeaconState) Slot() types.Slot {
+func (b *BeaconState) Slot() primitives.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

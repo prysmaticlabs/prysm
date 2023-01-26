@@ -5,14 +5,14 @@ import (
 
 	coreutils "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/stateutils"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ValidatorMapHandler is a container to hold the map and a reference tracker for how many
 // states shared this.
 type ValidatorMapHandler struct {
-	valIdxMap map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
+	valIdxMap map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
 	mapRef    *Reference
 	*sync.RWMutex
 }
@@ -39,11 +39,11 @@ func (v *ValidatorMapHandler) IsNil() bool {
 // Copy the whole map and returns a map handler with the copied map.
 func (v *ValidatorMapHandler) Copy() *ValidatorMapHandler {
 	if v == nil || v.valIdxMap == nil {
-		return &ValidatorMapHandler{valIdxMap: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{}, mapRef: new(Reference), RWMutex: new(sync.RWMutex)}
+		return &ValidatorMapHandler{valIdxMap: map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex{}, mapRef: new(Reference), RWMutex: new(sync.RWMutex)}
 	}
 	v.RLock()
 	defer v.RUnlock()
-	m := make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex, len(v.valIdxMap))
+	m := make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex, len(v.valIdxMap))
 	for k, v := range v.valIdxMap {
 		m[k] = v
 	}
@@ -55,7 +55,7 @@ func (v *ValidatorMapHandler) Copy() *ValidatorMapHandler {
 }
 
 // Get the validator index using the corresponding public key.
-func (v *ValidatorMapHandler) Get(key [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (v *ValidatorMapHandler) Get(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	v.RLock()
 	defer v.RUnlock()
 	idx, ok := v.valIdxMap[key]
@@ -66,7 +66,7 @@ func (v *ValidatorMapHandler) Get(key [fieldparams.BLSPubkeyLength]byte) (types.
 }
 
 // Set the validator index using the corresponding public key.
-func (v *ValidatorMapHandler) Set(key [fieldparams.BLSPubkeyLength]byte, index types.ValidatorIndex) {
+func (v *ValidatorMapHandler) Set(key [fieldparams.BLSPubkeyLength]byte, index primitives.ValidatorIndex) {
 	v.Lock()
 	defer v.Unlock()
 	v.valIdxMap[key] = index

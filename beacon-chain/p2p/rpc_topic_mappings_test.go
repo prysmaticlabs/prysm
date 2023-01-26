@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -84,9 +84,9 @@ func TestTopicDeconstructor(t *testing.T) {
 func TestTopicFromMessage_CorrectType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig().Copy()
-	forkEpoch := eth2types.Epoch(100)
+	forkEpoch := primitives.Epoch(100)
 	bCfg.AltairForkEpoch = forkEpoch
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = primitives.Epoch(100)
 	params.OverrideBeaconConfig(bCfg)
 
 	// Garbage Message

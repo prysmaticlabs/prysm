@@ -4,14 +4,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func getEmptyBlock(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
+func getEmptyBlock(slot primitives.Slot) (interfaces.SignedBeaconBlock, error) {
 	var sBlk interfaces.SignedBeaconBlock
 	var err error
 	switch {

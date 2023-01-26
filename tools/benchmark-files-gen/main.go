@@ -15,7 +15,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
@@ -102,7 +102,7 @@ func generateMarshalledFullStateAndBlock() error {
 	conf := &util.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we don't process a block on an epoch.
-	slotOffset := types.Slot(2)
+	slotOffset := primitives.Slot(2)
 	block, err := util.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
 		return err
@@ -202,7 +202,7 @@ func generate2FullEpochState() error {
 		NumAttestations: benchmark.AttestationsPerEpoch / uint64(params.BeaconConfig().SlotsPerEpoch),
 	}
 
-	for i := types.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
+	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
 		block, err := util.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err
