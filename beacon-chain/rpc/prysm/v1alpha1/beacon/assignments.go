@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/api/pagination"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -33,9 +33,9 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	filtered := map[types.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
-	filteredIndices := make([]types.ValidatorIndex, 0)
-	var requestedEpoch types.Epoch
+	filtered := map[primitives.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
+	filteredIndices := make([]primitives.ValidatorIndex, 0)
+	var requestedEpoch primitives.Epoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorAssignmentsRequest_Genesis:
 		if q.Genesis {

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
@@ -43,8 +43,8 @@ func Test_blocksQueue(t *testing.T) {
 	t.Run("push_and_dequeue", func(tt *testing.T) {
 		blkQueue := newBlocksQueue()
 		wantedBlks := []*slashertypes.SignedBlockHeaderWrapper{
-			createProposalWrapper(t, 0, types.ValidatorIndex(1), make([]byte, 32)),
-			createProposalWrapper(t, 1, types.ValidatorIndex(1), make([]byte, 32)),
+			createProposalWrapper(t, 0, primitives.ValidatorIndex(1), make([]byte, 32)),
+			createProposalWrapper(t, 1, primitives.ValidatorIndex(1), make([]byte, 32)),
 		}
 		blkQueue.push(wantedBlks[0])
 		blkQueue.push(wantedBlks[1])
@@ -58,8 +58,8 @@ func Test_blocksQueue(t *testing.T) {
 	t.Run("extend_and_dequeue", func(tt *testing.T) {
 		blkQueue := newBlocksQueue()
 		wantedBlks := []*slashertypes.SignedBlockHeaderWrapper{
-			createProposalWrapper(t, 0, types.ValidatorIndex(1), make([]byte, 32)),
-			createProposalWrapper(t, 1, types.ValidatorIndex(1), make([]byte, 32)),
+			createProposalWrapper(t, 0, primitives.ValidatorIndex(1), make([]byte, 32)),
+			createProposalWrapper(t, 1, primitives.ValidatorIndex(1), make([]byte, 32)),
 		}
 		blkQueue.extend(wantedBlks)
 		require.DeepEqual(t, 2, blkQueue.size())

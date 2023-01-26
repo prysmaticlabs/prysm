@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
@@ -196,12 +196,12 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:             v.emitAccountMetrics,
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
-		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
-		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
+		voteStats:                      voteStats{startEpoch: primitives.Epoch(^uint64(0))},
 		syncCommitteeStats:             syncCommitteeStats{},
 		useWeb:                         v.useWeb,
 		interopKeysConfig:              v.interopKeysConfig,

@@ -9,7 +9,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	chainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -22,7 +22,7 @@ func TestValidateSync(t *testing.T) {
 		syncChecker := &syncmock.Sync{
 			IsSyncing: true,
 		}
-		headSlot := types.Slot(100)
+		headSlot := primitives.Slot(100)
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(50))
@@ -47,7 +47,7 @@ func TestValidateSync(t *testing.T) {
 		syncChecker := &syncmock.Sync{
 			IsSyncing: false,
 		}
-		headSlot := types.Slot(100)
+		headSlot := primitives.Slot(100)
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(50))

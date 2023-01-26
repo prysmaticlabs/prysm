@@ -4,12 +4,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
 // ValidatorStatus returns a validator's status at the given epoch.
-func ValidatorStatus(validator state.ReadOnlyValidator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
+func ValidatorStatus(validator state.ReadOnlyValidator, epoch primitives.Epoch) (ethpb.ValidatorStatus, error) {
 	valStatus, err := ValidatorSubStatus(validator, epoch)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get sub status")
@@ -28,7 +28,7 @@ func ValidatorStatus(validator state.ReadOnlyValidator, epoch types.Epoch) (ethp
 }
 
 // ValidatorSubStatus returns a validator's sub-status at the given epoch.
-func ValidatorSubStatus(validator state.ReadOnlyValidator, epoch types.Epoch) (ethpb.ValidatorStatus, error) {
+func ValidatorSubStatus(validator state.ReadOnlyValidator, epoch primitives.Epoch) (ethpb.ValidatorStatus, error) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
 	// Pending.

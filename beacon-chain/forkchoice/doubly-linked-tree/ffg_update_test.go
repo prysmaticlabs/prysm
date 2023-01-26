@@ -6,7 +6,7 @@ import (
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -215,7 +215,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	assert.Equal(t, indexToHash(7), r, "Incorrect head with justified epoch at 0")
 }
 
-func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
+func setup(justifiedEpoch, finalizedEpoch primitives.Epoch) *ForkChoice {
 	ctx := context.Background()
 	f := New()
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: justifiedEpoch, Root: params.BeaconConfig().ZeroHash}

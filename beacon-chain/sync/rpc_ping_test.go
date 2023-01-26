@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -60,13 +60,13 @@ func TestPingRPCHandler_ReceivesPing(t *testing.T) {
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
 		expectSuccess(t, stream)
-		out := new(types.SSZUint64)
+		out := new(primitives.SSZUint64)
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 	})
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	seqNumber := types.SSZUint64(2)
+	seqNumber := primitives.SSZUint64(2)
 
 	assert.NoError(t, r.pingHandler(context.Background(), &seqNumber, stream1))
 
@@ -129,7 +129,7 @@ func TestPingRPCHandler_SendsPing(t *testing.T) {
 	wg.Add(1)
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		out := new(types.SSZUint64)
+		out := new(primitives.SSZUint64)
 		assert.NoError(t, r2.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		assert.Equal(t, uint64(2), uint64(*out))
 		assert.NoError(t, r2.pingHandler(context.Background(), out, stream))
@@ -194,7 +194,7 @@ func TestPingRPCHandler_BadSequenceNumber(t *testing.T) {
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
 
-	wantedSeq := types.SSZUint64(p2.LocalMetadata.SequenceNumber())
+	wantedSeq := primitives.SSZUint64(p2.LocalMetadata.SequenceNumber())
 	err = r.pingHandler(context.Background(), &wantedSeq, stream1)
 	assert.ErrorContains(t, p2ptypes.ErrInvalidSequenceNum.Error(), err)
 

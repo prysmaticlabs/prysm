@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -16,7 +16,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	defer b.lock.Unlock()
 
 	b.latestBlockHeader = ethpb.CopyBeaconBlockHeader(val)
-	b.markFieldAsDirty(nativetypes.LatestBlockHeader)
+	b.markFieldAsDirty(types.LatestBlockHeader)
 	return nil
 }
 
@@ -26,8 +26,8 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[nativetypes.BlockRoots].MinusRef()
-	b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.BlockRoots].MinusRef()
+	b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
 
 	var rootsArr [fieldparams.BlockRootsLength][32]byte
 	for i := 0; i < len(rootsArr); i++ {
@@ -35,8 +35,8 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	}
 	roots := customtypes.BlockRoots(rootsArr)
 	b.blockRoots = &roots
-	b.markFieldAsDirty(nativetypes.BlockRoots)
-	b.rebuildTrie[nativetypes.BlockRoots] = true
+	b.markFieldAsDirty(types.BlockRoots)
+	b.rebuildTrie[types.BlockRoots] = true
 	return nil
 }
 
@@ -50,19 +50,19 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	defer b.lock.Unlock()
 
 	r := b.blockRoots
-	if ref := b.sharedFieldReferences[nativetypes.BlockRoots]; ref.Refs() > 1 {
+	if ref := b.sharedFieldReferences[types.BlockRoots]; ref.Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		roots := *b.blockRoots
 		rootsCopy := roots
 		r = &rootsCopy
 		ref.MinusRef()
-		b.sharedFieldReferences[nativetypes.BlockRoots] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.BlockRoots] = stateutil.NewRef(1)
 	}
 
 	r[idx] = blockRoot
 	b.blockRoots = r
 
-	b.markFieldAsDirty(nativetypes.BlockRoots)
-	b.addDirtyIndices(nativetypes.BlockRoots, []uint64{idx})
+	b.markFieldAsDirty(types.BlockRoots)
+	b.addDirtyIndices(types.BlockRoots, []uint64{idx})
 	return nil
 }
