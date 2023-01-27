@@ -10,7 +10,7 @@ import (
 
 // SetStateRoots for the beacon state. Updates the state roots
 // to a new value by overwriting the previous value.
-func (b *BeaconState) SetStateRoots(val [][]byte) error {
+func (b *State) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -30,7 +30,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 
 // UpdateStateRootAtIndex for the beacon state. Updates the state root
 // at a specific index to a new value.
-func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
+func (b *State) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
 	b.lock.RLock()
 	if uint64(len(b.stateRoots)) <= idx {
 		b.lock.RUnlock()

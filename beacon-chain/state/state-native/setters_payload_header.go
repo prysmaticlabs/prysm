@@ -11,7 +11,7 @@ import (
 )
 
 // SetLatestExecutionPayloadHeader for the beacon state.
-func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionData) error {
+func (b *State) SetLatestExecutionPayloadHeader(val interfaces.ExecutionData) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

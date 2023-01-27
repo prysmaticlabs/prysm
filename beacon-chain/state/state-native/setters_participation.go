@@ -8,7 +8,7 @@ import (
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
+func (b *State) SetPreviousParticipationBits(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -27,7 +27,7 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 
 // SetCurrentParticipationBits for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
+func (b *State) SetCurrentParticipationBits(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -46,7 +46,7 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 
 // AppendCurrentParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
+func (b *State) AppendCurrentParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -71,7 +71,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 
 // AppendPreviousParticipationBits for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
+func (b *State) AppendPreviousParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -96,7 +96,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 
 // ModifyPreviousParticipationBits modifies the previous participation bitfield via
 // the provided mutator function.
-func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+func (b *State) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
 	b.lock.Lock()
 
 	if b.version == version.Phase0 {
@@ -131,7 +131,7 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 
 // ModifyCurrentParticipationBits modifies the current participation bitfield via
 // the provided mutator function.
-func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+func (b *State) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
 	b.lock.Lock()
 
 	if b.version == version.Phase0 {

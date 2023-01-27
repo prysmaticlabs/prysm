@@ -5,7 +5,7 @@ import (
 )
 
 // RandaoMixes of block proposers on the beacon chain.
-func (b *BeaconState) RandaoMixes() [][]byte {
+func (b *State) RandaoMixes() [][]byte {
 	if b.randaoMixes == nil {
 		return nil
 	}
@@ -18,7 +18,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 
 // RandaoMixAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+func (b *State) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if b.randaoMixes == nil {
 		return nil, nil
 	}
@@ -36,7 +36,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 // randaoMixAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
+func (b *State) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.randaoMixes)) <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}
@@ -45,7 +45,7 @@ func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
-func (b *BeaconState) RandaoMixesLength() int {
+func (b *State) RandaoMixesLength() int {
 	if b.randaoMixes == nil {
 		return 0
 	}
@@ -58,7 +58,7 @@ func (b *BeaconState) RandaoMixesLength() int {
 
 // randaoMixesLength returns the length of the randao mixes slice.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) randaoMixesLength() int {
+func (b *State) randaoMixesLength() int {
 	if b.randaoMixes == nil {
 		return 0
 	}

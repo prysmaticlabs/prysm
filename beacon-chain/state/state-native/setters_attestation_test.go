@@ -21,7 +21,7 @@ func TestBeaconState_RotateAttestations(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, st.RotateAttestations())
-	s, ok := st.(*BeaconState)
+	s, ok := st.(*State)
 	require.Equal(t, true, ok)
 	require.Equal(t, 0, len(s.currentEpochAttestationsVal()))
 	require.Equal(t, primitives.Slot(456), s.previousEpochAttestationsVal()[0].Data.Slot)
@@ -55,7 +55,7 @@ func TestAppendBeyondIndicesLimit(t *testing.T) {
 	require.NoError(t, err)
 	_, err = st.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	s, ok := st.(*BeaconState)
+	s, ok := st.(*State)
 	require.Equal(t, true, ok)
 	for i := types.FieldIndex(0); i < types.FieldIndex(params.BeaconConfig().BeaconStateFieldCount); i++ {
 		s.dirtyFields[i] = true

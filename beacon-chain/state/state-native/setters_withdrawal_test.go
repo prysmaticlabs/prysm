@@ -10,7 +10,7 @@ import (
 )
 
 func TestSetNextWithdrawalIndex(t *testing.T) {
-	s := BeaconState{
+	s := State{
 		version:             version.Capella,
 		nextWithdrawalIndex: 3,
 		dirtyFields:         make(map[types.FieldIndex]bool),
@@ -21,7 +21,7 @@ func TestSetNextWithdrawalIndex(t *testing.T) {
 }
 
 func TestSetLastWithdrawalValidatorIndex(t *testing.T) {
-	s := BeaconState{
+	s := State{
 		version:                      version.Capella,
 		nextWithdrawalValidatorIndex: 3,
 		dirtyFields:                  make(map[types.FieldIndex]bool),

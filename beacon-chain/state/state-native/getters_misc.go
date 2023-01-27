@@ -7,7 +7,7 @@ import (
 )
 
 // GenesisTime of the beacon state as a uint64.
-func (b *BeaconState) GenesisTime() uint64 {
+func (b *State) GenesisTime() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -15,7 +15,7 @@ func (b *BeaconState) GenesisTime() uint64 {
 }
 
 // GenesisValidatorsRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorsRoot() []byte {
+func (b *State) GenesisValidatorsRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -25,12 +25,12 @@ func (b *BeaconState) GenesisValidatorsRoot() []byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (b *BeaconState) Version() int {
+func (b *State) Version() int {
 	return b.version
 }
 
 // Slot of the current beacon chain state.
-func (b *BeaconState) Slot() primitives.Slot {
+func (b *State) Slot() primitives.Slot {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -38,7 +38,7 @@ func (b *BeaconState) Slot() primitives.Slot {
 }
 
 // Fork version of the beacon chain.
-func (b *BeaconState) Fork() *ethpb.Fork {
+func (b *State) Fork() *ethpb.Fork {
 	if b.fork == nil {
 		return nil
 	}
@@ -51,7 +51,7 @@ func (b *BeaconState) Fork() *ethpb.Fork {
 
 // forkVal version of the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) forkVal() *ethpb.Fork {
+func (b *State) forkVal() *ethpb.Fork {
 	if b.fork == nil {
 		return nil
 	}
@@ -68,7 +68,7 @@ func (b *BeaconState) forkVal() *ethpb.Fork {
 }
 
 // HistoricalRoots based on epochs stored in the beacon state.
-func (b *BeaconState) HistoricalRoots() ([][]byte, error) {
+func (b *State) HistoricalRoots() ([][]byte, error) {
 	if b.historicalRoots == nil {
 		return nil, nil
 	}
@@ -81,7 +81,7 @@ func (b *BeaconState) HistoricalRoots() ([][]byte, error) {
 
 // balancesLength returns the length of the balances slice.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesLength() int {
+func (b *State) balancesLength() int {
 	if b.balances == nil {
 		return 0
 	}
@@ -90,7 +90,7 @@ func (b *BeaconState) balancesLength() int {
 }
 
 // HistoricalSummaries of the beacon state.
-func (b *BeaconState) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) {
+func (b *State) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) {
 	if b.version < version.Capella {
 		return nil, errNotSupported("HistoricalSummaries", b.version)
 	}
@@ -107,6 +107,6 @@ func (b *BeaconState) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) 
 
 // historicalSummariesVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) historicalSummariesVal() []*ethpb.HistoricalSummary {
+func (b *State) historicalSummariesVal() []*ethpb.HistoricalSummary {
 	return ethpb.CopyHistoricalSummaries(b.historicalSummaries)
 }

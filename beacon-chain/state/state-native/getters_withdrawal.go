@@ -14,7 +14,7 @@ import (
 const ETH1AddressOffset = 12
 
 // NextWithdrawalIndex returns the index that will be assigned to the next withdrawal.
-func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
+func (b *State) NextWithdrawalIndex() (uint64, error) {
 	if b.version < version.Capella {
 		return 0, errNotSupported("NextWithdrawalIndex", b.version)
 	}
@@ -27,7 +27,7 @@ func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
 
 // NextWithdrawalValidatorIndex returns the index of the validator which is
 // next in line for a withdrawal.
-func (b *BeaconState) NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error) {
+func (b *State) NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error) {
 	if b.version < version.Capella {
 		return 0, errNotSupported("NextWithdrawalValidatorIndex", b.version)
 	}
@@ -41,7 +41,7 @@ func (b *BeaconState) NextWithdrawalValidatorIndex() (primitives.ValidatorIndex,
 // ExpectedWithdrawals returns the withdrawals that a proposer will need to pack in the next block
 // applied to the current state. It is also used by validators to check that the execution payload carried
 // the right number of withdrawals
-func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
+func (b *State) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	if b.version < version.Capella {
 		return nil, errNotSupported("ExpectedWithdrawals", b.version)
 	}

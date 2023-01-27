@@ -7,7 +7,7 @@ import (
 )
 
 // SetJustificationBits for the beacon state.
-func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
+func (b *State) SetJustificationBits(val bitfield.Bitvector4) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -17,7 +17,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 }
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
-func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+func (b *State) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -27,7 +27,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 }
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
-func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+func (b *State) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -37,7 +37,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 }
 
 // SetFinalizedCheckpoint for the beacon state.
-func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
+func (b *State) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

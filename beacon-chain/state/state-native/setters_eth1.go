@@ -7,7 +7,7 @@ import (
 )
 
 // SetEth1Data for the beacon state.
-func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
+func (b *State) SetEth1Data(val *ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -18,7 +18,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 
 // SetEth1DataVotes for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
+func (b *State) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -32,7 +32,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 }
 
 // SetEth1DepositIndex for the beacon state.
-func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
+func (b *State) SetEth1DepositIndex(val uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -43,7 +43,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 
 // AppendEth1DataVotes for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
+func (b *State) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

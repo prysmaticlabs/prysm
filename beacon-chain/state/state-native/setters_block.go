@@ -11,7 +11,7 @@ import (
 )
 
 // SetLatestBlockHeader in the beacon state.
-func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
+func (b *State) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -22,7 +22,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 
 // SetBlockRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+func (b *State) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -42,7 +42,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 // UpdateBlockRootAtIndex for the beacon state. Updates the block root
 // at a specific index to a new value.
-func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
+func (b *State) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
 	if uint64(len(b.blockRoots)) <= idx {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}

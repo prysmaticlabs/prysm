@@ -5,7 +5,7 @@ import (
 )
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
-func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
+func (b *State) Eth1Data() *ethpb.Eth1Data {
 	if b.eth1Data == nil {
 		return nil
 	}
@@ -18,7 +18,7 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 
 // eth1DataVal corresponding to the proof-of-work chain information stored in the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DataVal() *ethpb.Eth1Data {
+func (b *State) eth1DataVal() *ethpb.Eth1Data {
 	if b.eth1Data == nil {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (b *BeaconState) eth1DataVal() *ethpb.Eth1Data {
 
 // Eth1DataVotes corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
-func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
+func (b *State) Eth1DataVotes() []*ethpb.Eth1Data {
 	if b.eth1DataVotes == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 // eth1DataVotesVal corresponds to votes from Ethereum on the canonical proof-of-work chain
 // data retrieved from eth1.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) eth1DataVotesVal() []*ethpb.Eth1Data {
+func (b *State) eth1DataVotesVal() []*ethpb.Eth1Data {
 	if b.eth1DataVotes == nil {
 		return nil
 	}
@@ -56,7 +56,7 @@ func (b *BeaconState) eth1DataVotesVal() []*ethpb.Eth1Data {
 
 // Eth1DepositIndex corresponds to the index of the deposit made to the
 // validator deposit contract at the time of this state's eth1 data.
-func (b *BeaconState) Eth1DepositIndex() uint64 {
+func (b *State) Eth1DepositIndex() uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

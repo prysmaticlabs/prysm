@@ -31,7 +31,7 @@ func (e *ValidatorIndexOutOfRangeError) Error() string {
 }
 
 // Validators participating in consensus on the beacon chain.
-func (b *BeaconState) Validators() []*ethpb.Validator {
+func (b *State) Validators() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -44,7 +44,7 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 
 // validatorsVal participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) validatorsVal() []*ethpb.Validator {
+func (b *State) validatorsVal() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (b *BeaconState) validatorsVal() []*ethpb.Validator {
 // references of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState. This does not
 // copy fully and instead just copies the reference.
-func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
+func (b *State) validatorsReferences() []*ethpb.Validator {
 	if b.validators == nil {
 		return nil
 	}
@@ -81,7 +81,7 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 }
 
 // ValidatorAtIndex is the validator at the provided index.
-func (b *BeaconState) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error) {
+func (b *State) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error) {
 	if b.validators == nil {
 		return &ethpb.Validator{}, nil
 	}
@@ -99,7 +99,7 @@ func (b *BeaconState) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Va
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (b *State) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	if b.validators == nil {
 		return nil, state.ErrNilValidatorsInState
 	}
@@ -115,7 +115,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (s
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
-func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
+func (b *State) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
 		return 0, false
 	}
@@ -132,7 +132,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
-func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
+func (b *State) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
 	if uint64(idx) >= uint64(len(b.validators)) {
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
@@ -146,7 +146,7 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 }
 
 // NumValidators returns the size of the validator registry.
-func (b *BeaconState) NumValidators() int {
+func (b *State) NumValidators() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -156,7 +156,7 @@ func (b *BeaconState) NumValidators() int {
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 //
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
+func (b *State) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
 	if b.validators == nil {
 		return errors.New("nil validators in state")
 	}
@@ -177,7 +177,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // Balances of validators participating in consensus on the beacon chain.
-func (b *BeaconState) Balances() []uint64 {
+func (b *State) Balances() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -190,7 +190,7 @@ func (b *BeaconState) Balances() []uint64 {
 
 // balancesVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) balancesVal() []uint64 {
+func (b *State) balancesVal() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -201,7 +201,7 @@ func (b *BeaconState) balancesVal() []uint64 {
 }
 
 // BalanceAtIndex of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error) {
+func (b *State) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error) {
 	if b.balances == nil {
 		return 0, nil
 	}
@@ -216,7 +216,7 @@ func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, err
 }
 
 // BalancesLength returns the length of the balances slice.
-func (b *BeaconState) BalancesLength() int {
+func (b *State) BalancesLength() int {
 	if b.balances == nil {
 		return 0
 	}
@@ -228,7 +228,7 @@ func (b *BeaconState) BalancesLength() int {
 }
 
 // Slashings of validators on the beacon chain.
-func (b *BeaconState) Slashings() []uint64 {
+func (b *State) Slashings() []uint64 {
 	if b.slashings == nil {
 		return nil
 	}
@@ -241,7 +241,7 @@ func (b *BeaconState) Slashings() []uint64 {
 
 // slashingsVal of validators on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) slashingsVal() []uint64 {
+func (b *State) slashingsVal() []uint64 {
 	if b.slashings == nil {
 		return nil
 	}
@@ -252,7 +252,7 @@ func (b *BeaconState) slashingsVal() []uint64 {
 }
 
 // InactivityScores of validators participating in consensus on the beacon chain.
-func (b *BeaconState) InactivityScores() ([]uint64, error) {
+func (b *State) InactivityScores() ([]uint64, error) {
 	if b.version == version.Phase0 {
 		return nil, errNotSupported("InactivityScores", b.version)
 	}
@@ -269,7 +269,7 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 
 // inactivityScoresVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) inactivityScoresVal() []uint64 {
+func (b *State) inactivityScoresVal() []uint64 {
 	if b.inactivityScores == nil {
 		return nil
 	}

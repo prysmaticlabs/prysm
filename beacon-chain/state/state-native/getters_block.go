@@ -7,7 +7,7 @@ import (
 )
 
 // LatestBlockHeader stored within the beacon state.
-func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
+func (b *State) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	if b.latestBlockHeader == nil {
 		return nil
 	}
@@ -20,7 +20,7 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // latestBlockHeaderVal stored within the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
+func (b *State) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 	if b.latestBlockHeader == nil {
 		return nil
 	}
@@ -44,7 +44,7 @@ func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 }
 
 // BlockRoots kept track of in the beacon state.
-func (b *BeaconState) BlockRoots() [][]byte {
+func (b *State) BlockRoots() [][]byte {
 	if b.blockRoots == nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+func (b *State) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if b.blockRoots == nil {
 		return []byte{}, nil
 	}
@@ -75,7 +75,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 // blockRootAtIndex retrieves a specific block root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
+func (b *State) blockRootAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.blockRoots)) <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}

@@ -136,7 +136,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateFieldCount
-	b := &BeaconState{
+	b := &State{
 		version:                     version.Phase0,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
@@ -222,7 +222,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
-	b := &BeaconState{
+	b := &State{
 		version:                     version.Altair,
 		genesisTime:                 st.GenesisTime,
 		genesisValidatorsRoot:       bytesutil.ToBytes32(st.GenesisValidatorsRoot),
@@ -312,7 +312,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateBellatrixFieldCount
-	b := &BeaconState{
+	b := &State{
 		version:                      version.Bellatrix,
 		genesisTime:                  st.GenesisTime,
 		genesisValidatorsRoot:        bytesutil.ToBytes32(st.GenesisValidatorsRoot),
@@ -404,7 +404,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	}
 
 	fieldCount := params.BeaconConfig().BeaconStateCapellaFieldCount
-	b := &BeaconState{
+	b := &State{
 		version:                             version.Capella,
 		genesisTime:                         st.GenesisTime,
 		genesisValidatorsRoot:               bytesutil.ToBytes32(st.GenesisValidatorsRoot),
@@ -476,7 +476,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 }
 
 // Copy returns a deep copy of the beacon state.
-func (b *BeaconState) Copy() state.BeaconState {
+func (b *State) Copy() state.BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -492,7 +492,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		fieldCount = params.BeaconConfig().BeaconStateCapellaFieldCount
 	}
 
-	dst := &BeaconState{
+	dst := &State{
 		version: b.version,
 
 		// Primitive types, safe to copy.
@@ -604,7 +604,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the Ethereum Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+func (b *State) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.HashTreeRoot")
 	defer span.End()
 
@@ -622,7 +622,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 // Initializes the Merkle layers for the beacon state if they are empty.
 //
 // WARNING: Caller must acquire the mutex before using.
-func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
+func (b *State) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
 		return nil
 	}
@@ -649,7 +649,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 // Recomputes the Merkle layers for the dirty fields in the state.
 //
 // WARNING: Caller must acquire the mutex before using.
-func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
+func (b *State) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(ctx, field)
 		if err != nil {
@@ -665,7 +665,7 @@ func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 
 // FieldReferencesCount returns the reference count held by each field. This
 // also includes the field trie held by each field.
-func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
+func (b *State) FieldReferencesCount() map[string]uint64 {
 	refMap := make(map[string]uint64)
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -685,11 +685,11 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 
 // IsNil checks if the state and the underlying proto
 // object are nil.
-func (b *BeaconState) IsNil() bool {
+func (b *State) IsNil() bool {
 	return b == nil
 }
 
-func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
+func (b *State) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.version)))
@@ -842,7 +842,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
-func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
+func (b *State) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	fTrieMutex := fTrie.RWMutex
 	// We can't lock the trie directly because the trie's variable gets reassigned,
@@ -883,7 +883,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 	return root, nil
 }
 
-func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
+func (b *State) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
 	fTrie, err := fieldtrie.NewFieldTrie(index, fieldMap[index], elements, length)
 	if err != nil {
 		return err
@@ -893,7 +893,7 @@ func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{
 	return nil
 }
 
-func finalizerCleanup(b *BeaconState) {
+func finalizerCleanup(b *State) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	for field, v := range b.sharedFieldReferences {

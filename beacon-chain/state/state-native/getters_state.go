@@ -10,7 +10,7 @@ import (
 
 // ToProtoUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
-func (b *BeaconState) ToProtoUnsafe() interface{} {
+func (b *State) ToProtoUnsafe() interface{} {
 	if b == nil {
 		return nil
 	}
@@ -134,7 +134,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 }
 
 // ToProto the beacon state into a protobuf for usage.
-func (b *BeaconState) ToProto() interface{} {
+func (b *State) ToProto() interface{} {
 	if b == nil {
 		return nil
 	}
@@ -261,7 +261,7 @@ func (b *BeaconState) ToProto() interface{} {
 }
 
 // StateRoots kept track of in the beacon state.
-func (b *BeaconState) StateRoots() [][]byte {
+func (b *State) StateRoots() [][]byte {
 	if b.stateRoots == nil {
 		return nil
 	}
@@ -274,7 +274,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 
 // StateRootAtIndex retrieves a specific state root based on an
 // input index value.
-func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
+func (b *State) StateRootAtIndex(idx uint64) ([]byte, error) {
 	if b.stateRoots == nil {
 		return nil, nil
 	}
@@ -292,7 +292,7 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 // stateRootAtIndex retrieves a specific state root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
+func (b *State) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.stateRoots)) <= idx {
 		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
 	}

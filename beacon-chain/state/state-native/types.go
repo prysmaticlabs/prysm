@@ -9,7 +9,7 @@ import (
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
-var _ state.BeaconState = (*BeaconState)(nil)
+var _ state.BeaconState = (*State)(nil)
 
 func init() {
 	fieldMap = make(map[types.FieldIndex]types.DataType)

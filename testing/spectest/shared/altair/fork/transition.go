@@ -106,7 +106,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = st.(*state_native.BeaconState)
+				beaconState, ok = st.(*state_native.State)
 				require.Equal(t, true, ok)
 			}
 			for _, b := range postforkBlocks {
@@ -114,7 +114,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = st.(*state_native.BeaconState)
+				beaconState, ok = st.(*state_native.State)
 				require.Equal(t, true, ok)
 			}
 

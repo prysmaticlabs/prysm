@@ -20,7 +20,7 @@ func FinalizedRootGeneralizedIndex() uint64 {
 }
 
 // CurrentSyncCommitteeGeneralizedIndex for the beacon state.
-func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
+func (b *State) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 	if b.version == version.Phase0 {
 		return 0, errNotSupported("CurrentSyncCommitteeGeneralizedIndex", b.version)
 	}
@@ -29,7 +29,7 @@ func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 }
 
 // NextSyncCommitteeGeneralizedIndex for the beacon state.
-func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
+func (b *State) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 	if b.version == version.Phase0 {
 		return 0, errNotSupported("NextSyncCommitteeGeneralizedIndex", b.version)
 	}
@@ -38,7 +38,7 @@ func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+func (b *State) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -60,7 +60,7 @@ func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, 
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
-func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
+func (b *State) NextSyncCommitteeProof(ctx context.Context) ([][]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -79,7 +79,7 @@ func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, err
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root
 // contained within the finalized checkpoint of a beacon state.
-func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) {
+func (b *State) FinalizedRootProof(ctx context.Context) ([][]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

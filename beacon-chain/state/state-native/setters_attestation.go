@@ -12,7 +12,7 @@ import (
 
 // RotateAttestations sets the previous epoch attestations to the current epoch attestations and
 // then clears the current epoch attestations.
-func (b *BeaconState) RotateAttestations() error {
+func (b *State) RotateAttestations() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -25,7 +25,7 @@ func (b *BeaconState) RotateAttestations() error {
 	return nil
 }
 
-func (b *BeaconState) setPreviousEpochAttestations(val []*ethpb.PendingAttestation) {
+func (b *State) setPreviousEpochAttestations(val []*ethpb.PendingAttestation) {
 	b.sharedFieldReferences[types.PreviousEpochAttestations].MinusRef()
 	b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 
@@ -34,7 +34,7 @@ func (b *BeaconState) setPreviousEpochAttestations(val []*ethpb.PendingAttestati
 	b.rebuildTrie[types.PreviousEpochAttestations] = true
 }
 
-func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestation) {
+func (b *State) setCurrentEpochAttestations(val []*ethpb.PendingAttestation) {
 	b.sharedFieldReferences[types.CurrentEpochAttestations].MinusRef()
 	b.sharedFieldReferences[types.CurrentEpochAttestations] = stateutil.NewRef(1)
 
@@ -45,7 +45,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
+func (b *State) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -75,7 +75,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
 // to the the end of list.
-func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
+func (b *State) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -102,7 +102,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	return nil
 }
 
-func (b *BeaconState) SetPreviousEpochAttestations(a []*ethpb.PendingAttestation) error {
+func (b *State) SetPreviousEpochAttestations(a []*ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -113,7 +113,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(a []*ethpb.PendingAttestation
 	return nil
 }
 
-func (b *BeaconState) SetCurrentEpochAttestations(a []*ethpb.PendingAttestation) error {
+func (b *State) SetCurrentEpochAttestations(a []*ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

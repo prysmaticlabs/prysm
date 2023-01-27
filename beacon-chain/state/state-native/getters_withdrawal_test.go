@@ -14,13 +14,13 @@ import (
 
 func TestNextWithdrawalIndex(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := BeaconState{version: version.Capella, nextWithdrawalIndex: 123}
+		s := State{version: version.Capella, nextWithdrawalIndex: 123}
 		i, err := s.NextWithdrawalIndex()
 		require.NoError(t, err)
 		assert.Equal(t, uint64(123), i)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.Bellatrix}
+		s := State{version: version.Bellatrix}
 		_, err := s.NextWithdrawalIndex()
 		assert.ErrorContains(t, "NextWithdrawalIndex is not supported", err)
 	})
@@ -28,13 +28,13 @@ func TestNextWithdrawalIndex(t *testing.T) {
 
 func TestLastWithdrawalValidatorIndex(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
-		s := BeaconState{version: version.Capella, nextWithdrawalValidatorIndex: 123}
+		s := State{version: version.Capella, nextWithdrawalValidatorIndex: 123}
 		i, err := s.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		assert.Equal(t, primitives.ValidatorIndex(123), i)
 	})
 	t.Run("version before Capella not supported", func(t *testing.T) {
-		s := BeaconState{version: version.Bellatrix}
+		s := State{version: version.Bellatrix}
 		_, err := s.NextWithdrawalValidatorIndex()
 		assert.ErrorContains(t, "NextWithdrawalValidatorIndex is not supported", err)
 	})
@@ -112,7 +112,7 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 
 func TestExpectedWithdrawals(t *testing.T) {
 	t.Run("no withdrawals", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -132,7 +132,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, 0, len(expected))
 	})
 	t.Run("one fully withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:                      version.Capella,
 			validators:                   make([]*ethpb.Validator, 100),
 			balances:                     make([]uint64, 100),
@@ -161,7 +161,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
 	t.Run("one partially withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -189,7 +189,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
 	t.Run("one partially and one fully withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -227,7 +227,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawalFull, expected[1])
 	})
 	t.Run("all partially withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -254,7 +254,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
 	t.Run("all fully withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -281,7 +281,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
 	t.Run("all fully and partially withdrawable", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),
@@ -308,7 +308,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.DeepEqual(t, withdrawal, expected[0])
 	})
 	t.Run("one fully withdrawable but zero balance", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:                      version.Capella,
 			validators:                   make([]*ethpb.Validator, 100),
 			balances:                     make([]uint64, 100),
@@ -331,7 +331,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.Equal(t, 0, len(expected))
 	})
 	t.Run("one partially withdrawable, one above sweep bound", func(t *testing.T) {
-		s := BeaconState{
+		s := State{
 			version:    version.Capella,
 			validators: make([]*ethpb.Validator, 100),
 			balances:   make([]uint64, 100),

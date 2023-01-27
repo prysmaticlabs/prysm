@@ -7,7 +7,7 @@ import (
 )
 
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
-func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
+func (b *State) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -24,12 +24,12 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 
 // currentSyncCommitteeVal of the current sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentSyncCommitteeVal() *ethpb.SyncCommittee {
+func (b *State) currentSyncCommitteeVal() *ethpb.SyncCommittee {
 	return copySyncCommittee(b.currentSyncCommittee)
 }
 
 // NextSyncCommittee of the next sync committee in beacon chain state.
-func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
+func (b *State) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -46,7 +46,7 @@ func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 
 // nextSyncCommitteeVal of the next sync committee in beacon chain state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) nextSyncCommitteeVal() *ethpb.SyncCommittee {
+func (b *State) nextSyncCommitteeVal() *ethpb.SyncCommittee {
 	return copySyncCommittee(b.nextSyncCommittee)
 }
 

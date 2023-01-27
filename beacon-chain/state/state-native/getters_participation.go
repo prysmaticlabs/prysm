@@ -7,7 +7,7 @@ import (
 )
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
+func (b *State) CurrentEpochParticipation() ([]byte, error) {
 	if b.version == version.Phase0 {
 		return nil, errNotSupported("CurrentEpochParticipation", b.version)
 	}
@@ -23,7 +23,7 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 }
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
-func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
+func (b *State) PreviousEpochParticipation() ([]byte, error) {
 	if b.version == version.Phase0 {
 		return nil, errNotSupported("PreviousEpochParticipation", b.version)
 	}
@@ -41,7 +41,7 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 // UnrealizedCheckpointBalances returns the total balances: active, target attested in
 // current epoch and target attested in previous epoch. This function is used to
 // compute the "unrealized justification" that a synced Beacon Block will have.
-func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
+func (b *State) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
 	if b.version == version.Phase0 {
 		return 0, 0, 0, errNotSupported("UnrealizedCheckpointBalances", b.version)
 	}
@@ -62,7 +62,7 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 
 // currentEpochParticipationVal corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) currentEpochParticipationVal() []byte {
+func (b *State) currentEpochParticipationVal() []byte {
 	tmp := make([]byte, len(b.currentEpochParticipation))
 	copy(tmp, b.currentEpochParticipation)
 	return tmp
@@ -70,7 +70,7 @@ func (b *BeaconState) currentEpochParticipationVal() []byte {
 
 // previousEpochParticipationVal corresponding to participation bits on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) previousEpochParticipationVal() []byte {
+func (b *State) previousEpochParticipationVal() []byte {
 	tmp := make([]byte, len(b.previousEpochParticipation))
 	copy(tmp, b.previousEpochParticipation)
 	return tmp

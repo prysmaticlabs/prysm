@@ -42,7 +42,7 @@ const (
 )
 
 // SetGenesisTime for the beacon state.
-func (b *BeaconState) SetGenesisTime(val uint64) error {
+func (b *State) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -52,7 +52,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 }
 
 // SetGenesisValidatorsRoot for the beacon state.
-func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
+func (b *State) SetGenesisValidatorsRoot(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -65,7 +65,7 @@ func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
 }
 
 // SetSlot for the beacon state.
-func (b *BeaconState) SetSlot(val primitives.Slot) error {
+func (b *State) SetSlot(val primitives.Slot) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -75,7 +75,7 @@ func (b *BeaconState) SetSlot(val primitives.Slot) error {
 }
 
 // SetFork version for the beacon chain.
-func (b *BeaconState) SetFork(val *ethpb.Fork) error {
+func (b *State) SetFork(val *ethpb.Fork) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -90,7 +90,7 @@ func (b *BeaconState) SetFork(val *ethpb.Fork) error {
 
 // SetHistoricalRoots for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
-func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
+func (b *State) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -108,7 +108,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // AppendHistoricalRoots for the beacon state. Appends the new value
 // to the end of list.
-func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
+func (b *State) AppendHistoricalRoots(root [32]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -131,7 +131,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 
 // AppendHistoricalSummaries for the beacon state. Appends the new value
 // to the end of list.
-func (b *BeaconState) AppendHistoricalSummaries(summary *ethpb.HistoricalSummary) error {
+func (b *State) AppendHistoricalSummaries(summary *ethpb.HistoricalSummary) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -155,7 +155,7 @@ func (b *BeaconState) AppendHistoricalSummaries(summary *ethpb.HistoricalSummary
 // Recomputes the branch up the index in the Merkle trie representation
 // of the beacon state. This method performs slice reads and the caller MUST
 // hold the lock before calling this method.
-func (b *BeaconState) recomputeRoot(idx int) {
+func (b *State) recomputeRoot(idx int) {
 	hashFunc := hash.CustomSHA256Hasher()
 	layers := b.merkleLayers
 	// The merkle tree structure looks as follows:
@@ -187,13 +187,13 @@ func (b *BeaconState) recomputeRoot(idx int) {
 	b.merkleLayers = layers
 }
 
-func (b *BeaconState) markFieldAsDirty(field types.FieldIndex) {
+func (b *State) markFieldAsDirty(field types.FieldIndex) {
 	b.dirtyFields[field] = true
 }
 
 // addDirtyIndices adds the relevant dirty field indices, so that they
 // can be recomputed.
-func (b *BeaconState) addDirtyIndices(index types.FieldIndex, indices []uint64) {
+func (b *State) addDirtyIndices(index types.FieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
 		return
 	}

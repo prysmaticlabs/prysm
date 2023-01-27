@@ -69,7 +69,7 @@ func TestBeaconState_NoDeadlock_Phase0(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
-	st, ok := newState.(*BeaconState)
+	st, ok := newState.(*State)
 	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
@@ -125,7 +125,7 @@ func TestBeaconState_NoDeadlock_Altair(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
-	s, ok := st.(*BeaconState)
+	s, ok := st.(*State)
 	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
@@ -181,7 +181,7 @@ func TestBeaconState_NoDeadlock_Bellatrix(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
-	s, ok := st.(*BeaconState)
+	s, ok := st.(*State)
 	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
@@ -237,7 +237,7 @@ func TestBeaconState_NoDeadlock_Capella(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
-	s, ok := st.(*BeaconState)
+	s, ok := st.(*State)
 	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
@@ -334,7 +334,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 	})
 	assert.NoError(t, err)
-	st, ok := newState.(*BeaconState)
+	st, ok := newState.(*State)
 	require.Equal(t, true, ok)
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)

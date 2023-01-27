@@ -15,9 +15,9 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-// BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
+// State defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
-type BeaconState struct {
+type State struct {
 	version                             int
 	genesisTime                         uint64
 	genesisValidatorsRoot               [32]byte

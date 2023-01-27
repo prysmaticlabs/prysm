@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
-func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {
+func (b *State) ProportionalSlashingMultiplier() (uint64, error) {
 	switch b.version {
 	case version.Bellatrix, version.Capella:
 		return params.BeaconConfig().ProportionalSlashingMultiplierBellatrix, nil
@@ -17,7 +17,7 @@ func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {
 	return 0, errNotSupported("ProportionalSlashingMultiplier()", b.version)
 }
 
-func (b *BeaconState) InactivityPenaltyQuotient() (uint64, error) {
+func (b *State) InactivityPenaltyQuotient() (uint64, error) {
 	switch b.version {
 	case version.Bellatrix, version.Capella:
 		return params.BeaconConfig().InactivityPenaltyQuotientBellatrix, nil
