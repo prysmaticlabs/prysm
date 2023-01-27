@@ -396,10 +396,16 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	b.db = d
 
-	depositCache, err := depositcache.New()
-	if err != nil {
-		return errors.Wrap(err, "could not create deposit cache")
+	var depositCache cache.DepositCache
+	if cliCtx.IsSet(features.EnableEip4881.Name) {
+		depositCache = snapshot.EIP4881Cache()
+	} else {
+		depositCache, err = depositcache.New()
+		if err != nil {
+			return errors.Wrap(err, "could not create deposit cache")
+		}
 	}
+
 	b.depositCache = depositCache
 
 	if b.GenesisInitializer != nil {
