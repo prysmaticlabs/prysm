@@ -28,6 +28,7 @@ go_test(
     deps = [
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/state:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",

@@ -63,6 +63,7 @@ go_test(
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/state:go_default_library",
         "//consensus-types/state/types:go_default_library",
         "//container/slice:go_default_library",
         "//crypto/bls:go_default_library",

@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -59,7 +59,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, st types.BeaconState, vals []*v1alpha1.Validator) {
 				// disable the flag and see if the code mandates that flag.
 				resetCfg := features.InitWithReset(&features.Flags{
 					EnableHistoricalSpaceRepresentation: false,
@@ -76,12 +76,12 @@ func Test_migrateStateValidators(t *testing.T) {
 
 				// create a new state and save it
 				blockRoot := [32]byte{'B'}
-				st, err := util.NewBeaconState()
+				newState, err := util.NewBeaconState()
 				newValidators := validators(10)
 				assert.NoError(t, err)
-				assert.NoError(t, st.SetSlot(101))
-				assert.NoError(t, st.SetValidators(newValidators))
-				assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
+				assert.NoError(t, newState.SetSlot(101))
+				assert.NoError(t, newState.SetValidators(newValidators))
+				assert.NoError(t, dbStore.SaveState(context.Background(), newState, blockRoot))
 				assert.NoError(t, err)
 
 				// now check if this newly saved state followed the migrated code path
@@ -92,7 +92,7 @@ func Test_migrateStateValidators(t *testing.T) {
 					assert.NoError(t, hashErr)
 					individualHashes = append(individualHashes, hash[:])
 				}
-				pbState, err := state.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
+				pbState, err := state.ProtobufBeaconStatePhase0(newState.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -123,7 +123,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, st types.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -138,7 +138,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				blockRoot := [32]byte{'A'}
 				rcvdState, err := dbStore.State(context.Background(), blockRoot)
 				assert.NoError(t, err)
-				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), state.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), st.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
 
 				// find hashes of the validators that are set as part of the state
 				var hashes []byte
@@ -226,7 +226,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, st types.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -241,7 +241,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				blockRoot := [32]byte{'A'}
 				rcvdState, err := dbStore.State(context.Background(), blockRoot)
 				assert.NoError(t, err)
-				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), state.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
+				require.DeepSSZEqual(t, rcvdState.ToProtoUnsafe(), st.ToProtoUnsafe(), "saved state with validators and retrieved state are not matching")
 
 				// find hashes of the validators that are set as part of the state
 				var hashes []byte

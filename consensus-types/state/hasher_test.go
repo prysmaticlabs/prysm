@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -42,16 +43,16 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(checkpoint("current")))
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(checkpoint("finalized")))
 
-	nativeState, ok := beaconState.(*statenative.State)
+	nativeState, ok := beaconState.(*state.State)
 	require.Equal(t, true, ok)
 	protoState, ok := nativeState.ToProtoUnsafe().(*ethpb.BeaconState)
 	require.Equal(t, true, ok)
 
-	initState, err := statenative.InitializeFromProtoPhase0(protoState)
+	initState, err := state.InitializeFromProtoPhase0(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*statenative.State)
+	s, ok := initState.(*state.State)
 	require.Equal(t, true, ok)
-	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := state.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -109,16 +110,16 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
 
-	nativeState, ok := beaconState.(*statenative.State)
+	nativeState, ok := beaconState.(*state.State)
 	require.Equal(t, true, ok)
 	protoState, ok := nativeState.ToProtoUnsafe().(*ethpb.BeaconStateAltair)
 	require.Equal(t, true, ok)
-	initState, err := statenative.InitializeFromProtoAltair(protoState)
+	initState, err := state.InitializeFromProtoAltair(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*statenative.State)
+	s, ok := initState.(*state.State)
 	require.Equal(t, true, ok)
 
-	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := state.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -182,16 +183,16 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 
-	nativeState, ok := beaconState.(*statenative.State)
+	nativeState, ok := beaconState.(*state.State)
 	require.Equal(t, true, ok)
 	protoState, ok := nativeState.ToProtoUnsafe().(*ethpb.BeaconStateBellatrix)
 	require.Equal(t, true, ok)
-	initState, err := statenative.InitializeFromProtoBellatrix(protoState)
+	initState, err := state.InitializeFromProtoBellatrix(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*statenative.State)
+	s, ok := initState.(*state.State)
 	require.Equal(t, true, ok)
 
-	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := state.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -262,16 +263,16 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 		StateSummaryRoot: bytesutil.PadTo([]byte("state summary root"), 32),
 	}))
 
-	nativeState, ok := beaconState.(*statenative.State)
+	nativeState, ok := beaconState.(*state.State)
 	require.Equal(t, true, ok)
 	protoState, ok := nativeState.ToProtoUnsafe().(*ethpb.BeaconStateCapella)
 	require.Equal(t, true, ok)
-	initState, err := statenative.InitializeFromProtoCapella(protoState)
+	initState, err := state.InitializeFromProtoCapella(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*statenative.State)
+	s, ok := initState.(*state.State)
 	require.Equal(t, true, ok)
 
-	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := state.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},

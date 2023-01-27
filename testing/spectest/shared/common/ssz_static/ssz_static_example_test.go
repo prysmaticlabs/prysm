@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
-	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	common "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/ssz_static"

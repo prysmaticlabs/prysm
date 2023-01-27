@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -59,7 +60,7 @@ func TestBeaconStateMerkleProofs_altair(t *testing.T) {
 		finalizedRoot := altair.FinalizedCheckpoint().Root
 		proof, err := altair.FinalizedRootProof(ctx)
 		require.NoError(t, err)
-		gIndex := statenative.FinalizedRootGeneralizedIndex()
+		gIndex := state.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
@@ -83,7 +84,7 @@ func TestBeaconStateMerkleProofs_altair(t *testing.T) {
 		// changed and should have been marked as a dirty state field.
 		// The proof validity should be false for the old root, but true for the new.
 		finalizedRoot := altair.FinalizedCheckpoint().Root
-		gIndex := statenative.FinalizedRootGeneralizedIndex()
+		gIndex := state.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(currentRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, false, valid)
 
@@ -128,7 +129,7 @@ func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
 		finalizedRoot := bellatrix.FinalizedCheckpoint().Root
 		proof, err := bellatrix.FinalizedRootProof(ctx)
 		require.NoError(t, err)
-		gIndex := statenative.FinalizedRootGeneralizedIndex()
+		gIndex := state.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(htr[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
@@ -152,7 +153,7 @@ func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
 		// changed and should have been marked as a dirty state field.
 		// The proof validity should be false for the old root, but true for the new.
 		finalizedRoot := bellatrix.FinalizedCheckpoint().Root
-		gIndex := statenative.FinalizedRootGeneralizedIndex()
+		gIndex := state.FinalizedRootGeneralizedIndex()
 		valid := trie.VerifyMerkleProof(currentRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, false, valid)
 
