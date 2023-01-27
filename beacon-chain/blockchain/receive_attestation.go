@@ -203,8 +203,14 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if err != nil {
 		return err
 	}
-	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
+
+	// Only save head if the new head root is different.
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+	if s.headRoot() != newHeadRoot {
+		if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
+			log.WithError(err).Error("could not save head")
+		}
 	}
 	return nil
 }
