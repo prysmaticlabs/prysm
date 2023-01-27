@@ -26,8 +26,9 @@ func (s *Service) broadcastBLSChanges(currSlot types.Slot) {
 		return
 	}
 	source := rand.NewGenerator()
-	broadcastChanges := make([]*ethpb.SignedBLSToExecutionChange, len(changes))
-	for i := 0; i < len(changes); i++ {
+	length := len(changes)
+	broadcastChanges := make([]*ethpb.SignedBLSToExecutionChange, length)
+	for i := 0; i < length; i++ {
 		idx := source.Intn(len(changes))
 		broadcastChanges[i] = changes[idx]
 		changes = append(changes[:idx], changes[idx+1:]...)
