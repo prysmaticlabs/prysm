@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -163,54 +164,61 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
 		return err
 	}
 	return nil
 }
 
-// This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
-	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* root */)
+func (s *Service) isNewHead(r [32]byte) bool {
 	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot && ok {
-		s.headLock.RUnlock()
-		return nil
-	}
-	s.headLock.RUnlock()
+	defer s.headLock.RUnlock()
+	return r == [32]byte{} || r != s.headRoot()
+}
 
-	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
-		log.Debug("New head does not exist in DB. Do nothing")
-		return nil // We don't have the block, don't notify the engine and update head.
+func (s *Service) isNewProposer() bool {
+	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* root */)
+	return ok
+}
+
+func (s *Service) getHeadStateAndBlock(ctx context.Context, r [32]byte) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
+	if !s.hasBlockInInitSyncOrDB(ctx, r) {
+		return nil, nil, errors.New("block does not exist")
+	}
+	newHeadBlock, err := s.getBlock(ctx, r)
+	if err != nil {
+		return nil, nil, err
+	}
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, r)
+	if err != nil {
+		return nil, nil, err
+	}
+	return headState, newHeadBlock, nil
+}
+
+// This calls notify Forkchoice Update in the event that the head has changed
+func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte) error {
+	if !s.isNewHead(newHeadRoot) && !s.isNewProposer() {
+		return nil
 	}
 
-	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
+	headState, headBlock, err := s.getHeadStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not get new head block")
+		log.WithError(err).Error("Could not get forkchoice update argument")
 		return nil
 	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get state from db")
-		return nil
-	}
-	arg := &notifyForkchoiceUpdateArg{
+
+	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  newHeadRoot,
-		headBlock: newHeadBlock.Block(),
-	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
+		headBlock: headBlock.Block(),
+	})
 	if err != nil {
 		return err
 	}
 
-	// Only save head if the new head root is different.
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-	if s.headRoot() != newHeadRoot {
-		if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
-			log.WithError(err).Error("could not save head")
-		}
+	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+		log.WithError(err).Error("could not save head")
 	}
 	return nil
 }

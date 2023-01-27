@@ -198,7 +198,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot); err != nil {
 		return err
 	}
 

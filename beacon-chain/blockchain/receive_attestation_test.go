@@ -132,7 +132,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, service.headRoot()))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, service.headRoot()))
 	hookErr := "could not notify forkchoice update"
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
@@ -140,7 +140,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{'a'}))
 	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
@@ -164,7 +164,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
@@ -181,7 +181,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
@@ -191,7 +191,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 
 	// Test zero headRoot returns immediately.
 	headRoot := service.headRoot()
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{}))
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{}))
 	require.Equal(t, service.headRoot(), headRoot)
 }
 
