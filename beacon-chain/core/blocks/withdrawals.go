@@ -111,7 +111,26 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 }
 
 func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
-	for _, withdrawal := range withdrawals {
+	expected, err := st.ExpectedWithdrawals()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get expected withdrawals")
+	}
+	if len(expected) != len(withdrawals) {
+		return nil, errInvalidWithdrawalNumber
+	}
+	for i, withdrawal := range withdrawals {
+		if withdrawal.Index != expected[i].Index {
+			return nil, errInvalidWithdrawalIndex
+		}
+		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
+			return nil, errInvalidValidatorIndex
+		}
+		if !bytes.Equal(withdrawal.Address, expected[i].Address) {
+			return nil, errInvalidExecutionAddress
+		}
+		if withdrawal.Amount != expected[i].Amount {
+			return nil, errInvalidWithdrawalAmount
+		}
 		err := helpers.DecreaseBalance(st, withdrawal.ValidatorIndex, withdrawal.Amount)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not decrease balance")
@@ -124,7 +143,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 	}
 	var nextValidatorIndex types.ValidatorIndex
 	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
-		nextValidatorIndex, err := st.NextWithdrawalValidatorIndex()
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}

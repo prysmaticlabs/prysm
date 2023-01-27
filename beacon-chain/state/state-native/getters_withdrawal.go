@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"math/rand"
-
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -60,32 +58,20 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	for i := uint64(0); i < bound; i++ {
 		val := b.validators[validatorIndex]
 		balance := b.balances[validatorIndex]
-		wirand := uint64((rand.Uint32() % 2)) * rand.Uint64()
-		virand := uint64((rand.Uint32() % 2)) * rand.Uint64()
-		balrand := uint64((rand.Uint32() % 2)) * rand.Uint64()
-
-		address := bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:])
-		if wirand == 0 && virand == 0 && balrand == 0 {
-			addrand := rand.Uint32() % 2
-			if addrand == 0 {
-				address[4] = 0
-			}
-		}
-
 		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				Index:          withdrawalIndex + wirand,
-				ValidatorIndex: validatorIndex + types.ValidatorIndex(virand),
-				Address:        address,
-				Amount:         balance + balrand,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance,
 			})
 			withdrawalIndex++
 		} else if isPartiallyWithdrawableValidator(val, balance) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
-				Index:          withdrawalIndex + wirand,
-				ValidatorIndex: validatorIndex + types.ValidatorIndex(virand),
-				Address:        address,
-				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance + balrand,
+				Index:          withdrawalIndex,
+				ValidatorIndex: validatorIndex,
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ETH1AddressOffset:]),
+				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
 		}
