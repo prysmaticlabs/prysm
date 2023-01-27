@@ -6,10 +6,13 @@ package depositsnapshot
 import (
 	"crypto/sha256"
 
+	"context"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"math/big"
 )
 
 var (
@@ -29,8 +32,26 @@ var (
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
 
+type DepositCache struct {
+	depositTrie *depositTrie
+	lock        sync.RWMutex
+}
+
+// FinalizedDeposits stores the trie of deposits that have been included
+// in the beacon state up to the latest finalized checkpoint.
+type FinalizedDeposits struct {
+	Deposits        *depositTrie
+	MerkleTrieIndex int64
+}
+
+func (d *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
+func (d *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
+func (d *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
+func (d *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits
+func (d *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
+
 // DepositTree is the Merkle tree representation of deposits.
-type DepositTree struct {
+type depositTree struct {
 	tree                    MerkleTreeNode
 	mixInLength             uint64 // number of deposits in the tree, reference implementation calls this mix_in_length.
 	finalizedExecutionBlock executionBlock
@@ -44,7 +65,7 @@ type executionBlock struct {
 // New creates an empty deposit tree.
 //
 //nolint:unused
-func New() *DepositTree {
+func newDepositTrie() *depositTree {
 	var leaves [][32]byte
 	merkle := create(leaves, DepositContractDepth)
 	return &DepositTree{
@@ -57,7 +78,7 @@ func New() *DepositTree {
 // getSnapshot returns a deposit tree snapshot.
 //
 //nolint:unused
-func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
+func (d *depositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	if d.finalizedExecutionBlock == (executionBlock{}) {
 		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
 	}
@@ -69,7 +90,7 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.
 //
 //nolint:unused
-func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
+func fromSnapshot(snapshot DepositTreeSnapshot) (*depositTree, error) {
 	root, err := snapshot.CalculateRoot()
 	if err != nil {
 		return DepositTree{}, err
@@ -97,7 +118,7 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (DepositTree, error) {
 // finalize marks a deposit as finalized.
 //
 //nolint:unused
-func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
+func (d *depositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], eth1data.BlockHash)
 	d.finalizedExecutionBlock = executionBlock{
@@ -114,7 +135,7 @@ func (d *DepositTree) finalize(eth1data *eth.Eth1Data, executionBlockHeight uint
 // getProof returns the Deposit tree proof.
 //
 //nolint:unused
-func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
+func (d *depositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 	if d.mixInLength <= 0 {
 		return [32]byte{}, nil, ErrInvalidMixInLength
 	}
@@ -138,7 +159,7 @@ func (d *DepositTree) getProof(index uint64) ([32]byte, [][32]byte, error) {
 // getRoot returns the root of the deposit tree.
 //
 //nolint:unused
-func (d *DepositTree) getRoot() [32]byte {
+func (d *depositTree) getRoot() [32]byte {
 	root := d.tree.GetRoot()
 	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(d.mixInLength)...))
 }
@@ -146,7 +167,7 @@ func (d *DepositTree) getRoot() [32]byte {
 // pushLeaf adds a new leaf to the tree.
 //
 //nolint:unused
-func (d *DepositTree) pushLeaf(leaf [32]byte) error {
+func (d *depositTree) pushLeaf(leaf [32]byte) error {
 	var err error
 	d.tree, err = d.tree.PushLeaf(leaf, DepositContractDepth)
 	if err != nil {
