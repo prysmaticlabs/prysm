@@ -3600,7 +3600,7 @@ var (
 
 	pattern_BeaconChain_GetDepositContract_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"internal", "eth", "v1", "config", "deposit_contract"}, ""))
 
-	pattern_BeaconChain_GetBlobsSidecar_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "blobs", "sidecar", "block_id"}, ""))
+	pattern_BeaconChain_GetBlobsSidecar_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"internal", "eth", "v1", "beacon", "blobs_sidecars", "block_id"}, ""))
 )
 
 var (
