@@ -12,7 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -55,9 +55,9 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	).Times(1)
 
 	protoSyncCommiteeMessage := ethpb.SyncCommitteeMessage{
-		Slot:           types.Slot(42),
+		Slot:           primitives.Slot(42),
 		BlockRoot:      decodedBeaconBlockRoot,
-		ValidatorIndex: types.ValidatorIndex(12345),
+		ValidatorIndex: primitives.ValidatorIndex(12345),
 		Signature:      decodedSignature,
 	}
 
@@ -176,7 +176,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 	const blockRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 
 	request := &ethpb.SyncCommitteeContributionRequest{
-		Slot:      types.Slot(1),
+		Slot:      primitives.Slot(1),
 		PublicKey: nil,
 		SubnetId:  1,
 	}

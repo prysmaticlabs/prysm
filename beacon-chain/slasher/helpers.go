@@ -7,7 +7,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -24,7 +24,7 @@ func (s *Service) groupByValidatorChunkIndex(
 	for _, att := range attestations {
 		validatorChunkIndices := make(map[uint64]bool)
 		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-			validatorChunkIndex := s.params.validatorChunkIndex(types.ValidatorIndex(validatorIdx))
+			validatorChunkIndex := s.params.validatorChunkIndex(primitives.ValidatorIndex(validatorIdx))
 			validatorChunkIndices[validatorChunkIndex] = true
 		}
 		for validatorChunkIndex := range validatorChunkIndices {
@@ -52,7 +52,7 @@ func (s *Service) groupByChunkIndex(
 // This function returns a list of valid attestations, a list of attestations that are
 // valid in the future, and the number of attestations dropped.
 func (s *Service) filterAttestations(
-	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch types.Epoch,
+	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
 ) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
 	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))

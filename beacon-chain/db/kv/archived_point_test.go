@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -13,7 +13,7 @@ import (
 func TestArchivedPointIndexRoot_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	i1 := types.Slot(100)
+	i1 := primitives.Slot(100)
 	r1 := [32]byte{'A'}
 
 	received := db.ArchivedPointRoot(ctx, i1)
@@ -31,7 +31,7 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	i, err := db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(0), i, "Did not get correct index")
+	assert.Equal(t, primitives.Slot(0), i, "Did not get correct index")
 
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -47,5 +47,5 @@ func TestLastArchivedPoint_CanRetrieve(t *testing.T) {
 
 	i, err = db.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(3), i, "Did not get correct index")
+	assert.Equal(t, primitives.Slot(3), i, "Did not get correct index")
 }

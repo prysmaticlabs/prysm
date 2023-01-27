@@ -6,7 +6,7 @@ import (
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
@@ -15,7 +15,7 @@ func TestStore_NewSlot(t *testing.T) {
 	bj := [32]byte{'z'}
 
 	type args struct {
-		slot          types.Slot
+		slot          primitives.Slot
 		finalized     *forkchoicetypes.Checkpoint
 		justified     *forkchoicetypes.Checkpoint
 		bestJustified *forkchoicetypes.Checkpoint

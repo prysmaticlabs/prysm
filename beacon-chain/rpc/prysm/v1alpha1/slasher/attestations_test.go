@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/mock"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestServer_HighestAttestations(t *testing.T) {
-	highestAtts := map[types.ValidatorIndex]*ethpb.HighestAttestation{
+	highestAtts := map[primitives.ValidatorIndex]*ethpb.HighestAttestation{
 		0: {
 			ValidatorIndex:     0,
 			HighestSourceEpoch: 1,

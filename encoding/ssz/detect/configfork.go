@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -138,12 +138,12 @@ var beaconBlockSlot = fieldSpec{
 	t:      typeUint64,
 }
 
-func slotFromBlock(marshaled []byte) (types.Slot, error) {
+func slotFromBlock(marshaled []byte) (primitives.Slot, error) {
 	slot, err := beaconBlockSlot.uint64(marshaled)
 	if err != nil {
 		return 0, err
 	}
-	return types.Slot(slot), nil
+	return primitives.Slot(slot), nil
 }
 
 var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is different than block")
@@ -212,7 +212,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 // Heuristic to make sure block is from the same version as the VersionedUnmarshaler.
 // Look up the version for the epoch that the block is from, then ensure that it matches the Version in the
 // VersionedUnmarshaler.
-func (cf *VersionedUnmarshaler) validateVersion(slot types.Slot) error {
+func (cf *VersionedUnmarshaler) validateVersion(slot primitives.Slot) error {
 	epoch := slots.ToEpoch(slot)
 	fs := forks.NewOrderedSchedule(cf.Config)
 	ver, err := fs.VersionForEpoch(epoch)

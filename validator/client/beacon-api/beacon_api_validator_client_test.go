@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -20,8 +20,8 @@ import (
 
 // Make sure that GetAttestationData() returns the same thing as the internal getAttestationData()
 func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -61,8 +61,8 @@ func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
 }
 
 func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

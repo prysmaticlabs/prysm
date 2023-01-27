@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -16,7 +16,7 @@ import (
 // PoolManager maintains pending and seen voluntary exits.
 // This pool is used by proposers to insert voluntary exits into new blocks.
 type PoolManager interface {
-	PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
+	PendingExits(state state.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
 	InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit)
 	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
 }
@@ -37,7 +37,7 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot types.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -114,7 +114,7 @@ func (p *Pool) MarkIncluded(exit *ethpb.SignedVoluntaryExit) {
 }
 
 // Binary search to check if the index exists in the list of pending exits.
-func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor types.ValidatorIndex) (bool, int) {
+func existsInList(pending []*ethpb.SignedVoluntaryExit, searchingFor primitives.ValidatorIndex) (bool, int) {
 	i := sort.Search(len(pending), func(j int) bool {
 		return pending[j].Exit.ValidatorIndex >= searchingFor
 	})

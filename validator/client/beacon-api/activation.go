@@ -1,15 +1,14 @@
 package beacon_api
 
 import (
+	"context"
 	"strconv"
 	"time"
-
-	"context"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 )
@@ -94,7 +93,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 
 			statuses = append(statuses, &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: pubkey,
-				Index:     types.ValidatorIndex(index),
+				Index:     primitives.ValidatorIndex(index),
 				Status:    &ethpb.ValidatorStatusResponse{Status: validatorStatus},
 			})
 		}
@@ -108,7 +107,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		for _, missingPubKey := range missingPubKeys {
 			statuses = append(statuses, &ethpb.ValidatorActivationResponse_Status{
 				PublicKey: missingPubKey,
-				Index:     types.ValidatorIndex(^uint64(0)),
+				Index:     primitives.ValidatorIndex(^uint64(0)),
 				Status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS},
 			})
 		}

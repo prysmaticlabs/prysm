@@ -33,7 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -51,7 +51,7 @@ type Service struct {
 	head                    *head
 	headLock                sync.RWMutex
 	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot   types.Slot
+	nextEpochBoundarySlot   primitives.Slot
 	boundaryRoots           [][32]byte
 	checkpointStateCache    *cache.CheckpointStateCache
 	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
