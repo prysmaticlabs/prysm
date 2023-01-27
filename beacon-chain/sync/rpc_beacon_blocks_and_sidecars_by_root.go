@@ -61,6 +61,11 @@ func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context
 			return err
 		}
 
+		if blk == nil {
+			s.writeErrorResponseToStream(responseCodeInvalidRequest, "block not found!", stream)
+			return errors.New("block not found")
+		}
+
 		// TODO(Deneb): Reconstruct blind block
 		pb, err := blk.PbDenebBlock()
 		if err != nil {
