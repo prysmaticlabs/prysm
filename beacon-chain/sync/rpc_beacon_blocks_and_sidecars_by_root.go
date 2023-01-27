@@ -61,7 +61,7 @@ func (s *Service) beaconBlockAndBlobsSidecarByRootRPCHandler(ctx context.Context
 			return err
 		}
 
-		if blk == nil {
+		if blk == nil || blk.IsNil() {
 			s.writeErrorResponseToStream(responseCodeInvalidRequest, "block not found!", stream)
 			return errors.New("block not found")
 		}
