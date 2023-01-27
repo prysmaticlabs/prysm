@@ -7,16 +7,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
-var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
+var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
@@ -150,9 +151,28 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 		s.cfg.ExitPool.MarkIncluded(e)
 	}
 
+	// Mark block BLS changes as seen so we don't include same ones in future blocks.
+	if err := s.handleBlockBLSToExecChanges(b); err != nil {
+		return errors.Wrap(err, "could not process BLSToExecutionChanges")
+	}
+
 	//  Mark attester slashings as seen so we don't include same ones in future blocks.
 	for _, as := range b.Body().AttesterSlashings() {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
+	}
+	return nil
+}
+
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
+	if blk.Version() < version.Capella {
+		return nil
+	}
+	changes, err := blk.Body().BLSToExecutionChanges()
+	if err != nil {
+		return errors.Wrap(err, "could not get BLSToExecutionChanges")
+	}
+	for _, change := range changes {
+		s.cfg.BLSToExecPool.MarkIncluded(change)
 	}
 	return nil
 }
@@ -162,7 +182,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
-	var sinceFinality types.Epoch
+	var sinceFinality primitives.Epoch
 	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore

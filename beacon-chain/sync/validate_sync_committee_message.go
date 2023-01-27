@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -119,7 +119,7 @@ func (s *Service) readSyncCommitteeMessage(msg *pubsub.Message) (*ethpb.SyncComm
 }
 
 // Mark all a slot and validator index as seen for every index in a committee and subnet.
-func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []types.CommitteeIndex, m *ethpb.SyncCommitteeMessage) {
+func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []primitives.CommitteeIndex, m *ethpb.SyncCommitteeMessage) {
 	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 	for _, idx := range committeeIndices {
 		subnet := uint64(idx) / subCommitteeSize
@@ -128,7 +128,7 @@ func (s *Service) markSyncCommitteeMessagesSeen(committeeIndices []types.Committ
 }
 
 // Returns true if the node has received sync committee for the validator with index and slot.
-func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) bool {
+func (s *Service) hasSeenSyncMessageIndexSlot(slot primitives.Slot, valIndex primitives.ValidatorIndex, subCommitteeIndex uint64) bool {
 	s.seenSyncMessageLock.RLock()
 	defer s.seenSyncMessageLock.RUnlock()
 	_, seen := s.seenSyncMessageCache.Get(seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex))
@@ -136,7 +136,7 @@ func (s *Service) hasSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 }
 
 // Set sync committee message validator index and slot as seen.
-func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) {
+func (s *Service) setSeenSyncMessageIndexSlot(slot primitives.Slot, valIndex primitives.ValidatorIndex, subCommitteeIndex uint64) {
 	s.seenSyncMessageLock.Lock()
 	defer s.seenSyncMessageLock.Unlock()
 	key := seenSyncCommitteeKey(slot, valIndex, subCommitteeIndex)
@@ -152,7 +152,7 @@ func (s *Service) setSeenSyncMessageIndexSlot(slot types.Slot, valIndex types.Va
 // message and broadcasts it into subnet 2, we need to make sure that whatever committee index and
 // resultant subnet that the validator has is valid for this particular topic.
 func (s *Service) rejectIncorrectSyncCommittee(
-	committeeIndices []types.CommitteeIndex, topic string,
+	committeeIndices []primitives.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
@@ -185,7 +185,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 // and `subcommittee_index`. In the event of `validator_index` belongs to multiple subnets, as long
 // as one subnet has not been seen, we should let it in.
 func (s *Service) ignoreHasSeenSyncMsg(
-	m *ethpb.SyncCommitteeMessage, committeeIndices []types.CommitteeIndex,
+	m *ethpb.SyncCommitteeMessage, committeeIndices []primitives.CommitteeIndex,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		var isValid bool
@@ -252,7 +252,7 @@ func (s *Service) rejectInvalidSyncCommitteeSignature(m *ethpb.SyncCommitteeMess
 	}
 }
 
-func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
+func ignoreEmptyCommittee(indices []primitives.CommitteeIndex) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		if len(indices) == 0 {
 			return pubsub.ValidationIgnore, nil
@@ -261,7 +261,7 @@ func ignoreEmptyCommittee(indices []types.CommitteeIndex) validationFn {
 	}
 }
 
-func seenSyncCommitteeKey(slot types.Slot, valIndex types.ValidatorIndex, subCommitteeIndex uint64) string {
+func seenSyncCommitteeKey(slot primitives.Slot, valIndex primitives.ValidatorIndex, subCommitteeIndex uint64) string {
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(valIndex))...)
 	b = append(b, bytesutil.Bytes32(subCommitteeIndex)...)
 	return string(b)

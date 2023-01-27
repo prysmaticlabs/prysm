@@ -317,6 +317,8 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	var failures []*helpers.SingleIndexedVerificationFailure
+	var toBroadcast []*ethpbalpha.SignedBLSToExecutionChange
+
 	for i, change := range req.GetChanges() {
 		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
 		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
@@ -342,15 +344,10 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		})
 		bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
 		if st.Version() >= version.Capella {
-			if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
-				failures = append(failures, &helpers.SingleIndexedVerificationFailure{
-					Index:   i,
-					Message: "Could not broadcast BLSToExecutionChange: " + err.Error(),
-				})
-				continue
-			}
+			toBroadcast = append(toBroadcast, alphaChange)
 		}
 	}
+	bs.Broadcaster.BroadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
 		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)

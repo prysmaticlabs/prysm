@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -15,7 +15,7 @@ import (
 func TestProposerKeyFn_OK(t *testing.T) {
 	item := &ProposerIndices{
 		BlockRoot:       [32]byte{'A'},
-		ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5},
+		ProposerIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5},
 	}
 
 	k, err := proposerIndicesKeyFn(item)
@@ -51,7 +51,7 @@ func TestProposerCache_AddProposerIndicesList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, has)
 
-	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
+	item := &ProposerIndices{BlockRoot: [32]byte{'B'}, ProposerIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
 	require.NoError(t, cache.AddProposerIndices(item))
 
 	received, err = cache.ProposerIndices(item.BlockRoot)

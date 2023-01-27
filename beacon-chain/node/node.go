@@ -53,7 +53,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
@@ -947,9 +947,9 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 	if cliSlice == nil {
 		return nil
 	}
-	tracked := make([]types.ValidatorIndex, len(cliSlice))
+	tracked := make([]primitives.ValidatorIndex, len(cliSlice))
 	for i := range tracked {
-		tracked[i] = types.ValidatorIndex(cliSlice[i])
+		tracked[i] = primitives.ValidatorIndex(cliSlice[i])
 	}
 
 	var chainService *blockchain.Service

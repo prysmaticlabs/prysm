@@ -1,7 +1,7 @@
 package state_native
 
 import (
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -16,12 +16,12 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 		return errNotSupported("SetPreviousParticipationBits", b.version)
 	}
 
-	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].MinusRef()
-	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
+	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 
 	b.previousEpochParticipation = val
-	b.markFieldAsDirty(nativetypes.PreviousEpochParticipationBits)
-	b.rebuildTrie[nativetypes.PreviousEpochParticipationBits] = true
+	b.markFieldAsDirty(types.PreviousEpochParticipationBits)
+	b.rebuildTrie[types.PreviousEpochParticipationBits] = true
 	return nil
 }
 
@@ -35,12 +35,12 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 		return errNotSupported("SetCurrentParticipationBits", b.version)
 	}
 
-	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].MinusRef()
-	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
+	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 
 	b.currentEpochParticipation = val
-	b.markFieldAsDirty(nativetypes.CurrentEpochParticipationBits)
-	b.rebuildTrie[nativetypes.CurrentEpochParticipationBits] = true
+	b.markFieldAsDirty(types.CurrentEpochParticipationBits)
+	b.rebuildTrie[types.CurrentEpochParticipationBits] = true
 	return nil
 }
 
@@ -55,17 +55,17 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	}
 
 	participation := b.currentEpochParticipation
-	if b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].Refs() > 1 {
+	if b.sharedFieldReferences[types.CurrentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, len(b.currentEpochParticipation))
 		copy(participation, b.currentEpochParticipation)
-		b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].MinusRef()
-		b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	}
 
 	b.currentEpochParticipation = append(participation, val)
-	b.markFieldAsDirty(nativetypes.CurrentEpochParticipationBits)
-	b.addDirtyIndices(nativetypes.CurrentEpochParticipationBits, []uint64{uint64(len(b.currentEpochParticipation) - 1)})
+	b.markFieldAsDirty(types.CurrentEpochParticipationBits)
+	b.addDirtyIndices(types.CurrentEpochParticipationBits, []uint64{uint64(len(b.currentEpochParticipation) - 1)})
 	return nil
 }
 
@@ -80,16 +80,16 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	}
 
 	bits := b.previousEpochParticipation
-	if b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].Refs() > 1 {
+	if b.sharedFieldReferences[types.PreviousEpochParticipationBits].Refs() > 1 {
 		bits = make([]byte, len(b.previousEpochParticipation))
 		copy(bits, b.previousEpochParticipation)
-		b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].MinusRef()
-		b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	}
 
 	b.previousEpochParticipation = append(bits, val)
-	b.markFieldAsDirty(nativetypes.PreviousEpochParticipationBits)
-	b.addDirtyIndices(nativetypes.PreviousEpochParticipationBits, []uint64{uint64(len(b.previousEpochParticipation) - 1)})
+	b.markFieldAsDirty(types.PreviousEpochParticipationBits)
+	b.addDirtyIndices(types.PreviousEpochParticipationBits, []uint64{uint64(len(b.previousEpochParticipation) - 1)})
 
 	return nil
 }
@@ -105,12 +105,12 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 	}
 
 	participation := b.previousEpochParticipation
-	if b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].Refs() > 1 {
+	if b.sharedFieldReferences[types.PreviousEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, len(b.previousEpochParticipation))
 		copy(participation, b.previousEpochParticipation)
-		b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].MinusRef()
-		b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	}
 	// Lock is released so that mutator can
 	// acquire it.
@@ -124,8 +124,8 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.previousEpochParticipation = participation
-	b.markFieldAsDirty(nativetypes.PreviousEpochParticipationBits)
-	b.rebuildTrie[nativetypes.PreviousEpochParticipationBits] = true
+	b.markFieldAsDirty(types.PreviousEpochParticipationBits)
+	b.rebuildTrie[types.PreviousEpochParticipationBits] = true
 	return nil
 }
 
@@ -140,12 +140,12 @@ func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([
 	}
 
 	participation := b.currentEpochParticipation
-	if b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].Refs() > 1 {
+	if b.sharedFieldReferences[types.CurrentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, len(b.currentEpochParticipation))
 		copy(participation, b.currentEpochParticipation)
-		b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].MinusRef()
-		b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
+		b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
+		b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	}
 	// Lock is released so that mutator can
 	// acquire it.
@@ -159,7 +159,7 @@ func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.currentEpochParticipation = participation
-	b.markFieldAsDirty(nativetypes.CurrentEpochParticipationBits)
-	b.rebuildTrie[nativetypes.CurrentEpochParticipationBits] = true
+	b.markFieldAsDirty(types.CurrentEpochParticipationBits)
+	b.rebuildTrie[types.CurrentEpochParticipationBits] = true
 	return nil
 }

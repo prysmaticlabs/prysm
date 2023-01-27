@@ -14,7 +14,7 @@
 //	}
 package filters
 
-import types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+import primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 // FilterType defines an enum which is used as the keys in a map that tracks
 // set attribute filters for data as part of the `FilterQuery` struct type.
@@ -91,37 +91,37 @@ func (q *QueryFilter) SetTargetRoot(val []byte) *QueryFilter {
 }
 
 // SetSourceEpoch enables filtering by the source epoch data attribute of an object.
-func (q *QueryFilter) SetSourceEpoch(val types.Epoch) *QueryFilter {
+func (q *QueryFilter) SetSourceEpoch(val primitives.Epoch) *QueryFilter {
 	q.queries[SourceEpoch] = val
 	return q
 }
 
 // SetTargetEpoch enables filtering by the target epoch data attribute of an object.
-func (q *QueryFilter) SetTargetEpoch(val types.Epoch) *QueryFilter {
+func (q *QueryFilter) SetTargetEpoch(val primitives.Epoch) *QueryFilter {
 	q.queries[TargetEpoch] = val
 	return q
 }
 
 // SetStartSlot enables filtering by all the items that begin at a slot (inclusive).
-func (q *QueryFilter) SetStartSlot(val types.Slot) *QueryFilter {
+func (q *QueryFilter) SetStartSlot(val primitives.Slot) *QueryFilter {
 	q.queries[StartSlot] = val
 	return q
 }
 
 // SetEndSlot enables filtering by all the items that end at a slot (inclusive).
-func (q *QueryFilter) SetEndSlot(val types.Slot) *QueryFilter {
+func (q *QueryFilter) SetEndSlot(val primitives.Slot) *QueryFilter {
 	q.queries[EndSlot] = val
 	return q
 }
 
 // SetStartEpoch enables filtering by the StartEpoch attribute of an object (inclusive).
-func (q *QueryFilter) SetStartEpoch(val types.Epoch) *QueryFilter {
+func (q *QueryFilter) SetStartEpoch(val primitives.Epoch) *QueryFilter {
 	q.queries[StartEpoch] = val
 	return q
 }
 
 // SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
-func (q *QueryFilter) SetEndEpoch(val types.Epoch) *QueryFilter {
+func (q *QueryFilter) SetEndEpoch(val primitives.Epoch) *QueryFilter {
 	q.queries[EndEpoch] = val
 	return q
 }

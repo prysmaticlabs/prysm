@@ -53,8 +53,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidators(
 
 	stateValidatorsJson := &rpcmiddleware.StateValidatorsResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, stateValidatorsJson)
-	if err != nil {
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, stateValidatorsJson); err != nil {
 		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.Wrap(err, "failed to get json response")
 	}
 

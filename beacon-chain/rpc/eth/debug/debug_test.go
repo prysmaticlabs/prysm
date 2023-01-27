@@ -10,7 +10,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -224,7 +224,7 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	ctx := context.Background()
 
 	expectedSlotsAndRoots := []struct {
-		Slot types.Slot
+		Slot primitives.Slot
 		Root [32]byte
 	}{{
 		Slot: 0,
@@ -288,6 +288,6 @@ func TestServer_GetForkChoice(t *testing.T) {
 	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
-	require.Equal(t, types.Epoch(3), res.JustifiedCheckpoint.Epoch, "Did not get wanted justified epoch")
-	require.Equal(t, types.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")
+	require.Equal(t, primitives.Epoch(3), res.JustifiedCheckpoint.Epoch, "Did not get wanted justified epoch")
+	require.Equal(t, primitives.Epoch(2), res.FinalizedCheckpoint.Epoch, "Did not get wanted finalized epoch")
 }

@@ -88,7 +88,7 @@ func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 	return OptimizedGenesisBeaconStateBellatrix(genesisTime, st, st.Eth1Data(), ep)
 }
 
-// OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
+// OptimizedGenesisBeaconStateBellatrix is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
 func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (state.BeaconState, error) {
 	if eth1Data == nil {
@@ -241,7 +241,7 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 	return ist, nil
 }
 
-// EmptyGenesisState returns an empty beacon state object.
+// EmptyGenesisStateBellatrix returns an empty beacon state object.
 func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.

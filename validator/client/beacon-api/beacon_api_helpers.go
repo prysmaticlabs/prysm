@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -36,7 +36,7 @@ func validRoot(root string) bool {
 	return matchesRegex
 }
 
-func uint64ToString[T uint64 | types.Slot | types.ValidatorIndex | types.CommitteeIndex | types.Epoch](val T) string {
+func uint64ToString[T uint64 | primitives.Slot | primitives.ValidatorIndex | primitives.CommitteeIndex | primitives.Epoch](val T) string {
 	return strconv.FormatUint(uint64(val), 10)
 }
 
@@ -53,12 +53,11 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*apimiddleware.
 
 	stateForkResponseJson := &apimiddleware.StateForkResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		stateForkResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 
@@ -70,19 +69,18 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*apimiddlewa
 
 	blockHeadersResponseJson := &apimiddleware.BlockHeadersResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		blockHeadersResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 
 	return blockHeadersResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch types.Epoch, validatorIndexes []string) (*apimiddleware.LivenessResponseJson, error) {
+func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*apimiddleware.LivenessResponseJson, error) {
 	const endpoint = "/eth/v1/validator/liveness/"
 	url := endpoint + strconv.FormatUint(uint64(epoch), 10)
 
@@ -105,12 +103,11 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddlewa
 
 	syncingResponseJson := &apimiddleware.SyncingResponseJson{}
 
-	_, err := c.jsonRestHandler.GetRestJsonResponse(
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,
 		endpoint,
 		syncingResponseJson,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
 	}
 

@@ -5,7 +5,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -76,7 +76,7 @@ func TestUpdateLogAggregateStats(t *testing.T) {
 		if i == len(responses)-1 { // Handle last log.
 			hook = logTest.NewGlobal()
 		}
-		v.UpdateLogAggregateStats(val, params.BeaconConfig().SlotsPerEpoch*types.Slot(i+1))
+		v.UpdateLogAggregateStats(val, params.BeaconConfig().SlotsPerEpoch*primitives.Slot(i+1))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+
@@ -154,7 +154,7 @@ func TestUpdateLogAltairAggregateStats(t *testing.T) {
 		altairStart, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		require.NoError(t, err)
 
-		v.UpdateLogAggregateStats(val, altairStart+params.BeaconConfig().SlotsPerEpoch*types.Slot(i+1))
+		v.UpdateLogAggregateStats(val, altairStart+params.BeaconConfig().SlotsPerEpoch*primitives.Slot(i+1))
 	}
 
 	require.LogsContain(t, hook, "msg=\"Previous epoch aggregated voting summary\" attestationInclusionPct=\"67%\" "+

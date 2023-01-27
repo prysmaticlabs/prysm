@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -13,7 +13,7 @@ import (
 func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},
@@ -49,7 +49,7 @@ func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},
@@ -85,7 +85,7 @@ func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 func TestProcessExitP2PTrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},
@@ -105,7 +105,7 @@ func TestProcessExitP2PTrackedIndices(t *testing.T) {
 func TestProcessExitP2PUntrackedIndices(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s := &Service{
-		TrackedValidators: map[types.ValidatorIndex]bool{
+		TrackedValidators: map[primitives.ValidatorIndex]bool{
 			1: true,
 			2: true,
 		},

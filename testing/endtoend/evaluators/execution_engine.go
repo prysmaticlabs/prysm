@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	ctypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -40,13 +40,13 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		default:
 			return errors.New("no valid block type retrieved")
 		}
-		currEpoch := slots.ToEpoch(ctypes.Slot(headSlot))
+		currEpoch := slots.ToEpoch(primitives.Slot(headSlot))
 		startSlot, err := slots.EpochStart(currEpoch)
 		if err != nil {
 			return err
 		}
 		isOptimistic := false
-		for i := startSlot; i <= ctypes.Slot(headSlot); i++ {
+		for i := startSlot; i <= primitives.Slot(headSlot); i++ {
 			castI, err := mathutil.Int(uint64(i))
 			if err != nil {
 				return err

@@ -57,7 +57,6 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 }
 
 func TestGetDomainData_GenesisError(t *testing.T) {
-	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
@@ -77,7 +76,6 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 }
 
 func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
-	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
