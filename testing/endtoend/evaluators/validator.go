@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -37,7 +37,7 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
-var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "validators_participating_epoch_%d",
 		Policy:     policies.AfterNthEpoch(epoch),

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
@@ -35,7 +35,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 
 // updateBestDescendant updates the best descendant of this node and its
 // children. This function assumes the caller has a lock on Store.nodesLock
-func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch, currentEpoch types.Epoch) error {
+func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -89,7 +89,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 // viableForHead returns true if the node is viable to head.
 // Any node with different finalized or justified epoch than
 // the ones in fork choice store should not be viable to head.
-func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch types.Epoch) bool {
+func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
 	finalized := finalizedEpoch == n.finalizedEpoch || finalizedEpoch == 0
 	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
@@ -103,7 +103,7 @@ func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch types.
 	return justified && finalized
 }
 
-func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch types.Epoch) bool {
+func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
 	if n.bestDescendant == nil {
 		return n.viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch)
 	}

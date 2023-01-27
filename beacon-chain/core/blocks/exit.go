@@ -10,7 +10,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -93,7 +93,7 @@ func ProcessVoluntaryExits(
 //	 initiate_validator_exit(state, voluntary_exit.validator_index)
 func VerifyExitAndSignature(
 	validator state.ReadOnlyValidator,
-	currentSlot types.Slot,
+	currentSlot primitives.Slot,
 	fork *ethpb.Fork,
 	signed *ethpb.SignedVoluntaryExit,
 	genesisRoot []byte,
@@ -103,7 +103,7 @@ func VerifyExitAndSignature(
 	}
 
 	exit := signed.Exit
-	if err := VerifyExitConditions(validator, currentSlot, exit); err != nil {
+	if err := verifyExitConditions(validator, currentSlot, exit); err != nil {
 		return err
 	}
 	domain, err := signing.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit, genesisRoot)
@@ -138,7 +138,7 @@ func VerifyExitAndSignature(
 //	 assert bls.Verify(validator.pubkey, signing_root, signed_voluntary_exit.signature)
 //	 # Initiate exit
 //	 initiate_validator_exit(state, voluntary_exit.validator_index)
-func VerifyExitConditions(validator state.ReadOnlyValidator, currentSlot types.Slot, exit *ethpb.VoluntaryExit) error {
+func verifyExitConditions(validator state.ReadOnlyValidator, currentSlot primitives.Slot, exit *ethpb.VoluntaryExit) error {
 	currentEpoch := slots.ToEpoch(currentSlot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidatorUsingTrie(validator, currentEpoch) {

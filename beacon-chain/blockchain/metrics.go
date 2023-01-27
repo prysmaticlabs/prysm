@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -216,7 +216,7 @@ var (
 )
 
 // reportSlotMetrics reports slot related metrics.
-func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
+func reportSlotMetrics(stateSlot, headSlot, clockSlot primitives.Slot, finalizedCheckpoint *ethpb.Checkpoint) {
 	clockTimeSlot.Set(float64(clockSlot))
 	beaconSlot.Set(float64(stateSlot))
 	beaconHeadSlot.Set(float64(headSlot))
@@ -228,7 +228,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot types.Slot, finalizedCheck
 
 // reportEpochMetrics reports epoch related metrics.
 func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconState) error {
-	currentEpoch := types.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
+	currentEpoch := primitives.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
 	pendingInstances := 0
@@ -247,7 +247,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	slashingEffectiveBalance := uint64(0)
 
 	for i, validator := range postState.Validators() {
-		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
+		bal, err := postState.BalanceAtIndex(primitives.ValidatorIndex(i))
 		if err != nil {
 			log.WithError(err).Error("Could not load validator balance")
 			continue

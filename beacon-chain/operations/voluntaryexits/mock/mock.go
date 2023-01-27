@@ -2,7 +2,7 @@ package mock
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -17,7 +17,7 @@ func (m *PoolMock) PendingExits() ([]*eth.SignedVoluntaryExit, error) {
 }
 
 // ExitsForInclusion --
-func (m *PoolMock) ExitsForInclusion(_ state.ReadOnlyBeaconState, _ types.Slot) ([]*eth.SignedVoluntaryExit, error) {
+func (m *PoolMock) ExitsForInclusion(_ state.ReadOnlyBeaconState, _ primitives.Slot) ([]*eth.SignedVoluntaryExit, error) {
 	return m.Exits, nil
 }
 

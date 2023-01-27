@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -35,13 +35,13 @@ func SplitIndices(l []uint64, n uint64) [][]uint64 {
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
 // constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func ShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byte) (types.ValidatorIndex, error) {
+func ShuffledIndex(index primitives.ValidatorIndex, indexCount uint64, seed [32]byte) (primitives.ValidatorIndex, error) {
 	return ComputeShuffledIndex(index, indexCount, seed, true /* shuffle */)
 }
 
 // UnShuffledIndex returns the inverse of ShuffledIndex. This implementation is based
 // on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func UnShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byte) (types.ValidatorIndex, error) {
+func UnShuffledIndex(index primitives.ValidatorIndex, indexCount uint64, seed [32]byte) (primitives.ValidatorIndex, error) {
 	return ComputeShuffledIndex(index, indexCount, seed, false /* un-shuffle */)
 }
 
@@ -70,7 +70,7 @@ func UnShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byt
 //	     index = flip if bit else index
 //
 //	 return index
-func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [32]byte, shuffle bool) (types.ValidatorIndex, error) {
+func ComputeShuffledIndex(index primitives.ValidatorIndex, indexCount uint64, seed [32]byte, shuffle bool) (primitives.ValidatorIndex, error) {
 	if params.BeaconConfig().ShuffleRoundCount == 0 {
 		return index, nil
 	}
@@ -119,7 +119,7 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 		bitV := (byteV >> (position & 0x7)) & 0x1
 		// index = flip if bit else index
 		if bitV == 1 {
-			index = types.ValidatorIndex(flip)
+			index = primitives.ValidatorIndex(flip)
 		}
 		if shuffle {
 			round++
@@ -151,17 +151,17 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 //	 - change byteV every 8 iterations.
 //	 - we start at the edges, and work back to the mirror point.
 //	   this makes us process each pear exactly once (instead of unnecessarily twice, like in the spec).
-func ShuffleList(input []types.ValidatorIndex, seed [32]byte) ([]types.ValidatorIndex, error) {
+func ShuffleList(input []primitives.ValidatorIndex, seed [32]byte) ([]primitives.ValidatorIndex, error) {
 	return innerShuffleList(input, seed, true /* shuffle */)
 }
 
 // UnshuffleList un-shuffles the list by running backwards through the round count.
-func UnshuffleList(input []types.ValidatorIndex, seed [32]byte) ([]types.ValidatorIndex, error) {
+func UnshuffleList(input []primitives.ValidatorIndex, seed [32]byte) ([]primitives.ValidatorIndex, error) {
 	return innerShuffleList(input, seed, false /* un-shuffle */)
 }
 
 // shuffles or unshuffles, shuffle=false to un-shuffle.
-func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool) ([]types.ValidatorIndex, error) {
+func innerShuffleList(input []primitives.ValidatorIndex, seed [32]byte, shuffle bool) ([]primitives.ValidatorIndex, error) {
 	if len(input) <= 1 {
 		return input, nil
 	}
@@ -190,7 +190,7 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 		source := hashfunc(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, types.ValidatorIndex(i), input, types.ValidatorIndex(j), source, hashfunc)
+			byteV, source = swapOrNot(buf, byteV, primitives.ValidatorIndex(i), input, primitives.ValidatorIndex(j), source, hashfunc)
 		}
 		// Now repeat, but for the part after the pivot.
 		mirror = (pivot + listSize + 1) >> 1
@@ -199,7 +199,7 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 		source = hashfunc(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, types.ValidatorIndex(i), input, types.ValidatorIndex(j), source, hashfunc)
+			byteV, source = swapOrNot(buf, byteV, primitives.ValidatorIndex(i), input, primitives.ValidatorIndex(j), source, hashfunc)
 		}
 		if shuffle {
 			r++
@@ -218,8 +218,8 @@ func innerShuffleList(input []types.ValidatorIndex, seed [32]byte, shuffle bool)
 
 // swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value
 // depending on if the conditions are met.
-func swapOrNot(buf []byte, byteV byte, i types.ValidatorIndex, input []types.ValidatorIndex,
-	j types.ValidatorIndex, source [32]byte, hashFunc func([]byte) [32]byte) (byte, [32]byte) {
+func swapOrNot(buf []byte, byteV byte, i primitives.ValidatorIndex, input []primitives.ValidatorIndex,
+	j primitives.ValidatorIndex, source [32]byte, hashFunc func([]byte) [32]byte) (byte, [32]byte) {
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))

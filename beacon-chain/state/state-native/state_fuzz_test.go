@@ -6,7 +6,7 @@ import (
 
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -44,7 +44,7 @@ func FuzzPhase0StateHashTreeRoot(f *testing.F) {
 		slotsToTransition %= 100
 		stateObj, err := native.InitializeFromProtoUnsafePhase0(pbState)
 		assert.NoError(t, err)
-		for stateObj.Slot() < types.Slot(slotsToTransition) {
+		for stateObj.Slot() < primitives.Slot(slotsToTransition) {
 			stateObj, err = coreState.ProcessSlots(context.Background(), stateObj, stateObj.Slot()+1)
 			assert.NoError(t, err)
 			stateObj.Copy()
@@ -115,7 +115,7 @@ func FuzzAltairStateHashTreeRoot(f *testing.F) {
 		slotsToTransition %= 100
 		stateObj, err := native.InitializeFromProtoUnsafeAltair(pbState)
 		assert.NoError(t, err)
-		for stateObj.Slot() < types.Slot(slotsToTransition) {
+		for stateObj.Slot() < primitives.Slot(slotsToTransition) {
 			stateObj, err = coreState.ProcessSlots(context.Background(), stateObj, stateObj.Slot()+1)
 			assert.NoError(t, err)
 			stateObj.Copy()
@@ -185,7 +185,7 @@ func FuzzBellatrixStateHashTreeRoot(f *testing.F) {
 		slotsToTransition %= 100
 		stateObj, err := native.InitializeFromProtoUnsafeBellatrix(pbState)
 		assert.NoError(t, err)
-		for stateObj.Slot() < types.Slot(slotsToTransition) {
+		for stateObj.Slot() < primitives.Slot(slotsToTransition) {
 			stateObj, err = coreState.ProcessSlots(context.Background(), stateObj, stateObj.Slot()+1)
 			assert.NoError(t, err)
 			stateObj.Copy()
@@ -255,7 +255,7 @@ func FuzzCapellaStateHashTreeRoot(f *testing.F) {
 		slotsToTransition %= 100
 		stateObj, err := native.InitializeFromProtoUnsafeCapella(pbState)
 		assert.NoError(t, err)
-		for stateObj.Slot() < types.Slot(slotsToTransition) {
+		for stateObj.Slot() < primitives.Slot(slotsToTransition) {
 			stateObj, err = coreState.ProcessSlots(context.Background(), stateObj, stateObj.Slot()+1)
 			assert.NoError(t, err)
 			stateObj.Copy()

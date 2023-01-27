@@ -9,7 +9,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -261,7 +261,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 func TestGetRandao(t *testing.T) {
 	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
 	mixOld := bytesutil.PadTo([]byte("old"), 32)
-	epochCurrent := types.Epoch(100000)
+	epochCurrent := primitives.Epoch(100000)
 	epochOld := 100000 - params.BeaconConfig().EpochsPerHistoricalVector + 1
 
 	ctx := context.Background()
@@ -272,7 +272,7 @@ func TestGetRandao(t *testing.T) {
 	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochCurrent%params.BeaconConfig().EpochsPerHistoricalVector), mixCurrent))
 	require.NoError(t, st.UpdateRandaoMixesAtIndex(uint64(epochOld%params.BeaconConfig().EpochsPerHistoricalVector), mixOld))
 
-	headEpoch := types.Epoch(1)
+	headEpoch := primitives.Epoch(1)
 	headSt, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -314,12 +314,12 @@ func TestGetRandao(t *testing.T) {
 		assert.DeepEqual(t, headRandao, resp.Data.Randao)
 	})
 	t.Run("epoch too old", func(t *testing.T) {
-		epochTooOld := types.Epoch(100000 - st.RandaoMixesLength())
+		epochTooOld := primitives.Epoch(100000 - st.RandaoMixesLength())
 		_, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &epochTooOld})
 		require.ErrorContains(t, "Epoch is out of range for the randao mixes of the state", err)
 	})
 	t.Run("epoch in the future", func(t *testing.T) {
-		futureEpoch := types.Epoch(100000 + 1)
+		futureEpoch := primitives.Epoch(100000 + 1)
 		_, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: make([]byte, 0), Epoch: &futureEpoch})
 		require.ErrorContains(t, "Epoch is out of range for the randao mixes of the state", err)
 	})

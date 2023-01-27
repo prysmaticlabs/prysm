@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -120,7 +120,7 @@ func (s *Service) processSlashings(blk interfaces.BeaconBlock) {
 
 	for _, slashing := range blk.Body().AttesterSlashings() {
 		for _, idx := range blocks.SlashableAttesterIndices(slashing) {
-			if s.trackedIndex(types.ValidatorIndex(idx)) {
+			if s.trackedIndex(primitives.ValidatorIndex(idx)) {
 				log.WithFields(logrus.Fields{
 					"AttesterIndex":      idx,
 					"BlockInclusionSlot": blk.Slot(),

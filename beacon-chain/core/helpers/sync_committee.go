@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -26,7 +26,7 @@ var (
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
 func IsCurrentPeriodSyncCommittee(
-	st state.BeaconState, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -63,7 +63,7 @@ func IsCurrentPeriodSyncCommittee(
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input next sync committee object
 func IsNextPeriodSyncCommittee(
-	st state.BeaconState, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -90,8 +90,8 @@ func IsNextPeriodSyncCommittee(
 // CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
 // current period sync committee for input validator.
 func CurrentPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx types.ValidatorIndex,
-) ([]types.CommitteeIndex, error) {
+	st state.BeaconState, valIdx primitives.ValidatorIndex,
+) ([]primitives.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
@@ -124,8 +124,8 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 // NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
 func NextPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx types.ValidatorIndex,
-) ([]types.CommitteeIndex, error) {
+	st state.BeaconState, valIdx primitives.ValidatorIndex,
+) ([]primitives.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
@@ -174,11 +174,11 @@ func UpdateSyncCommitteeCache(st state.BeaconState) error {
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
-func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []types.CommitteeIndex {
-	var indices []types.CommitteeIndex
+func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []primitives.CommitteeIndex {
+	var indices []primitives.CommitteeIndex
 	for i, k := range pubKeys {
 		if bytes.Equal(k, pubKey) {
-			indices = append(indices, types.CommitteeIndex(i))
+			indices = append(indices, primitives.CommitteeIndex(i))
 		}
 	}
 	return indices

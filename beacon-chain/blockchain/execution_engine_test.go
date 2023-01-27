@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -795,11 +795,11 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
 	require.Equal(t, false, hasPayload)
-	require.Equal(t, types.ValidatorIndex(0), vId)
+	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
 	// Cache hit, advance state, no fee recipient
-	suggestedVid := types.ValidatorIndex(1)
-	slot := types.Slot(1)
+	suggestedVid := primitives.ValidatorIndex(1)
+	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
 	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
@@ -810,7 +810,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)
@@ -833,11 +833,11 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateCapella(t, 1)
 	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0)
 	require.Equal(t, false, hasPayload)
-	require.Equal(t, types.ValidatorIndex(0), vId)
+	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
 	// Cache hit, advance state, no fee recipient
-	suggestedVid := types.ValidatorIndex(1)
-	slot := types.Slot(1)
+	suggestedVid := primitives.ValidatorIndex(1)
+	slot := primitives.Slot(1)
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hook := logTest.NewGlobal()
 	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot)
@@ -851,7 +851,7 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
+	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot)
 	require.Equal(t, true, hasPayload)

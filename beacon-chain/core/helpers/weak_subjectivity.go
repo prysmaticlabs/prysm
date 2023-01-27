@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -56,7 +56,7 @@ import (
 //	    )
 //
 //	return ws_period
-func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
+func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (primitives.Epoch, error) {
 	// Weak subjectivity period cannot be smaller than withdrawal delay.
 	wsp := uint64(cfg.MinValidatorWithdrawabilityDelay)
 
@@ -103,7 +103,7 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 		wsp += 3 * N * D * t / (200 * Delta * (T - t))
 	}
 
-	return types.Epoch(wsp), nil
+	return primitives.Epoch(wsp), nil
 }
 
 // IsWithinWeakSubjectivityPeriod verifies if a given weak subjectivity checkpoint is not stale i.e.
@@ -125,7 +125,7 @@ func ComputeWeakSubjectivityPeriod(ctx context.Context, st state.ReadOnlyBeaconS
 //	current_epoch = compute_epoch_at_slot(get_current_slot(store))
 //	return current_epoch <= ws_state_epoch + ws_period
 func IsWithinWeakSubjectivityPeriod(
-	ctx context.Context, currentEpoch types.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [fieldparams.RootLength]byte, wsEpoch types.Epoch, cfg *params.BeaconChainConfig) (bool, error) {
+	ctx context.Context, currentEpoch primitives.Epoch, wsState state.ReadOnlyBeaconState, wsStateRoot [fieldparams.RootLength]byte, wsEpoch primitives.Epoch, cfg *params.BeaconChainConfig) (bool, error) {
 	// Make sure that incoming objects are not nil.
 	if wsState == nil || wsState.IsNil() || wsState.LatestBlockHeader() == nil {
 		return false, errors.New("invalid weak subjectivity state or checkpoint")
@@ -156,7 +156,7 @@ func IsWithinWeakSubjectivityPeriod(
 // Within the weak subjectivity period, if two conflicting blocks are finalized, 1/3 - D (D := safety decay)
 // of validators will get slashed. Therefore, it is safe to assume that any finalized checkpoint within that
 // period is protected by this safety margin.
-func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (types.Epoch, error) {
+func LatestWeakSubjectivityEpoch(ctx context.Context, st state.ReadOnlyBeaconState, cfg *params.BeaconChainConfig) (primitives.Epoch, error) {
 	wsPeriod, err := ComputeWeakSubjectivityPeriod(ctx, st, cfg)
 	if err != nil {
 		return 0, err
@@ -201,7 +201,7 @@ func ParseWeakSubjectivityInputString(wsCheckpointString string) (*v1alpha1.Chec
 	}
 
 	return &v1alpha1.Checkpoint{
-		Epoch: types.Epoch(epoch),
+		Epoch: primitives.Epoch(epoch),
 		Root:  bRoot,
 	}, nil
 }

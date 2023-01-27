@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -56,7 +56,11 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
-		return s.beaconDB.GenesisState(ctx)
+		root, err := s.beaconDB.GenesisBlockRoot(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get genesis block root")
+		}
+		blockRoot = root
 	}
 	return s.loadStateByRoot(ctx, blockRoot)
 }
@@ -323,7 +327,7 @@ func (s *State) CombinedCache() *CombinedCache {
 	return &CombinedCache{getters: getters}
 }
 
-func (s *State) slotAvailable(slot types.Slot) bool {
+func (s *State) slotAvailable(slot primitives.Slot) bool {
 	// default to assuming node was initialized from genesis - backfill only needs to be specified for checkpoint sync
 	if s.backfillStatus == nil {
 		return true

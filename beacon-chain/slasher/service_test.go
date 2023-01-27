@@ -13,7 +13,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockslasher "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/mock"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -36,7 +36,7 @@ func TestService_StartStop_ChainInitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	currentSlot := types.Slot(4)
+	currentSlot := primitives.Slot(4)
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	mockChain := &mock.ChainService{
 		State: beaconState,

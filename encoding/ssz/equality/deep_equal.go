@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -223,13 +223,13 @@ func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {
 	case reflect.Uint64:
 		switch v1.Type().Name() {
 		case "Epoch":
-			return v1.Interface().(types.Epoch) == v2.Interface().(types.Epoch)
+			return v1.Interface().(primitives.Epoch) == v2.Interface().(primitives.Epoch)
 		case "Slot":
-			return v1.Interface().(types.Slot) == v2.Interface().(types.Slot)
+			return v1.Interface().(primitives.Slot) == v2.Interface().(primitives.Slot)
 		case "ValidatorIndex":
-			return v1.Interface().(types.ValidatorIndex) == v2.Interface().(types.ValidatorIndex)
+			return v1.Interface().(primitives.ValidatorIndex) == v2.Interface().(primitives.ValidatorIndex)
 		case "CommitteeIndex":
-			return v1.Interface().(types.CommitteeIndex) == v2.Interface().(types.CommitteeIndex)
+			return v1.Interface().(primitives.CommitteeIndex) == v2.Interface().(primitives.CommitteeIndex)
 		}
 		return v1.Interface().(uint64) == v2.Interface().(uint64)
 	case reflect.Uint32:
