@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -37,7 +37,7 @@ import (
 //	     data=attestation.data,
 //	     signature=attestation.signature,
 //	 )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []types.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []primitives.ValidatorIndex) (*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "attestationutil.ConvertToIndexed")
 	defer span.End()
 
@@ -71,7 +71,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //	 """
 //	 committee = get_beacon_committee(state, data.slot, data.index)
 //	 return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(bf bitfield.Bitfield, committee []types.ValidatorIndex) ([]uint64, error) {
+func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorIndex) ([]uint64, error) {
 	if bf.Len() != uint64(len(committee)) {
 		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", bf.Len(), len(committee))
 	}

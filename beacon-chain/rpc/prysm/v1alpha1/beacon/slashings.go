@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v3/config/features"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -32,7 +32,7 @@ func (bs *Server) SubmitProposerSlashing(
 	}
 
 	return &ethpb.SubmitSlashingResponse{
-		SlashedIndices: []types.ValidatorIndex{req.Header_1.Header.ProposerIndex},
+		SlashedIndices: []primitives.ValidatorIndex{req.Header_1.Header.ProposerIndex},
 	}, nil
 }
 
@@ -56,9 +56,9 @@ func (bs *Server) SubmitAttesterSlashing(
 		}
 	}
 	indices := slice.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
-	slashedIndices := make([]types.ValidatorIndex, len(indices))
+	slashedIndices := make([]primitives.ValidatorIndex, len(indices))
 	for i, index := range indices {
-		slashedIndices[i] = types.ValidatorIndex(index)
+		slashedIndices[i] = primitives.ValidatorIndex(index)
 	}
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: slashedIndices,

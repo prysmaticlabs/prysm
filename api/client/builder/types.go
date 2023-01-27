@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -181,6 +182,10 @@ func (s Uint64String) MarshalText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d", s)), nil
 }
 
+type VersionResponse struct {
+	Version string `json:"version"`
+}
+
 type ExecHeaderResponse struct {
 	Version string `json:"version"`
 	Data    struct {
@@ -339,6 +344,186 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 		BlockHash:     p.BlockHash,
 		Transactions:  txs,
 	}, nil
+}
+
+type ExecHeaderResponseCapella struct {
+	Data struct {
+		Signature hexutil.Bytes      `json:"signature"`
+		Message   *BuilderBidCapella `json:"message"`
+	} `json:"data"`
+}
+
+func (ehr *ExecHeaderResponseCapella) ToProto() (*eth.SignedBuilderBidCapella, error) {
+	bb, err := ehr.Data.Message.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.SignedBuilderBidCapella{
+		Message:   bb,
+		Signature: ehr.Data.Signature,
+	}, nil
+}
+
+func (bb *BuilderBidCapella) ToProto() (*eth.BuilderBidCapella, error) {
+	header, err := bb.Header.ToProto()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.BuilderBidCapella{
+		Header: header,
+		Value:  bb.Value.SSZBytes(),
+		Pubkey: bb.Pubkey,
+	}, nil
+}
+
+func (h *ExecutionPayloadHeaderCapella) ToProto() (*v1.ExecutionPayloadHeaderCapella, error) {
+	return &v1.ExecutionPayloadHeaderCapella{
+		ParentHash:       h.ParentHash,
+		FeeRecipient:     h.FeeRecipient,
+		StateRoot:        h.StateRoot,
+		ReceiptsRoot:     h.ReceiptsRoot,
+		LogsBloom:        h.LogsBloom,
+		PrevRandao:       h.PrevRandao,
+		BlockNumber:      uint64(h.BlockNumber),
+		GasLimit:         uint64(h.GasLimit),
+		GasUsed:          uint64(h.GasUsed),
+		Timestamp:        uint64(h.Timestamp),
+		ExtraData:        h.ExtraData,
+		BaseFeePerGas:    h.BaseFeePerGas.SSZBytes(),
+		BlockHash:        h.BlockHash,
+		TransactionsRoot: h.TransactionsRoot,
+		WithdrawalsRoot:  h.WithdrawalsRoot,
+	}, nil
+}
+
+type BuilderBidCapella struct {
+	Header *ExecutionPayloadHeaderCapella `json:"header"`
+	Value  Uint256                        `json:"value"`
+	Pubkey hexutil.Bytes                  `json:"pubkey"`
+}
+
+type ExecutionPayloadHeaderCapella struct {
+	ParentHash       hexutil.Bytes `json:"parent_hash"`
+	FeeRecipient     hexutil.Bytes `json:"fee_recipient"`
+	StateRoot        hexutil.Bytes `json:"state_root"`
+	ReceiptsRoot     hexutil.Bytes `json:"receipts_root"`
+	LogsBloom        hexutil.Bytes `json:"logs_bloom"`
+	PrevRandao       hexutil.Bytes `json:"prev_randao"`
+	BlockNumber      Uint64String  `json:"block_number"`
+	GasLimit         Uint64String  `json:"gas_limit"`
+	GasUsed          Uint64String  `json:"gas_used"`
+	Timestamp        Uint64String  `json:"timestamp"`
+	ExtraData        hexutil.Bytes `json:"extra_data"`
+	BaseFeePerGas    Uint256       `json:"base_fee_per_gas"`
+	BlockHash        hexutil.Bytes `json:"block_hash"`
+	TransactionsRoot hexutil.Bytes `json:"transactions_root"`
+	WithdrawalsRoot  hexutil.Bytes `json:"withdrawals_root"`
+	*v1.ExecutionPayloadHeaderCapella
+}
+
+func (h *ExecutionPayloadHeaderCapella) MarshalJSON() ([]byte, error) {
+	type MarshalCaller ExecutionPayloadHeaderCapella
+	baseFeePerGas, err := sszBytesToUint256(h.ExecutionPayloadHeaderCapella.BaseFeePerGas)
+	if err != nil {
+		return []byte{}, errors.Wrapf(err, "invalid BaseFeePerGas")
+	}
+	return json.Marshal(&MarshalCaller{
+		ParentHash:       h.ExecutionPayloadHeaderCapella.ParentHash,
+		FeeRecipient:     h.ExecutionPayloadHeaderCapella.FeeRecipient,
+		StateRoot:        h.ExecutionPayloadHeaderCapella.StateRoot,
+		ReceiptsRoot:     h.ExecutionPayloadHeaderCapella.ReceiptsRoot,
+		LogsBloom:        h.ExecutionPayloadHeaderCapella.LogsBloom,
+		PrevRandao:       h.ExecutionPayloadHeaderCapella.PrevRandao,
+		BlockNumber:      Uint64String(h.ExecutionPayloadHeaderCapella.BlockNumber),
+		GasLimit:         Uint64String(h.ExecutionPayloadHeaderCapella.GasLimit),
+		GasUsed:          Uint64String(h.ExecutionPayloadHeaderCapella.GasUsed),
+		Timestamp:        Uint64String(h.ExecutionPayloadHeaderCapella.Timestamp),
+		ExtraData:        h.ExecutionPayloadHeaderCapella.ExtraData,
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        h.ExecutionPayloadHeaderCapella.BlockHash,
+		TransactionsRoot: h.ExecutionPayloadHeaderCapella.TransactionsRoot,
+		WithdrawalsRoot:  h.ExecutionPayloadHeaderCapella.WithdrawalsRoot,
+	})
+}
+
+func (h *ExecutionPayloadHeaderCapella) UnmarshalJSON(b []byte) error {
+	type UnmarshalCaller ExecutionPayloadHeaderCapella
+	uc := &UnmarshalCaller{}
+	if err := json.Unmarshal(b, uc); err != nil {
+		return err
+	}
+	ep := ExecutionPayloadHeaderCapella(*uc)
+	*h = ep
+	var err error
+	h.ExecutionPayloadHeaderCapella, err = h.ToProto()
+	return err
+}
+
+type ExecPayloadResponseCapella struct {
+	Version string                  `json:"version"`
+	Data    ExecutionPayloadCapella `json:"data"`
+}
+
+type ExecutionPayloadCapella struct {
+	ParentHash    hexutil.Bytes   `json:"parent_hash"`
+	FeeRecipient  hexutil.Bytes   `json:"fee_recipient"`
+	StateRoot     hexutil.Bytes   `json:"state_root"`
+	ReceiptsRoot  hexutil.Bytes   `json:"receipts_root"`
+	LogsBloom     hexutil.Bytes   `json:"logs_bloom"`
+	PrevRandao    hexutil.Bytes   `json:"prev_randao"`
+	BlockNumber   Uint64String    `json:"block_number"`
+	GasLimit      Uint64String    `json:"gas_limit"`
+	GasUsed       Uint64String    `json:"gas_used"`
+	Timestamp     Uint64String    `json:"timestamp"`
+	ExtraData     hexutil.Bytes   `json:"extra_data"`
+	BaseFeePerGas Uint256         `json:"base_fee_per_gas"`
+	BlockHash     hexutil.Bytes   `json:"block_hash"`
+	Transactions  []hexutil.Bytes `json:"transactions"`
+	Withdrawals   []Withdrawal    `json:"withdrawals"`
+}
+
+func (r *ExecPayloadResponseCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
+	return r.Data.ToProto()
+}
+
+func (p *ExecutionPayloadCapella) ToProto() (*v1.ExecutionPayloadCapella, error) {
+	txs := make([][]byte, len(p.Transactions))
+	for i := range p.Transactions {
+		txs[i] = p.Transactions[i]
+	}
+	withdrawals := make([]*v1.Withdrawal, len(p.Withdrawals))
+	for i, w := range p.Withdrawals {
+		withdrawals[i] = &v1.Withdrawal{
+			Index:          w.Index.Uint64(),
+			ValidatorIndex: types.ValidatorIndex(w.ValidatorIndex.Uint64()),
+			Address:        w.Address,
+			Amount:         w.Amount.Uint64(),
+		}
+	}
+	return &v1.ExecutionPayloadCapella{
+		ParentHash:    p.ParentHash,
+		FeeRecipient:  p.FeeRecipient,
+		StateRoot:     p.StateRoot,
+		ReceiptsRoot:  p.ReceiptsRoot,
+		LogsBloom:     p.LogsBloom,
+		PrevRandao:    p.PrevRandao,
+		BlockNumber:   uint64(p.BlockNumber),
+		GasLimit:      uint64(p.GasLimit),
+		GasUsed:       uint64(p.GasUsed),
+		Timestamp:     uint64(p.Timestamp),
+		ExtraData:     p.ExtraData,
+		BaseFeePerGas: p.BaseFeePerGas.SSZBytes(),
+		BlockHash:     p.BlockHash,
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+	}, nil
+}
+
+type Withdrawal struct {
+	Index          Uint256       `json:"index"`
+	ValidatorIndex Uint256       `json:"validator_index"`
+	Address        hexutil.Bytes `json:"address"`
+	Amount         Uint256       `json:"amount"`
 }
 
 type SignedBlindedBeaconBlockBellatrix struct {
@@ -648,6 +833,126 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 		VoluntaryExits:         sve,
 		SyncAggregate:          &SyncAggregate{b.BlindedBeaconBlockBodyBellatrix.SyncAggregate},
 		ExecutionPayloadHeader: &ExecutionPayloadHeader{ExecutionPayloadHeader: b.BlindedBeaconBlockBodyBellatrix.ExecutionPayloadHeader},
+	})
+}
+
+type SignedBLSToExecutionChange struct {
+	*eth.SignedBLSToExecutionChange
+}
+
+func (ch *SignedBLSToExecutionChange) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Message   *BLSToExecutionChange `json:"message"`
+		Signature hexutil.Bytes         `json:"signature"`
+	}{
+		Signature: ch.Signature,
+		Message:   &BLSToExecutionChange{ch.Message},
+	})
+}
+
+type BLSToExecutionChange struct {
+	*eth.BLSToExecutionChange
+}
+
+func (ch *BLSToExecutionChange) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		ValidatorIndex     string        `json:"validator_index"`
+		FromBlsPubkey      hexutil.Bytes `json:"from_bls_pubkey"`
+		ToExecutionAddress hexutil.Bytes `json:"to_execution_address"`
+	}{
+		ValidatorIndex:     fmt.Sprintf("%d", ch.ValidatorIndex),
+		FromBlsPubkey:      ch.FromBlsPubkey,
+		ToExecutionAddress: ch.ToExecutionAddress,
+	})
+}
+
+type SignedBlindedBeaconBlockCapella struct {
+	*eth.SignedBlindedBeaconBlockCapella
+}
+
+type BlindedBeaconBlockCapella struct {
+	*eth.BlindedBeaconBlockCapella
+}
+
+type BlindedBeaconBlockBodyCapella struct {
+	*eth.BlindedBeaconBlockBodyCapella
+}
+
+func (b *SignedBlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Message   *BlindedBeaconBlockCapella `json:"message"`
+		Signature hexutil.Bytes              `json:"signature"`
+	}{
+		Message:   &BlindedBeaconBlockCapella{b.Block},
+		Signature: b.Signature,
+	})
+}
+
+func (b *BlindedBeaconBlockCapella) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Slot          string                         `json:"slot"`
+		ProposerIndex string                         `json:"proposer_index"`
+		ParentRoot    hexutil.Bytes                  `json:"parent_root"`
+		StateRoot     hexutil.Bytes                  `json:"state_root"`
+		Body          *BlindedBeaconBlockBodyCapella `json:"body"`
+	}{
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
+		ParentRoot:    b.ParentRoot,
+		StateRoot:     b.StateRoot,
+		Body:          &BlindedBeaconBlockBodyCapella{b.Body},
+	})
+}
+
+func (b *BlindedBeaconBlockBodyCapella) MarshalJSON() ([]byte, error) {
+	sve := make([]*SignedVoluntaryExit, len(b.VoluntaryExits))
+	for i := range b.VoluntaryExits {
+		sve[i] = &SignedVoluntaryExit{SignedVoluntaryExit: b.VoluntaryExits[i]}
+	}
+	deps := make([]*Deposit, len(b.Deposits))
+	for i := range b.Deposits {
+		deps[i] = &Deposit{Deposit: b.Deposits[i]}
+	}
+	atts := make([]*Attestation, len(b.Attestations))
+	for i := range b.Attestations {
+		atts[i] = &Attestation{Attestation: b.Attestations[i]}
+	}
+	atsl := make([]*AttesterSlashing, len(b.AttesterSlashings))
+	for i := range b.AttesterSlashings {
+		atsl[i] = &AttesterSlashing{AttesterSlashing: b.AttesterSlashings[i]}
+	}
+	pros := make([]*ProposerSlashing, len(b.ProposerSlashings))
+	for i := range b.ProposerSlashings {
+		pros[i] = &ProposerSlashing{ProposerSlashing: b.ProposerSlashings[i]}
+	}
+	chs := make([]*SignedBLSToExecutionChange, len(b.BlsToExecutionChanges))
+	for i := range b.BlsToExecutionChanges {
+		chs[i] = &SignedBLSToExecutionChange{SignedBLSToExecutionChange: b.BlsToExecutionChanges[i]}
+	}
+	return json.Marshal(struct {
+		RandaoReveal           hexutil.Bytes                  `json:"randao_reveal"`
+		Eth1Data               *Eth1Data                      `json:"eth1_data"`
+		Graffiti               hexutil.Bytes                  `json:"graffiti"`
+		ProposerSlashings      []*ProposerSlashing            `json:"proposer_slashings"`
+		AttesterSlashings      []*AttesterSlashing            `json:"attester_slashings"`
+		Attestations           []*Attestation                 `json:"attestations"`
+		Deposits               []*Deposit                     `json:"deposits"`
+		VoluntaryExits         []*SignedVoluntaryExit         `json:"voluntary_exits"`
+		BLSToExecutionChanges  []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes"`
+		SyncAggregate          *SyncAggregate                 `json:"sync_aggregate"`
+		ExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"execution_payload_header"`
+	}{
+		RandaoReveal:           b.RandaoReveal,
+		Eth1Data:               &Eth1Data{b.Eth1Data},
+		Graffiti:               b.Graffiti,
+		ProposerSlashings:      pros,
+		AttesterSlashings:      atsl,
+		Attestations:           atts,
+		Deposits:               deps,
+		VoluntaryExits:         sve,
+		BLSToExecutionChanges:  chs,
+		SyncAggregate:          &SyncAggregate{b.SyncAggregate},
+		ExecutionPayloadHeader: &ExecutionPayloadHeaderCapella{ExecutionPayloadHeaderCapella: b.ExecutionPayloadHeader},
 	})
 }
 

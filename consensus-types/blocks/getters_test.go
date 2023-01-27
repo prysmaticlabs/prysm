@@ -6,7 +6,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -142,13 +142,13 @@ func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
 func Test_BeaconBlock_Slot(t *testing.T) {
 	b := &BeaconBlock{}
 	b.SetSlot(128)
-	assert.Equal(t, types.Slot(128), b.Slot())
+	assert.Equal(t, primitives.Slot(128), b.Slot())
 }
 
 func Test_BeaconBlock_ProposerIndex(t *testing.T) {
 	b := &BeaconBlock{}
 	b.SetProposerIndex(128)
-	assert.Equal(t, types.ValidatorIndex(128), b.ProposerIndex())
+	assert.Equal(t, primitives.ValidatorIndex(128), b.ProposerIndex())
 }
 
 func Test_BeaconBlock_ParentRoot(t *testing.T) {

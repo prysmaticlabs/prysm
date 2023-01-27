@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -65,7 +65,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	headBlock, err := restoredDb.HeadBlock(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(5000), headBlock.Block().Slot(), "Restored database has incorrect data")
+	assert.Equal(t, primitives.Slot(5000), headBlock.Block().Slot(), "Restored database has incorrect data")
 	assert.LogsContain(t, logHook, "Restore completed successfully")
 
 }

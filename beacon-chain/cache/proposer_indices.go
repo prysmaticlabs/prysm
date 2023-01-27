@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -76,7 +76,7 @@ func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 }
 
 // ProposerIndices returns the proposer indices of a block root seed.
-func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
+func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]primitives.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.proposerIndicesCache.GetByKey(key(r))

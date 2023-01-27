@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -98,7 +98,7 @@ func ProcessBlockHeader(
 func ProcessBlockHeaderNoVerify(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	slot types.Slot, proposerIndex types.ValidatorIndex,
+	slot primitives.Slot, proposerIndex primitives.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
 ) (state.BeaconState, error) {
 	if beaconState.Slot() != slot {

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -21,8 +21,8 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 		name                 string
 		currentSyncCommittee *ethpb.SyncCommittee
 		nextSyncCommittee    *ethpb.SyncCommittee
-		currentSyncMap       map[types.ValidatorIndex][]types.CommitteeIndex
-		nextSyncMap          map[types.ValidatorIndex][]types.CommitteeIndex
+		currentSyncMap       map[primitives.ValidatorIndex][]primitives.CommitteeIndex
+		nextSyncMap          map[primitives.ValidatorIndex][]primitives.CommitteeIndex
 	}{
 		{
 			name: "only current epoch",
@@ -30,12 +30,12 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
 			}),
 			nextSyncCommittee: util.ConvertToCommittee([][]byte{}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 				2: {},
 				3: {},
@@ -47,12 +47,12 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 			nextSyncCommittee: util.ConvertToCommittee([][]byte{
 				pubKeys[1], pubKeys[2], pubKeys[3], pubKeys[2], pubKeys[2],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 				2: {},
 				3: {},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
@@ -74,12 +74,12 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 				pubKeys[4],
 				pubKeys[7],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				7: {0, 4},
 				6: {1},
 				5: {2},
@@ -102,12 +102,12 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 				pubKeys[2],
 				pubKeys[1],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {0},
 				2: {1, 3, 4},
 				3: {2},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {1, 4},
 				2: {0, 3},
 				3: {2},
@@ -127,10 +127,10 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				100: {0, 1, 2, 3},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				100: {0, 1, 2, 3},
 			},
 		},
@@ -148,10 +148,10 @@ func TestSyncCommitteeCache_CanUpdateAndRetrieve(t *testing.T) {
 				pubKeys[100],
 				pubKeys[100],
 			}),
-			currentSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			currentSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 			},
-			nextSyncMap: map[types.ValidatorIndex][]types.CommitteeIndex{
+			nextSyncMap: map[primitives.ValidatorIndex][]primitives.CommitteeIndex{
 				1: {},
 			},
 		},

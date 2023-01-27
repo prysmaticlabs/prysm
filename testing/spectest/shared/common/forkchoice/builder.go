@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -44,7 +44,7 @@ func (bb *Builder) Tick(t testing.TB, tick int64) {
 	for lastSlot < currentSlot {
 		lastSlot++
 		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - int64(params.BeaconConfig().SecondsPerSlot*lastSlot)))
-		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), types.Slot(lastSlot)))
+		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), primitives.Slot(lastSlot)))
 	}
 	if tick > int64(params.BeaconConfig().SecondsPerSlot*lastSlot) {
 		bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
@@ -124,11 +124,11 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		r, err := bb.service.HeadRoot(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, common.FromHex(c.Head.Root), r)
-		require.Equal(t, types.Slot(c.Head.Slot), bb.service.HeadSlot())
+		require.Equal(t, primitives.Slot(c.Head.Slot), bb.service.HeadSlot())
 	}
 	if c.JustifiedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
-			Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
+			Epoch: primitives.Epoch(c.JustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.JustifiedCheckPoint.Root),
 		}
 		got := bb.service.CurrentJustifiedCheckpt()
@@ -136,7 +136,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.BestJustifiedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
-			Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
+			Epoch: primitives.Epoch(c.BestJustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
 		}
 		got := bb.service.BestJustifiedCheckpt()
@@ -144,7 +144,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	if c.FinalizedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
-			Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
+			Epoch: primitives.Epoch(c.FinalizedCheckPoint.Epoch),
 			Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 		}
 		got := bb.service.FinalizedCheckpt()

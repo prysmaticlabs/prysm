@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -39,7 +39,7 @@ func TestProposer_ProposerAtts_sortByProfitability(t *testing.T) {
 
 func TestProposer_ProposerAtts_sortByProfitabilityUsingMaxCover(t *testing.T) {
 	type testData struct {
-		slot types.Slot
+		slot primitives.Slot
 		bits bitfield.Bitlist
 	}
 	getAtts := func(data []testData) proposerAtts {

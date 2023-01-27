@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -341,7 +341,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		if i%2 == 0 {
-			assert.NoError(t, st.UpdateBalancesAtIndex(types.ValidatorIndex(i), 1000))
+			assert.NoError(t, st.UpdateBalancesAtIndex(primitives.ValidatorIndex(i), 1000))
 		}
 		if i%3 == 0 {
 			assert.NoError(t, st.AppendBalance(1000))
@@ -349,7 +349,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][nativetypes.Balances])
+	newRt := bytesutil.ToBytes32(st.merkleLayers[0][types.Balances])
 	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -123,8 +123,8 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 // Duplicate bits are counted only once, using max-cover algorithm.
 func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 	// Separate attestations by slot, as slot number takes higher precedence when sorting.
-	var slots []types.Slot
-	attsBySlot := map[types.Slot]proposerAtts{}
+	var slots []primitives.Slot
+	attsBySlot := map[primitives.Slot]proposerAtts{}
 	for _, att := range a {
 		if _, ok := attsBySlot[att.Data.Slot]; !ok {
 			slots = append(slots, att.Data.Slot)

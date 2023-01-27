@@ -8,7 +8,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 )
 
@@ -37,7 +37,7 @@ func newSubnetIDs() *subnetIDs {
 }
 
 // AddAttesterSubnetID adds the subnet index for subscribing subnet for the attester of a given slot.
-func (s *subnetIDs) AddAttesterSubnetID(slot types.Slot, subnetID uint64) {
+func (s *subnetIDs) AddAttesterSubnetID(slot primitives.Slot, subnetID uint64) {
 	s.attesterLock.Lock()
 	defer s.attesterLock.Unlock()
 
@@ -50,7 +50,7 @@ func (s *subnetIDs) AddAttesterSubnetID(slot types.Slot, subnetID uint64) {
 }
 
 // GetAttesterSubnetIDs gets the subnet IDs for subscribed subnets for attesters of the slot.
-func (s *subnetIDs) GetAttesterSubnetIDs(slot types.Slot) []uint64 {
+func (s *subnetIDs) GetAttesterSubnetIDs(slot primitives.Slot) []uint64 {
 	s.attesterLock.RLock()
 	defer s.attesterLock.RUnlock()
 
@@ -65,7 +65,7 @@ func (s *subnetIDs) GetAttesterSubnetIDs(slot types.Slot) []uint64 {
 }
 
 // AddAggregatorSubnetID adds the subnet ID for subscribing subnet for the aggregator of a given slot.
-func (s *subnetIDs) AddAggregatorSubnetID(slot types.Slot, subnetID uint64) {
+func (s *subnetIDs) AddAggregatorSubnetID(slot primitives.Slot, subnetID uint64) {
 	s.aggregatorLock.Lock()
 	defer s.aggregatorLock.Unlock()
 
@@ -78,7 +78,7 @@ func (s *subnetIDs) AddAggregatorSubnetID(slot types.Slot, subnetID uint64) {
 }
 
 // GetAggregatorSubnetIDs gets the subnet IDs for subscribing subnet for aggregator of the slot.
-func (s *subnetIDs) GetAggregatorSubnetIDs(slot types.Slot) []uint64 {
+func (s *subnetIDs) GetAggregatorSubnetIDs(slot primitives.Slot) []uint64 {
 	s.aggregatorLock.RLock()
 	defer s.aggregatorLock.RUnlock()
 
