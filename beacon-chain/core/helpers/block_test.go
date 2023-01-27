@@ -77,7 +77,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	for i := uint64(0); i < uint64(params.BeaconConfig().SlotsPerHistoricalRoot); i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		BlockRoots: blockRoots,
 	}
 
@@ -110,8 +110,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-		s, err := state.InitializeFromProtoPhase0(state)
+		st.Slot = tt.stateSlot
+		s, err := state.InitializeFromProtoPhase0(st)
 		require.NoError(t, err)
 		_, err = helpers.BlockRootAtSlot(s, tt.slot)
 		assert.ErrorContains(t, tt.expectedErr, err)

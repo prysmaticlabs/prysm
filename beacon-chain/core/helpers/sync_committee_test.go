@@ -361,18 +361,18 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 }
 
 func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
-	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 1,
 	})
 	require.NoError(t, err)
-	err = UpdateSyncCommitteeCache(state)
+	err = UpdateSyncCommitteeCache(st)
 	require.ErrorContains(t, "not at the end of the epoch to update cache", err)
 
-	state, err = state.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	st, err = state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch - 1,
 	})
 	require.NoError(t, err)
-	err = UpdateSyncCommitteeCache(state)
+	err = UpdateSyncCommitteeCache(st)
 	require.ErrorContains(t, "not at sync committee period boundary to update cache", err)
 }
 

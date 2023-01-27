@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"testing"
 
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
@@ -22,7 +22,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ctx := context.Background()
 	genesis := setupGenesisState(t, 64)
-	customState, err := statenative.InitializeFromProtoPhase0(genesis)
+	customState, err := state.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
 	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
@@ -31,7 +31,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 
 	r1, err := customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	beaconState, err := statenative.InitializeFromProtoPhase0(genesis)
+	beaconState, err := state.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	r2, err := beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	r1, err = customState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis.Balances = balances
-	beaconState, err = statenative.InitializeFromProtoPhase0(genesis)
+	beaconState, err = state.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	r2, err = beaconState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	params.SetupTestConfigCleanup(b)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
-	st, err := statenative.InitializeFromProtoPhase0(genesis)
+	st, err := state.InitializeFromProtoPhase0(genesis)
 	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
@@ -179,7 +179,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
-	a, err := statenative.InitializeFromProtoPhase0(genesis)
+	a, err := state.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	b := a.Copy()
 
@@ -216,7 +216,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(t, 64)
-	a, err := statenative.InitializeFromProtoPhase0(genesis)
+	a, err := state.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
 	wantedFork := &ethpb.Fork{
 		PreviousVersion: []byte{'a', 'b', 'c'},
@@ -225,7 +225,7 @@ func TestForkManualCopy_OK(t *testing.T) {
 	}
 	require.NoError(t, a.SetFork(wantedFork))
 
-	pbState, err := statenative.ProtobufBeaconStatePhase0(a.ToProtoUnsafe())
+	pbState, err := state.ProtobufBeaconStatePhase0(a.ToProtoUnsafe())
 	require.NoError(t, err)
 	require.DeepEqual(t, pbState.Fork, wantedFork)
 }
