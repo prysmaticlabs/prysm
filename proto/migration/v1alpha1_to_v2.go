@@ -2,7 +2,7 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -316,8 +316,8 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 	return v2Block, nil
 }
 
-// BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconState, error) {
+// BeaconStateAltairToProto converts a types.BeaconState object to its protobuf equivalent.
+func BeaconStateAltairToProto(altairState types.BeaconState) (*ethpbv2.BeaconState, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()
@@ -435,8 +435,8 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 	return result, nil
 }
 
-// BeaconStateBellatrixToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBellatrix, error) {
+// BeaconStateBellatrixToProto converts a types.BeaconState object to its protobuf equivalent.
+func BeaconStateBellatrixToProto(st types.BeaconState) (*ethpbv2.BeaconStateBellatrix, error) {
 	sourceFork := st.Fork()
 	sourceLatestBlockHeader := st.LatestBlockHeader()
 	sourceEth1Data := st.Eth1Data()
@@ -578,8 +578,8 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 	return result, nil
 }
 
-// BeaconStateCapellaToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapella, error) {
+// BeaconStateCapellaToProto converts a types.BeaconState object to its protobuf equivalent.
+func BeaconStateCapellaToProto(st types.BeaconState) (*ethpbv2.BeaconStateCapella, error) {
 	sourceFork := st.Fork()
 	sourceLatestBlockHeader := st.LatestBlockHeader()
 	sourceEth1Data := st.Eth1Data()

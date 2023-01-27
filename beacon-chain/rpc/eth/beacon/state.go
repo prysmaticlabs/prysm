@@ -7,9 +7,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	eth2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -179,7 +179,7 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 	}, nil
 }
 
-func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (state.BeaconState, error) {
+func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (types.BeaconState, error) {
 	if req.epoch != nil {
 		slot, err := slots.EpochStart(*req.epoch)
 		if err != nil {

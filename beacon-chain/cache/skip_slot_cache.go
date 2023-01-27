@@ -9,8 +9,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"go.opencensus.io/trace"
 )
 
@@ -54,7 +54,7 @@ func (c *SkipSlotCache) Disable() {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState, error) {
+func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "skipSlotCache.Get")
 	defer span.End()
 	if c.disabled {
@@ -94,7 +94,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, r [32]byte) (state.BeaconState,
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
 		span.AddAttributes(trace.BoolAttribute("hit", true))
-		return item.(state.BeaconState).Copy(), nil
+		return item.(types.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
 	span.AddAttributes(trace.BoolAttribute("hit", false))
@@ -132,7 +132,7 @@ func (c *SkipSlotCache) MarkNotInProgress(r [32]byte) {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state state.BeaconState) {
+func (c *SkipSlotCache) Put(_ context.Context, r [32]byte, state types.BeaconState) {
 	if c.disabled {
 		return
 	}

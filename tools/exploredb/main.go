@@ -19,9 +19,9 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -58,7 +58,7 @@ type bucketStat struct {
 
 // used to parallelize state bucket processing
 type modifiedState struct {
-	state     state.BeaconState
+	state     types.BeaconState
 	key       []byte
 	valueSize uint64
 	rowCount  uint64

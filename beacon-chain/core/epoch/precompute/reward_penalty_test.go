@@ -9,11 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -38,7 +39,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	}
 	base.PreviousEpochAttestations = atts
 
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	vp, bp, err := New(context.Background(), beaconState)
@@ -81,7 +82,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	slashedAttestedIndices := []primitives.ValidatorIndex{1413}
 	for _, i := range slashedAttestedIndices {
@@ -165,7 +166,7 @@ func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	pVals, pBal, err := New(context.Background(), beaconState)
@@ -203,7 +204,7 @@ func TestAttestationDeltas_ZeroInclusionDelay(t *testing.T) {
 		}
 	}
 	base.PreviousEpochAttestations = atts
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	pVals, pBal, err := New(context.Background(), beaconState)
@@ -229,7 +230,7 @@ func TestProcessRewardsAndPenaltiesPrecompute_SlashedInactivePenalty(t *testing.
 	}
 	base.PreviousEpochAttestations = atts
 
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
 
@@ -303,7 +304,7 @@ func TestProposerDeltaPrecompute_HappyCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	proposerIndex := primitives.ValidatorIndex(1)
@@ -325,7 +326,7 @@ func TestProposerDeltaPrecompute_ValidatorIndexOutOfRange(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	proposerIndex := primitives.ValidatorIndex(validatorCount)
@@ -341,7 +342,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(10)
 	base := buildState(e, validatorCount)
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	proposerIndex := primitives.ValidatorIndex(1)
@@ -363,7 +364,7 @@ func TestProposerDeltaPrecompute_SlashedCase(t *testing.T) {
 //	  total_balance = get_total_active_balance(state)
 //	  effective_balance = state.validators[index].effective_balance
 //	  return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
-func baseReward(state state.ReadOnlyBeaconState, index primitives.ValidatorIndex) (uint64, error) {
+func baseReward(state types.ReadOnlyBeaconState, index primitives.ValidatorIndex) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(state)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")

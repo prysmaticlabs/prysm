@@ -17,11 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -786,10 +786,10 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	}
 
 	// Verify validators at the beginning to return early if request is invalid.
-	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	validators := make([]types.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
-		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
+		if outOfRangeErr, ok := err.(*state.ValidatorIndexOutOfRangeError); ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator ID: %v", outOfRangeErr)
 		}
 		validators[i] = val
@@ -861,7 +861,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	currEpoch := slots.ToEpoch(s.Slot())
-	validators := make([]state.ReadOnlyValidator, len(req.Data))
+	validators := make([]types.ReadOnlyValidator, len(req.Data))
 	for i, sub := range req.Data {
 		val, err := s.ValidatorAtIndexReadOnly(sub.ValidatorIndex)
 		if err != nil {
@@ -1002,7 +1002,7 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 		return nil, status.Error(codes.InvalidArgument, "Requested epoch cannot be in the future")
 	}
 
-	var st state.BeaconState
+	var st types.BeaconState
 	if req.Epoch == currEpoch {
 		st = headSt
 		participation, err = st.CurrentEpochParticipation()
@@ -1048,7 +1048,7 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
-func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+func attestationDependentRoot(s types.BeaconState, epoch primitives.Epoch) ([]byte, error) {
 	var dependentRootSlot primitives.Slot
 	if epoch <= 1 {
 		dependentRootSlot = 0
@@ -1068,7 +1068,7 @@ func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]by
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+func proposalDependentRoot(s types.BeaconState, epoch primitives.Epoch) ([]byte, error) {
 	var dependentRootSlot primitives.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -1109,7 +1109,7 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives
 
 func syncCommitteeDuties(
 	valIndices []primitives.ValidatorIndex,
-	st state.BeaconState,
+	st types.BeaconState,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
 ) ([]*ethpbv2.SyncCommitteeDuty, error) {
 	duties := make([]*ethpbv2.SyncCommitteeDuty, 0)

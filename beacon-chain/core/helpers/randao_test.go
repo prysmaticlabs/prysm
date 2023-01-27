@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -20,7 +20,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
 		epoch     primitives.Epoch
@@ -54,7 +54,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
 		epoch     primitives.Epoch
@@ -95,7 +95,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 		randaoMixes[i] = intInBytes
 	}
 	slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MinSeedLookahead * 10))
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		RandaoMixes: randaoMixes,
 		Slot:        slot,
 	})

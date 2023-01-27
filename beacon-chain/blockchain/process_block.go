@@ -14,12 +14,12 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -282,7 +282,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return nil
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionData, error) {
+func getStateVersionAndPayload(st types.BeaconState) (int, interfaces.ExecutionData, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
@@ -345,7 +345,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	var set *bls.SignatureBatch
-	boundaries := make(map[[32]byte]state.BeaconState)
+	boundaries := make(map[[32]byte]types.BeaconState)
 	for i, b := range blks {
 		v, h, err := getStateVersionAndPayload(preState)
 		if err != nil {
@@ -473,7 +473,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 }
 
 // Epoch boundary bookkeeping such as logging epoch summaries.
-func (s *Service) handleEpochBoundary(ctx context.Context, postState state.BeaconState) error {
+func (s *Service) handleEpochBoundary(ctx context.Context, postState types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
 
@@ -519,7 +519,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 // This feeds in the block to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
+func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
@@ -536,7 +536,7 @@ func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfac
 
 // This feeds in the attestations included in the block to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.BeaconBlock, st state.BeaconState) error {
+func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.BeaconBlock, st types.BeaconState) error {
 	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body().Attestations() {
 		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
@@ -570,7 +570,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
 	if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {

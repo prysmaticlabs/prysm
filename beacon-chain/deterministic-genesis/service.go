@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
@@ -69,7 +69,7 @@ func (s *Service) Start() {
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
 			log.WithError(err).Fatal("Could not unmarshal pre-loaded state")
 		}
-		genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
+		genesisTrie, err := state.InitializeFromProtoPhase0(genesisState)
 		if err != nil {
 			log.WithError(err).Fatal("Could not get state trie")
 		}
@@ -84,7 +84,7 @@ func (s *Service) Start() {
 	if err != nil {
 		log.WithError(err).Fatal("Could not generate interop genesis state")
 	}
-	genesisTrie, err := state_native.InitializeFromProtoPhase0(genesisState)
+	genesisTrie, err := state.InitializeFromProtoPhase0(genesisState)
 	if err != nil {
 		log.WithError(err).Fatal("Could not get state trie")
 	}
@@ -124,8 +124,8 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (_ *Service) PreGenesisState() state.BeaconState {
-	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+func (_ *Service) PreGenesisState() types.BeaconState {
+	s, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	if err != nil {
 		panic("could not initialize state")
 	}
@@ -157,7 +157,7 @@ func (_ *Service) NonFinalizedDeposits(_ context.Context, _ int64, _ *big.Int) [
 	return []*ethpb.Deposit{}
 }
 
-func (s *Service) saveGenesisState(ctx context.Context, genesisState state.BeaconState) error {
+func (s *Service) saveGenesisState(ctx context.Context, genesisState types.BeaconState) error {
 	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return err
 	}

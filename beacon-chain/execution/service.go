@@ -26,10 +26,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	statetypes "github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -69,7 +69,7 @@ var (
 // of the beacon chain for usage across various services.
 type ChainStartFetcher interface {
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() state.BeaconState
+	PreGenesisState() statetypes.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -126,7 +126,7 @@ type config struct {
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
 	headers                 []string
-	finalizedStateAtStartup state.BeaconState
+	finalizedStateAtStartup statetypes.BeaconState
 }
 
 // Service fetches important information about the canonical
@@ -153,7 +153,7 @@ type Service struct {
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
-	preGenesisState         state.BeaconState
+	preGenesisState         statetypes.BeaconState
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
@@ -260,7 +260,7 @@ func (s *Service) Stop() error {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &native.State{}
+	s.preGenesisState = &state.State{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -270,7 +270,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() state.BeaconState {
+func (s *Service) PreGenesisState() statetypes.BeaconState {
 	return s.preGenesisState
 }
 
@@ -743,7 +743,7 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	}
 	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
-		s.preGenesisState, err = native.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
+		s.preGenesisState, err = state.InitializeFromProtoPhase0(eth1DataInDB.BeaconState)
 		if err != nil {
 			return errors.Wrap(err, "Could not initialize state trie")
 		}
@@ -796,7 +796,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
+		pbState, err := state.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
 		if err != nil {
 			return err
 		}

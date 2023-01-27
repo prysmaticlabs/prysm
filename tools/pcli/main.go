@@ -11,8 +11,8 @@ import (
 	"github.com/kr/pretty"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prefixed "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
@@ -161,7 +161,7 @@ func main() {
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
+				stateObj, err := state.InitializeFromProtoPhase0(preState)
 				if err != nil {
 					log.Fatal(err)
 				}

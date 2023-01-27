@@ -12,10 +12,10 @@ import (
 	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
@@ -27,10 +27,10 @@ import (
 // WARNING Blocks passed to the function must be in decreasing slots order.
 func (_ *State) replayBlocks(
 	ctx context.Context,
-	state state.BeaconState,
+	state types.BeaconState,
 	signed []interfaces.SignedBeaconBlock,
 	targetSlot primitives.Slot,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.replayBlocks")
 	defer span.End()
 	var err error
@@ -141,9 +141,9 @@ func (s *State) loadBlocks(ctx context.Context, startSlot, endSlot primitives.Sl
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
-	state state.BeaconState,
+	state types.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -175,7 +175,7 @@ func executeStateTransitionStateGen(
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
 //
 // WARNING: This method should not be used for future slot.
-func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
+func ReplayProcessSlots(ctx context.Context, state types.BeaconState, slot primitives.Slot) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ReplayProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {

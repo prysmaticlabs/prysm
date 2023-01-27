@@ -13,12 +13,12 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -268,7 +268,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 //	   otherwise:
 //	      [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
 //	       node verification of the block.body.execution_payload).
-func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
+func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState types.BeaconState, blk interfaces.BeaconBlock) error {
 	// Error if block and state are not the same version
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")

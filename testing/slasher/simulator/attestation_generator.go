@@ -6,9 +6,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -108,7 +108,7 @@ func (s *Simulator) generateAttestationsForSlot(
 }
 
 func (s *Simulator) aggregateSigForAttestation(
-	beaconState state.BeaconState, att *ethpb.IndexedAttestation,
+	beaconState types.BeaconState, att *ethpb.IndexedAttestation,
 ) (bls.Signature, error) {
 	domain, err := signing.Domain(
 		beaconState.Fork(),

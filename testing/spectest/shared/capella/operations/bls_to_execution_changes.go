@@ -8,8 +8,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -35,7 +35,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 			body := &ethpb.BeaconBlockBodyCapella{
 				BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{change},
 			}
-			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s types.BeaconState, b interfaces.SignedBeaconBlock) (types.BeaconState, error) {
 				st, err := blocks.ProcessBLSToExecutionChanges(s, b)
 				if err != nil {
 					return nil, err

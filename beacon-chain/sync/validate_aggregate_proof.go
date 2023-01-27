@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -231,7 +231,7 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 }
 
 // This validates the aggregator's index in state is within the beacon committee.
-func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) error {
+func validateIndexInCommittee(ctx context.Context, bs types.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
@@ -257,7 +257,7 @@ func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState,
 // It does not verify the selection proof, it returns the signature set of selection proof which can be used for batch verify.
 func validateSelectionIndex(
 	ctx context.Context,
-	bs state.ReadOnlyBeaconState,
+	bs types.ReadOnlyBeaconState,
 	data *ethpb.AttestationData,
 	validatorIndex primitives.ValidatorIndex,
 	proof []byte,
@@ -307,7 +307,7 @@ func validateSelectionIndex(
 }
 
 // This returns aggregator signature set which can be used to batch verify.
-func aggSigSet(s state.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureBatch, error) {
+func aggSigSet(s types.ReadOnlyBeaconState, a *ethpb.SignedAggregateAttestationAndProof) (*bls.SignatureBatch, error) {
 	v, err := s.ValidatorAtIndex(a.Message.AggregatorIndex)
 	if err != nil {
 		return nil, err

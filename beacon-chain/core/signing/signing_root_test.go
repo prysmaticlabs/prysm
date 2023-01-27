@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -51,19 +51,19 @@ func TestSigningRoot_ComputeDomain(t *testing.T) {
 func TestSigningRoot_ComputeDomainAndSign(t *testing.T) {
 	tests := []struct {
 		name       string
-		genState   func(t *testing.T) (state.BeaconState, []bls.SecretKey)
-		genBlock   func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock
+		genState   func(t *testing.T) (types.BeaconState, []bls.SecretKey)
+		genBlock   func(t *testing.T, st types.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock
 		domainType [4]byte
 		want       []byte
 	}{
 		{
 			name: "block proposer",
-			genState: func(t *testing.T) (state.BeaconState, []bls.SecretKey) {
+			genState: func(t *testing.T) (types.BeaconState, []bls.SecretKey) {
 				beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 				require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
 				return beaconState, privKeys
 			},
-			genBlock: func(t *testing.T, st state.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock {
+			genBlock: func(t *testing.T, st types.BeaconState, keys []bls.SecretKey) *ethpb.SignedBeaconBlock {
 				block, err := util.GenerateFullBlock(st, keys, nil, 1)
 				require.NoError(t, err)
 				return block

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
@@ -26,7 +26,7 @@ func RunHistoricalSummariesUpdateTests(t *testing.T, config string) {
 	}
 }
 
-func processHistoricalSummariesUpdateWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+func processHistoricalSummariesUpdateWrapper(t *testing.T, st types.BeaconState) (types.BeaconState, error) {
 	st, err := epoch.ProcessHistoricalDataUpdate(st)
 	require.NoError(t, err, "Could not process historical summary updates")
 	return st, nil

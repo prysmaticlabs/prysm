@@ -7,10 +7,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -19,7 +20,7 @@ import (
 )
 
 func TestSyncCommitteeIndices_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) state.BeaconState {
+	getState := func(t *testing.T, count uint64) types.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -27,7 +28,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+		st, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -36,7 +37,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 	}
 
 	type args struct {
-		state state.BeaconState
+		state types.BeaconState
 		epoch primitives.Epoch
 	}
 	tests := []struct {
@@ -86,7 +87,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 
 func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 	helpers.ClearCache()
-	getState := func(t *testing.T, count uint64) state.BeaconState {
+	getState := func(t *testing.T, count uint64) types.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -94,7 +95,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+		st, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -120,7 +121,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 }
 
 func TestSyncCommittee_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) state.BeaconState {
+	getState := func(t *testing.T, count uint64) types.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			blsKey, err := bls.RandKey()
@@ -131,7 +132,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+		st, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
@@ -140,7 +141,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 	}
 
 	type args struct {
-		state state.BeaconState
+		state types.BeaconState
 		epoch primitives.Epoch
 	}
 	tests := []struct {
@@ -367,7 +368,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 	}
 }
 
-func getState(t *testing.T, count uint64) state.BeaconState {
+func getState(t *testing.T, count uint64) types.BeaconState {
 	validators := make([]*ethpb.Validator, count)
 	for i := 0; i < len(validators); i++ {
 		blsKey, err := bls.RandKey()
@@ -378,7 +379,7 @@ func getState(t *testing.T, count uint64) state.BeaconState {
 			PublicKey:        blsKey.PublicKey().Marshal(),
 		}
 	}
-	st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	st, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})

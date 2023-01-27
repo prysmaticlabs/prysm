@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -53,7 +53,7 @@ type HeadFetcher interface {
 	HeadSlot() primitives.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
-	HeadState(ctx context.Context) (state.BeaconState, error)
+	HeadState(ctx context.Context) (types.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
@@ -171,7 +171,7 @@ func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, 
 // HeadState returns the head state of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head state from DB.
-func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
+func (s *Service) HeadState(ctx context.Context) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
 	defer span.End()
 	s.headLock.RLock()

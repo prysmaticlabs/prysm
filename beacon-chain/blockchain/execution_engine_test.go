@@ -14,8 +14,6 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	bstate "github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -80,7 +78,7 @@ func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
 
 	// Intentionally generate a bad state such that `hash_tree_root` fails during `process_slot`
-	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	s, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
 	arg := &notifyForkchoiceUpdateArg{
 		headState: s,
@@ -545,7 +543,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
 	tests := []struct {
-		postState      bstate.BeaconState
+		postState      btypes.BeaconState
 		invalidBlock   bool
 		isValidPayload bool
 		blk            interfaces.SignedBeaconBlock

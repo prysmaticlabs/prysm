@@ -5,8 +5,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	statetypes "github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 )
 
@@ -101,7 +101,7 @@ func WithBeaconNodeStatsUpdater(updater BeaconNodeStatsUpdater) Option {
 }
 
 // WithFinalizedStateAtStartup to set the beacon node's finalized state at startup.
-func WithFinalizedStateAtStartup(st state.BeaconState) Option {
+func WithFinalizedStateAtStartup(st statetypes.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.finalizedStateAtStartup = st
 		return nil

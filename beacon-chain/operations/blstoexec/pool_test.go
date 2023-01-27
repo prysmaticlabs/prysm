@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -81,7 +81,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		blsChanges[i] = message
 	}
 	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*eth.SignedBLSToExecutionChange, numValidators)

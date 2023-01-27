@@ -11,10 +11,11 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -28,7 +29,7 @@ func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
 
-	var st state.BeaconState
+	var st types.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
@@ -115,7 +116,7 @@ func TestGetValidator(t *testing.T) {
 func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
-	var st state.BeaconState
+	var st types.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
@@ -294,7 +295,7 @@ func TestListValidators_Status(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
 
-	var st state.BeaconState
+	var st types.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
@@ -380,7 +381,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192+2 /* 2 active */)
 		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 0)
 			require.NoError(t, err)
@@ -417,7 +418,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, len(resp.Data), 8192+1 /* 1 active_ongoing */)
 		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 0)
 			require.NoError(t, err)
@@ -453,7 +454,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
 			require.NoError(t, err)
@@ -488,7 +489,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 4 /* 4 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 35)
 			require.NoError(t, err)
@@ -523,7 +524,7 @@ func TestListValidators_Status(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2 /* 1 pending, 1 exited */, len(resp.Data))
 		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
+			readOnlyVal, err := state.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
 			require.NoError(t, err)
 			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
 			require.NoError(t, err)
@@ -546,7 +547,7 @@ func TestListValidatorBalances(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
 
-	var st state.BeaconState
+	var st types.BeaconState
 	count := uint64(8192)
 	st, _ = util.DeterministicGenesisState(t, count)
 	balances := make([]uint64, count)
@@ -665,7 +666,7 @@ func TestListCommittees(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
 
-	var st state.BeaconState
+	var st types.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 	epoch := slots.ToEpoch(st.Slot())
 

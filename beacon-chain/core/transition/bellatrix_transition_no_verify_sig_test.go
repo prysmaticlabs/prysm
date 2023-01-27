@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -219,7 +219,7 @@ func TestProcessEpoch_BadBalanceBellatrix(t *testing.T) {
 	assert.ErrorContains(t, "addition overflows", err)
 }
 
-func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
+func createFullBellatrixBlockWithOperations(t *testing.T) (types.BeaconState,
 	*ethpb.SignedBeaconBlockBellatrix) {
 	_, altairBlk := createFullAltairBlockWithOperations(t)
 	blk := &ethpb.SignedBeaconBlockBellatrix{
@@ -258,7 +258,7 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 	return beaconState, blk
 }
 
-func createFullCapellaBlockWithOperations(t *testing.T) (state.BeaconState,
+func createFullCapellaBlockWithOperations(t *testing.T) (types.BeaconState,
 	*ethpb.SignedBeaconBlockCapella) {
 	_, bellatrixBlk := createFullBellatrixBlockWithOperations(t)
 	blk := &ethpb.SignedBeaconBlockCapella{

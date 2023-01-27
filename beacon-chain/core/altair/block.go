@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -44,7 +44,7 @@ import (
 //	        increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //	    else:
 //	        decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, error) {
+func ProcessSyncAggregate(ctx context.Context, s types.BeaconState, sync *ethpb.SyncAggregate) (types.BeaconState, error) {
 	s, votedKeys, err := processSyncAggregate(ctx, s, sync)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter sync committee votes")
@@ -59,8 +59,8 @@ func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 // processSyncAggregate applies all the logic in the spec function `process_sync_aggregate` except
 // verifying the BLS signatures. It returns the modified beacons state and the list of validators'
 // public keys that voted, for future signature verification.
-func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (
-	state.BeaconState,
+func processSyncAggregate(ctx context.Context, s types.BeaconState, sync *ethpb.SyncAggregate) (
+	types.BeaconState,
 	[]bls.PublicKey,
 	error) {
 	currentSyncCommittee, err := s.CurrentSyncCommittee()
@@ -120,7 +120,7 @@ func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
-func VerifySyncCommitteeSig(s state.BeaconState, syncKeys []bls.PublicKey, syncSig []byte) error {
+func VerifySyncCommitteeSig(s types.BeaconState, syncKeys []bls.PublicKey, syncSig []byte) error {
 	ps := slots.PrevSlot(s.Slot())
 	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorsRoot())
 	if err != nil {

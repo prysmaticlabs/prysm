@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/trailofbits/go-mutexasserts"
@@ -30,7 +30,7 @@ func NewPool() *Pool {
 // PendingAttesterSlashings returns attester slashings that are able to be included into a block.
 // This method will return the amount of pending attester slashings for a block transition unless parameter `noLimit` is true
 // to indicate the request is for noLimit pending items.
-func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing {
+func (p *Pool) PendingAttesterSlashings(ctx context.Context, state types.ReadOnlyBeaconState, noLimit bool) []*ethpb.AttesterSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
@@ -77,7 +77,7 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, state state.ReadOnl
 // PendingProposerSlashings returns proposer slashings that are able to be included into a block.
 // This method will return the amount of pending proposer slashings for a block transition unless the `noLimit` parameter
 // is set to true to indicate the request is for noLimit pending items.
-func (p *Pool) PendingProposerSlashings(ctx context.Context, state state.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing {
+func (p *Pool) PendingProposerSlashings(ctx context.Context, state types.ReadOnlyBeaconState, noLimit bool) []*ethpb.ProposerSlashing {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
@@ -117,7 +117,7 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, state state.ReadOnl
 // has been included into a block recently, or the validator is already exited.
 func (p *Pool) InsertAttesterSlashing(
 	ctx context.Context,
-	state state.ReadOnlyBeaconState,
+	state types.ReadOnlyBeaconState,
 	slashing *ethpb.AttesterSlashing,
 ) error {
 	p.lock.Lock()
@@ -182,7 +182,7 @@ func (p *Pool) InsertAttesterSlashing(
 // has been included recently, the validator is already exited, or the validator was already slashed.
 func (p *Pool) InsertProposerSlashing(
 	ctx context.Context,
-	state state.ReadOnlyBeaconState,
+	state types.ReadOnlyBeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	p.lock.Lock()
@@ -266,7 +266,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 // has been recently included in the pool, then it checks if the validator is slashable.
 // Note: this method requires caller to hold the lock.
 func (p *Pool) validatorSlashingPreconditionCheck(
-	state state.ReadOnlyBeaconState,
+	state types.ReadOnlyBeaconState,
 	valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	if !mutexasserts.RWMutexLocked(&p.lock) && !mutexasserts.RWMutexRLocked(&p.lock) {

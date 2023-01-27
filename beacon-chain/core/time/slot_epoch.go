@@ -1,9 +1,9 @@
 package time
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -18,7 +18,7 @@ import (
 //	  Return the current epoch.
 //	  """
 //	  return compute_epoch_at_slot(state.slot)
-func CurrentEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
+func CurrentEpoch(state types.ReadOnlyBeaconState) primitives.Epoch {
 	return slots.ToEpoch(state.Slot())
 }
 
@@ -34,7 +34,7 @@ func CurrentEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 //	  """
 //	  current_epoch = get_current_epoch(state)
 //	  return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
+func PrevEpoch(state types.ReadOnlyBeaconState) primitives.Epoch {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -44,12 +44,12 @@ func PrevEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 
 // NextEpoch returns the next epoch number calculated from
 // the slot number stored in beacon state.
-func NextEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
+func NextEpoch(state types.ReadOnlyBeaconState) primitives.Epoch {
 	return slots.ToEpoch(state.Slot()) + 1
 }
 
 // HigherEqualThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
-func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e primitives.Epoch) bool {
+func HigherEqualThanAltairVersionAndEpoch(s types.BeaconState, e primitives.Epoch) bool {
 	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
@@ -87,6 +87,6 @@ func CanUpgradeToCapella(slot primitives.Slot) bool {
 // Spec pseudocode definition:
 //
 //	If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state state.ReadOnlyBeaconState) bool {
+func CanProcessEpoch(state types.ReadOnlyBeaconState) bool {
 	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }

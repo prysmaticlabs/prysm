@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -135,8 +135,8 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot primitives.Slot,
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
 // For the cache miss, it processes head state up to slot and fill the cache with `slot` as key.
-func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives.Slot) (state.BeaconState, error) {
-	var headState state.BeaconState
+func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives.Slot) (types.BeaconState, error) {
+	var headState types.BeaconState
 	var err error
 	mLock := async.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
 	mLock.Lock()

@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
@@ -30,6 +30,6 @@ func RunRegistryUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processRegistryUpdatesWrapper(_ *testing.T, state state.BeaconState) (state.BeaconState, error) {
+func processRegistryUpdatesWrapper(_ *testing.T, state types.BeaconState) (types.BeaconState, error) {
 	return epoch.ProcessRegistryUpdates(context.Background(), state)
 }

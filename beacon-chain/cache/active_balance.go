@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 const (
@@ -48,7 +48,7 @@ func NewEffectiveBalanceCache() *BalanceCache {
 }
 
 // AddTotalEffectiveBalance adds a new total effective balance entry for current balance for state `st` into the cache.
-func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, balance uint64) error {
+func (c *BalanceCache) AddTotalEffectiveBalance(st types.ReadOnlyBeaconState, balance uint64) error {
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (c *BalanceCache) AddTotalEffectiveBalance(st state.ReadOnlyBeaconState, ba
 }
 
 // Get returns the current epoch's effective balance for state `st` in cache.
-func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
+func (c *BalanceCache) Get(st types.ReadOnlyBeaconState) (uint64, error) {
 	key, err := balanceCacheKey(st)
 	if err != nil {
 		return 0, err
@@ -82,7 +82,7 @@ func (c *BalanceCache) Get(st state.ReadOnlyBeaconState) (uint64, error) {
 
 // Given input state `st`, balance key is constructed as:
 // (block_root in `st` at epoch_start_slot - 1) + current_epoch + validator_count
-func balanceCacheKey(st state.ReadOnlyBeaconState) (string, error) {
+func balanceCacheKey(st types.ReadOnlyBeaconState) (string, error) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	currentEpoch := st.Slot().DivSlot(slotsPerEpoch)
 	epochStartSlot, err := slotsPerEpoch.SafeMul(uint64(currentEpoch))

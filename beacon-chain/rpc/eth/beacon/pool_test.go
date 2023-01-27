@@ -19,7 +19,7 @@ import (
 	slashingsmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -1245,7 +1245,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	require.NoError(t, err)
 	spb.Slot = slot
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
@@ -1337,7 +1337,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	spb.Slot = slot
-	st, err := state_native.InitializeFromProtoBellatrix(spb)
+	st, err := state.InitializeFromProtoBellatrix(spb)
 	require.NoError(t, err)
 
 	spc := &ethpbv1alpha1.BeaconStateCapella{
@@ -1351,7 +1351,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 	spc.Slot = slot
 
-	stc, err := state_native.InitializeFromProtoCapella(spc)
+	stc, err := state.InitializeFromProtoCapella(spc)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
@@ -1445,7 +1445,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	require.NoError(t, err)
 	spb.Slot = slot
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)

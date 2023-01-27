@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -419,7 +420,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		if b.Block == nil {
 			b.Block = &ethpb.BeaconBlockAltair{}
 		}
-		s, err := state_native.InitializeFromProtoUnsafeAltair(st)
+		s, err := state.InitializeFromProtoUnsafeAltair(st)
 		require.NoError(t, err)
 		if b.Block == nil || b.Block.Body == nil {
 			continue
@@ -632,14 +633,14 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 
 	tests := []struct {
 		name                 string
-		inputState           state.BeaconState
+		inputState           types.BeaconState
 		inputData            *ethpb.AttestationData
 		inputDelay           primitives.Slot
 		participationIndices map[uint8]bool
 	}{
 		{
 			name: "none",
-			inputState: func() state.BeaconState {
+			inputState: func() types.BeaconState {
 				return beaconState
 			}(),
 			inputData: &ethpb.AttestationData{
@@ -651,7 +652,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 		},
 		{
 			name: "participated source",
-			inputState: func() state.BeaconState {
+			inputState: func() types.BeaconState {
 				return beaconState
 			}(),
 			inputData: &ethpb.AttestationData{
@@ -665,7 +666,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 		},
 		{
 			name: "participated source and target",
-			inputState: func() state.BeaconState {
+			inputState: func() types.BeaconState {
 				return beaconState
 			}(),
 			inputData: &ethpb.AttestationData{
@@ -680,7 +681,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 		},
 		{
 			name: "participated source and target and head",
-			inputState: func() state.BeaconState {
+			inputState: func() types.BeaconState {
 				return beaconState
 			}(),
 			inputData: &ethpb.AttestationData{
@@ -709,7 +710,7 @@ func TestMatchingStatus(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(1))
 	tests := []struct {
 		name          string
-		inputState    state.BeaconState
+		inputState    types.BeaconState
 		inputData     *ethpb.AttestationData
 		inputCheckpt  *ethpb.Checkpoint
 		matchedSource bool

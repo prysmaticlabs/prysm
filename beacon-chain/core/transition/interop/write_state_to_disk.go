@@ -5,13 +5,13 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 )
 
 // WriteStateToDisk as a state ssz. Writes to temp directory. Debug!
-func WriteStateToDisk(state state.ReadOnlyBeaconState) {
+func WriteStateToDisk(state types.ReadOnlyBeaconState) {
 	if !features.Get().WriteSSZStateTransitions {
 		return
 	}

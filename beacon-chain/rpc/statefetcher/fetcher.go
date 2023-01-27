@@ -10,11 +10,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -73,9 +73,9 @@ func (e *StateRootNotFoundError) Error() string {
 
 // Fetcher is responsible for retrieving info related with the beacon chain.
 type Fetcher interface {
-	State(ctx context.Context, stateId []byte) (state.BeaconState, error)
+	State(ctx context.Context, stateId []byte) (types.BeaconState, error)
 	StateRoot(ctx context.Context, stateId []byte) ([]byte, error)
-	StateBySlot(ctx context.Context, slot primitives.Slot) (state.BeaconState, error)
+	StateBySlot(ctx context.Context, slot primitives.Slot) (types.BeaconState, error)
 }
 
 // StateProvider is a real implementation of Fetcher.
@@ -94,9 +94,9 @@ type StateProvider struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded state root with '0x' prefix>
-func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
+func (p *StateProvider) State(ctx context.Context, stateId []byte) (types.BeaconState, error) {
 	var (
-		s   state.BeaconState
+		s   types.BeaconState
 		err error
 	)
 
@@ -192,7 +192,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 	return root, err
 }
 
-func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
+func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (types.BeaconState, error) {
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
@@ -213,7 +213,7 @@ func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (stat
 // between the found state's slot and the target slot.
 // process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
 // slots, or slots following the most recent canonical block up to and including the target slot.
-func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error) {
+func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 

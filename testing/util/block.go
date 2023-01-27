@@ -9,12 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -80,7 +80,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot primitives.Slot,
@@ -202,7 +202,7 @@ func GenerateFullBlock(
 
 // GenerateProposerSlashingForValidator for a specific validator index.
 func GenerateProposerSlashingForValidator(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	priv bls.SecretKey,
 	idx primitives.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
@@ -241,7 +241,7 @@ func GenerateProposerSlashingForValidator(
 }
 
 func generateProposerSlashings(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -262,7 +262,7 @@ func generateProposerSlashings(
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
 func GenerateAttesterSlashingForValidator(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	priv bls.SecretKey,
 	idx primitives.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
@@ -318,7 +318,7 @@ func GenerateAttesterSlashingForValidator(
 }
 
 func generateAttesterSlashings(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	privs []bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -342,7 +342,7 @@ func generateAttesterSlashings(
 }
 
 func generateDepositsAndEth1Data(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
@@ -361,7 +361,7 @@ func generateDepositsAndEth1Data(
 	return currentDeposits[previousDepsLen:], eth1Data, nil
 }
 
-func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx primitives.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+func GenerateVoluntaryExits(bState types.BeaconState, k bls.SecretKey, idx primitives.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
 	currentEpoch := time.CurrentEpoch(bState)
 	exit := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
@@ -378,7 +378,7 @@ func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx primi
 }
 
 func generateVoluntaryExits(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	privs []bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
@@ -405,7 +405,7 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState state.BeaconState) (primitives.ValidatorIndex, error) {
+func randValIndex(bState types.BeaconState) (primitives.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
@@ -26,7 +26,7 @@ func RunSlashingsResetTests(t *testing.T, config string) {
 	}
 }
 
-func processSlashingsResetWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+func processSlashingsResetWrapper(t *testing.T, st types.BeaconState) (types.BeaconState, error) {
 	st, err := epoch.ProcessSlashingsReset(st)
 	require.NoError(t, err, "Could not process final updates")
 	return st, nil

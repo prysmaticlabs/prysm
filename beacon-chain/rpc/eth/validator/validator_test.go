@@ -28,13 +28,13 @@ import (
 	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -90,7 +90,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	}
 	vs := &Server{
 		StateFetcher: &testutil.MockFetcher{
-			StatesBySlot: map[primitives.Slot]state.BeaconState{
+			StatesBySlot: map[primitives.Slot]types.BeaconState{
 				0:                                   bs,
 				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
 			},
@@ -194,7 +194,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			StateFetcher:          &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
@@ -254,7 +254,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -293,7 +293,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -333,7 +333,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -373,7 +373,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -410,7 +410,7 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			StateFetcher:           &testutil.MockFetcher{StatesBySlot: map[primitives.Slot]types.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
@@ -593,7 +593,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
 
-		stateFetchFn := func(slot primitives.Slot) state.BeaconState {
+		stateFetchFn := func(slot primitives.Slot) types.BeaconState {
 			if slot < newSyncPeriodStartSlot {
 				return st
 			} else {
@@ -4000,7 +4000,7 @@ func TestGetLiveness(t *testing.T) {
 		HeadFetcher: &mockChain.ChainService{State: headSt},
 		StateFetcher: &testutil.MockFetcher{
 			// We configure states for last slots of an epoch
-			StatesBySlot: map[primitives.Slot]state.BeaconState{
+			StatesBySlot: map[primitives.Slot]types.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
 			},

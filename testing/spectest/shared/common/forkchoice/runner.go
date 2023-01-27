@@ -7,11 +7,11 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -62,7 +62,7 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 				require.NoError(t, err)
 
-				var beaconState state.BeaconState
+				var beaconState types.BeaconState
 				var beaconBlock interfaces.SignedBeaconBlock
 				switch fork {
 				case version.Phase0:
@@ -149,10 +149,10 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 	}
 }
 
-func unmarshalPhase0State(t *testing.T, raw []byte) state.BeaconState {
+func unmarshalPhase0State(t *testing.T, raw []byte) types.BeaconState {
 	base := &ethpb.BeaconState{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProtoPhase0(base)
+	st, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	return st
 }
@@ -173,10 +173,10 @@ func unmarshalSignedPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaco
 	return blk
 }
 
-func unmarshalAltairState(t *testing.T, raw []byte) state.BeaconState {
+func unmarshalAltairState(t *testing.T, raw []byte) types.BeaconState {
 	base := &ethpb.BeaconStateAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProtoAltair(base)
+	st, err := state.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 	return st
 }
@@ -197,10 +197,10 @@ func unmarshalSignedAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaco
 	return blk
 }
 
-func unmarshalBellatrixState(t *testing.T, raw []byte) state.BeaconState {
+func unmarshalBellatrixState(t *testing.T, raw []byte) types.BeaconState {
 	base := &ethpb.BeaconStateBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProtoBellatrix(base)
+	st, err := state.InitializeFromProtoBellatrix(base)
 	require.NoError(t, err)
 	return st
 }
@@ -221,10 +221,10 @@ func unmarshalSignedBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBe
 	return blk
 }
 
-func unmarshalCapellaState(t *testing.T, raw []byte) state.BeaconState {
+func unmarshalCapellaState(t *testing.T, raw []byte) types.BeaconState {
 	base := &ethpb.BeaconStateCapella{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := state_native.InitializeFromProtoCapella(base)
+	st, err := state.InitializeFromProtoCapella(base)
 	require.NoError(t, err)
 	return st
 }

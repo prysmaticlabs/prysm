@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -54,7 +54,7 @@ func ValidateSync(
 }
 
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
-func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticModeFetcher blockchain.OptimisticModeFetcher) (bool, error) {
+func IsOptimistic(ctx context.Context, st types.BeaconState, optimisticModeFetcher blockchain.OptimisticModeFetcher) (bool, error) {
 	header := st.LatestBlockHeader()
 	// This happens when the block at the state's slot is not missing.
 	if bytes.Equal(header.StateRoot, params.BeaconConfig().ZeroHash[:]) {

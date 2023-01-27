@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
@@ -78,8 +78,8 @@ type mockHistory struct {
 	slotMap                        map[primitives.Slot][32]byte
 	slotIndex                      slotList
 	canonical                      map[[32]byte]bool
-	states                         map[[32]byte]state.BeaconState
-	hiddenStates                   map[[32]byte]state.BeaconState
+	states                         map[[32]byte]types.BeaconState
+	hiddenStates                   map[[32]byte]types.BeaconState
 	current                        primitives.Slot
 	overrideHighestSlotBlocksBelow func(context.Context, primitives.Slot) (primitives.Slot, [][32]byte, error)
 }
@@ -138,7 +138,7 @@ func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.S
 	return nil, nil
 }
 
-func (m *mockHistory) StateOrError(_ context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (m *mockHistory) StateOrError(_ context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	if s, ok := m.states[blockRoot]; ok {
 		return s.Copy(), nil
 	}
@@ -160,11 +160,11 @@ func (h *mockHistory) addBlock(root [32]byte, b interfaces.SignedBeaconBlock, ca
 	h.canonical[root] = canon
 }
 
-func (h *mockHistory) addState(root [32]byte, s state.BeaconState) {
+func (h *mockHistory) addState(root [32]byte, s types.BeaconState) {
 	h.states[root] = s
 }
 
-func (h *mockHistory) hideState(root [32]byte, s state.BeaconState) {
+func (h *mockHistory) hideState(root [32]byte, s types.BeaconState) {
 	h.hiddenStates[root] = s
 }
 
@@ -192,8 +192,8 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slo
 	mh := &mockHistory{
 		blocks:       map[[32]byte]interfaces.SignedBeaconBlock{},
 		canonical:    map[[32]byte]bool{},
-		states:       map[[32]byte]state.BeaconState{},
-		hiddenStates: map[[32]byte]state.BeaconState{},
+		states:       map[[32]byte]types.BeaconState{},
+		hiddenStates: map[[32]byte]types.BeaconState{},
 		slotMap:      map[primitives.Slot][32]byte{},
 		slotIndex:    slotList{},
 		current:      current,
@@ -271,10 +271,10 @@ var _ CanonicalChecker = &mockHistory{}
 var _ CurrentSlotter = &mockHistory{}
 
 type mockCachedGetter struct {
-	cache map[[32]byte]state.BeaconState
+	cache map[[32]byte]types.BeaconState
 }
 
-func (m mockCachedGetter) ByBlockRoot(root [32]byte) (state.BeaconState, error) {
+func (m mockCachedGetter) ByBlockRoot(root [32]byte) (types.BeaconState, error) {
 	st, ok := m.cache[root]
 	if !ok {
 		return nil, ErrNotInCache

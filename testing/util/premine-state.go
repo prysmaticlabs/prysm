@@ -3,17 +3,17 @@ package util
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -28,12 +28,12 @@ var errUnsupportedVersion = errors.New("schema version not supported by premineG
 type premineGenesisConfig struct {
 	GenesisTime uint64
 	NVals       uint64
-	Version     int          // as in "github.com/prysmaticlabs/prysm/v3/runtime/version"
-	GB          *types.Block // geth genesis block
+	Version     int              // as in "github.com/prysmaticlabs/prysm/v3/runtime/version"
+	GB          *gethtypes.Block // geth genesis block
 }
 
 // NewPreminedGenesis creates a genesis BeaconState at the given fork version, suitable for using as an e2e genesis.
-func NewPreminedGenesis(ctx context.Context, t, nvals uint64, version int, gb *types.Block) (state.BeaconState, error) {
+func NewPreminedGenesis(ctx context.Context, t, nvals uint64, version int, gb *gethtypes.Block) (types.BeaconState, error) {
 	return (&premineGenesisConfig{
 		GenesisTime: t,
 		NVals:       nvals,
@@ -42,7 +42,7 @@ func NewPreminedGenesis(ctx context.Context, t, nvals uint64, version int, gb *t
 	}).prepare(ctx)
 }
 
-func (s *premineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, error) {
+func (s *premineGenesisConfig) prepare(ctx context.Context) (types.BeaconState, error) {
 	switch s.Version {
 	case version.Phase0, version.Altair, version.Bellatrix:
 	default:
@@ -63,22 +63,22 @@ func (s *premineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, 
 	return st, nil
 }
 
-func (s *premineGenesisConfig) empty() (state.BeaconState, error) {
-	var e state.BeaconState
+func (s *premineGenesisConfig) empty() (types.BeaconState, error) {
+	var e types.BeaconState
 	var err error
 	switch s.Version {
 	case version.Phase0:
-		e, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+		e, err = state.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 		if err != nil {
 			return nil, err
 		}
 	case version.Altair:
-		e, err = state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{})
+		e, err = state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{})
 		if err != nil {
 			return nil, err
 		}
 	case version.Bellatrix:
-		e, err = state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{})
+		e, err = state.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{})
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (s *premineGenesisConfig) empty() (state.BeaconState, error) {
 	return e.Copy(), nil
 }
 
-func (s *premineGenesisConfig) processDeposits(ctx context.Context, g state.BeaconState) error {
+func (s *premineGenesisConfig) processDeposits(ctx context.Context, g types.BeaconState) error {
 	deposits, err := s.deposits()
 	if err != nil {
 		return err
@@ -173,7 +173,7 @@ func (s *premineGenesisConfig) keys() ([]bls.SecretKey, []bls.PublicKey, error) 
 	return prv, pub, nil
 }
 
-func (s *premineGenesisConfig) setEth1Data(g state.BeaconState) error {
+func (s *premineGenesisConfig) setEth1Data(g types.BeaconState) error {
 	if err := g.SetEth1DepositIndex(0); err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func emptyDepositRoot() ([32]byte, error) {
 	return t.HashTreeRoot()
 }
 
-func (s *premineGenesisConfig) populate(g state.BeaconState) error {
+func (s *premineGenesisConfig) populate(g types.BeaconState) error {
 	if err := g.SetGenesisTime(s.GenesisTime); err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (s *premineGenesisConfig) populate(g state.BeaconState) error {
 	return s.setEth1Data(g)
 }
 
-func (s *premineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
+func (s *premineGenesisConfig) setGenesisValidatorsRoot(g types.BeaconState) error {
 	vroot, err := stateutil.ValidatorRegistryRoot(g.Validators())
 	if err != nil {
 		return err
@@ -241,7 +241,7 @@ func (s *premineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) err
 	return g.SetGenesisValidatorsRoot(vroot[:])
 }
 
-func (s *premineGenesisConfig) setFork(g state.BeaconState) error {
+func (s *premineGenesisConfig) setFork(g types.BeaconState) error {
 	var pv, cv []byte
 	switch s.Version {
 	case version.Phase0:
@@ -261,7 +261,7 @@ func (s *premineGenesisConfig) setFork(g state.BeaconState) error {
 	return g.SetFork(fork)
 }
 
-func (s *premineGenesisConfig) setInactivityScores(g state.BeaconState) error {
+func (s *premineGenesisConfig) setInactivityScores(g types.BeaconState) error {
 	if s.Version < version.Altair {
 		return nil
 	}
@@ -279,7 +279,7 @@ func (s *premineGenesisConfig) setInactivityScores(g state.BeaconState) error {
 	return g.SetInactivityScores(scores)
 }
 
-func (s *premineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
+func (s *premineGenesisConfig) setSyncCommittees(g types.BeaconState) error {
 	if s.Version < version.Altair {
 		return nil
 	}
@@ -297,7 +297,7 @@ type rooter interface {
 	HashTreeRoot() ([32]byte, error)
 }
 
-func (s *premineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
+func (s *premineGenesisConfig) setLatestBlockHeader(g types.BeaconState) error {
 	var body rooter
 	switch s.Version {
 	case version.Phase0:
@@ -362,7 +362,7 @@ func (s *premineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 	return g.SetLatestBlockHeader(lbh)
 }
 
-func (s *premineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
+func (s *premineGenesisConfig) setExecutionPayload(g types.BeaconState) error {
 	if s.Version < version.Bellatrix {
 		return nil
 	}

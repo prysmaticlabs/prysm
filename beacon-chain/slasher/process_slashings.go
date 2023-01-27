@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -12,7 +12,7 @@ import (
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) error {
-	var beaconState state.BeaconState
+	var beaconState types.BeaconState
 	var err error
 	if len(slashings) > 0 {
 		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)
@@ -48,7 +48,7 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 // Verifies proposer slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
 func (s *Service) processProposerSlashings(ctx context.Context, slashings []*ethpb.ProposerSlashing) error {
-	var beaconState state.BeaconState
+	var beaconState types.BeaconState
 	var err error
 	if len(slashings) > 0 {
 		beaconState, err = s.serviceCfg.HeadStateFetcher.HeadState(ctx)

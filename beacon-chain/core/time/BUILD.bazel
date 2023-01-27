@@ -6,9 +6,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/state/types:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
     ],
@@ -19,10 +19,10 @@ go_test(
     srcs = ["slot_epoch_test.go"],
     deps = [
         ":go_default_library",
-        "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/state:go_default_library",
+        "//consensus-types/state/types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",

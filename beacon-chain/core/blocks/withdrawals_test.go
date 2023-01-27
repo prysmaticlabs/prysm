@@ -7,11 +7,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -44,7 +45,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 				WithdrawalCredentials: digest[:],
 			},
 		}
-		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Validators: registry,
 			Fork: &ethpb.Fork{
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -90,7 +91,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 				WithdrawalCredentials: digest[:],
 			},
 		}
-		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Validators: registry,
 			Fork: &ethpb.Fork{
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -132,7 +133,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 				WithdrawalCredentials: digest[:],
 			},
 		}
-		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Validators: registry,
 			Fork: &ethpb.Fork{
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -170,7 +171,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 				WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
 			},
 		}
-		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Validators: registry,
 			Fork: &ethpb.Fork{
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -213,7 +214,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		}
 		registry[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 
-		st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		st, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 			Validators: registry,
 			Fork: &ethpb.Fork{
 				CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -578,7 +579,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		},
 	}
 
-	checkPostState := func(t *testing.T, expected control, st state.BeaconState) {
+	checkPostState := func(t *testing.T, expected control, st types.BeaconState) {
 		l, err := st.NextWithdrawalValidatorIndex()
 		require.NoError(t, err)
 		require.Equal(t, expected.NextWithdrawalValidatorIndex, l)
@@ -592,7 +593,7 @@ func TestProcessWithdrawals(t *testing.T) {
 		}
 	}
 
-	prepareValidators := func(st *ethpb.BeaconStateCapella, arguments args) (state.BeaconState, error) {
+	prepareValidators := func(st *ethpb.BeaconStateCapella, arguments args) (types.BeaconState, error) {
 		validators := make([]*ethpb.Validator, numValidators)
 		st.Balances = make([]uint64, numValidators)
 		for i := range validators {
@@ -616,7 +617,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			st.Balances[idx] = withdrawalAmount(idx)
 		}
 		st.Validators = validators
-		return state_native.InitializeFromProtoCapella(st)
+		return state.InitializeFromProtoCapella(st)
 	}
 
 	for _, test := range tests {
@@ -692,7 +693,7 @@ func TestProcessBLSToExecutionChanges(t *testing.T) {
 		blsChanges[i] = message
 	}
 	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
@@ -766,7 +767,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 		blsChanges[i] = message
 	}
 	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
@@ -831,7 +832,7 @@ func TestBLSChangesSignatureBatchWrongFork(t *testing.T) {
 		blsChanges[i] = message
 	}
 	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoCapella(spb)
+	st, err := state.InitializeFromProtoCapella(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
@@ -905,7 +906,7 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 		blsChanges[i] = message
 	}
 	spb.Validators = validators
-	st, err := state_native.InitializeFromProtoBellatrix(spb)
+	st, err := state.InitializeFromProtoBellatrix(spb)
 	require.NoError(t, err)
 
 	signedChanges := make([]*ethpb.SignedBLSToExecutionChange, numValidators)
@@ -920,7 +921,7 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	spc.Slot = slot
 
-	stc, err := state_native.InitializeFromProtoCapella(spc)
+	stc, err := state.InitializeFromProtoCapella(spc)
 	require.NoError(t, err)
 
 	for i, message := range blsChanges {

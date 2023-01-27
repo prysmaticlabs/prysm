@@ -13,20 +13,20 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic deposits.
-func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
+func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (types.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -44,7 +44,7 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.
 }
 
 // GenesisBeaconState returns the genesis beacon state.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (types.BeaconState, error) {
 	st, err := emptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -67,9 +67,9 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 // processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
 func processPreGenesisDeposits(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	var err error
 	beaconState, err = altair.ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
@@ -82,7 +82,7 @@ func processPreGenesisDeposits(
 	return beaconState, nil
 }
 
-func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func buildGenesisBeaconState(genesisTime uint64, preState types.BeaconState, eth1Data *ethpb.Eth1Data) (types.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -214,10 +214,10 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	return state_native.InitializeFromProtoAltair(st)
+	return state.InitializeFromProtoAltair(st)
 }
 
-func emptyGenesisState() (state.BeaconState, error) {
+func emptyGenesisState() (types.BeaconState, error) {
 	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
@@ -241,7 +241,7 @@ func emptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state_native.InitializeFromProtoAltair(st)
+	return state.InitializeFromProtoAltair(st)
 }
 
 // NewBeaconBlockAltair creates a beacon block with minimum marshalable fields.
@@ -275,7 +275,7 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	block *ethpb.BeaconBlockAltair,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
@@ -316,7 +316,7 @@ func BlockSignatureAltair(
 // GenerateFullBlockAltair generates a fully valid Altair block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlockAltair(
-	bState state.BeaconState,
+	bState types.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
 	slot primitives.Slot,

@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -164,7 +164,7 @@ func withStateBalanceCache(c *stateBalanceCache) Option {
 }
 
 // WithFinalizedStateAtStartUp to store finalized state at start up.
-func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
+func WithFinalizedStateAtStartUp(st types.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.FinalizedStateAtStartUp = st
 		return nil

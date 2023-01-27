@@ -10,12 +10,12 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -54,12 +54,12 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 type head struct {
 	root  [32]byte                     // current head root.
 	block interfaces.SignedBeaconBlock // current head block.
-	state state.BeaconState            // current head state.
+	state types.BeaconState            // current head state.
 }
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.SignedBeaconBlock, headState types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
@@ -179,7 +179,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs types.BeaconState) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlo
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
+func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state types.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -222,7 +222,7 @@ func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, sta
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
+func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state types.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
@@ -269,7 +269,7 @@ func (s *Service) headBlock() (interfaces.SignedBeaconBlock, error) {
 // This returns the head state.
 // It does a full copy on head state for immutability.
 // This is a lock free version.
-func (s *Service) headState(ctx context.Context) state.BeaconState {
+func (s *Service) headState(ctx context.Context) types.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "blockChain.headState")
 	defer span.End()
 
@@ -285,7 +285,7 @@ func (s *Service) headGenesisValidatorsRoot() [32]byte {
 // This returns the validator referenced by the provided index in
 // the head state.
 // This is a lock free version.
-func (s *Service) headValidatorAtIndex(index primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (s *Service) headValidatorAtIndex(index primitives.ValidatorIndex) (types.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
@@ -307,7 +307,7 @@ func (s *Service) hasHeadState() bool {
 func (s *Service) notifyNewHeadEvent(
 	ctx context.Context,
 	newHeadSlot primitives.Slot,
-	newHeadState state.BeaconState,
+	newHeadState types.BeaconState,
 	newHeadStateRoot,
 	newHeadRoot []byte,
 ) error {

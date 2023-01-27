@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -22,7 +22,7 @@ import (
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
-	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error)
+	AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (types.BeaconState, error)
 }
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -33,7 +33,7 @@ type AttestationReceiver interface {
 }
 
 // AttestationTargetState returns the pre state of attestation.
-func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (types.BeaconState, error) {
 	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
 		return nil, err

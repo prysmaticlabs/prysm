@@ -42,7 +42,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
@@ -54,6 +53,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
@@ -105,7 +105,7 @@ type BeaconNode struct {
 	collector               *bcnodeCollector
 	slasherBlockHeadersFeed *event.Feed
 	slasherAttestationsFeed *event.Feed
-	finalizedStateAtStartUp state.BeaconState
+	finalizedStateAtStartUp types.BeaconState
 	serviceFlagOpts         *serviceFlagOpts
 	GenesisInitializer      genesis.Initializer
 	CheckpointInitializer   checkpoint.Initializer

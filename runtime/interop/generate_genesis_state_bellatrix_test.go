@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -43,7 +43,7 @@ func TestGenerateGenesisStateBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	g.Eth1Data.DepositRoot = dr[:]
 	g.Eth1Data.BlockHash = make([]byte, 32)
-	st, err := state_native.InitializeFromProtoUnsafeBellatrix(g)
+	st, err := state.InitializeFromProtoUnsafeBellatrix(g)
 	require.NoError(t, err)
 	_, err = st.MarshalSSZ()
 	require.NoError(t, err)

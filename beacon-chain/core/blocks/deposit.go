@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -20,9 +20,9 @@ import (
 // ProcessPreGenesisDeposits processes a deposit for the beacon state before chainstart.
 func ProcessPreGenesisDeposits(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	var err error
 	beaconState, err = ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
@@ -36,7 +36,7 @@ func ProcessPreGenesisDeposits(
 }
 
 // ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
-func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposits []*ethpb.Deposit) (state.BeaconState, error) {
+func ActivateValidatorWithEffectiveBalance(beaconState types.BeaconState, deposits []*ethpb.Deposit) (types.BeaconState, error) {
 	for _, d := range deposits {
 		pubkey := d.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
@@ -76,9 +76,9 @@ func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposi
 //	  process_deposit(state, deposit)
 func ProcessDeposits(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
 	batchVerified, err := BatchVerifyDepositsSignatures(ctx, deposits)
@@ -156,7 +156,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 //	    # Increase balance by deposit amount
 //	    index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //	    increase_balance(state, index, amount)
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, bool, error) {
+func ProcessDeposit(beaconState types.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (types.BeaconState, bool, error) {
 	var newValidator bool
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
@@ -209,7 +209,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	return beaconState, newValidator, nil
 }
 
-func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
+func verifyDeposit(beaconState types.ReadOnlyBeaconState, deposit *ethpb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	if deposit == nil || deposit.Data == nil {
 		return errors.New("received nil deposit or nil deposit data")

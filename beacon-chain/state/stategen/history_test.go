@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/mock"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -297,7 +297,7 @@ func TestAncestorChainCache(t *testing.T) {
 
 	// now populate the cache, we should get the cached state instead of genesis
 	ch.cache = &mockCachedGetter{
-		cache: map[[32]byte]state.BeaconState{
+		cache: map[[32]byte]types.BeaconState{
 			hist.slotMap[end]: hist.hiddenStates[hist.slotMap[end]],
 		},
 	}
@@ -312,7 +312,7 @@ func TestAncestorChainCache(t *testing.T) {
 
 	// populate cache with a different state for good measure
 	ch.cache = &mockCachedGetter{
-		cache: map[[32]byte]state.BeaconState{
+		cache: map[[32]byte]types.BeaconState{
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}
@@ -330,7 +330,7 @@ func TestAncestorChainCache(t *testing.T) {
 	hist = newMockHistory(t, specs, end+1)
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
 	ch.cache = &mockCachedGetter{
-		cache: map[[32]byte]state.BeaconState{
+		cache: map[[32]byte]types.BeaconState{
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}

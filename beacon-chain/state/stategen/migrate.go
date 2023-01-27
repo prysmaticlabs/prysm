@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -51,7 +51,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			}
 
 			var aRoot [32]byte
-			var aState state.BeaconState
+			var aState types.BeaconState
 
 			// When the epoch boundary state is not in cache due to skip slot scenario,
 			// we have to regenerate the state which will represent epoch boundary.

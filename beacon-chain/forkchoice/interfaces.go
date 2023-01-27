@@ -4,9 +4,9 @@ import (
 	"context"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
@@ -35,7 +35,7 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertNode(context.Context, state.BeaconState, [32]byte) error
+	InsertNode(context.Context, types.BeaconState, [32]byte) error
 	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 

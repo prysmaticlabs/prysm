@@ -1,14 +1,14 @@
 package validator
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.BeaconState) {
+func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState types.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}

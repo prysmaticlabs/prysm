@@ -9,8 +9,8 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -34,7 +34,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBodyCapella{Attestations: []*ethpb.Attestation{att}}
-			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			processAtt := func(ctx context.Context, st types.BeaconState, blk interfaces.SignedBeaconBlock) (types.BeaconState, error) {
 				st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 				if err != nil {
 					return nil, err

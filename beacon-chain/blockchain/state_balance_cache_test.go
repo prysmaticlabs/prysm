@@ -6,9 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -29,12 +30,12 @@ func testStateWithSlot(slot primitives.Slot) testStateOpt {
 	}
 }
 
-func testStateFixture(opts ...testStateOpt) state.BeaconState {
+func testStateFixture(opts ...testStateOpt) types.BeaconState {
 	a := &ethpb.BeaconStateAltair{}
 	for _, o := range opts {
 		o(a)
 	}
-	s, _ := state_native.InitializeFromProtoUnsafeAltair(a)
+	s, _ := state.InitializeFromProtoUnsafeAltair(a)
 	return s
 }
 

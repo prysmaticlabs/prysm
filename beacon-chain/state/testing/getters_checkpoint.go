@@ -2,9 +2,9 @@ package testing
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 
@@ -17,7 +17,7 @@ func VerifyBeaconStateJustificationBitsNil(t *testing.T, factory getState) {
 	require.DeepEqual(t, bitfield.Bitvector4{}.Bytes(), s.JustificationBits().Bytes())
 }
 
-type getStateWithJustificationBits = func(bitfield.Bitvector4) (state.BeaconState, error)
+type getStateWithJustificationBits = func(bitfield.Bitvector4) (types.BeaconState, error)
 
 func VerifyBeaconStateJustificationBits(t *testing.T, factory getStateWithJustificationBits) {
 	s, err := factory(bitfield.Bitvector4{1, 2, 3, 4})
@@ -34,7 +34,7 @@ func VerifyBeaconStatePreviousJustifiedCheckpointNil(t *testing.T, factory getSt
 	require.Equal(t, (*ethpb.Checkpoint)(nil), checkpoint)
 }
 
-type getStateWithCheckpoint = func(checkpoint *ethpb.Checkpoint) (state.BeaconState, error)
+type getStateWithCheckpoint = func(checkpoint *ethpb.Checkpoint) (types.BeaconState, error)
 
 func VerifyBeaconStatePreviousJustifiedCheckpoint(t *testing.T, factory getStateWithCheckpoint) {
 	orgCheckpoint := &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)}

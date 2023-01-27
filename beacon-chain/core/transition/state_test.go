@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -98,9 +97,9 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state, err := transition.GenesisBeaconState(context.Background(), deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
 
-	pbState1, err := state_native.ProtobufBeaconStatePhase0(state1.ToProto())
+	pbState1, err := state.ProtobufBeaconStatePhase0(state1.ToProto())
 	require.NoError(t, err)
-	pbstate, err := state_native.ProtobufBeaconStatePhase0(state.ToProto())
+	pbstate, err := state.ProtobufBeaconStatePhase0(state.ToProto())
 	require.NoError(t, err)
 
 	root1, err1 := hash.HashProto(pbState1)

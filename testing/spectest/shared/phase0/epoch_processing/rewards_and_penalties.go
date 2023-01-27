@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
@@ -30,7 +30,7 @@ func RunRewardsAndPenaltiesTests(t *testing.T, config string) {
 	}
 }
 
-func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+func processRewardsAndPenaltiesPrecomputeWrapper(t *testing.T, st types.BeaconState) (types.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := precompute.New(ctx, st)
 	require.NoError(t, err)

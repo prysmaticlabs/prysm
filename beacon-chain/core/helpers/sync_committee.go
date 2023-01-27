@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -26,7 +26,7 @@ var (
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
 func IsCurrentPeriodSyncCommittee(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st types.BeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -63,7 +63,7 @@ func IsCurrentPeriodSyncCommittee(
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input next sync committee object
 func IsNextPeriodSyncCommittee(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st types.BeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -90,7 +90,7 @@ func IsNextPeriodSyncCommittee(
 // CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
 // current period sync committee for input validator.
 func CurrentPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st types.BeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -124,7 +124,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 // NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
 func NextPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st types.BeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -151,7 +151,7 @@ func NextPeriodSyncSubcommitteeIndices(
 // UpdateSyncCommitteeCache updates sync committee cache.
 // It uses `state`'s latest block header root as key. To avoid misuse, it disallows
 // block header with state root zeroed out.
-func UpdateSyncCommitteeCache(st state.BeaconState) error {
+func UpdateSyncCommitteeCache(st types.BeaconState) error {
 	nextSlot := st.Slot() + 1
 	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return errors.New("not at the end of the epoch to update cache")
@@ -187,7 +187,7 @@ func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []primitives.Commi
 // Retrieve the current sync period boundary root by calculating sync period start epoch
 // and calling `BlockRoot`.
 // It uses the boundary slot - 1 for block root. (Ex: SlotsPerEpoch * EpochsPerSyncCommitteePeriod - 1)
-func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([32]byte, error) {
+func syncPeriodBoundaryRoot(st types.ReadOnlyBeaconState) ([32]byte, error) {
 	// Can't call `BlockRoot` until the first slot.
 	if st.Slot() == params.BeaconConfig().GenesisSlot {
 		return params.BeaconConfig().ZeroHash, nil

@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -64,7 +64,7 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlo
 }
 
 // processProposedBlock logs when the beacon node observes a beacon block from a tracked validator.
-func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk interfaces.BeaconBlock) {
+func (s *Service) processProposedBlock(state types.BeaconState, root [32]byte, blk interfaces.BeaconBlock) {
 	s.Lock()
 	defer s.Unlock()
 	if s.trackedIndex(blk.ProposerIndex()) {

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -37,7 +37,7 @@ func slotKeyFn(obj interface{}) (string, error) {
 // rootStateInfo specifies the root state info in the epoch boundary state cache.
 type rootStateInfo struct {
 	root  [32]byte
-	state state.BeaconState
+	state types.BeaconState
 }
 
 // rootKeyFn takes the string representation of the block root to be used as key
@@ -67,7 +67,7 @@ func newBoundaryStateCache() *epochBoundaryState {
 }
 
 // ByBlockRoot satisfies the CachedGetter interface
-func (e *epochBoundaryState) ByBlockRoot(r [32]byte) (state.BeaconState, error) {
+func (e *epochBoundaryState) ByBlockRoot(r [32]byte) (types.BeaconState, error) {
 	rsi, ok, err := e.getByBlockRoot(r)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (e *epochBoundaryState) getBySlot(s primitives.Slot) (*rootStateInfo, bool,
 // put adds a state to the epoch boundary state cache. This method also trims the
 // least recently added state info if the cache size has reached the max cache
 // size limit.
-func (e *epochBoundaryState) put(blockRoot [32]byte, s state.BeaconState) error {
+func (e *epochBoundaryState) put(blockRoot [32]byte, s types.BeaconState) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 

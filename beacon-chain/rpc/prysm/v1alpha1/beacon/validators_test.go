@@ -19,8 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
@@ -31,6 +30,8 @@ import (
 	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -461,7 +462,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 			State: nil,
 		},
 		StateGen: &mockstategen.MockStateManager{
-			StatesBySlot: map[primitives.Slot]state.BeaconState{
+			StatesBySlot: map[primitives.Slot]types.BeaconState{
 				0: nil,
 			},
 		},
@@ -1328,7 +1329,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
-	headState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	headState, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:            helpers.ActivationExitEpoch(0),
@@ -1427,7 +1428,7 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
-	headState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	headState, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				ActivationEpoch:       0,
@@ -1724,7 +1725,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 	})
 }
 
-func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlock) {
+func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState types.BeaconState, gb interfaces.SignedBeaconBlock) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
 
@@ -2249,7 +2250,7 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 	}
 }
 
-func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator, []uint64, state.BeaconState) {
+func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator, []uint64, types.BeaconState) {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {

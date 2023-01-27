@@ -8,11 +8,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -31,7 +32,7 @@ func prepareForkchoiceState(
 	payloadHash [32]byte,
 	justifiedEpoch primitives.Epoch,
 	finalizedEpoch primitives.Epoch,
-) (state.BeaconState, [32]byte, error) {
+) (types.BeaconState, [32]byte, error) {
 	blockHeader := &ethpb.BeaconBlockHeader{
 		ParentRoot: parentRoot[:],
 	}
@@ -57,7 +58,7 @@ func prepareForkchoiceState(
 		LatestBlockHeader:            blockHeader,
 	}
 
-	st, err := state_native.InitializeFromProtoBellatrix(base)
+	st, err := state.InitializeFromProtoBellatrix(base)
 	return st, blockRoot, err
 }
 

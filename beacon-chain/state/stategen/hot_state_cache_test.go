@@ -3,8 +3,9 @@ package stategen
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -14,10 +15,10 @@ func TestHotStateCache_RoundTrip(t *testing.T) {
 	c := newHotStateCache()
 	root := [32]byte{'A'}
 	s := c.get(root)
-	assert.Equal(t, state.BeaconState(nil), s)
+	assert.Equal(t, types.BeaconState(nil), s)
 	assert.Equal(t, false, c.has(root), "Empty cache has an object")
 
-	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	s, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 10,
 	})
 	require.NoError(t, err)

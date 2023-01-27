@@ -8,16 +8,16 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
-type slashValidatorFunc func(ctx context.Context, st state.BeaconState, vid primitives.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (state.BeaconState, error)
+type slashValidatorFunc func(ctx context.Context, st types.BeaconState, vid primitives.ValidatorIndex, penaltyQuotient, proposerRewardQuotient uint64) (types.BeaconState, error)
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to slash proposers based on
@@ -47,10 +47,10 @@ type slashValidatorFunc func(ctx context.Context, st state.BeaconState, vid prim
 //	 slash_validator(state, header_1.proposer_index)
 func ProcessProposerSlashings(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	slashings []*ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	var err error
 	for _, slashing := range slashings {
 		beaconState, err = ProcessProposerSlashing(ctx, beaconState, slashing, slashFunc)
@@ -64,10 +64,10 @@ func ProcessProposerSlashings(
 // ProcessProposerSlashing processes individual proposer slashing.
 func ProcessProposerSlashing(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	var err error
 	if slashing == nil {
 		return nil, errors.New("nil proposer slashings in block body")
@@ -96,7 +96,7 @@ func ProcessProposerSlashing(
 
 // VerifyProposerSlashing verifies that the data provided from slashing is valid.
 func VerifyProposerSlashing(
-	beaconState state.ReadOnlyBeaconState,
+	beaconState types.ReadOnlyBeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
 	if slashing.Header_1 == nil || slashing.Header_1.Header == nil || slashing.Header_2 == nil || slashing.Header_2.Header == nil {

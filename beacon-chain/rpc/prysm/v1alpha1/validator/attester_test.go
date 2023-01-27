@@ -13,7 +13,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -203,7 +203,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &ethpb.BeaconState{Slot: 100}
-	state, err := state_native.InitializeFromProtoPhase0(s)
+	state, err := state.InitializeFromProtoPhase0(s)
 	require.NoError(t, err)
 	ctx := context.Background()
 	chainService := &mock.ChainService{

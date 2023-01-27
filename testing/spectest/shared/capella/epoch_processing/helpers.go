@@ -8,8 +8,8 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -17,7 +17,7 @@ import (
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type epochOperation func(*testing.T, state.BeaconState) (state.BeaconState, error)
+type epochOperation func(*testing.T, types.BeaconState) (types.BeaconState, error)
 
 // RunEpochOperationTest takes in the prestate and processes it through the
 // passed in epoch operation function and checks the post state with the expected post state.
@@ -34,7 +34,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preBeaconState, err := state_native.InitializeFromProtoCapella(preBeaconStateBase)
+	preBeaconState, err := state.InitializeFromProtoCapella(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -59,7 +59,7 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		pbState, err := state_native.ProtobufBeaconStateCapella(beaconState.ToProtoUnsafe())
+		pbState, err := state.ProtobufBeaconStateCapella(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.ToProtoUnsafe(), postBeaconState)

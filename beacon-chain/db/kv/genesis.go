@@ -6,13 +6,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	dbIface "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
-func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
+func (s *Store) SaveGenesisData(ctx context.Context, genesisState types.BeaconState) error {
 	wsb, err := blocks.NewGenesisBlockForState(ctx, genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")

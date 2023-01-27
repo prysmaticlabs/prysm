@@ -3,11 +3,11 @@ package stateutil_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -222,7 +222,7 @@ func TestMerkleizeTrieLeaves_BadHashLayer(t *testing.T) {
 	assert.ErrorContains(t, "hash layer is a non power of 2", err)
 }
 
-func retrieveBlockRoots(b state.BeaconState) [][32]byte {
+func retrieveBlockRoots(b types.BeaconState) [][32]byte {
 	blockRts := b.BlockRoots()
 	roots := make([][32]byte, 0, len(blockRts))
 	for _, rt := range blockRts {

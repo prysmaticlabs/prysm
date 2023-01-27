@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -75,7 +75,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //	     index=(slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
 //	     count=committees_per_slot * SLOTS_PER_EPOCH,
 //	 )
-func BeaconCommitteeFromState(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
+func BeaconCommitteeFromState(ctx context.Context, state types.ReadOnlyBeaconState, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
 	epoch := slots.ToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -158,7 +158,7 @@ type CommitteeAssignmentContainer struct {
 // 4. Construct a map of validator indices pointing to the respective committees.
 func CommitteeAssignments(
 	ctx context.Context,
-	state state.BeaconState,
+	state types.BeaconState,
 	epoch primitives.Epoch,
 ) (map[primitives.ValidatorIndex]*CommitteeAssignmentContainer, map[primitives.ValidatorIndex][]primitives.Slot, error) {
 	nextEpoch := time.NextEpoch(state)
@@ -256,7 +256,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att *ethpb.Attestation) error {
+func VerifyAttestationBitfieldLengths(ctx context.Context, state types.ReadOnlyBeaconState, att *ethpb.Attestation) error {
 	committee, err := BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
@@ -274,14 +274,14 @@ func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyB
 
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
-func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {
+func ShuffledIndices(s types.ReadOnlyBeaconState, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	seed, err := Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
 	indices := make([]primitives.ValidatorIndex, 0, s.NumValidators())
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, primitives.ValidatorIndex(idx))
 		}
@@ -296,7 +296,7 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
+func UpdateCommitteeCache(ctx context.Context, state types.ReadOnlyBeaconState, epoch primitives.Epoch) error {
 	for _, e := range []primitives.Epoch{epoch, epoch + 1} {
 		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
@@ -336,7 +336,7 @@ func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, 
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
-func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState) error {
+func UpdateProposerIndicesInCache(ctx context.Context, state types.ReadOnlyBeaconState) error {
 	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
 	// Which is the reason why we skip genesis epoch.
 	if time.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
@@ -432,7 +432,7 @@ func computeCommittee(
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex) ([]primitives.ValidatorIndex, error) {
+func precomputeProposerIndices(state types.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 

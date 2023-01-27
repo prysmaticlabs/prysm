@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -20,12 +20,12 @@ import (
 func Test_migrateStateValidators(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
-		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		setup func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator)
+		eval  func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator)
 	}{
 		{
 			name: "only runs once",
-			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -36,7 +36,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// check if the migration is completed, per migration table.
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					migrationCompleteOrNot := tx.Bucket(migrationsBucket).Get(migrationStateValidatorsKey)
@@ -48,7 +48,7 @@ func Test_migrateStateValidators(t *testing.T) {
 		},
 		{
 			name: "once migrated, always enable flag",
-			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -59,7 +59,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// disable the flag and see if the code mandates that flag.
 				resetCfg := features.InitWithReset(&features.Flags{
 					EnableHistoricalSpaceRepresentation: false,
@@ -92,7 +92,7 @@ func Test_migrateStateValidators(t *testing.T) {
 					assert.NoError(t, hashErr)
 					individualHashes = append(individualHashes, hash[:])
 				}
-				pbState, err := state_native.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
+				pbState, err := state.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -112,7 +112,7 @@ func Test_migrateStateValidators(t *testing.T) {
 		},
 		{
 			name: "migrates validators and adds them to new buckets",
-			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -123,7 +123,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -151,7 +151,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := state_native.ProtobufBeaconStatePhase0(rcvdState.ToProtoUnsafe())
+				pbState, err := state.ProtobufBeaconStatePhase0(rcvdState.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
@@ -210,12 +210,12 @@ func Test_migrateStateValidators(t *testing.T) {
 func Test_migrateAltairStateValidators(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
-		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		setup func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator)
+		eval  func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator)
 	}{
 		{
 			name: "migrates validators and adds them to new buckets",
-			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -226,7 +226,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state types.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -254,7 +254,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := state_native.ProtobufBeaconStateAltair(rcvdState.ToProtoUnsafe())
+				pbState, err := state.ProtobufBeaconStateAltair(rcvdState.ToProtoUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {

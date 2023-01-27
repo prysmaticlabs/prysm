@@ -2,8 +2,8 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -355,25 +355,25 @@ func SignedBeaconBlock(block interfaces.SignedBeaconBlock) (*ethpbv1.SignedBeaco
 	return v1Block, nil
 }
 
-// BeaconStateToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
-	sourceFork := state.Fork()
-	sourceLatestBlockHeader := state.LatestBlockHeader()
-	sourceEth1Data := state.Eth1Data()
-	sourceEth1DataVotes := state.Eth1DataVotes()
-	sourceValidators := state.Validators()
-	sourcePrevEpochAtts, err := state.PreviousEpochAttestations()
+// BeaconStateToProto converts a types.BeaconState object to its protobuf equivalent.
+func BeaconStateToProto(st types.BeaconState) (*ethpbv1.BeaconState, error) {
+	sourceFork := st.Fork()
+	sourceLatestBlockHeader := st.LatestBlockHeader()
+	sourceEth1Data := st.Eth1Data()
+	sourceEth1DataVotes := st.Eth1DataVotes()
+	sourceValidators := st.Validators()
+	sourcePrevEpochAtts, err := st.PreviousEpochAttestations()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get previous epoch attestations from state")
 	}
-	sourceCurrEpochAtts, err := state.CurrentEpochAttestations()
+	sourceCurrEpochAtts, err := st.CurrentEpochAttestations()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get current epoch attestations from state")
 	}
-	sourceJustificationBits := state.JustificationBits()
-	sourcePrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
-	sourceCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
-	sourceFinalizedCheckpoint := state.FinalizedCheckpoint()
+	sourceJustificationBits := st.JustificationBits()
+	sourcePrevJustifiedCheckpoint := st.PreviousJustifiedCheckpoint()
+	sourceCurrJustifiedCheckpoint := st.CurrentJustifiedCheckpoint()
+	sourceFinalizedCheckpoint := st.FinalizedCheckpoint()
 
 	resultEth1DataVotes := make([]*ethpbv1.Eth1Data, len(sourceEth1DataVotes))
 	for i, vote := range sourceEth1DataVotes {
@@ -441,14 +441,14 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
-	hRoot, err := state.HistoricalRoots()
+	hRoot, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get historical roots from state")
 	}
 	result := &ethpbv1.BeaconState{
-		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorsRoot()),
-		Slot:                  state.Slot(),
+		GenesisTime:           st.GenesisTime(),
+		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
+		Slot:                  st.Slot(),
 		Fork: &ethpbv1.Fork{
 			PreviousVersion: bytesutil.SafeCopyBytes(sourceFork.PreviousVersion),
 			CurrentVersion:  bytesutil.SafeCopyBytes(sourceFork.CurrentVersion),
@@ -461,8 +461,8 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
+		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
 		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoot),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
@@ -470,11 +470,11 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 			BlockHash:    bytesutil.SafeCopyBytes(sourceEth1Data.BlockHash),
 		},
 		Eth1DataVotes:             resultEth1DataVotes,
-		Eth1DepositIndex:          state.Eth1DepositIndex(),
+		Eth1DepositIndex:          st.Eth1DepositIndex(),
 		Validators:                resultValidators,
-		Balances:                  state.Balances(),
-		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
-		Slashings:                 state.Slashings(),
+		Balances:                  st.Balances(),
+		RandaoMixes:               bytesutil.SafeCopy2dBytes(st.RandaoMixes()),
+		Slashings:                 st.Slashings(),
 		PreviousEpochAttestations: resultPrevEpochAtts,
 		CurrentEpochAttestations:  resultCurrEpochAtts,
 		JustificationBits:         bytesutil.SafeCopyBytes(sourceJustificationBits),

@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -25,7 +25,7 @@ var balanceCache = cache.NewEffectiveBalanceCache()
 //	 Math safe up to ~10B ETH, afterwhich this overflows uint64.
 //	 """
 //	 return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])))
-func TotalBalance(state state.ReadOnlyValidators, indices []primitives.ValidatorIndex) uint64 {
+func TotalBalance(state types.ReadOnlyValidators, indices []primitives.ValidatorIndex) uint64 {
 	total := uint64(0)
 
 	for _, idx := range indices {
@@ -55,7 +55,7 @@ func TotalBalance(state state.ReadOnlyValidators, indices []primitives.Validator
 //	 Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
 //	 """
 //	 return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
-func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
+func TotalActiveBalance(s types.ReadOnlyBeaconState) (uint64, error) {
 	bal, err := balanceCache.Get(s)
 	switch {
 	case err == nil:
@@ -69,7 +69,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 
 	total := uint64(0)
 	epoch := slots.ToEpoch(s.Slot())
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := s.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			total += val.EffectiveBalance()
 		}
@@ -96,7 +96,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 //	  Increase the validator balance at index ``index`` by ``delta``.
 //	  """
 //	  state.balances[index] += delta
-func IncreaseBalance(state state.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
+func IncreaseBalance(state types.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err
@@ -132,7 +132,7 @@ func IncreaseBalanceWithVal(currBalance, delta uint64) (uint64, error) {
 //	  Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //	  """
 //	  state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
-func DecreaseBalance(state state.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
+func DecreaseBalance(state types.BeaconState, idx primitives.ValidatorIndex, delta uint64) error {
 	balAtIdx, err := state.BalanceAtIndex(idx)
 	if err != nil {
 		return err

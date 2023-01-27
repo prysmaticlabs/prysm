@@ -3,14 +3,14 @@ package testing
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-type getStateWithLatestBlockHeader func(*ethpb.BeaconBlockHeader) (state.BeaconState, error)
+type getStateWithLatestBlockHeader func(*ethpb.BeaconBlockHeader) (types.BeaconState, error)
 
 func VerifyBeaconStateLatestBlockHeader(
 	t *testing.T,
@@ -33,7 +33,7 @@ func VerifyBeaconStateLatestBlockHeader(
 	require.DeepNotEqual(t, want, got)
 }
 
-type getStateWithLBlockRoots func([][]byte) (state.BeaconState, error)
+type getStateWithLBlockRoots func([][]byte) (types.BeaconState, error)
 
 func VerifyBeaconStateBlockRootsNative(
 	t *testing.T,

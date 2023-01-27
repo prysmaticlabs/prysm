@@ -25,13 +25,13 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -82,7 +82,7 @@ func TestStore_OnBlock(t *testing.T) {
 	tests := []struct {
 		name          string
 		blk           *ethpb.SignedBeaconBlock
-		s             state.BeaconState
+		s             types.BeaconState
 		time          uint64
 		wantErrString string
 	}{
@@ -1115,13 +1115,13 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 func Test_getStateVersionAndPayload(t *testing.T) {
 	tests := []struct {
 		name    string
-		st      state.BeaconState
+		st      types.BeaconState
 		version int
 		header  *enginev1.ExecutionPayloadHeader
 	}{
 		{
 			name: "phase 0 state",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				s, _ := util.DeterministicGenesisState(t, 1)
 				return s
 			}(),
@@ -1130,7 +1130,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 		},
 		{
 			name: "altair state",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				s, _ := util.DeterministicGenesisStateAltair(t, 1)
 				return s
 			}(),
@@ -1139,7 +1139,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 		},
 		{
 			name: "bellatrix state",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 				wrappedHeader, err := consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,

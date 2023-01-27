@@ -7,13 +7,13 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -25,7 +25,7 @@ import (
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
-func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *Store) State(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	startTime := time.Now()
@@ -53,7 +53,7 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 
 // StateOrError is just like State(), except it only returns a non-error response
 // if the requested state is found in the database.
-func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	st, err := s.State(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.Bea
 }
 
 // GenesisState returns the genesis state in beacon chain.
-func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
+func (s *Store) GenesisState(ctx context.Context) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 
@@ -79,7 +79,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 		return cached, nil
 	}
 
-	var st state.BeaconState
+	var st types.BeaconState
 	err = s.db.View(func(tx *bolt.Tx) error {
 		// Retrieve genesis block's signing root from blocks bucket,
 		// to look up what the genesis state is.
@@ -111,7 +111,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (s *Store) SaveState(ctx context.Context, st state.ReadOnlyBeaconState, blockRoot [32]byte) error {
+func (s *Store) SaveState(ctx context.Context, st types.ReadOnlyBeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
 	ok, err := s.isStateValidatorMigrationOver()
@@ -119,13 +119,13 @@ func (s *Store) SaveState(ctx context.Context, st state.ReadOnlyBeaconState, blo
 		return err
 	}
 	if ok {
-		return s.SaveStatesEfficient(ctx, []state.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
+		return s.SaveStatesEfficient(ctx, []types.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
 	}
-	return s.SaveStates(ctx, []state.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
+	return s.SaveStates(ctx, []types.ReadOnlyBeaconState{st}, [][32]byte{blockRoot})
 }
 
 // SaveStates stores multiple states to the db using the provided corresponding roots.
-func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
+func (s *Store) SaveStates(ctx context.Context, states []types.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
 	if states == nil {
@@ -165,7 +165,7 @@ type withValidators interface {
 }
 
 // SaveStatesEfficient stores multiple states to the db (new schema) using the provided corresponding roots.
-func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
+func (s *Store) SaveStatesEfficient(ctx context.Context, states []types.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStatesEfficient")
 	defer span.End()
 	if states == nil {
@@ -185,7 +185,7 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	return nil
 }
 
-func getValidators(states []state.ReadOnlyBeaconState) ([][]byte, map[string]*ethpb.Validator, error) {
+func getValidators(states []types.ReadOnlyBeaconState) ([][]byte, map[string]*ethpb.Validator, error) {
 	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
@@ -214,7 +214,7 @@ func getValidators(states []state.ReadOnlyBeaconState) ([][]byte, map[string]*et
 	return validatorKeys, validatorsEntries, nil
 }
 
-func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, blockRoots [][32]byte, states []state.ReadOnlyBeaconState, validatorKeys [][]byte, validatorsEntries map[string]*ethpb.Validator) error {
+func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, blockRoots [][32]byte, states []types.ReadOnlyBeaconState, validatorKeys [][]byte, validatorsEntries map[string]*ethpb.Validator) error {
 	bucket := tx.Bucket(stateBucket)
 	valIdxBkt := tx.Bucket(blockRootValidatorHashesBucket)
 	for i, rt := range blockRoots {
@@ -230,7 +230,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 		switch rawType := states[i].ToProtoUnsafe().(type) {
 		case *ethpb.BeaconState:
-			pbState, err := statenative.ProtobufBeaconStatePhase0(rawType)
+			pbState, err := state.ProtobufBeaconStatePhase0(rawType)
 			if err != nil {
 				return err
 			}
@@ -251,7 +251,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateAltair:
-			pbState, err := statenative.ProtobufBeaconStateAltair(rawType)
+			pbState, err := state.ProtobufBeaconStateAltair(rawType)
 			if err != nil {
 				return err
 			}
@@ -273,7 +273,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateBellatrix:
-			pbState, err := statenative.ProtobufBeaconStateBellatrix(rawType)
+			pbState, err := state.ProtobufBeaconStateBellatrix(rawType)
 			if err != nil {
 				return err
 			}
@@ -295,7 +295,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateCapella:
-			pbState, err := statenative.ProtobufBeaconStateCapella(rawType)
+			pbState, err := state.ProtobufBeaconStateCapella(rawType)
 			if err != nil {
 				return err
 			}
@@ -465,7 +465,7 @@ func (s *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 }
 
 // unmarshal state from marshaled proto state bytes to versioned state struct type.
-func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries []*ethpb.Validator) (state.BeaconState, error) {
+func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries []*ethpb.Validator) (types.BeaconState, error) {
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
@@ -486,7 +486,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return statenative.InitializeFromProtoUnsafeCapella(protoState)
+		return state.InitializeFromProtoUnsafeCapella(protoState)
 	case hasBellatrixKey(enc):
 		// Marshal state bytes to bellatrix beacon state.
 		protoState := &ethpb.BeaconStateBellatrix{}
@@ -500,7 +500,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return statenative.InitializeFromProtoUnsafeBellatrix(protoState)
+		return state.InitializeFromProtoUnsafeBellatrix(protoState)
 	case hasAltairKey(enc):
 		// Marshal state bytes to altair beacon state.
 		protoState := &ethpb.BeaconStateAltair{}
@@ -514,7 +514,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return statenative.InitializeFromProtoUnsafeAltair(protoState)
+		return state.InitializeFromProtoUnsafeAltair(protoState)
 	default:
 		// Marshal state bytes to phase 0 beacon state.
 		protoState := &ethpb.BeaconState{}
@@ -528,12 +528,12 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return statenative.InitializeFromProtoUnsafePhase0(protoState)
+		return state.InitializeFromProtoUnsafePhase0(protoState)
 	}
 }
 
 // marshal versioned state from struct type down to bytes.
-func marshalState(ctx context.Context, st state.ReadOnlyBeaconState) ([]byte, error) {
+func marshalState(ctx context.Context, st types.ReadOnlyBeaconState) ([]byte, error) {
 	switch st.ToProtoUnsafe().(type) {
 	case *ethpb.BeaconState:
 		rState, ok := st.ToProtoUnsafe().(*ethpb.BeaconState)
@@ -730,7 +730,7 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 // from the db. Ideally there should just be one state per slot, but given validator
 // can double propose, a single slot could have multiple block roots and
 // results states. This returns a list of states.
-func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]state.ReadOnlyBeaconState, error) {
+func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]types.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotStatesBelow")
 	defer span.End()
 
@@ -756,7 +756,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot
 		return nil, err
 	}
 
-	var st state.ReadOnlyBeaconState
+	var st types.ReadOnlyBeaconState
 	var err error
 	if best != nil {
 		st, err = s.State(ctx, bytesutil.ToBytes32(best))
@@ -771,7 +771,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot
 		}
 	}
 
-	return []state.ReadOnlyBeaconState{st}, nil
+	return []types.ReadOnlyBeaconState{st}, nil
 }
 
 // createStateIndicesFromStateSlot takes in a state slot and returns

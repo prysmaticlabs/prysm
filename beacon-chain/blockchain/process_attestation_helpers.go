@@ -8,17 +8,17 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
-func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.BeaconState, error) {
+func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (types.BeaconState, error) {
 	// Use a multilock to allow scoped holding of a mutex by a checkpoint root + epoch
 	// allowing us to behave smarter in terms of how this function is used concurrently.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)

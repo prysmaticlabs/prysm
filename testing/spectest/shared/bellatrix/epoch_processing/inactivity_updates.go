@@ -7,7 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
@@ -30,7 +30,7 @@ func RunInactivityUpdatesTest(t *testing.T, config string) {
 	}
 }
 
-func processInactivityUpdates(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+func processInactivityUpdates(t *testing.T, st types.BeaconState) (types.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp, err := altair.InitializePrecomputeValidators(ctx, st)
 	require.NoError(t, err)

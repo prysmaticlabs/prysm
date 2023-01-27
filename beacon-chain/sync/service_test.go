@@ -12,7 +12,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -23,7 +23,7 @@ import (
 )
 
 func TestService_StatusZeroEpoch(t *testing.T) {
-	bState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 0})
+	bState, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 0})
 	require.NoError(t, err)
 	r := &Service{
 		cfg: &config{

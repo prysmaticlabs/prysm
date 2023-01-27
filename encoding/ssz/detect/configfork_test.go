@@ -6,10 +6,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -110,7 +110,7 @@ func TestByState(t *testing.T) {
 	}
 }
 
-func stateForVersion(v int) (state.BeaconState, error) {
+func stateForVersion(v int) (types.BeaconState, error) {
 	switch v {
 	case version.Phase0:
 		return util.NewBeaconState()

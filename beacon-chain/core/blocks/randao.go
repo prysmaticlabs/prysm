@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -29,9 +29,9 @@ import (
 //	 state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func ProcessRandao(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	b interfaces.SignedBeaconBlock,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func ProcessRandao(
 //	        hash(body.randao_reveal))
 //	)
 func ProcessRandaoNoVerify(
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	randaoReveal []byte,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.

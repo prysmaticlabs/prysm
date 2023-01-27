@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -69,7 +69,7 @@ func (s *Simulator) generateBlockHeadersForSlot(
 }
 
 func (s *Simulator) signBlockHeader(
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	header *ethpb.SignedBeaconBlockHeader,
 ) (bls.Signature, error) {
 	domain, err := signing.Domain(

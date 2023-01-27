@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -46,7 +46,7 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	var registry []*ethpb.Validator
 	currentSlot := primitives.Slot(0)
 
-	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	beaconState, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})
@@ -65,7 +65,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	var registry []*ethpb.Validator
 	currentSlot := primitives.Slot(0)
 
-	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	beaconState, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
 	})

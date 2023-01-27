@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	attv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -49,7 +49,7 @@ func NewAttestation() *ethpb.Attestation {
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool,
+	bState types.BeaconState, privs []bls.SecretKey, numToGen uint64, slot primitives.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
 	generateHeadState := false
@@ -66,44 +66,44 @@ func GenerateAttestations(
 	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		var headState state.BeaconState
+		var headState types.BeaconState
 		switch bState.Version() {
 		case version.Phase0:
-			pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
+			pbState, err := state.ProtobufBeaconStatePhase0(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := state_native.InitializeFromProtoUnsafePhase0(pbState)
+			genState, err := state.InitializeFromProtoUnsafePhase0(pbState)
 			if err != nil {
 				return nil, err
 			}
 			headState = genState
 		case version.Altair:
-			pbState, err := state_native.ProtobufBeaconStateAltair(bState.ToProto())
+			pbState, err := state.ProtobufBeaconStateAltair(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := state_native.InitializeFromProtoUnsafeAltair(pbState)
+			genState, err := state.InitializeFromProtoUnsafeAltair(pbState)
 			if err != nil {
 				return nil, err
 			}
 			headState = genState
 		case version.Bellatrix:
-			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.ToProto())
+			pbState, err := state.ProtobufBeaconStateBellatrix(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := state_native.InitializeFromProtoUnsafeBellatrix(pbState)
+			genState, err := state.InitializeFromProtoUnsafeBellatrix(pbState)
 			if err != nil {
 				return nil, err
 			}
 			headState = genState
 		case version.Capella:
-			pbState, err := state_native.ProtobufBeaconStateCapella(bState.ToProto())
+			pbState, err := state.ProtobufBeaconStateCapella(bState.ToProto())
 			if err != nil {
 				return nil, err
 			}
-			genState, err := state_native.InitializeFromProtoUnsafeCapella(pbState)
+			genState, err := state.InitializeFromProtoUnsafeCapella(pbState)
 			if err != nil {
 				return nil, err
 			}

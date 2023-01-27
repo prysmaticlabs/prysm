@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	doublylinkedlist "github.com/prysmaticlabs/prysm/v3/container/doubly-linked-list"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/blst"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -18,7 +18,7 @@ import (
 // This pool is used by proposers to insert BLS-to-execution-change objects into new blocks.
 type PoolManager interface {
 	PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
-	BLSToExecChangesForInclusion(beaconState state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
+	BLSToExecChangesForInclusion(beaconState types.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error)
 	InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange)
 	MarkIncluded(change *ethpb.SignedBLSToExecutionChange)
 	ValidatorExists(idx primitives.ValidatorIndex) bool
@@ -62,7 +62,7 @@ func (p *Pool) PendingBLSToExecChanges() ([]*ethpb.SignedBLSToExecutionChange, e
 
 // BLSToExecChangesForInclusion returns objects that are ready for inclusion.
 // This method will not return more than the block enforced MaxBlsToExecutionChanges.
-func (p *Pool) BLSToExecChangesForInclusion(st state.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error) {
+func (p *Pool) BLSToExecChangesForInclusion(st types.ReadOnlyBeaconState) ([]*ethpb.SignedBLSToExecutionChange, error) {
 	p.lock.RLock()
 	length := int(math.Min(float64(params.BeaconConfig().MaxBlsToExecutionChanges), float64(p.pending.Len())))
 	result := make([]*ethpb.SignedBLSToExecutionChange, 0, length)

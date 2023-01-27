@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
@@ -225,7 +225,7 @@ func generate2FullEpochState() error {
 	return file.WriteFile(path.Join(*outputDir, benchmark.BstateEpochFileName), beaconBytes)
 }
 
-func genesisBeaconState() (state.BeaconState, error) {
+func genesisBeaconState() (types.BeaconState, error) {
 	beaconBytes, err := os.ReadFile(path.Join(*outputDir, benchmark.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
@@ -234,5 +234,5 @@ func genesisBeaconState() (state.BeaconState, error) {
 	if err := genesisState.UnmarshalSSZ(beaconBytes); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return state_native.InitializeFromProtoUnsafePhase0(genesisState)
+	return state.InitializeFromProtoUnsafePhase0(genesisState)
 }

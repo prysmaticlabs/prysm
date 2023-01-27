@@ -5,11 +5,11 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
-func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*ethpb.ProposerSlashing, []*ethpb.AttesterSlashing) {
+func (vs *Server) getSlashings(ctx context.Context, head types.BeaconState) ([]*ethpb.ProposerSlashing, []*ethpb.AttesterSlashing) {
 	proposerSlashings := vs.SlashingsPool.PendingProposerSlashings(ctx, head, false /*noLimit*/)
 	validProposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposerSlashings))
 	for _, slashing := range proposerSlashings {

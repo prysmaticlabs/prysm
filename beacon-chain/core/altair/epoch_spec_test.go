@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -103,7 +103,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	}
-	s, err := state_native.InitializeFromProtoAltair(base)
+	s, err := state.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
 	require.NoError(t, err)
@@ -174,7 +174,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			helpers.ClearCache()
 			original := proto.Clone(tt.state)
-			s, err := state_native.InitializeFromProtoAltair(tt.state)
+			s, err := state.InitializeFromProtoAltair(tt.state)
 			require.NoError(t, err)
 			newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
 			require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{math.MaxUint64, 1e9},
 	}
-	s, err := state_native.InitializeFromProtoAltair(base)
+	s, err := state.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 	_, err = epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplierAltair)
 	require.ErrorContains(t, "addition overflows", err)

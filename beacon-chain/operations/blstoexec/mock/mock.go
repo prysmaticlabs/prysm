@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -17,7 +17,7 @@ func (m *PoolMock) PendingBLSToExecChanges() ([]*eth.SignedBLSToExecutionChange,
 }
 
 // BLSToExecChangesForInclusion --
-func (m *PoolMock) BLSToExecChangesForInclusion(_ state.ReadOnlyBeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
+func (m *PoolMock) BLSToExecChangesForInclusion(_ types.ReadOnlyBeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
 	return m.Changes, nil
 }
 

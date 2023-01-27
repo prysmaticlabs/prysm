@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -29,7 +29,7 @@ type HistoryAccessor interface {
 	HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
+	StateOrError(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error)
 }
 
 // CanonicalChecker determines whether the given block root is canonical.
@@ -46,12 +46,12 @@ type CurrentSlotter interface {
 // Replayer encapsulates database query and replay logic. It can be constructed via a ReplayerBuilder.
 type Replayer interface {
 	// ReplayBlocks replays the blocks the Replayer knows about based on Builder params
-	ReplayBlocks(ctx context.Context) (state.BeaconState, error)
+	ReplayBlocks(ctx context.Context) (types.BeaconState, error)
 	// ReplayToSlot invokes ReplayBlocks under the hood,
 	// but then also runs process_slots to advance the state past the root or slot used in the builder.
 	// For example, if you wanted the state to be at the target slot, but only integrating blocks up to
 	// slot-1, you could request Builder.ReplayerForSlot(slot-1).ReplayToSlot(slot)
-	ReplayToSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error)
+	ReplayToSlot(ctx context.Context, target primitives.Slot) (types.BeaconState, error)
 }
 
 var _ Replayer = &stateReplayer{}
@@ -59,7 +59,7 @@ var _ Replayer = &stateReplayer{}
 // chainer is responsible for supplying the chain components necessary to rebuild a state,
 // namely a starting BeaconState and all available blocks from the starting state up to and including the target slot
 type chainer interface {
-	chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error)
+	chainForSlot(ctx context.Context, target primitives.Slot) (types.BeaconState, []interfaces.SignedBeaconBlock, error)
 }
 
 type stateReplayer struct {
@@ -70,11 +70,11 @@ type stateReplayer struct {
 
 // ReplayBlocks applies all the blocks that were accumulated when building the Replayer.
 // This method relies on the correctness of the code that constructed the Replayer data.
-func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, error) {
+func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.stateReplayer.ReplayBlocks")
 	defer span.End()
 
-	var s state.BeaconState
+	var s types.BeaconState
 	var descendants []interfaces.SignedBeaconBlock
 	var err error
 	switch rs.method {
@@ -127,7 +127,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 // but then also runs process_slots to advance the state past the root or slot used in the builder.
 // for example, if you wanted the state to be at the target slot, but only integrating blocks up to
 // slot-1, you could request Builder.ReplayerForSlot(slot-1).ReplayToSlot(slot)
-func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo primitives.Slot) (state.BeaconState, error) {
+func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo primitives.Slot) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.stateReplayer.ReplayToSlot")
 	defer span.End()
 

@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/capella"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/cmd/flags"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 
 	"github.com/ghodss/yaml"
@@ -185,8 +185,8 @@ func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
 	return nil
 }
 
-func upgradeStateToForkName(ctx context.Context, pbst *ethpb.BeaconState, name string) (state.BeaconState, error) {
-	st, err := state_native.InitializeFromProtoUnsafePhase0(pbst)
+func upgradeStateToForkName(ctx context.Context, pbst *ethpb.BeaconState, name string) (types.BeaconState, error) {
+	st, err := state.InitializeFromProtoUnsafePhase0(pbst)
 	if err != nil {
 		return nil, err
 	}

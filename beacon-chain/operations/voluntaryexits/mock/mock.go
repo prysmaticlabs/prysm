@@ -3,8 +3,8 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -14,12 +14,12 @@ type PoolMock struct {
 }
 
 // PendingExits --
-func (m *PoolMock) PendingExits(_ state.ReadOnlyBeaconState, _ primitives.Slot, _ bool) []*eth.SignedVoluntaryExit {
+func (m *PoolMock) PendingExits(_ types.ReadOnlyBeaconState, _ primitives.Slot, _ bool) []*eth.SignedVoluntaryExit {
 	return m.Exits
 }
 
 // InsertVoluntaryExit --
-func (m *PoolMock) InsertVoluntaryExit(_ context.Context, _ state.ReadOnlyBeaconState, exit *eth.SignedVoluntaryExit) {
+func (m *PoolMock) InsertVoluntaryExit(_ context.Context, _ types.ReadOnlyBeaconState, exit *eth.SignedVoluntaryExit) {
 	m.Exits = append(m.Exits, exit)
 }
 

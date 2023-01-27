@@ -14,12 +14,12 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
@@ -344,7 +344,7 @@ func (node *BeaconNode) UnderlyingProcess() *os.Process {
 	return node.cmd.Process
 }
 
-func generateGenesis(ctx context.Context) (state.BeaconState, error) {
+func generateGenesis(ctx context.Context) (types.BeaconState, error) {
 	if e2e.TestParams.Eth1GenesisBlock == nil {
 		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
 	}

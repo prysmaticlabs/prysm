@@ -6,23 +6,23 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func Test_BaseReward(t *testing.T) {
 	helpers.ClearCache()
-	genState := func(valCount uint64) state.ReadOnlyBeaconState {
+	genState := func(valCount uint64) types.ReadOnlyBeaconState {
 		s, _ := util.DeterministicGenesisStateAltair(t, valCount)
 		return s
 	}
 	tests := []struct {
 		name      string
 		valIdx    primitives.ValidatorIndex
-		st        state.ReadOnlyBeaconState
+		st        types.ReadOnlyBeaconState
 		want      uint64
 		errString string
 	}{

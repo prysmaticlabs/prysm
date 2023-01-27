@@ -5,9 +5,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 )
@@ -63,48 +63,48 @@ import (
 //	post.current_sync_committee = get_next_sync_committee(post)
 //	post.next_sync_committee = get_next_sync_committee(post)
 //	return post
-func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	epoch := time.CurrentEpoch(state)
+func UpgradeToAltair(ctx context.Context, st types.BeaconState) (types.BeaconState, error) {
+	epoch := time.CurrentEpoch(st)
 
-	numValidators := state.NumValidators()
-	hrs, err := state.HistoricalRoots()
+	numValidators := st.NumValidators()
+	hrs, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
 	s := &ethpb.BeaconStateAltair{
-		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
-		Slot:                  state.Slot(),
+		GenesisTime:           st.GenesisTime(),
+		GenesisValidatorsRoot: st.GenesisValidatorsRoot(),
+		Slot:                  st.Slot(),
 		Fork: &ethpb.Fork{
-			PreviousVersion: state.Fork().CurrentVersion,
+			PreviousVersion: st.Fork().CurrentVersion,
 			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           epoch,
 		},
-		LatestBlockHeader:           state.LatestBlockHeader(),
-		BlockRoots:                  state.BlockRoots(),
-		StateRoots:                  state.StateRoots(),
+		LatestBlockHeader:           st.LatestBlockHeader(),
+		BlockRoots:                  st.BlockRoots(),
+		StateRoots:                  st.StateRoots(),
 		HistoricalRoots:             hrs,
-		Eth1Data:                    state.Eth1Data(),
-		Eth1DataVotes:               state.Eth1DataVotes(),
-		Eth1DepositIndex:            state.Eth1DepositIndex(),
-		Validators:                  state.Validators(),
-		Balances:                    state.Balances(),
-		RandaoMixes:                 state.RandaoMixes(),
-		Slashings:                   state.Slashings(),
+		Eth1Data:                    st.Eth1Data(),
+		Eth1DataVotes:               st.Eth1DataVotes(),
+		Eth1DepositIndex:            st.Eth1DepositIndex(),
+		Validators:                  st.Validators(),
+		Balances:                    st.Balances(),
+		RandaoMixes:                 st.RandaoMixes(),
+		Slashings:                   st.Slashings(),
 		PreviousEpochParticipation:  make([]byte, numValidators),
 		CurrentEpochParticipation:   make([]byte, numValidators),
-		JustificationBits:           state.JustificationBits(),
-		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
-		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
-		FinalizedCheckpoint:         state.FinalizedCheckpoint(),
+		JustificationBits:           st.JustificationBits(),
+		PreviousJustifiedCheckpoint: st.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  st.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         st.FinalizedCheckpoint(),
 		InactivityScores:            make([]uint64, numValidators),
 	}
 
-	newState, err := state_native.InitializeFromProtoUnsafeAltair(s)
+	newState, err := state.InitializeFromProtoUnsafeAltair(s)
 	if err != nil {
 		return nil, err
 	}
-	prevEpochAtts, err := state.PreviousEpochAttestations()
+	prevEpochAtts, err := st.PreviousEpochAttestations()
 	if err != nil {
 		return nil, err
 	}
@@ -143,18 +143,18 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 //	    for index in get_attesting_indices(state, data, attestation.aggregation_bits):
 //	        for flag_index in participation_flag_indices:
 //	            epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-func TranslateParticipation(ctx context.Context, state state.BeaconState, atts []*ethpb.PendingAttestation) (state.BeaconState, error) {
-	epochParticipation, err := state.PreviousEpochParticipation()
+func TranslateParticipation(ctx context.Context, st types.BeaconState, atts []*ethpb.PendingAttestation) (types.BeaconState, error) {
+	epochParticipation, err := st.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, att := range atts {
-		participatedFlags, err := AttestationParticipationFlagIndices(state, att.Data, att.InclusionDelay)
+		participatedFlags, err := AttestationParticipationFlagIndices(st, att.Data, att.InclusionDelay)
 		if err != nil {
 			return nil, err
 		}
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(ctx, st, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -200,9 +200,9 @@ func TranslateParticipation(ctx context.Context, state state.BeaconState, atts [
 		}
 	}
 
-	if err := state.SetPreviousParticipationBits(epochParticipation); err != nil {
+	if err := st.SetPreviousParticipationBits(epochParticipation); err != nil {
 		return nil, err
 	}
 
-	return state, nil
+	return st, nil
 }

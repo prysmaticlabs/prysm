@@ -16,9 +16,9 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -223,11 +223,11 @@ func TestListSyncCommittees(t *testing.T) {
 }
 
 type futureSyncMockFetcher struct {
-	BeaconState     state.BeaconState
+	BeaconState     types.BeaconState
 	BeaconStateRoot []byte
 }
 
-func (m *futureSyncMockFetcher) State(_ context.Context, stateId []byte) (state.BeaconState, error) {
+func (m *futureSyncMockFetcher) State(_ context.Context, stateId []byte) (types.BeaconState, error) {
 	expectedRequest := []byte(strconv.FormatUint(uint64(0), 10))
 	res := bytes.Compare(stateId, expectedRequest)
 	if res != 0 {
@@ -244,7 +244,7 @@ func (m *futureSyncMockFetcher) StateRoot(context.Context, []byte) ([]byte, erro
 	return m.BeaconStateRoot, nil
 }
 
-func (m *futureSyncMockFetcher) StateBySlot(context.Context, primitives.Slot) (state.BeaconState, error) {
+func (m *futureSyncMockFetcher) StateBySlot(context.Context, primitives.Slot) (types.BeaconState, error) {
 	return m.BeaconState, nil
 }
 

@@ -16,12 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -49,9 +49,9 @@ import (
 //	      assert block.state_root == hash_tree_root(state)
 func ExecuteStateTransition(
 	ctx context.Context,
-	state state.BeaconState,
+	state types.BeaconState,
 	signed interfaces.SignedBeaconBlock,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -98,7 +98,7 @@ func ExecuteStateTransition(
 //	  # Cache block root
 //	  previous_block_root = hash_tree_root(state.latest_block_header)
 //	  state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state types.BeaconState) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
@@ -141,9 +141,9 @@ func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconStat
 // ProcessSlotsUsingNextSlotCache processes slots by using next slot cache for higher efficiency.
 func ProcessSlotsUsingNextSlotCache(
 	ctx context.Context,
-	parentState state.BeaconState,
+	parentState types.BeaconState,
 	parentRoot []byte,
-	slot primitives.Slot) (state.BeaconState, error) {
+	slot primitives.Slot) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
@@ -175,7 +175,7 @@ func ProcessSlotsUsingNextSlotCache(
 
 // ProcessSlotsIfPossible executes ProcessSlots on the input state when target slot is above the state's slot.
 // Otherwise, it returns the input state unchanged.
-func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, targetSlot primitives.Slot) (state.BeaconState, error) {
+func ProcessSlotsIfPossible(ctx context.Context, state types.BeaconState, targetSlot primitives.Slot) (types.BeaconState, error) {
 	if targetSlot > state.Slot() {
 		return ProcessSlots(ctx, state, targetSlot)
 	}
@@ -194,7 +194,7 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 //	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //	          process_epoch(state)
 //	      state.slot = Slot(state.slot + 1)
-func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state types.BeaconState, slot primitives.Slot) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
@@ -312,7 +312,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state types.BeaconState, b interfaces.SignedBeaconBlock) (types.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
-func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func ProcessEpochPrecompute(ctx context.Context, state types.BeaconState) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(time.CurrentEpoch(state)))) // lint:ignore uintcast -- This is OK for tracing.

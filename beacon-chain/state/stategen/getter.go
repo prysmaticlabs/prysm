@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -42,7 +42,7 @@ func (s *State) hasStateInCache(_ context.Context, blockRoot [32]byte) (bool, er
 }
 
 // StateByRootIfCachedNoCopy retrieves a state using the input block root only if the state is already in the cache.
-func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
+func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) types.BeaconState {
 	if !s.hotStateCache.has(blockRoot) {
 		return nil
 	}
@@ -50,7 +50,7 @@ func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState 
 }
 
 // StateByRoot retrieves the state using input block root.
-func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
@@ -78,7 +78,7 @@ func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint6
 	epoch := time.CurrentEpoch(st)
 
 	balances := make([]uint64, st.NumValidators())
-	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
+	var balanceAccretor = func(idx int, val types.ReadOnlyValidator) error {
 		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
 			balances[idx] = val.EffectiveBalance()
 		} else {
@@ -98,7 +98,7 @@ func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint6
 // It invalidates cache for parent root because pre-state will get mutated.
 //
 // WARNING: Do not use this method for anything other than initial syncing purpose or block tree is applied.
-func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	// Genesis case. If block root is zero hash, short circuit to use genesis state stored in DB.
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		return s.beaconDB.GenesisState(ctx)
@@ -186,7 +186,7 @@ func (s *State) DeleteStateFromCaches(_ context.Context, blockRoot [32]byte) err
 }
 
 // This loads a beacon state from either the cache or DB, then replays blocks up the slot of the requested block root.
-func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateByRoot")
 	defer span.End()
 
@@ -248,7 +248,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 // 1) block parent state is the last finalized state
 // 2) block parent state is the epoch boundary state and exists in epoch boundary cache
 // 3) block parent state is in DB
-func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.latestAncestor")
 	defer span.End()
 

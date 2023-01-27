@@ -7,8 +7,8 @@ import (
 
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 func testServiceOptsWithDB(t *testing.T) []Option {
@@ -31,13 +31,13 @@ func testServiceOptsNoDB() []Option {
 }
 
 type mockStateByRooter struct {
-	state state.BeaconState
+	state types.BeaconState
 	err   error
 }
 
 var _ stateByRooter = &mockStateByRooter{}
 
-func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.BeaconState, error) {
+func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (types.BeaconState, error) {
 	return m.state, m.err
 }
 

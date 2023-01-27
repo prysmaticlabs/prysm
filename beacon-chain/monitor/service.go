@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -163,7 +163,7 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 
 // initializePerformanceStructures initializes the validatorLatestPerformance
 // and validatorAggregatedPerformance for each tracked validator.
-func (s *Service) initializePerformanceStructures(state state.BeaconState, epoch primitives.Epoch) {
+func (s *Service) initializePerformanceStructures(state types.BeaconState, epoch primitives.Epoch) {
 	for idx := range s.TrackedValidators {
 		balance, err := state.BalanceAtIndex(idx)
 		if err != nil {
@@ -291,7 +291,7 @@ func (s *Service) trackedIndex(idx primitives.ValidatorIndex) bool {
 
 // updateSyncCommitteeTrackedVals updates the sync committee assignments of our
 // tracked validators. It gets called when we sync a block after the Sync Period changes.
-func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
+func (s *Service) updateSyncCommitteeTrackedVals(state types.BeaconState) {
 	s.Lock()
 	defer s.Unlock()
 	for idx := range s.TrackedValidators {

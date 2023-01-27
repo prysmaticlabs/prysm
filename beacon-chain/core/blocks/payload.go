@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -27,7 +27,7 @@ var (
 // def is_merge_transition_complete(state: BeaconState) -> bool:
 //
 //	return state.latest_execution_payload_header != ExecutionPayloadHeader()
-func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
+func IsMergeTransitionComplete(st types.BeaconState) (bool, error) {
 	if st == nil {
 		return false, errors.New("nil state")
 	}
@@ -80,7 +80,7 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 // def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
 //
 //	return is_merge_block(state, body) or is_merge_complete(state)
-func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabled(st types.BeaconState, body interfaces.BeaconBlockBody) (bool, error) {
 	if st == nil || body == nil {
 		return false, errors.New("nil state or block body")
 	}
@@ -120,7 +120,7 @@ func IsPreBellatrixVersion(v int) bool {
 //	# Verify consistency of the parent hash with respect to the previous execution payload header
 //	if is_merge_complete(state):
 //	    assert payload.parent_hash == state.latest_execution_payload_header.block_hash
-func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.ExecutionData) error {
+func ValidatePayloadWhenMergeCompletes(st types.BeaconState, payload interfaces.ExecutionData) error {
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
 		return err
@@ -147,7 +147,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 //	assert payload.random == get_randao_mix(state, get_current_epoch(state))
 //	# Verify timestamp
 //	assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
-func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) error {
+func ValidatePayload(st types.BeaconState, payload interfaces.ExecutionData) error {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //	    block_hash=payload.block_hash,
 //	    transactions_root=hash_tree_root(payload.transactions),
 //	)
-func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
+func ProcessPayload(st types.BeaconState, payload interfaces.ExecutionData) (types.BeaconState, error) {
 	if st.Version() >= version.Capella {
 		withdrawals, err := payload.Withdrawals()
 		if err != nil {
@@ -223,7 +223,7 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 }
 
 // ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
-func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interfaces.ExecutionData) error {
+func ValidatePayloadHeaderWhenMergeCompletes(st types.BeaconState, header interfaces.ExecutionData) error {
 	// Skip validation if the state is not merge compatible.
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
@@ -244,7 +244,7 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interf
 }
 
 // ValidatePayloadHeader validates the payload header.
-func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData) error {
+func ValidatePayloadHeader(st types.BeaconState, header interfaces.ExecutionData) error {
 	// Validate header's random mix matches with state in current epoch
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
@@ -266,7 +266,7 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 }
 
 // ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
+func ProcessPayloadHeader(st types.BeaconState, header interfaces.ExecutionData) (types.BeaconState, error) {
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}

@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -55,7 +55,7 @@ func GeneratePreminedGenesisStateFromDepositData(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	pbState, err := statenative.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
+	pbState, err := state.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 	if err != nil {
 		return nil, nil, err
 	}

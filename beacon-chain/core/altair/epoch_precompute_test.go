@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -17,7 +18,7 @@ import (
 
 func TestInitializeEpochValidators_Ok(t *testing.T) {
 	ffe := params.BeaconConfig().FarFutureEpoch
-	s, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	s, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 		// Validator 0 is slashed
 		// Validator 1 is withdrawable
@@ -65,7 +66,7 @@ func TestInitializeEpochValidators_Ok(t *testing.T) {
 
 func TestInitializeEpochValidators_Overflow(t *testing.T) {
 	ffe := params.BeaconConfig().FarFutureEpoch
-	s, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	s, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: math.MaxUint64},
@@ -79,7 +80,7 @@ func TestInitializeEpochValidators_Overflow(t *testing.T) {
 }
 
 func TestInitializeEpochValidators_BadState(t *testing.T) {
-	s, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	s, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators:       []*ethpb.Validator{{}},
 		InactivityScores: []uint64{},
 	})
@@ -149,7 +150,7 @@ func TestProcessEpochParticipation_InactiveValidator(t *testing.T) {
 		}
 		return b
 	}
-	st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	st, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},                                                  // Inactive
@@ -455,7 +456,7 @@ func TestProcessInactivityScores_NonEligibleValidator(t *testing.T) {
 	require.Equal(t, uint64(0), inactivityScores[3])
 }
 
-func testState() (state.BeaconState, error) {
+func testState() (types.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
 		var err error
@@ -467,7 +468,7 @@ func testState() (state.BeaconState, error) {
 		}
 		return b
 	}
-	return state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	return state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -492,7 +493,7 @@ func testState() (state.BeaconState, error) {
 	})
 }
 
-func testStateBellatrix() (state.BeaconState, error) {
+func testStateBellatrix() (types.BeaconState, error) {
 	generateParticipation := func(flags ...uint8) byte {
 		b := byte(0)
 		var err error
@@ -504,7 +505,7 @@ func testStateBellatrix() (state.BeaconState, error) {
 		}
 		return b
 	}
-	return state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
+	return state.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
 			{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},

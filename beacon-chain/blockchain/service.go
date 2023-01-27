@@ -27,13 +27,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -81,7 +81,7 @@ type config struct {
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            execution.POWBlockFetcher
-	FinalizedStateAtStartUp state.BeaconState
+	FinalizedStateAtStartUp types.BeaconState
 	ExecutionEngineCaller   execution.EngineCaller
 }
 
@@ -175,7 +175,7 @@ func (s *Service) Status() error {
 }
 
 // StartFromSavedState initializes the blockchain using a previously saved finalized checkpoint.
-func (s *Service) StartFromSavedState(saved state.BeaconState) error {
+func (s *Service) StartFromSavedState(saved types.BeaconState) error {
 	log.Info("Blockchain data already exists in DB, initializing...")
 	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 	s.cfg.AttService.SetGenesisTime(saved.GenesisTime())
@@ -293,7 +293,7 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 		return errors.New("no finalized epoch in the database")
 	}
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	var finalizedState state.BeaconState
+	var finalizedState types.BeaconState
 
 	finalizedState, err = s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 	if err != nil {
@@ -382,8 +382,8 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState state.BeaconState,
-	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
+	preGenesisState types.BeaconState,
+	eth1data *ethpb.Eth1Data) (types.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
@@ -417,7 +417,7 @@ func (s *Service) initializeBeaconChain(
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
-func (s *Service) saveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
+func (s *Service) saveGenesisData(ctx context.Context, genesisState types.BeaconState) error {
 	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis data")
 	}

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/stateutils"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -24,7 +24,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 			},
 		},
 	}
-	state, err := state_native.InitializeFromProtoPhase0(base)
+	state, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	tests := []struct {

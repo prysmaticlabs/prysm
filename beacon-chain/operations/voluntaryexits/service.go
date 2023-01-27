@@ -5,9 +5,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
@@ -16,8 +16,8 @@ import (
 // PoolManager maintains pending and seen voluntary exits.
 // This pool is used by proposers to insert voluntary exits into new blocks.
 type PoolManager interface {
-	PendingExits(state state.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
-	InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit)
+	PendingExits(state types.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit
+	InsertVoluntaryExit(ctx context.Context, state types.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit)
 	MarkIncluded(exit *ethpb.SignedVoluntaryExit)
 }
 
@@ -37,7 +37,7 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state types.ReadOnlyBeaconState, slot primitives.Slot, noLimit bool) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -65,7 +65,7 @@ func (p *Pool) PendingExits(state state.ReadOnlyBeaconState, slot primitives.Slo
 
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // or the validator is already exited.
-func (p *Pool) InsertVoluntaryExit(ctx context.Context, state state.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit) {
+func (p *Pool) InsertVoluntaryExit(ctx context.Context, state types.ReadOnlyBeaconState, exit *ethpb.SignedVoluntaryExit) {
 	ctx, span := trace.StartSpan(ctx, "exitPool.InsertVoluntaryExit")
 	defer span.End()
 	p.lock.Lock()

@@ -3,9 +3,9 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 func NewMockReplayerBuilder(opt ...MockReplayerBuilderOption) *MockReplayerBuilder {
@@ -18,7 +18,7 @@ func NewMockReplayerBuilder(opt ...MockReplayerBuilderOption) *MockReplayerBuild
 
 type MockReplayerBuilderOption func(*MockReplayerBuilder)
 
-func WithMockState(s state.BeaconState) MockReplayerBuilderOption {
+func WithMockState(s types.BeaconState) MockReplayerBuilderOption {
 	return func(b *MockReplayerBuilder) {
 		b.SetMockState(s)
 	}
@@ -28,14 +28,14 @@ type MockReplayerBuilder struct {
 	forSlot map[primitives.Slot]*MockReplayer
 }
 
-func (b *MockReplayerBuilder) SetMockState(s state.BeaconState) {
+func (b *MockReplayerBuilder) SetMockState(s types.BeaconState) {
 	if b.forSlot == nil {
 		b.forSlot = make(map[primitives.Slot]*MockReplayer)
 	}
 	b.forSlot[s.Slot()] = &MockReplayer{State: s}
 }
 
-func (b *MockReplayerBuilder) SetMockStateForSlot(s state.BeaconState, slot primitives.Slot) {
+func (b *MockReplayerBuilder) SetMockStateForSlot(s types.BeaconState, slot primitives.Slot) {
 	if b.forSlot == nil {
 		b.forSlot = make(map[primitives.Slot]*MockReplayer)
 	}
@@ -56,15 +56,15 @@ func (b *MockReplayerBuilder) ReplayerForSlot(target primitives.Slot) stategen.R
 var _ stategen.ReplayerBuilder = &MockReplayerBuilder{}
 
 type MockReplayer struct {
-	State state.BeaconState
+	State types.BeaconState
 	Err   error
 }
 
-func (m *MockReplayer) ReplayBlocks(_ context.Context) (state.BeaconState, error) {
+func (m *MockReplayer) ReplayBlocks(_ context.Context) (types.BeaconState, error) {
 	return m.State, m.Err
 }
 
-func (m *MockReplayer) ReplayToSlot(_ context.Context, _ primitives.Slot) (state.BeaconState, error) {
+func (m *MockReplayer) ReplayToSlot(_ context.Context, _ primitives.Slot) (types.BeaconState, error) {
 	return m.State, m.Err
 }
 

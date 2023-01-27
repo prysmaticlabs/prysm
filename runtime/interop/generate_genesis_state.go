@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/async"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -68,7 +68,7 @@ func GenerateGenesisStateFromDepositData(
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
 
-	pbState, err := statenative.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
+	pbState, err := state.ProtobufBeaconStatePhase0(beaconState.ToProtoUnsafe())
 	if err != nil {
 		return nil, nil, err
 	}

@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	p2pType "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -229,7 +229,7 @@ func TestProcessEpoch_BadBalanceAltair(t *testing.T) {
 	assert.ErrorContains(t, "addition overflows", err)
 }
 
-func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconState,
+func createFullAltairBlockWithOperations(t *testing.T) (types.BeaconState,
 	*ethpb.SignedBeaconBlockAltair) {
 	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)

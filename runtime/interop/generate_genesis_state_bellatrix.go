@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -54,7 +54,7 @@ func GenerateGenesisStateBellatrixFromDepositData(
 	if !ok {
 		return nil, nil, errors.New("unexpected BeaconState version")
 	}
-	pbState, err := statenative.ProtobufBeaconStateBellatrix(pbb)
+	pbState, err := state.ProtobufBeaconStateBellatrix(pbb)
 	if err != nil {
 		return nil, nil, err
 	}

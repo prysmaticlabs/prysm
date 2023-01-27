@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	powtesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -63,7 +63,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		st                state.BeaconState
+		st                types.BeaconState
 		errString         string
 		forkchoiceErr     error
 		payloadID         *pb.PayloadIDBytes

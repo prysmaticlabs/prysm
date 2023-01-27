@@ -9,10 +9,10 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -74,7 +74,7 @@ func FillRootsNaturalOptCapella(state *ethpb.BeaconStateCapella) error {
 type NewBeaconStateOption func(state *ethpb.BeaconState) error
 
 // NewBeaconState creates a beacon state with minimum marshalable fields.
-func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) {
+func NewBeaconState(options ...NewBeaconStateOption) (types.BeaconState, error) {
 	seed := &ethpb.BeaconState{
 		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
 		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
@@ -107,7 +107,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 		}
 	}
 
-	var st, err = state_native.InitializeFromProtoUnsafePhase0(seed)
+	var st, err = state.InitializeFromProtoUnsafePhase0(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
-func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconState, error) {
+func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (types.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -162,7 +162,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 		}
 	}
 
-	var st, err = state_native.InitializeFromProtoUnsafeAltair(seed)
+	var st, err = state.InitializeFromProtoUnsafeAltair(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
-func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconState, error) {
+func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (types.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -229,7 +229,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 		}
 	}
 
-	var st, err = state_native.InitializeFromProtoUnsafeBellatrix(seed)
+	var st, err = state.InitializeFromProtoUnsafeBellatrix(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 }
 
 // NewBeaconStateCapella creates a beacon state with minimum marshalable fields.
-func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) error) (state.BeaconState, error) {
+func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) error) (types.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -297,7 +297,7 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 		}
 	}
 
-	var st, err = state_native.InitializeFromProtoUnsafeCapella(seed)
+	var st, err = state.InitializeFromProtoUnsafeCapella(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func DeterministicGenesisStateWithGenesisBlock(
 	ctx context.Context,
 	db iface.HeadAccessDatabase,
 	numValidators uint64,
-) (state.BeaconState, [32]byte, []bls.SecretKey) {
+) (types.BeaconState, [32]byte, []bls.SecretKey) {
 	genesisState, privateKeys := DeterministicGenesisState(t, numValidators)
 	stateRoot, err := genesisState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")

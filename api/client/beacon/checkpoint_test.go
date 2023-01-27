@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -357,7 +357,7 @@ func forkForEpoch(cfg *params.BeaconChainConfig, epoch primitives.Epoch) (*ethpb
 	}, nil
 }
 
-func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.BeaconState, primitives.Epoch) {
+func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (types.BeaconState, primitives.Epoch) {
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
 
@@ -381,8 +381,8 @@ func defaultTestHeadState(t *testing.T, cfg *params.BeaconChainConfig) (state.Be
 	return st, expectedEpoch
 }
 
-// TODO(10429): refactor beacon state options in testing/util to take a state.BeaconState so this can become an option
-func populateValidators(cfg *params.BeaconChainConfig, st state.BeaconState, valCount, avgBalance uint64) error {
+// TODO(10429): refactor beacon state options in testing/util to take a types.BeaconState so this can become an option
+func populateValidators(cfg *params.BeaconChainConfig, st types.BeaconState, valCount, avgBalance uint64) error {
 	validators := make([]*ethpb.Validator, valCount)
 	balances := make([]uint64, len(validators))
 	for i := uint64(0); i < valCount; i++ {

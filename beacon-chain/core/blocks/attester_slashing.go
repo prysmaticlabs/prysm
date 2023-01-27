@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -39,10 +39,10 @@ import (
 //	 assert slashed_any
 func ProcessAttesterSlashings(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	slashings []*ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	var err error
 	for _, slashing := range slashings {
 		beaconState, err = ProcessAttesterSlashing(ctx, beaconState, slashing, slashFunc)
@@ -56,10 +56,10 @@ func ProcessAttesterSlashings(
 // ProcessAttesterSlashing processes individual attester slashing.
 func ProcessAttesterSlashing(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	slashing *ethpb.AttesterSlashing,
 	slashFunc slashValidatorFunc,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 		return nil, errors.Wrap(err, "could not verify attester slashing")
 	}
@@ -70,7 +70,7 @@ func ProcessAttesterSlashing(
 	currentEpoch := slots.ToEpoch(beaconState.Slot())
 	var err error
 	var slashedAny bool
-	var val state.ReadOnlyValidator
+	var val types.ReadOnlyValidator
 	for _, validatorIndex := range slashableIndices {
 		val, err = beaconState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(validatorIndex))
 		if err != nil {
@@ -104,7 +104,7 @@ func ProcessAttesterSlashing(
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(ctx context.Context, beaconState state.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(ctx context.Context, beaconState types.ReadOnlyBeaconState, slashing *ethpb.AttesterSlashing) error {
 	if slashing == nil {
 		return errors.New("nil slashing")
 	}

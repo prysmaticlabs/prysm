@@ -11,7 +11,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -45,7 +45,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			preBeaconStateBase := &ethpb.BeaconState{}
 			require.NoError(t, preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			preBeaconState, err := state_native.InitializeFromProtoPhase0(preBeaconStateBase)
+			preBeaconState, err := state.InitializeFromProtoPhase0(preBeaconStateBase)
 			require.NoError(t, err)
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -71,7 +71,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 
 				postBeaconState := &ethpb.BeaconState{}
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-				pbState, err := state_native.ProtobufBeaconStatePhase0(beaconState.ToProto())
+				pbState, err := state.ProtobufBeaconStatePhase0(beaconState.ToProto())
 				require.NoError(t, err)
 				if !proto.Equal(pbState, postBeaconState) {
 					diff, _ := messagediff.PrettyDiff(beaconState.ToProto(), postBeaconState)

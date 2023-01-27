@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
@@ -22,8 +22,8 @@ import (
 const executionToBLSPadding = 12
 
 func ProcessBLSToExecutionChanges(
-	st state.BeaconState,
-	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	st types.BeaconState,
+	signed interfaces.SignedBeaconBlock) (types.BeaconState, error) {
 	if signed.Version() < version.Capella {
 		return st, nil
 	}
@@ -65,7 +65,7 @@ func ProcessBLSToExecutionChanges(
 //	    + b'\x00' * 11
 //	    + address_change.to_execution_address
 //	)
-func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
+func processBLSToExecutionChange(st types.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (types.BeaconState, error) {
 	// Checks that the message passes the validation conditions.
 	val, err := ValidateBLSToExecutionChange(st, signed)
 	if err != nil {
@@ -82,7 +82,7 @@ func processBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 
 // ValidateBLSToExecutionChange validates the execution change message against the state and returns the
 // validator referenced by the message.
-func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
+func ValidateBLSToExecutionChange(st types.ReadOnlyBeaconState, signed *ethpb.SignedBLSToExecutionChange) (*ethpb.Validator, error) {
 	if signed == nil {
 		return nil, errNilSignedWithdrawalMessage
 	}
@@ -110,7 +110,7 @@ func ValidateBLSToExecutionChange(st state.ReadOnlyBeaconState, signed *ethpb.Si
 	return val, nil
 }
 
-func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal) (state.BeaconState, error) {
+func ProcessWithdrawals(st types.BeaconState, withdrawals []*enginev1.Withdrawal) (types.BeaconState, error) {
 	expected, err := st.ExpectedWithdrawals()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get expected withdrawals")
@@ -162,7 +162,7 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 }
 
 func BLSChangesSignatureBatch(
-	st state.ReadOnlyBeaconState,
+	st types.ReadOnlyBeaconState,
 	changes []*ethpb.SignedBLSToExecutionChange,
 ) (*bls.SignatureBatch, error) {
 	// Return early if no changes
@@ -201,7 +201,7 @@ func BLSChangesSignatureBatch(
 // It validates the signature with the Capella fork version if the passed state
 // is from a previous fork.
 func VerifyBLSChangeSignature(
-	st state.BeaconState,
+	st types.BeaconState,
 	change *ethpbv2.SignedBLSToExecutionChange,
 ) error {
 	c := params.BeaconConfig()

@@ -6,10 +6,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -33,7 +33,7 @@ func (s *Service) canUpdateAttestedValidator(idx primitives.ValidatorIndex, slot
 }
 
 // attestingIndices returns the indices of validators that participated in the given aggregated attestation.
-func attestingIndices(ctx context.Context, state state.BeaconState, att *ethpb.Attestation) ([]uint64, error) {
+func attestingIndices(ctx context.Context, state types.BeaconState, att *ethpb.Attestation) ([]uint64, error) {
 	committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func logMessageTimelyFlagsForIndex(idx primitives.ValidatorIndex, data *ethpb.At
 }
 
 // processAttestations logs the event for the tracked validators' attestations inclusion in block
-func (s *Service) processAttestations(ctx context.Context, state state.BeaconState, blk interfaces.BeaconBlock) {
+func (s *Service) processAttestations(ctx context.Context, state types.BeaconState, blk interfaces.BeaconBlock) {
 	if blk == nil || blk.Body() == nil {
 		return
 	}
@@ -63,7 +63,7 @@ func (s *Service) processAttestations(ctx context.Context, state state.BeaconSta
 }
 
 // processIncludedAttestation logs in the event for the tracked validators' and their latest attestation gets processed.
-func (s *Service) processIncludedAttestation(ctx context.Context, state state.BeaconState, att *ethpb.Attestation) {
+func (s *Service) processIncludedAttestation(ctx context.Context, state types.BeaconState, att *ethpb.Attestation) {
 	attestingIndices, err := attestingIndices(ctx, state, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")

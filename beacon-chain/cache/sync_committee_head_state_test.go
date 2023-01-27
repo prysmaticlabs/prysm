@@ -3,37 +3,38 @@ package cache
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSyncCommitteeHeadState(t *testing.T) {
-	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+	beaconState, err := state.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	phase0State, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	phase0State, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	bellatrixState, err := state_native.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
+	bellatrixState, err := state.InitializeFromProtoBellatrix(&ethpb.BeaconStateBellatrix{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
 	})
 	require.NoError(t, err)
-	capellaState, err := state_native.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
+	capellaState, err := state.InitializeFromProtoCapella(&ethpb.BeaconStateCapella{
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -42,13 +43,13 @@ func TestSyncCommitteeHeadState(t *testing.T) {
 	require.NoError(t, err)
 	type put struct {
 		slot  primitives.Slot
-		state state.BeaconState
+		state types.BeaconState
 	}
 	tests := []struct {
 		name       string
 		key        primitives.Slot
 		put        *put
-		want       state.BeaconState
+		want       types.BeaconState
 		wantErr    bool
 		wantPutErr bool
 	}{

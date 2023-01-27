@@ -4,8 +4,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -41,7 +41,7 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.BeaconState, error) {
+func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (types.BeaconState, error) {
 	h, err := hash.HashProto(cp)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.Be
 	if exists && item != nil {
 		checkpointStateHit.Inc()
 		// Copy here is unnecessary since the return will only be used to verify attestation signature.
-		return item.(state.BeaconState), nil
+		return item.(types.BeaconState), nil
 	}
 
 	checkpointStateMiss.Inc()
@@ -61,7 +61,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (state.Be
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
 // recently added CheckpointState object if the cache size has ready the max cache size limit.
-func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s state.ReadOnlyBeaconState) error {
+func (c *CheckpointStateCache) AddCheckpointState(cp *ethpb.Checkpoint, s types.ReadOnlyBeaconState) error {
 	h, err := hash.HashProto(cp)
 	if err != nil {
 		return err

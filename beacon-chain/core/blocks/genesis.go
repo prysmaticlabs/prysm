@@ -6,11 +6,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -37,9 +37,9 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	return block
 }
 
-var ErrUnrecognizedState = errors.New("unknown underlying type for state.BeaconState value")
+var ErrUnrecognizedState = errors.New("unknown underlying type for types.BeaconState value")
 
-func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
+func NewGenesisBlockForState(ctx context.Context, st types.BeaconState) (interfaces.SignedBeaconBlock, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, err

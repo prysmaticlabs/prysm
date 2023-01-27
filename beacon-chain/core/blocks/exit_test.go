@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -32,7 +32,7 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       10,
 	})
@@ -62,7 +62,7 @@ func TestProcessVoluntaryExits_ExitAlreadySubmitted(t *testing.T) {
 			ExitEpoch: 10,
 		},
 	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Slot:       0,
 	})
@@ -94,7 +94,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	state, err := state.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Validators: registry,
 		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -228,7 +228,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 			params.BeaconConfig().ShardCommitteePeriod = 0
 			validator, signedExit, fork, genesisRoot, err := tt.setup()
 			require.NoError(t, err)
-			rvalidator, err := state_native.NewValidator(validator)
+			rvalidator, err := state.NewValidator(validator)
 			require.NoError(t, err)
 			err = blocks.VerifyExitAndSignature(
 				rvalidator,

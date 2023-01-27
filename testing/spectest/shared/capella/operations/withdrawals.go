@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -33,7 +33,7 @@ func RunWithdrawalsTest(t *testing.T, config string) {
 			require.NoError(t, payload.UnmarshalSSZ(payloadSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBodyCapella{ExecutionPayload: payload}
-			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			RunBlockOperationTest(t, folderPath, body, func(_ context.Context, s types.BeaconState, b interfaces.SignedBeaconBlock) (types.BeaconState, error) {
 				payload, err := b.Block().Body().Execution()
 				if err != nil {
 					return nil, err

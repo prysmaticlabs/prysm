@@ -3,19 +3,19 @@ package testutil
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 // MockFetcher is a fake implementation of statefetcher.Fetcher.
 type MockFetcher struct {
-	BeaconState     state.BeaconState
+	BeaconState     types.BeaconState
 	BeaconStateRoot []byte
-	StatesBySlot    map[primitives.Slot]state.BeaconState
+	StatesBySlot    map[primitives.Slot]types.BeaconState
 }
 
 // State --
-func (m *MockFetcher) State(context.Context, []byte) (state.BeaconState, error) {
+func (m *MockFetcher) State(context.Context, []byte) (types.BeaconState, error) {
 	return m.BeaconState, nil
 }
 
@@ -24,6 +24,6 @@ func (m *MockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
 	return m.BeaconStateRoot, nil
 }
 
-func (m *MockFetcher) StateBySlot(_ context.Context, s primitives.Slot) (state.BeaconState, error) {
+func (m *MockFetcher) StateBySlot(_ context.Context, s primitives.Slot) (types.BeaconState, error) {
 	return m.StatesBySlot[s], nil
 }

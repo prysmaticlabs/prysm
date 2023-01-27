@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -56,7 +56,7 @@ import (
 //	  return state
 //
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (types.BeaconState, error) {
 	st, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 // are not represented in the deposit contract and are only found in the genesis state validator registry. In order
 // to ensure the deposit root and count match the empty deposit contract deployed in a testnet genesis block, the root
 // of an empty deposit trie is computed and used as Eth1Data.deposit_root, and the deposit count is set to 0.
-func PreminedGenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func PreminedGenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (types.BeaconState, error) {
 	st, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func PreminedGenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, 
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState types.BeaconState, eth1Data *ethpb.Eth1Data) (types.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -216,11 +216,11 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return state_native.InitializeFromProtoPhase0(st)
+	return state.InitializeFromProtoPhase0(st)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() (state.BeaconState, error) {
+func EmptyGenesisState() (types.BeaconState, error) {
 	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -243,7 +243,7 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state_native.InitializeFromProtoPhase0(st)
+	return state.InitializeFromProtoPhase0(st)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

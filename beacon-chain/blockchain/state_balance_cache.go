@@ -7,8 +7,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 type stateBalanceCache struct {
@@ -19,7 +19,7 @@ type stateBalanceCache struct {
 }
 
 type stateByRooter interface {
-	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
+	StateByRoot(context.Context, [32]byte) (types.BeaconState, error)
 }
 
 // newStateBalanceCache exists to remind us that stateBalanceCache needs a state gen
@@ -48,7 +48,7 @@ func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) 
 	epoch := time.CurrentEpoch(justifiedState)
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	var balanceAccumulator = func(idx int, val state.ReadOnlyValidator) error {
+	var balanceAccumulator = func(idx int, val types.ReadOnlyValidator) error {
 		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
 			justifiedBalances[idx] = val.EffectiveBalance()
 		} else {

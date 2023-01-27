@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -20,9 +21,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	transition.SkipSlotCache.Enable()
 	defer transition.SkipSlotCache.Disable()
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
+	pbState, err := state.ProtobufBeaconStatePhase0(bState.ToProto())
 	require.NoError(t, err)
-	originalState, err := state_native.InitializeFromProtoPhase0(pbState)
+	originalState, err := state.InitializeFromProtoPhase0(pbState)
 	require.NoError(t, err)
 
 	blkCfg := util.DefaultBlockGenConfig()
@@ -47,9 +48,9 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	bState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProto())
+	pbState, err := state.ProtobufBeaconStatePhase0(bState.ToProto())
 	require.NoError(t, err)
-	originalState, err := state_native.InitializeFromProtoPhase0(pbState)
+	originalState, err := state.InitializeFromProtoPhase0(pbState)
 	require.NoError(t, err)
 
 	blkCfg := util.DefaultBlockGenConfig()
@@ -68,7 +69,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	require.Equal(t, true, executedState.Version() == version.Phase0)
 
 	// Create two shallow but different forks
-	var s1, s0 state.BeaconState
+	var s1, s0 types.BeaconState
 	{
 		blk, err := util.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
@@ -108,9 +109,9 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	// prepare copies for both states
-	var setups []state.BeaconState
+	var setups []types.BeaconState
 	for i := uint64(0); i < 300; i++ {
-		var st state.BeaconState
+		var st types.BeaconState
 		if i%2 == 0 {
 			st = s1
 		} else {
@@ -145,7 +146,7 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(setups))
 
-	step := func(i int, setup state.BeaconState) {
+	step := func(i int, setup types.BeaconState) {
 		// go at least 1 past problemSlot, to ensure problem slot state root is available
 		outState, err := transition.ProcessSlots(context.Background(), setup, problemSlot.Add(1+uint64(i))) // keep increasing, to hit and extend the cache
 		require.NoError(t, err, "Could not process state transition")

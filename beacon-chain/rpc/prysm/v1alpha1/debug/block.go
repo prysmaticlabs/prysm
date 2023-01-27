@@ -7,9 +7,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
@@ -63,7 +63,7 @@ func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlot
 	}
 
 	inclusionSlot := primitives.Slot(math.MaxUint64)
-	targetStates := make(map[[32]byte]state.ReadOnlyBeaconState)
+	targetStates := make(map[[32]byte]types.ReadOnlyBeaconState)
 	for _, blk := range blks {
 		for _, a := range blk.Block().Body().Attestations() {
 			tr := bytesutil.ToBytes32(a.Data.Target.Root)

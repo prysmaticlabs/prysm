@@ -22,10 +22,10 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -302,8 +302,8 @@ func (is *infostream) generateValidatorsInfo(pubKeys [][]byte) ([]*ethpb.Validat
 // generateValidatorInfo generates the validator info for a public key.
 func (is *infostream) generateValidatorInfo(
 	pubKey []byte,
-	validator state.ReadOnlyValidator,
-	headState state.ReadOnlyBeaconState,
+	validator types.ReadOnlyValidator,
+	headState types.ReadOnlyBeaconState,
 	epoch primitives.Epoch,
 ) (*ethpb.ValidatorInfo, error) {
 	info := &ethpb.ValidatorInfo{
@@ -375,7 +375,7 @@ func (is *infostream) generatePendingValidatorInfo(info *ethpb.ValidatorInfo) (*
 	return info, nil
 }
 
-func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
+func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.ValidatorInfo, headState types.ReadOnlyBeaconState, epoch primitives.Epoch) error {
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
 	pendingValidatorsMap := make(map[[fieldparams.BLSPubkeyLength]byte]int)
 	for i, info := range res {
@@ -392,7 +392,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 	numAttestingValidators := uint64(0)
 	pendingValidators := make([]primitives.ValidatorIndex, 0, headState.NumValidators())
 
-	err := headState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	err := headState.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		if val.IsNil() {
 			return errors.New("nil validator in state")
 		}
@@ -483,7 +483,7 @@ func (s indicesSorter) Less(i, j int) bool {
 	return s.indices[i] < s.indices[j]
 }
 
-func (is *infostream) calculateStatusAndTransition(validator state.ReadOnlyValidator, currentEpoch primitives.Epoch) (ethpb.ValidatorStatus, uint64) {
+func (is *infostream) calculateStatusAndTransition(validator types.ReadOnlyValidator, currentEpoch primitives.Epoch) (ethpb.ValidatorStatus, uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
 	if validator.IsNil() {

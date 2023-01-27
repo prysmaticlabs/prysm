@@ -15,9 +15,9 @@ go_library(
     ],
     deps = [
         "//beacon-chain/forkchoice/types:go_default_library",
-        "//beacon-chain/state:go_default_library",
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//consensus-types/state/types:go_default_library",
         "//proto/eth/v1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],

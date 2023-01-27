@@ -6,11 +6,11 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -41,9 +41,9 @@ import (
 //	  assert not proposer.slashed
 func ProcessBlockHeader(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	block interfaces.SignedBeaconBlock,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if err := blocks.BeaconBlockIsNil(block); err != nil {
 		return nil, err
 	}
@@ -97,10 +97,10 @@ func ProcessBlockHeader(
 //	  assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	slot primitives.Slot, proposerIndex primitives.ValidatorIndex,
 	parentRoot, bodyRoot []byte,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	if beaconState.Slot() != slot {
 		return nil, fmt.Errorf("state slot: %d is different than block slot: %d", beaconState.Slot(), slot)
 	}

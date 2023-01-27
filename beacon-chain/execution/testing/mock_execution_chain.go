@@ -12,13 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	statetypes "github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -32,7 +32,7 @@ type Chain struct {
 	BlockNumberByTime map[uint64]*big.Int
 	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
-	GenesisState      state.BeaconState
+	GenesisState      statetypes.BeaconState
 	CurrEndpoint      string
 	CurrError         error
 	Endpoints         []string
@@ -110,7 +110,7 @@ func (m *Chain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (m *Chain) PreGenesisState() state.BeaconState {
+func (m *Chain) PreGenesisState() statetypes.BeaconState {
 	return m.GenesisState
 }
 
@@ -166,7 +166,7 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 		return nil
 	}
 	if r.Backend == nil && methodName == "eth_getBlockByNumber" {
-		h := &gethTypes.Header{
+		h := &gethtypes.Header{
 			Number: big.NewInt(15),
 			Time:   150,
 		}

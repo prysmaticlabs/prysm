@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -48,7 +48,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	assert.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	assert.Equal(t, types.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {
@@ -684,7 +684,7 @@ func TestAltairState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, types.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestAltairState_CanDelete(t *testing.T) {
@@ -703,7 +703,7 @@ func TestAltairState_CanDelete(t *testing.T) {
 	require.NoError(t, db.DeleteState(context.Background(), r))
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
-	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, types.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func validators(limit int) []*ethpb.Validator {
@@ -878,7 +878,7 @@ func TestBellatrixState_CanSaveRetrieve(t *testing.T) {
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
 	require.NoError(t, err)
-	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, types.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func TestBellatrixState_CanDelete(t *testing.T) {
@@ -897,7 +897,7 @@ func TestBellatrixState_CanDelete(t *testing.T) {
 	require.NoError(t, db.DeleteState(context.Background(), r))
 	savedS, err := db.State(context.Background(), r)
 	require.NoError(t, err)
-	require.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+	require.Equal(t, types.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
 }
 
 func BenchmarkState_CheckStateSaveTime_1(b *testing.B)  { checkStateSaveTime(b, 1) }

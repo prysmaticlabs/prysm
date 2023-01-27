@@ -7,9 +7,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis",
     visibility = ["//beacon-chain/db:__subpackages__"],
     deps = [
-        "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/state-native:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/state:go_default_library",
+        "//consensus-types/state/types:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
     ],

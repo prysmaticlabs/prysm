@@ -4,8 +4,8 @@ import (
 	"context"
 	"math"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -14,7 +14,7 @@ import (
 )
 
 // SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
@@ -47,7 +47,7 @@ func (s *State) ForceCheckpoint(ctx context.Context, blockRoot []byte) error {
 // This saves a post beacon state. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
-func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
+func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st types.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveStateByRoot")
 	defer span.End()
 

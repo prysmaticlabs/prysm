@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/async/event"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	statetypes "github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -54,8 +54,8 @@ func (*FaultyExecutionChain) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState --
-func (*FaultyExecutionChain) PreGenesisState() state.BeaconState {
-	s, err := state_native.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
+func (*FaultyExecutionChain) PreGenesisState() statetypes.BeaconState {
+	s, err := state.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
 	if err != nil {
 		panic("could not initialize state")
 	}

@@ -7,14 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	"go.opencensus.io/trace"
 )
 
 // InitializePrecomputeValidators precomputes individual validator for its attested balances and the total sum of validators attested balances of the epoch.
-func InitializePrecomputeValidators(ctx context.Context, beaconState state.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
+func InitializePrecomputeValidators(ctx context.Context, beaconState types.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.InitializePrecomputeValidators")
 	defer span.End()
 	vals := make([]*precompute.Validator, beaconState.NumValidators())
@@ -31,7 +31,7 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 	if beaconState.NumValidators() != len(inactivityScores) {
 		return nil, nil, errors.New("num of validators is different than num of inactivity scores")
 	}
-	if err := beaconState.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	if err := beaconState.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		// Set validator's balance, inactivity score and slashed/withdrawable status.
 		v := &precompute.Validator{
 			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
@@ -74,9 +74,9 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 //	If the chain has recently finalized, each validator's score drops by 16.
 func ProcessInactivityScores(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	vals []*precompute.Validator,
-) (state.BeaconState, []*precompute.Validator, error) {
+) (types.BeaconState, []*precompute.Validator, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessInactivityScores")
 	defer span.End()
 
@@ -142,7 +142,7 @@ func ProcessInactivityScores(
 //	return set(filter(lambda index: not state.validators[index].slashed, participating_indices))
 func ProcessEpochParticipation(
 	ctx context.Context,
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
 ) ([]*precompute.Validator, *precompute.Balance, error) {
@@ -210,10 +210,10 @@ func ProcessEpochParticipation(
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
-	beaconState state.BeaconState,
+	beaconState types.BeaconState,
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
-) (state.BeaconState, error) {
+) (types.BeaconState, error) {
 	// Don't process rewards and penalties in genesis epoch.
 	cfg := params.BeaconConfig()
 	if time.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
@@ -255,7 +255,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
+func AttestationsDelta(beaconState types.BeaconState, bal *precompute.Balance, vals []*precompute.Validator) (rewards, penalties []uint64, err error) {
 	numOfVals := beaconState.NumValidators()
 	rewards = make([]uint64, numOfVals)
 	penalties = make([]uint64, numOfVals)

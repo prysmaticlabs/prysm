@@ -7,10 +7,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -271,7 +271,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
 func (vs *Server) validatorStatus(
 	ctx context.Context,
-	headState state.ReadOnlyBeaconState,
+	headState types.ReadOnlyBeaconState,
 	pubKey []byte,
 ) (*ethpb.ValidatorStatusResponse, primitives.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
@@ -390,7 +390,7 @@ func checkValidatorsAreRecent(headEpoch primitives.Epoch, req *ethpb.DoppelGange
 	return validatorsAreRecent, resp
 }
 
-func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, primitives.ValidatorIndex, error) {
+func statusForPubKey(headState types.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, primitives.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
@@ -401,7 +401,7 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 	return assignmentStatus(headState, idx), idx, nil
 }
 
-func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex primitives.ValidatorIndex) ethpb.ValidatorStatus {
+func assignmentStatus(beaconState types.ReadOnlyBeaconState, validatorIndex primitives.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS

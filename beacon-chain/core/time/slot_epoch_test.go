@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -43,7 +44,7 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
+		st, err := state.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.CurrentEpoch(st), "ActiveCurrentEpoch(%d)", st.Slot())
 	}
@@ -59,7 +60,7 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
+		st, err := state.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.PrevEpoch(st), "ActivePrevEpoch(%d)", st.Slot())
 	}
@@ -77,7 +78,7 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: primitives.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		st, err := state_native.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
+		st, err := state.InitializeFromProtoPhase0(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
 		assert.Equal(t, tt.epoch, time.NextEpoch(st), "NextEpoch(%d)", st.Slot())
 	}
@@ -179,7 +180,7 @@ func TestCanProcessEpoch_TrueOnEpochsLastSlot(t *testing.T) {
 
 	for _, tt := range tests {
 		b := &eth.BeaconState{Slot: tt.slot}
-		s, err := state_native.InitializeFromProtoPhase0(b)
+		s, err := state.InitializeFromProtoPhase0(b)
 		require.NoError(t, err)
 		assert.Equal(t, tt.canProcessEpoch, time.CanProcessEpoch(s), "CanProcessEpoch(%d)", tt.slot)
 	}
@@ -193,7 +194,7 @@ func TestAltairCompatible(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	type args struct {
-		s state.BeaconState
+		s types.BeaconState
 		e primitives.Epoch
 	}
 	tests := []struct {
@@ -204,7 +205,7 @@ func TestAltairCompatible(t *testing.T) {
 		{
 			name: "phase0 state",
 			args: args{
-				s: func() state.BeaconState {
+				s: func() types.BeaconState {
 					st, _ := util.DeterministicGenesisState(t, 1)
 					return st
 				}(),
@@ -214,7 +215,7 @@ func TestAltairCompatible(t *testing.T) {
 		{
 			name: "altair state, altair epoch",
 			args: args{
-				s: func() state.BeaconState {
+				s: func() types.BeaconState {
 					st, _ := util.DeterministicGenesisStateAltair(t, 1)
 					return st
 				}(),
@@ -225,7 +226,7 @@ func TestAltairCompatible(t *testing.T) {
 		{
 			name: "bellatrix state, bellatrix epoch",
 			args: args{
-				s: func() state.BeaconState {
+				s: func() types.BeaconState {
 					st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 					return st
 				}(),
@@ -236,7 +237,7 @@ func TestAltairCompatible(t *testing.T) {
 		{
 			name: "bellatrix state, altair epoch",
 			args: args{
-				s: func() state.BeaconState {
+				s: func() types.BeaconState {
 					st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 					return st
 				}(),
@@ -247,7 +248,7 @@ func TestAltairCompatible(t *testing.T) {
 		{
 			name: "bellatrix state, phase0 epoch",
 			args: args{
-				s: func() state.BeaconState {
+				s: func() types.BeaconState {
 					st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 					return st
 				}(),

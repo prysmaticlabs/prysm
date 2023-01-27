@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	state "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -48,7 +49,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
@@ -94,7 +95,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	indices, err := epoch.UnslashedAttestingIndices(context.Background(), beaconState, atts)
@@ -140,7 +141,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 		Validators: validators,
 		Balances:   balances,
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
 	balance, err := epoch.AttestingBalance(context.Background(), beaconState, atts)
@@ -156,7 +157,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{0, 1e9},
 	}
-	s, err := state_native.InitializeFromProtoPhase0(base)
+	s, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 	require.NoError(t, err)
@@ -234,7 +235,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			original := proto.Clone(tt.state)
-			s, err := state_native.InitializeFromProtoPhase0(tt.state)
+			s, err := state.InitializeFromProtoPhase0(tt.state)
 			require.NoError(t, err)
 			helpers.ClearCache()
 			newState, err := epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
@@ -297,7 +298,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -320,7 +321,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 		})
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	currentEpoch := time.CurrentEpoch(beaconState)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
@@ -349,7 +350,7 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -373,7 +374,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -398,7 +399,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
 	}
-	beaconState, err := state_native.InitializeFromProtoPhase0(base)
+	beaconState, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, err := epoch.ProcessRegistryUpdates(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -407,7 +408,7 @@ func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	}
 }
 
-func buildState(t testing.TB, slot primitives.Slot, validatorCount uint64) state.BeaconState {
+func buildState(t testing.TB, slot primitives.Slot, validatorCount uint64) types.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -454,7 +455,7 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 		Balances:   []uint64{params.BeaconConfig().MaxEffectiveBalance},
 		Slashings:  []uint64{math.MaxUint64, 1e9},
 	}
-	s, err := state_native.InitializeFromProtoPhase0(base)
+	s, err := state.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	_, err = epoch.ProcessSlashings(s, params.BeaconConfig().ProportionalSlashingMultiplier)
 	require.ErrorContains(t, "addition overflows", err)
@@ -463,16 +464,16 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 func TestProcessHistoricalDataUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
-		st       func() state.BeaconState
-		verifier func(state.BeaconState)
+		st       func() types.BeaconState
+		verifier func(types.BeaconState)
 	}{
 		{
 			name: "no change",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				st, _ := util.DeterministicGenesisState(t, 1)
 				return st
 			},
-			verifier: func(st state.BeaconState) {
+			verifier: func(st types.BeaconState) {
 				roots, err := st.HistoricalRoots()
 				require.NoError(t, err)
 				require.Equal(t, 0, len(roots))
@@ -480,13 +481,13 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 		},
 		{
 			name: "before capella can process and get historical root",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				st, _ := util.DeterministicGenesisState(t, 1)
 				st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerHistoricalRoot-1)
 				require.NoError(t, err)
 				return st
 			},
-			verifier: func(st state.BeaconState) {
+			verifier: func(st types.BeaconState) {
 				roots, err := st.HistoricalRoots()
 				require.NoError(t, err)
 				require.Equal(t, 1, len(roots))
@@ -505,13 +506,13 @@ func TestProcessHistoricalDataUpdate(t *testing.T) {
 		},
 		{
 			name: "after capella can process and get historical summary",
-			st: func() state.BeaconState {
+			st: func() types.BeaconState {
 				st, _ := util.DeterministicGenesisStateCapella(t, 1)
 				st, err := transition.ProcessSlots(context.Background(), st, params.BeaconConfig().SlotsPerHistoricalRoot-1)
 				require.NoError(t, err)
 				return st
 			},
-			verifier: func(st state.BeaconState) {
+			verifier: func(st types.BeaconState) {
 				summaries, err := st.HistoricalSummaries()
 				require.NoError(t, err)
 				require.Equal(t, 1, len(summaries))

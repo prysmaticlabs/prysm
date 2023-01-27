@@ -3,8 +3,8 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 )
 
 // FakeSyncCommitteeCache is a fake `SyncCommitteeCache` to satisfy fuzzing.
@@ -27,6 +27,6 @@ func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx p
 }
 
 // UpdatePositionsInCommittee -- fake.
-func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconState) error {
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state types.BeaconState) error {
 	return nil
 }

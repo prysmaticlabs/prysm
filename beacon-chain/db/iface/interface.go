@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -32,13 +32,13 @@ type ReadOnlyDatabase interface {
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 	HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
 	// State related methods.
-	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	GenesisState(ctx context.Context) (state.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error)
+	StateOrError(ctx context.Context, blockRoot [32]byte) (types.BeaconState, error)
+	GenesisState(ctx context.Context) (types.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]state.ReadOnlyBeaconState, error)
+	HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]types.ReadOnlyBeaconState, error)
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
@@ -69,8 +69,8 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
-	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
-	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
+	SaveState(ctx context.Context, state types.ReadOnlyBeaconState, blockRoot [32]byte) error
+	SaveStates(ctx context.Context, states []types.ReadOnlyBeaconState, blockRoots [][32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	SaveStateSummary(ctx context.Context, summary *ethpb.StateSummary) error
@@ -102,7 +102,7 @@ type HeadAccessDatabase interface {
 
 	// Genesis operations.
 	LoadGenesis(ctx context.Context, stateBytes []byte) error
-	SaveGenesisData(ctx context.Context, state state.BeaconState) error
+	SaveGenesisData(ctx context.Context, state types.BeaconState) error
 	EnsureEmbeddedGenesis(ctx context.Context) error
 
 	// initialization method needed for origin checkpoint sync

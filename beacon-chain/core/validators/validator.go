@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -42,7 +42,7 @@ import (
 //	  # Set validator exit epoch and withdrawable epoch
 //	  validator.exit_epoch = exit_queue_epoch
 //	  validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primitives.ValidatorIndex) (state.BeaconState, error) {
+func InitiateValidatorExit(ctx context.Context, s types.BeaconState, idx primitives.ValidatorIndex) (types.BeaconState, error) {
 	validator, err := s.ValidatorAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 		return s, nil
 	}
 	var exitEpochs []primitives.Epoch
-	err = s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	err = s.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		if val.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 			exitEpochs = append(exitEpochs, val.ExitEpoch())
 		}
@@ -72,7 +72,7 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := uint64(0)
-	err = s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	err = s.ReadFromEveryValidator(func(idx int, val types.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
 			var mErr error
 			exitQueueChurn, mErr = mathutil.Add64(exitQueueChurn, 1)
@@ -140,10 +140,10 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 //	  increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
 func SlashValidator(
 	ctx context.Context,
-	s state.BeaconState,
+	s types.BeaconState,
 	slashedIdx primitives.ValidatorIndex,
 	penaltyQuotient uint64,
-	proposerRewardQuotient uint64) (state.BeaconState, error) {
+	proposerRewardQuotient uint64) (types.BeaconState, error) {
 	s, err := InitiateValidatorExit(ctx, s, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	common "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/ssz_static"
@@ -21,7 +21,7 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 	switch object.(type) {
 	case *ethpb.BeaconStateAltair:
 		htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProtoAltair(s.(*ethpb.BeaconStateAltair))
+			beaconState, err := state.InitializeFromProtoAltair(s.(*ethpb.BeaconStateAltair))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})

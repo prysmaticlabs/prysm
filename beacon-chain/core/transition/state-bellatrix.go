@@ -7,12 +7,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/state/types"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -59,7 +59,7 @@ import (
 //	  return state
 //
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (state.BeaconState, error) {
+func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (types.BeaconState, error) {
 	st, err := EmptyGenesisStateBellatrix()
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func GenesisBeaconStateBellatrix(ctx context.Context, deposits []*ethpb.Deposit,
 
 // OptimizedGenesisBeaconStateBellatrix is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (state.BeaconState, error) {
+func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState types.BeaconState, eth1Data *ethpb.Eth1Data, ep *enginev1.ExecutionPayload) (types.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -224,7 +224,7 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		BodyRoot:   bodyRoot[:],
 	}
 
-	ist, err := state_native.InitializeFromProtoBellatrix(st)
+	ist, err := state.InitializeFromProtoBellatrix(st)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 }
 
 // EmptyGenesisStateBellatrix returns an empty beacon state object.
-func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
+func EmptyGenesisStateBellatrix() (types.BeaconState, error) {
 	st := &ethpb.BeaconStateBellatrix{
 		// Misc fields.
 		Slot: 0,
@@ -275,5 +275,5 @@ func EmptyGenesisStateBellatrix() (state.BeaconState, error) {
 		},
 	}
 
-	return state_native.InitializeFromProtoBellatrix(st)
+	return state.InitializeFromProtoBellatrix(st)
 }
