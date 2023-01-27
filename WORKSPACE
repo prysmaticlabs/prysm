@@ -204,7 +204,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    3sha256 = "5c90f42ff30857def5ae0952904c5cad6dbc16310a86d3a0914f37b557920779",
+    sha256 = "5c90f42ff30857def5ae0952904c5cad6dbc16310a86d3a0914f37b557920779",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
