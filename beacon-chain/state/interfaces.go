@@ -82,6 +82,7 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyParticipation
 	WriteOnlyInactivity
 	WriteOnlySyncCommittee
+	WriteOnlyUpgrade
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val primitives.Slot) error
@@ -277,4 +278,9 @@ type WriteOnlyInactivity interface {
 type WriteOnlySyncCommittee interface {
 	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
+}
+
+// WriteOnlyUpgrade defines a struct that only has access to the fork upgrade methods.
+type WriteOnlyUpgrade interface {
+	UpgradeToCapella() (BeaconState, error)
 }

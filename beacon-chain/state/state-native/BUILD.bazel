@@ -27,6 +27,7 @@ go_library(
         "setters_misc.go",
         "setters_participation.go",
         "setters_payload_header.go",
+        "setters_upgrade.go",
         "setters_randao.go",
         "setters_state.go",
         "setters_sync_committee.go",
