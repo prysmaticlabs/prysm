@@ -72,8 +72,10 @@ func (s *Service) broadcastBLSChanges(ctx context.Context, changes []*ethpb.Sign
 				limit = len(changes)
 			}
 			for _, ch := range changes[:limit] {
-				if err := s.Broadcast(ctx, ch); err != nil {
-					log.WithError(err).Error("could not broadcast BLS to execution changes.")
+				if ch != nil {
+					if err := s.Broadcast(ctx, ch); err != nil {
+						log.WithError(err).Error("could not broadcast BLS to execution changes.")
+					}
 				}
 			}
 			changes = changes[limit:]
