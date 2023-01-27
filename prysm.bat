@@ -5,7 +5,7 @@ SetLocal EnableDelayedExpansion & REM All variables are set local to this run & 
 set PRYLABS_SIGNING_KEY=0AE0051D647BA3C1A917AF4072E33E4DF1A5036E
 
 REM Complain if invalid arguments were provided.
-for %%a in (beacon-chain validator client-stats) do (
+for %%a in (beacon-chain validator prysmctl client-stats) do (
     if %1 equ %%a (
         goto validprocess
     )
@@ -13,7 +13,7 @@ for %%a in (beacon-chain validator client-stats) do (
 echo [31mERROR: PROCESS missing or invalid[0m
 echo Usage: ./prysm.bat PROCESS FLAGS.
 echo.
-echo PROCESS can be beacon-chain, validator, or client-stats.
+echo PROCESS can be beacon-chain, validator, prysmctl or client-stats.
 echo FLAGS are the flags or arguments passed to the PROCESS.
 echo. 
 echo Use this script to download the latest Prysm release binaries.
@@ -70,6 +70,7 @@ IF defined USE_PRYSM_MODERN (
 )
 set VALIDATOR_REAL=%wrapper_dir%\validator-%prysm_version%-%system%-%arch%
 set CLIENT_STATS_REAL=%wrapper_dir%\client-stats-%prysm_version%-%system%-%arch%
+set PRYSMCTL_REAL=%wrapper_dir%\prysmctl-%prysm_version%-%system%-%arch%
 
 if "%~1"=="beacon-chain" (
     if exist "%BEACON_CHAIN_REAL%" (
@@ -130,6 +131,22 @@ if "%~1"=="client-stats" (
     )
 )
 
+if "%~1"=="prysmctl" (
+    if exist %PRYSMCTL_REAL% (
+        echo [32mprysmctl is up to date.[0m
+    ) else (
+        echo [35mDownloading prysmctl %prysm_version% to %PRYSMCTL_REAL% %reason%[0m
+		for /f "delims=" %%i in ('curl --silent -o nul -w "%%{http_code}" https://prysmaticlabs.com/releases/prysmctl-%prysm_version%-%system%-%arch% ') do set "http=%%i" && echo %%i
+		if "!http!"=="404" (
+			echo [35mNo prysmctl found for %prysm_version%[0m
+			exit /b 1
+		)
+		curl -L https://prysmaticlabs.com/releases/prysmctl-%prysm_version%-%system%-%arch% -o %PRYSMCTL_REAL%
+        curl --silent -L https://prysmaticlabs.com/releases/prysmctl-%prysm_version%-%system%-%arch%.sha256 -o %wrapper_dir%\prysmctl-%prysm_version%-%system%-%arch%.sha256
+        curl --silent -L https://prysmaticlabs.com/releases/prysmctl-%prysm_version%-%system%-%arch%.sig -o %wrapper_dir%\prysmctl-%prysm_version%-%system%-%arch%.sig
+    )
+)
+
 if "%~1"=="slasher" (
     echo [31mThe slasher binary is no longer available. Please use the --slasher flag with your beacon node. See: https://docs.prylabs.network/docs/prysm-usage/slasher/[0m
     exit /b 1
@@ -138,6 +155,7 @@ if "%~1"=="slasher" (
 if "%~1"=="beacon-chain" ( set process=%BEACON_CHAIN_REAL%)
 if "%~1"=="validator" ( set process=%VALIDATOR_REAL%) 
 if "%~1"=="client-stats" ( set process=%CLIENT_STATS_REAL%)
+if "%~1"=="prysmctl" ( set process=%PRYSMCTL_REAL%)
 
 REM GPG not natively available on Windows, external module required
 echo [33mWARN GPG verification is not natively available on Windows.[0m
