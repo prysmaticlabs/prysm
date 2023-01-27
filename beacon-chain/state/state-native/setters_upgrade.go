@@ -27,6 +27,7 @@ func (b *BeaconState) UpgradeToCapella() (state.BeaconState, error) {
 	fieldCount := params.BeaconConfig().BeaconStateCapellaFieldCount
 	epoch := slots.ToEpoch(b.slot)
 
+	payloadHeader := b.latestExecutionPayloadHeaderVal()
 	dst := &BeaconState{
 		version: version.Capella,
 
@@ -71,20 +72,20 @@ func (b *BeaconState) UpgradeToCapella() (state.BeaconState, error) {
 		currentSyncCommittee:        b.currentSyncCommitteeVal(),
 		nextSyncCommittee:           b.nextSyncCommitteeVal(),
 		latestExecutionPayloadHeaderCapella: &enginev1.ExecutionPayloadHeaderCapella{
-			ParentHash:       b.latestExecutionPayloadHeaderVal().ParentHash(),
-			FeeRecipient:     b.latestExecutionPayloadHeaderVal().FeeRecipient(),
-			StateRoot:        b.latestExecutionPayloadHeaderVal().StateRoot(),
-			ReceiptsRoot:     b.latestExecutionPayloadHeaderVal().ReceiptsRoot(),
-			LogsBloom:        b.latestExecutionPayloadHeaderVal().LogsBloom(),
-			PrevRandao:       b.latestExecutionPayloadHeaderVal().PrevRandao(),
-			BlockNumber:      b.latestExecutionPayloadHeaderVal().BlockNumber(),
-			GasLimit:         b.latestExecutionPayloadHeaderVal().GasLimit(),
-			GasUsed:          b.latestExecutionPayloadHeaderVal().GasUsed(),
-			Timestamp:        b.latestExecutionPayloadHeaderVal().Timestamp(),
-			ExtraData:        b.latestExecutionPayloadHeaderVal().ExtraData(),
-			BaseFeePerGas:    b.latestExecutionPayloadHeaderVal().BaseFeePerGas(),
-			BlockHash:        b.latestExecutionPayloadHeaderVal().BlockHash(),
-			TransactionsRoot: b.latestExecutionPayloadHeaderVal().TxRoot(),
+			ParentHash:       payloadHeader.ParentHash,
+			FeeRecipient:     payloadHeader.FeeRecipient,
+			StateRoot:        payloadHeader.StateRoot,
+			ReceiptsRoot:     payloadHeader.ReceiptsRoot,
+			LogsBloom:        payloadHeader.LogsBloom,
+			PrevRandao:       payloadHeader.PrevRandao,
+			BlockNumber:      payloadHeader.BlockNumber,
+			GasLimit:         payloadHeader.GasLimit,
+			GasUsed:          payloadHeader.GasUsed,
+			Timestamp:        payloadHeader.Timestamp,
+			ExtraData:        payloadHeader.ExtraData,
+			BaseFeePerGas:    payloadHeader.BaseFeePerGas,
+			BlockHash:        payloadHeader.BlockHash,
+			TransactionsRoot: payloadHeader.TransactionsRoot,
 			WithdrawalsRoot:  make([]byte, 32),
 		},
 
