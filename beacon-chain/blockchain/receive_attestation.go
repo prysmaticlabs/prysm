@@ -173,7 +173,7 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
 	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* root */)
 	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot && !ok {
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot && ok {
 		s.headLock.RUnlock()
 		return nil
 	}
