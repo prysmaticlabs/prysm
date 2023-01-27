@@ -110,7 +110,7 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 		requestMap[w.Message.ValidatorIndex] = w.Message.ToExecutionAddress
 	}
 	totalMessages := len(requestMap)
-	log.Infof("There are a total of %d messages known to the node's pool. ", len(poolResponse.Data))
+	log.Infof("There are a total of %d messages known to the node's pool.", len(poolResponse.Data))
 	for _, resp := range poolResponse.Data {
 		value, found := requestMap[resp.Message.ValidatorIndex]
 		if found && value == resp.Message.ToExecutionAddress {
