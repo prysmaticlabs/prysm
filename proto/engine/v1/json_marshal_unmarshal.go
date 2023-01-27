@@ -11,7 +11,7 @@ import (
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -191,7 +191,7 @@ func (w *Withdrawal) UnmarshalJSON(enc []byte) error {
 	}
 	*w = Withdrawal{}
 	w.Index = uint64(*dec.Index)
-	w.ValidatorIndex = types.ValidatorIndex(*dec.Validator)
+	w.ValidatorIndex = primitives.ValidatorIndex(*dec.Validator)
 	w.Amount = uint64(*dec.Amount)
 	w.Address = dec.Address.Bytes()
 	return nil

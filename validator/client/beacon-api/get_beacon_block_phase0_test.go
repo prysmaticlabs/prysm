@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -25,7 +25,7 @@ func TestGetBeaconBlock_Phase0Valid(t *testing.T) {
 	phase0BeaconBlockBytes, err := json.Marshal(test_helpers.GenerateJsonPhase0BeaconBlock())
 	require.NoError(t, err)
 
-	const slot = types.Slot(1)
+	const slot = primitives.Slot(1)
 	randaoReveal := []byte{2}
 	graffiti := []byte{3}
 	ctx := context.Background()

@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -452,7 +452,7 @@ func TestFilterSubnetPeers(t *testing.T) {
 	defer flags.Init(new(flags.GlobalFlags))
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	currSlot := primitives.Slot(100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -522,7 +522,7 @@ func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
 
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	currSlot := primitives.Slot(100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -553,7 +553,7 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	currSlot := primitives.Slot(100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -598,7 +598,7 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	params.BeaconConfig().InitializeForkSchedule()
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	currSlot := primitives.Slot(100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
@@ -637,7 +637,7 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	params.BeaconConfig().InitializeForkSchedule()
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	currSlot := primitives.Slot(100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{

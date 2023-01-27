@@ -12,7 +12,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -25,12 +25,12 @@ import (
 // insert into forkchoice
 func prepareForkchoiceState(
 	_ context.Context,
-	slot types.Slot,
+	slot primitives.Slot,
 	blockRoot [32]byte,
 	parentRoot [32]byte,
 	payloadHash [32]byte,
-	justifiedEpoch types.Epoch,
-	finalizedEpoch types.Epoch,
+	justifiedEpoch primitives.Epoch,
+	finalizedEpoch primitives.Epoch,
 ) (state.BeaconState, [32]byte, error) {
 	blockHeader := &ethpb.BeaconBlockHeader{
 		ParentRoot: parentRoot[:],
@@ -338,8 +338,8 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Process index where index == vote length. Should not panic.
-	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
-	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	f.InsertSlashedIndex(ctx, primitives.ValidatorIndex(len(f.balances)))
+	f.InsertSlashedIndex(ctx, primitives.ValidatorIndex(len(f.votes)))
 	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
 
@@ -408,7 +408,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
-		wantSlot types.Slot
+		wantSlot primitives.Slot
 	}{
 		{
 			name:     "Common ancestor between c and b is a",
@@ -509,7 +509,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 		r1       [32]byte
 		r2       [32]byte
 		wantRoot [32]byte
-		wantSlot types.Slot
+		wantSlot primitives.Slot
 	}{
 		{
 			name:     "Common ancestor between a and b is a",
@@ -546,12 +546,12 @@ func TestStore_CommonAncestor(t *testing.T) {
 	r, s, err := f.CommonAncestor(ctx, [32]byte{'b'}, [32]byte{'b'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, r)
-	require.Equal(t, types.Slot(1), s)
+	require.Equal(t, primitives.Slot(1), s)
 	// Requesting finalized root (last node) should return the same root.
 	r, s, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'a'})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, r)
-	require.Equal(t, types.Slot(0), s)
+	require.Equal(t, primitives.Slot(0), s)
 	// Requesting unknown root
 	_, _, err = f.CommonAncestor(ctx, [32]byte{'a'}, [32]byte{'z'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
@@ -590,7 +590,7 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	})
 	for i := uint64(2); i < 11; i++ {
 		blk := util.NewBeaconBlock()
-		blk.Block.Slot = types.Slot(i)
+		blk.Block.Slot = primitives.Slot(i)
 		copiedRoot := root
 		blk.Block.ParentRoot = copiedRoot[:]
 		wsb, err = blocks.NewSignedBeaconBlock(blk)
@@ -624,7 +624,7 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 		wantedJustified     *forkchoicetypes.Checkpoint
 		wantedBestJustified *forkchoicetypes.Checkpoint
 		wantedFinalized     *forkchoicetypes.Checkpoint
-		currentSlot         types.Slot
+		currentSlot         primitives.Slot
 		wantedErr           string
 	}{
 		{

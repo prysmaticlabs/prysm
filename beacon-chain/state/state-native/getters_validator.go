@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -19,7 +19,7 @@ type ValidatorIndexOutOfRangeError struct {
 }
 
 // NewValidatorIndexOutOfRangeError creates a new error instance.
-func NewValidatorIndexOutOfRangeError(index types.ValidatorIndex) ValidatorIndexOutOfRangeError {
+func NewValidatorIndexOutOfRangeError(index primitives.ValidatorIndex) ValidatorIndexOutOfRangeError {
 	return ValidatorIndexOutOfRangeError{
 		message: fmt.Sprintf("index %d out of range", index),
 	}
@@ -81,7 +81,7 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 }
 
 // ValidatorAtIndex is the validator at the provided index.
-func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error) {
+func (b *BeaconState) ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error) {
 	if b.validators == nil {
 		return &ethpb.Validator{}, nil
 	}
@@ -99,7 +99,7 @@ func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validat
 
 // ValidatorAtIndexReadOnly is the validator at the provided index. This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	if b.validators == nil {
 		return nil, state.ErrNilValidatorsInState
 	}
@@ -115,7 +115,7 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx types.ValidatorIndex) (state.
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
-func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	if b == nil || b.valMapHandler == nil || b.valMapHandler.IsNil() {
 		return 0, false
 	}
@@ -124,15 +124,15 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	numOfVals := len(b.validators)
 
 	idx, ok := b.valMapHandler.Get(key)
-	if ok && types.ValidatorIndex(numOfVals) <= idx {
-		return types.ValidatorIndex(0), false
+	if ok && primitives.ValidatorIndex(numOfVals) <= idx {
+		return primitives.ValidatorIndex(0), false
 	}
 	return idx, ok
 }
 
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
-func (b *BeaconState) PubkeyAtIndex(idx types.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
+func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte {
 	if uint64(idx) >= uint64(len(b.validators)) {
 		return [fieldparams.BLSPubkeyLength]byte{}
 	}
@@ -201,7 +201,7 @@ func (b *BeaconState) balancesVal() []uint64 {
 }
 
 // BalanceAtIndex of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx types.ValidatorIndex) (uint64, error) {
+func (b *BeaconState) BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error) {
 	if b.balances == nil {
 		return 0, nil
 	}

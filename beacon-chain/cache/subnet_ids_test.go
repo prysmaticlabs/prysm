@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSubnetIDsCache_RoundTrip(t *testing.T) {
 	c := newSubnetIDs()
-	slot := types.Slot(100)
+	slot := primitives.Slot(100)
 	committeeIDs := c.GetAggregatorSubnetIDs(slot)
 	assert.Equal(t, 0, len(committeeIDs), "Empty cache returned an object")
 

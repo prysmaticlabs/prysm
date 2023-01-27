@@ -5,7 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -41,25 +41,25 @@ func (v readOnlyValidator) EffectiveBalance() uint64 {
 
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
 // read only validator.
-func (v readOnlyValidator) ActivationEligibilityEpoch() types.Epoch {
+func (v readOnlyValidator) ActivationEligibilityEpoch() primitives.Epoch {
 	return v.validator.ActivationEligibilityEpoch
 }
 
 // ActivationEpoch returns the activation epoch of the
 // read only validator.
-func (v readOnlyValidator) ActivationEpoch() types.Epoch {
+func (v readOnlyValidator) ActivationEpoch() primitives.Epoch {
 	return v.validator.ActivationEpoch
 }
 
 // WithdrawableEpoch returns the withdrawable epoch of the
 // read only validator.
-func (v readOnlyValidator) WithdrawableEpoch() types.Epoch {
+func (v readOnlyValidator) WithdrawableEpoch() primitives.Epoch {
 	return v.validator.WithdrawableEpoch
 }
 
 // ExitEpoch returns the exit epoch of the
 // read only validator.
-func (v readOnlyValidator) ExitEpoch() types.Epoch {
+func (v readOnlyValidator) ExitEpoch() primitives.Epoch {
 	return v.validator.ExitEpoch
 }
 
@@ -89,7 +89,7 @@ func (v readOnlyValidator) HasETH1WithdrawalCredential() bool {
 // IsFullyWithdrawable returns whether the validator is able to perform a full
 // withdrawal. This differ from the spec helper in that the balance > 0 is not
 // checked.
-func (v readOnlyValidator) IsFullyWithdrawable(epoch types.Epoch) bool {
+func (v readOnlyValidator) IsFullyWithdrawable(epoch primitives.Epoch) bool {
 	return v.HasETH1WithdrawalCredential() && v.WithdrawableEpoch() <= epoch
 }
 

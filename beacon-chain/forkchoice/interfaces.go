@@ -6,11 +6,11 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 )
 
-// BalanceByRooter is a handler to obtain the effective balances of the state
+// BalancesByRooter is a handler to obtain the effective balances of the state
 // with the given block root
 type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
 
@@ -28,7 +28,7 @@ type ForkChoicer interface {
 type HeadRetriever interface {
 	Head(context.Context, []uint64) ([32]byte, error)
 	CachedHeadRoot() [32]byte
-	Tips() ([][32]byte, []types.Slot)
+	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 	AllTipsAreInvalid() bool
 }
@@ -41,8 +41,8 @@ type BlockProcessor interface {
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
 type AttestationProcessor interface {
-	ProcessAttestation(context.Context, []uint64, [32]byte, types.Epoch)
-	InsertSlashedIndex(context.Context, types.ValidatorIndex)
+	ProcessAttestation(context.Context, []uint64, [32]byte, primitives.Epoch)
+	InsertSlashedIndex(context.Context, primitives.ValidatorIndex)
 }
 
 // ProposerBooster is able to boost the proposer's root score during fork choice.
@@ -55,8 +55,8 @@ type Getter interface {
 	HasNode([32]byte) bool
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
-	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, types.Slot, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error)
+	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 	FinalizedPayloadBlockHash() [32]byte
@@ -65,7 +65,7 @@ type Getter interface {
 	JustifiedPayloadBlockHash() [32]byte
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	NodeCount() int
-	HighestReceivedBlockSlot() types.Slot
+	HighestReceivedBlockSlot() primitives.Slot
 	HighestReceivedBlockRoot() [32]byte
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
@@ -81,6 +81,6 @@ type Setter interface {
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
-	NewSlot(context.Context, types.Slot) error
+	NewSlot(context.Context, primitives.Slot) error
 	SetBalancesByRooter(BalancesByRooter)
 }

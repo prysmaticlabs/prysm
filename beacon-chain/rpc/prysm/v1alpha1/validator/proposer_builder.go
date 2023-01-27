@@ -6,14 +6,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/sirupsen/logrus"
 )
 
 // Returns true if builder (ie outsourcing block construction) can be used. Both conditions have to meet:
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
-func (vs *Server) canUseBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (bool, error) {
+func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
 	activated, err := vs.circuitBreakBuilder(slot)
 	if err != nil {
 		return false, err
@@ -25,7 +25,7 @@ func (vs *Server) canUseBuilder(ctx context.Context, slot types.Slot, idx types.
 }
 
 // validatorRegistered returns true if validator with index `id` was previously registered in the database.
-func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
+func (vs *Server) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
 	if vs.BeaconDB == nil {
 		return false, errors.New("nil beacon db")
 	}
@@ -40,7 +40,7 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 }
 
 // circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
-func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
+func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
 		return true, errors.New("no fork choicer configured")
 	}

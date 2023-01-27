@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -144,7 +144,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
 		c := params.BeaconConfig().Copy()
-		nextForkEpoch := types.Epoch(i)
+		nextForkEpoch := primitives.Epoch(i)
 		c.ForkVersionSchedule[[4]byte{'A', 'B', 'C', 'D'}] = nextForkEpoch
 		params.OverrideBeaconConfig(c)
 
@@ -210,11 +210,11 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	c := params.BeaconConfig().Copy()
-	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
+	c.ForkVersionSchedule = map[[4]byte]primitives.Epoch{
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
 		{0, 0, 0, 1}: 1,
 	}
-	nextForkEpoch := types.Epoch(1)
+	nextForkEpoch := primitives.Epoch(1)
 	nextForkVersion := []byte{0, 0, 0, 1}
 	params.OverrideBeaconConfig(c)
 
@@ -265,7 +265,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	require.NoError(t, err)
 
 	bCfg := params.MainnetConfig().Copy()
-	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
+	bCfg.ForkVersionSchedule = map[[4]byte]primitives.Epoch{}
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
 	params.OverrideBeaconConfig(bCfg)
 

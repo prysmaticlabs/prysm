@@ -16,7 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -443,7 +443,7 @@ func TestSetParticipationAndRewardProposer(t *testing.T) {
 		indices             []uint64
 		epochParticipation  []byte
 		participatedFlags   map[uint8]bool
-		epoch               types.Epoch
+		epoch               primitives.Epoch
 		wantedBalance       uint64
 		wantedParticipation []byte
 	}{
@@ -634,7 +634,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 		name                 string
 		inputState           state.BeaconState
 		inputData            *ethpb.AttestationData
-		inputDelay           types.Slot
+		inputDelay           primitives.Slot
 		participationIndices map[uint8]bool
 	}{
 		{
@@ -658,7 +658,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{},
 			},
-			inputDelay: types.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			inputDelay: primitives.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
 			participationIndices: map[uint8]bool{
 				sourceFlagIndex: true,
 			},
@@ -672,7 +672,7 @@ func TestAttestationParticipationFlagIndices(t *testing.T) {
 				Source: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
 			},
-			inputDelay: types.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
+			inputDelay: primitives.Slot(math.IntegerSquareRoot(uint64(cfg.SlotsPerEpoch)) - 1),
 			participationIndices: map[uint8]bool{
 				sourceFlagIndex: true,
 				targetFlagIndex: true,

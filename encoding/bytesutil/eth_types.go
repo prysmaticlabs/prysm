@@ -2,32 +2,32 @@ package bytesutil
 
 import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // EpochToBytesLittleEndian conversion.
-func EpochToBytesLittleEndian(i types.Epoch) []byte {
+func EpochToBytesLittleEndian(i primitives.Epoch) []byte {
 	return Uint64ToBytesLittleEndian(uint64(i))
 }
 
 // EpochToBytesBigEndian conversion.
-func EpochToBytesBigEndian(i types.Epoch) []byte {
+func EpochToBytesBigEndian(i primitives.Epoch) []byte {
 	return Uint64ToBytesBigEndian(uint64(i))
 }
 
 // BytesToEpochBigEndian conversion.
-func BytesToEpochBigEndian(b []byte) types.Epoch {
-	return types.Epoch(BytesToUint64BigEndian(b))
+func BytesToEpochBigEndian(b []byte) primitives.Epoch {
+	return primitives.Epoch(BytesToUint64BigEndian(b))
 }
 
 // SlotToBytesBigEndian conversion.
-func SlotToBytesBigEndian(i types.Slot) []byte {
+func SlotToBytesBigEndian(i primitives.Slot) []byte {
 	return Uint64ToBytesBigEndian(uint64(i))
 }
 
 // BytesToSlotBigEndian conversion.
-func BytesToSlotBigEndian(b []byte) types.Slot {
-	return types.Slot(BytesToUint64BigEndian(b))
+func BytesToSlotBigEndian(b []byte) primitives.Slot {
+	return primitives.Slot(BytesToUint64BigEndian(b))
 }
 
 // ZeroRoot returns whether or not a root is of proper length and non-zero hash.

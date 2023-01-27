@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -41,7 +41,7 @@ func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, 
 
 func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []int64) (
 	[][]byte,
-	[]types.ValidatorIndex,
+	[]primitives.ValidatorIndex,
 	[]*ethpb.ValidatorStatusResponse,
 	error,
 ) {
@@ -58,7 +58,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 	totalLen := len(inPubKeys) + len(inIndexes)
 
 	outPubKeys := make([][]byte, totalLen)
-	outIndexes := make([]types.ValidatorIndex, totalLen)
+	outIndexes := make([]primitives.ValidatorIndex, totalLen)
 	outValidatorsStatuses := make([]*ethpb.ValidatorStatusResponse, totalLen)
 
 	for index, publicKey := range inPubKeys {
@@ -96,7 +96,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		}
 
 		outPubKeys[i] = pubKey
-		outIndexes[i] = types.ValidatorIndex(validatorIndex)
+		outIndexes[i] = primitives.ValidatorIndex(validatorIndex)
 
 		validatorStatus := &ethpb.ValidatorStatusResponse{}
 
@@ -114,7 +114,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 			return nil, nil, nil, errors.Wrapf(err, "failed to parse activation epoch %s", validatorContainer.Validator.ActivationEpoch)
 		}
 
-		validatorStatus.ActivationEpoch = types.Epoch(activationEpoch)
+		validatorStatus.ActivationEpoch = primitives.Epoch(activationEpoch)
 
 		// Set PositionInActivationQueue
 		switch status {
@@ -156,7 +156,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 
 	for i, missingPubKey := range missingPubKeys {
 		outPubKeys[nbStringRetrievedPubKeys+i] = missingPubKey
-		outIndexes[nbStringRetrievedPubKeys+i] = types.ValidatorIndex(^uint64(0))
+		outIndexes[nbStringRetrievedPubKeys+i] = primitives.ValidatorIndex(^uint64(0))
 
 		outValidatorsStatuses[nbStringRetrievedPubKeys+i] = &ethpb.ValidatorStatusResponse{
 			Status:          ethpb.ValidatorStatus_UNKNOWN_STATUS,

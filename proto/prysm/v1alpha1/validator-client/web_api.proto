@@ -183,6 +183,8 @@ message CreateWalletRequest {
     string remote_key_path = 7;
     // Path to ca.crt for secure TLS connections to a remote signer server.
     string remote_ca_crt_path = 8;
+    // User specified mnemonic language.
+    string mnemonic_language = 9;
 }
 
 message CreateWalletResponse {
