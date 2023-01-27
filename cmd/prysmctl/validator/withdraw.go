@@ -87,10 +87,15 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*apimid
 	if err != nil {
 		return err
 	}
-	if err := client.SubmitChangeBLStoExecution(ctx, request); err != nil {
+	err = client.SubmitChangeBLStoExecution(ctx, request)
+	if err != nil && strings.Contains(err.Error(), "POST error") {
+		// just log the error, so we can check the pool for partial inclusions.
+		log.Error(err)
+	} else if err != nil {
 		return err
+	} else {
+		log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
 	}
-	log.Infof("Successfully published messages to update %d withdrawal addresses.", len(request))
 	return checkIfWithdrawsAreInPool(ctx, client, request)
 }
 
@@ -105,6 +110,7 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 		requestMap[w.Message.ValidatorIndex] = w.Message.ToExecutionAddress
 	}
 	totalMessages := len(requestMap)
+	log.Infof("There are a total of %d messages known to the node's pool.", len(poolResponse.Data))
 	for _, resp := range poolResponse.Data {
 		value, found := requestMap[resp.Message.ValidatorIndex]
 		if found && value == resp.Message.ToExecutionAddress {

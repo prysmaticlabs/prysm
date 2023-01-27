@@ -255,7 +255,7 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	err = setWithdrawalAddresses(cliCtx)
-	assert.ErrorContains(t, "POST error", err)
+	require.ErrorContains(t, "did not receive 2xx response from API", err)
 
 	assert.LogsContain(t, hook, "Could not validate SignedBLSToExecutionChange")
 }

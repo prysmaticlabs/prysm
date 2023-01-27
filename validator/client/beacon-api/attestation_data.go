@@ -23,8 +23,8 @@ func (c beaconApiValidatorClient) getAttestationData(
 
 	query := buildURL("/eth/v1/validator/attestation_data", params)
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
-	_, err := c.jsonRestHandler.GetRestJsonResponse(ctx, query, &produceAttestationDataResponseJson)
-	if err != nil {
+
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, query, &produceAttestationDataResponseJson); err != nil {
 		return nil, errors.Wrap(err, "failed to get json response")
 	}
 
