@@ -86,7 +86,7 @@ func Merkleize(hasher Hasher, count, limit uint64, leaf func(i uint64) []byte) (
 	tmp := make([][32]byte, limitDepth+1)
 
 	j := uint8(0)
-	hArr := [32]byte{}
+	var hArr [32]byte
 	h := hArr[:]
 
 	merge := func(i uint64) {
@@ -151,7 +151,7 @@ func ConstructProof(hasher Hasher, count, limit uint64, leaf func(i uint64) []by
 	tmp := make([][32]byte, limitDepth+1)
 
 	j := uint8(0)
-	hArr := [32]byte{}
+	var hArr [32]byte
 	h := hArr[:]
 
 	merge := func(i uint64) {

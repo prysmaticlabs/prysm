@@ -8,7 +8,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -116,7 +116,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheNoReplay(t *testing.T) {
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
 	loadedState, err := service.StateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, primitives.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
@@ -130,7 +130,7 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
-	targetSlot := types.Slot(10)
+	targetSlot := primitives.Slot(10)
 	targetBlock := util.NewBeaconBlock()
 	targetBlock.Block.Slot = 11
 	targetBlock.Block.ParentRoot = blkRoot[:]
@@ -213,7 +213,7 @@ func TestStateByRootInitialSync_UseEpochStateCache(t *testing.T) {
 	service := New(beaconDB, doublylinkedtree.New())
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	targetSlot := types.Slot(10)
+	targetSlot := primitives.Slot(10)
 	require.NoError(t, beaconState.SetSlot(targetSlot))
 	blk := util.NewBeaconBlock()
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -253,7 +253,7 @@ func TestStateByRootInitialSync_CanProcessUpTo(t *testing.T) {
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.epochBoundaryStateCache.put(blkRoot, beaconState))
-	targetSlot := types.Slot(10)
+	targetSlot := primitives.Slot(10)
 	targetBlk := util.NewBeaconBlock()
 	targetBlk.Block.Slot = 11
 	targetBlk.Block.ParentRoot = blkRoot[:]
@@ -329,7 +329,7 @@ func TestLoadeStateByRoot_EpochBoundaryStateCanProcess(t *testing.T) {
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadStateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, primitives.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
@@ -355,7 +355,7 @@ func TestLoadeStateByRoot_FromDBBoundaryCase(t *testing.T) {
 	// This tests where hot state was not cached and needs processing.
 	loadedState, err := service.loadStateByRoot(ctx, blkRoot)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(10), loadedState.Slot(), "Did not correctly load state")
+	assert.Equal(t, primitives.Slot(10), loadedState.Slot(), "Did not correctly load state")
 }
 
 func TestLastAncestorState_CanGetUsingDB(t *testing.T) {

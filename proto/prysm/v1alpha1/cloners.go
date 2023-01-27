@@ -698,3 +698,18 @@ func CopyBLSToExecutionChanges(changes []*SignedBLSToExecutionChange) []*SignedB
 
 	return res
 }
+
+// CopyHistoricalSummaries copies the historical summaries.
+func CopyHistoricalSummaries(summaries []*HistoricalSummary) []*HistoricalSummary {
+	if summaries == nil {
+		return nil
+	}
+	newSummaries := make([]*HistoricalSummary, len(summaries))
+	for i, s := range summaries {
+		newSummaries[i] = &HistoricalSummary{
+			BlockSummaryRoot: bytesutil.SafeCopyBytes(s.BlockSummaryRoot),
+			StateSummaryRoot: bytesutil.SafeCopyBytes(s.StateSummaryRoot),
+		}
+	}
+	return newSummaries
+}

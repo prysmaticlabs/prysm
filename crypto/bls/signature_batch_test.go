@@ -703,7 +703,7 @@ func NewInvalidSignatureSet(t *testing.T, msgBody string, num int, throwErr bool
 }
 
 func messageBytes(message string) [32]byte {
-	bytes := [32]byte{}
+	var bytes [32]byte
 	copy(bytes[:], []byte(message))
 	return bytes
 }

@@ -10,7 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -55,9 +55,9 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	var ba []byte
-	pubkey := [fieldparams.BLSPubkeyLength]byte{}
-	sig := [96]byte{}
-	domain := [4]byte{}
+	var pubkey [fieldparams.BLSPubkeyLength]byte
+	var sig [96]byte
+	var domain [4]byte
 	var p []byte
 	var s []byte
 	var d []byte
@@ -418,7 +418,7 @@ func TestFuzzVerifyExit_10000(_ *testing.T) {
 	ve := &ethpb.SignedVoluntaryExit{}
 	rawVal := &ethpb.Validator{}
 	fork := &ethpb.Fork{}
-	var slot types.Slot
+	var slot primitives.Slot
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(ve)

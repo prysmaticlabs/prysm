@@ -22,7 +22,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v3/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -41,7 +41,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := types.Slot(1); i < 11; i++ {
+	for i := primitives.Slot(1); i < 11; i++ {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
@@ -127,7 +127,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
 	// Populate the database with blocks that would match the request.
-	for i := types.Slot(1); i < 11; i++ {
+	for i := primitives.Slot(1); i < 11; i++ {
 		blk := util.NewBlindedBeaconBlockBellatrix()
 		blk.Block.Body.ExecutionPayloadHeader = header
 		blk.Block.Slot = i

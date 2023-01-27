@@ -8,7 +8,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -73,7 +73,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 
-	currentEpoch := types.Epoch(3)
+	currentEpoch := primitives.Epoch(3)
 	currentTime := time.Now()
 	totalSlots := uint64(currentEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
@@ -86,7 +86,7 @@ func TestIsSlashableAttestation(t *testing.T) {
 		params:                         DefaultParams(),
 		blksQueue:                      newBlocksQueue(),
 		genesisTime:                    genesisTime,
-		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
+		latestEpochWrittenForValidator: map[primitives.ValidatorIndex]primitives.Epoch{},
 	}
 	prevAtts := []*slashertypes.IndexedAttestationWrapper{
 		createAttestationWrapper(t, 2, 3, []uint64{0}, []byte{1}),
@@ -142,7 +142,7 @@ func TestService_HighestAttestations(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
 
-	currentEpoch := types.Epoch(3)
+	currentEpoch := primitives.Epoch(3)
 	currentTime := time.Now()
 	totalSlots := uint64(currentEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
 	secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
@@ -163,36 +163,36 @@ func TestService_HighestAttestations(t *testing.T) {
 	err := slasherDB.SaveAttestationRecordsForValidators(ctx, prevAtts)
 	require.NoError(t, err)
 	t.Run("single index not found", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{0})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{0})
 		require.NoError(t, err)
 		require.Equal(t, 0, len(atts))
 	})
 	t.Run("single index case 1", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{1})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{1})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(atts))
 		require.DeepEqual(t, &ethpb.HighestAttestation{ValidatorIndex: 1, HighestSourceEpoch: 0, HighestTargetEpoch: 1}, atts[0])
 	})
 	t.Run("single index case 2", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{2})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{2})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(atts))
 		require.DeepEqual(t, &ethpb.HighestAttestation{ValidatorIndex: 2, HighestSourceEpoch: 2, HighestTargetEpoch: 3}, atts[0])
 	})
 	t.Run("multiple indices all found", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{1, 2})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{1, 2})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(atts))
 		require.DeepEqual(t, &ethpb.HighestAttestation{ValidatorIndex: 1, HighestSourceEpoch: 0, HighestTargetEpoch: 1}, atts[0])
 		require.DeepEqual(t, &ethpb.HighestAttestation{ValidatorIndex: 2, HighestSourceEpoch: 2, HighestTargetEpoch: 3}, atts[1])
 	})
 	t.Run("multiple indices all not found", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{3, 4})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{3, 4})
 		require.NoError(t, err)
 		require.Equal(t, 0, len(atts))
 	})
 	t.Run("multiple indices some not found", func(t *testing.T) {
-		atts, err := s.HighestAttestations(ctx, []types.ValidatorIndex{1, 4})
+		atts, err := s.HighestAttestations(ctx, []primitives.ValidatorIndex{1, 4})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(atts))
 		require.DeepEqual(t, &ethpb.HighestAttestation{ValidatorIndex: 1, HighestSourceEpoch: 0, HighestTargetEpoch: 1}, atts[0])

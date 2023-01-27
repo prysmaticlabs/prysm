@@ -9,7 +9,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -322,11 +322,11 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	require.Equal(t, false, ok, "bad pubkey should not exist in state")
 
 	for i := 1; i < newState.NumValidators(); i++ {
-		val, err := newState.ValidatorAtIndex(types.ValidatorIndex(i))
+		val, err := newState.ValidatorAtIndex(primitives.ValidatorIndex(i))
 		require.NoError(t, err)
 		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, val.EffectiveBalance, "unequal effective balance")
-		require.Equal(t, types.Epoch(0), val.ActivationEpoch)
-		require.Equal(t, types.Epoch(0), val.ActivationEligibilityEpoch)
+		require.Equal(t, primitives.Epoch(0), val.ActivationEpoch)
+		require.Equal(t, primitives.Epoch(0), val.ActivationEligibilityEpoch)
 	}
 	if newState.Eth1DepositIndex() != 100 {
 		t.Errorf(

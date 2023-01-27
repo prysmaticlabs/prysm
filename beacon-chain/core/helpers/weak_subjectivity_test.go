@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -20,7 +20,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 	tests := []struct {
 		valCount   uint64
 		avgBalance uint64
-		want       types.Epoch
+		want       primitives.Epoch
 	}{
 		// Asserting that we get the same numbers as defined in the reference table:
 		// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/weak-subjectivity.md#calculating-the-weak-subjectivity-period
@@ -55,12 +55,12 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 	}
 }
 
-type mockWsCheckpoint func() (stateRoot [32]byte, blockRoot [32]byte, e types.Epoch)
+type mockWsCheckpoint func() (stateRoot [32]byte, blockRoot [32]byte, e primitives.Epoch)
 
 func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	tests := []struct {
 		name            string
-		epoch           types.Epoch
+		epoch           primitives.Epoch
 		genWsState      func() state.ReadOnlyBeaconState
 		genWsCheckpoint mockWsCheckpoint
 		want            bool
@@ -71,7 +71,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 			genWsState: func() state.ReadOnlyBeaconState {
 				return nil
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				return [32]byte{}, [32]byte{}, 42
 			},
 			wantedErr: "invalid weak subjectivity state or checkpoint",
@@ -88,7 +88,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot2"), 32))
 				return sr, [32]byte{}, 42
@@ -108,7 +108,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 43
@@ -127,7 +127,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 42
@@ -147,7 +147,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 42
@@ -167,7 +167,7 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 				require.NoError(t, err)
 				return beaconState
 			},
-			genWsCheckpoint: func() ([32]byte, [32]byte, types.Epoch) {
+			genWsCheckpoint: func() ([32]byte, [32]byte, primitives.Epoch) {
 				var sr [32]byte
 				copy(sr[:], bytesutil.PadTo([]byte("stateroot"), 32))
 				return sr, [32]byte{}, 42
@@ -217,7 +217,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 			input: "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
 			checkpt: &ethpb.Checkpoint{
 				Root:  []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-				Epoch: types.Epoch(123456789),
+				Epoch: primitives.Epoch(123456789),
 			},
 		},
 		{
@@ -225,7 +225,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 			input: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
 			checkpt: &ethpb.Checkpoint{
 				Root:  []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-				Epoch: types.Epoch(123456789),
+				Epoch: primitives.Epoch(123456789),
 			},
 		},
 		{
@@ -233,7 +233,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 			input: "0xF0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
 			checkpt: &ethpb.Checkpoint{
 				Root:  []byte{0xf0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-				Epoch: types.Epoch(123456789),
+				Epoch: primitives.Epoch(123456789),
 			},
 		},
 		{
@@ -241,7 +241,7 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 			input: "F0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:123456789",
 			checkpt: &ethpb.Checkpoint{
 				Root:  []byte{0xf0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-				Epoch: types.Epoch(123456789),
+				Epoch: primitives.Epoch(123456789),
 			},
 		},
 	}

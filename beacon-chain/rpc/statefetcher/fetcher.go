@@ -14,8 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -74,7 +75,7 @@ func (e *StateRootNotFoundError) Error() string {
 type Fetcher interface {
 	State(ctx context.Context, stateId []byte) (state.BeaconState, error)
 	StateRoot(ctx context.Context, stateId []byte) ([]byte, error)
-	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
+	StateBySlot(ctx context.Context, slot primitives.Slot) (state.BeaconState, error)
 }
 
 // StateProvider is a real implementation of Fetcher.
@@ -113,13 +114,29 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 		}
 	case "finalized":
 		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get start slot")
+		}
+		// We use the stategen replayer to fetch the finalized state and then
+		// replay it to the start slot of our checkpoint's epoch. The replayer
+		// only ever accesses our canonical history, so the state retrieved will
+		// always be the finalized state at that epoch.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
 		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
+		targetSlot, err := slots.EpochStart(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get start slot")
+		}
+		// We use the stategen replayer to fetch the justified state and then
+		// replay it to the start slot of our checkpoint's epoch. The replayer
+		// only ever accesses our canonical history, so the state retrieved will
+		// always be the justified state at that epoch.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
@@ -133,7 +150,7 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 				e := NewStateIdParseError(parseErr)
 				return nil, &e
 			}
-			s, err = p.StateBySlot(ctx, types.Slot(slotNumber))
+			s, err = p.StateBySlot(ctx, primitives.Slot(slotNumber))
 		}
 	}
 
@@ -168,7 +185,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 				// ID format does not match any valid options.
 				return nil, &e
 			}
-			root, err = p.stateRootBySlot(ctx, types.Slot(slotNumber))
+			root, err = p.stateRootBySlot(ctx, primitives.Slot(slotNumber))
 		}
 	}
 
@@ -196,15 +213,12 @@ func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (stat
 // between the found state's slot and the target slot.
 // process_blocks is applied for all canonical blocks, and process_slots is called for any skipped
 // slots, or slots following the most recent canonical block up to and including the target slot.
-func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (state.BeaconState, error) {
+func (p *StateProvider) StateBySlot(ctx context.Context, target primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
 	if target > p.GenesisTimeFetcher.CurrentSlot() {
 		return nil, errors.New("requested slot is in the future")
-	}
-	if target > p.ChainInfoFetcher.HeadSlot() {
-		return nil, errors.New("requested slot number is higher than head slot number")
 	}
 
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
@@ -288,7 +302,7 @@ func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) (
 	return nil, &rootNotFoundErr
 }
 
-func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte, error) {
+func (p *StateProvider) stateRootBySlot(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")

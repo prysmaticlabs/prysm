@@ -6,7 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -78,8 +79,8 @@ func convertProposerSlashingSignedHeaderToProto(signedHeader *apimiddleware.Sign
 
 	return &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
-			Slot:          types.Slot(slot),
-			ProposerIndex: types.ValidatorIndex(proposerIndex),
+			Slot:          primitives.Slot(slot),
+			ProposerIndex: primitives.ValidatorIndex(proposerIndex),
 			ParentRoot:    parentRoot,
 			StateRoot:     stateRoot,
 			BodyRoot:      bodyRoot,
@@ -164,7 +165,7 @@ func convertCheckpointToProto(jsonCheckpoint *apimiddleware.CheckpointJson) (*et
 	}
 
 	return &ethpb.Checkpoint{
-		Epoch: types.Epoch(epoch),
+		Epoch: primitives.Epoch(epoch),
 		Root:  root,
 	}, nil
 }
@@ -233,8 +234,8 @@ func convertAttestationDataToProto(jsonAttestationData *apimiddleware.Attestatio
 	}
 
 	return &ethpb.AttestationData{
-		Slot:            types.Slot(slot),
-		CommitteeIndex:  types.CommitteeIndex(committeeIndex),
+		Slot:            primitives.Slot(slot),
+		CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
 		BeaconBlockRoot: beaconBlockRoot,
 		Source:          sourceCheckpoint,
 		Target:          targetCheckpoint,
@@ -326,8 +327,8 @@ func convertVoluntaryExitsToProto(jsonVoluntaryExits []*apimiddleware.SignedVolu
 
 		attestingIndices[index] = &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
-				Epoch:          types.Epoch(epoch),
-				ValidatorIndex: types.ValidatorIndex(validatorIndex),
+				Epoch:          primitives.Epoch(epoch),
+				ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
 			},
 			Signature: signature,
 		}
@@ -349,4 +350,88 @@ func convertTransactionsToProto(jsonTransactions []string) ([][]byte, error) {
 	}
 
 	return transactions, nil
+}
+
+func convertWithdrawalsToProto(jsonWithdrawals []*apimiddleware.WithdrawalJson) ([]*enginev1.Withdrawal, error) {
+	withdrawals := make([]*enginev1.Withdrawal, len(jsonWithdrawals))
+
+	for index, jsonWithdrawal := range jsonWithdrawals {
+		if jsonWithdrawal == nil {
+			return nil, errors.Errorf("withdrawal at index `%d` is nil", index)
+		}
+
+		withdrawalIndex, err := strconv.ParseUint(jsonWithdrawal.WithdrawalIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse withdrawal index `%s`", jsonWithdrawal.WithdrawalIndex)
+		}
+
+		validatorIndex, err := strconv.ParseUint(jsonWithdrawal.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", jsonWithdrawal.ValidatorIndex)
+		}
+
+		executionAddress, err := hexutil.Decode(jsonWithdrawal.ExecutionAddress)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonWithdrawal.ExecutionAddress)
+		}
+
+		amount, err := strconv.ParseUint(jsonWithdrawal.Amount, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse withdrawal amount `%s`", jsonWithdrawal.Amount)
+		}
+
+		withdrawals[index] = &enginev1.Withdrawal{
+			Index:          withdrawalIndex,
+			ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
+			Address:        executionAddress,
+			Amount:         amount,
+		}
+	}
+
+	return withdrawals, nil
+}
+
+func convertBlsToExecutionChangesToProto(jsonSignedBlsToExecutionChanges []*apimiddleware.SignedBLSToExecutionChangeJson) ([]*ethpb.SignedBLSToExecutionChange, error) {
+	signedBlsToExecutionChanges := make([]*ethpb.SignedBLSToExecutionChange, len(jsonSignedBlsToExecutionChanges))
+
+	for index, jsonBlsToExecutionChange := range jsonSignedBlsToExecutionChanges {
+		if jsonBlsToExecutionChange == nil {
+			return nil, errors.Errorf("bls to execution change at index `%d` is nil", index)
+		}
+
+		if jsonBlsToExecutionChange.Message == nil {
+			return nil, errors.Errorf("bls to execution change message at index `%d` is nil", index)
+		}
+
+		validatorIndex, err := strconv.ParseUint(jsonBlsToExecutionChange.Message.ValidatorIndex, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode validator index `%s`", jsonBlsToExecutionChange.Message.ValidatorIndex)
+		}
+
+		fromBlsPubkey, err := hexutil.Decode(jsonBlsToExecutionChange.Message.FromBLSPubkey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode bls pubkey `%s`", jsonBlsToExecutionChange.Message.FromBLSPubkey)
+		}
+
+		toExecutionAddress, err := hexutil.Decode(jsonBlsToExecutionChange.Message.ToExecutionAddress)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonBlsToExecutionChange.Message.ToExecutionAddress)
+		}
+
+		signature, err := hexutil.Decode(jsonBlsToExecutionChange.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode signature `%s`", jsonBlsToExecutionChange.Signature)
+		}
+
+		signedBlsToExecutionChanges[index] = &ethpb.SignedBLSToExecutionChange{
+			Message: &ethpb.BLSToExecutionChange{
+				ValidatorIndex:     primitives.ValidatorIndex(validatorIndex),
+				FromBlsPubkey:      fromBlsPubkey,
+				ToExecutionAddress: toExecutionAddress,
+			},
+			Signature: signature,
+		}
+	}
+
+	return signedBlsToExecutionChanges, nil
 }

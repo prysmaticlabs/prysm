@@ -12,10 +12,33 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
+
+// https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/submitPoolBLSToExecutionChange
+// expects posting a top-level array. We make it more proto-friendly by wrapping it in a struct.
+func wrapBLSChangesArray(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*SubmitBLSToExecutionChangesRequest); !ok {
+		return true, nil
+	}
+	changes := make([]*SignedBLSToExecutionChangeJson, 0)
+	if err := json.NewDecoder(req.Body).Decode(&changes); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
+	}
+	j := &SubmitBLSToExecutionChangesRequest{Changes: changes}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+	}
+	req.Body = io.NopCloser(bytes.NewReader(b))
+	return true, nil
+}
 
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconProposer expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct.
@@ -273,13 +296,15 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	currentEpoch := slots.ToEpoch(primitives.Slot(slot))
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockAltairContainerJson{}
-	} else {
+	} else if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockBellatrixContainerJson{}
+	} else {
+		endpoint.PostRequest = &SignedBeaconBlockCapellaContainerJson{}
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
@@ -355,7 +380,7 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
-	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	currentEpoch := slots.ToEpoch(primitives.Slot(slot))
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockContainerJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
@@ -684,9 +709,19 @@ type bellatrixProduceBlockResponseJson struct {
 	Data    *BeaconBlockBellatrixJson `json:"data"`
 }
 
+type capellaProduceBlockResponseJson struct {
+	Version string                  `json:"version" enum:"true"`
+	Data    *BeaconBlockCapellaJson `json:"data"`
+}
+
 type bellatrixProduceBlindedBlockResponseJson struct {
 	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
+}
+
+type capellaProduceBlindedBlockResponseJson struct {
+	Version string                         `json:"version" enum:"true"`
+	Data    *BlindedBeaconBlockCapellaJson `json:"data"`
 }
 
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -711,6 +746,11 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 		actualRespContainer = &bellatrixProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.BellatrixBlock,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.CapellaBlock,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
@@ -745,6 +785,11 @@ func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefau
 		actualRespContainer = &bellatrixProduceBlindedBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.BellatrixBlock,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
+		actualRespContainer = &capellaProduceBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.CapellaBlock,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))

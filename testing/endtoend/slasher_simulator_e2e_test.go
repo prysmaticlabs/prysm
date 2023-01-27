@@ -11,7 +11,7 @@ import (
 	mockslashings "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
 	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -70,11 +70,11 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	// We setup validators in the beacon state along with their
 	// private keys used to generate valid signatures in generated objects.
 	validators := make([]*ethpb.Validator, simulatorParams.NumValidators)
-	privKeys := make(map[types.ValidatorIndex]bls.SecretKey)
+	privKeys := make(map[primitives.ValidatorIndex]bls.SecretKey)
 	for valIdx := range validators {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
-		privKeys[types.ValidatorIndex(valIdx)] = privKey
+		privKeys[primitives.ValidatorIndex(valIdx)] = privKey
 		validators[valIdx] = &ethpb.Validator{
 			PublicKey:             privKey.PublicKey().Marshal(),
 			WithdrawalCredentials: make([]byte, 32),

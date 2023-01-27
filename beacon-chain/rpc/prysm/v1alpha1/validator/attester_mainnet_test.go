@@ -10,7 +10,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
@@ -50,7 +50,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash justified block")
 	epochBoundaryRoot, err := epochBoundaryBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
-	slot := types.Slot(10000)
+	slot := primitives.Slot(10000)
 
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)

@@ -13,3 +13,7 @@ func TestEndToEnd_MainnetConfig_ValidatorAtCurrentRelease(t *testing.T) {
 	r := e2eMainnet(t, true, false, types.StartAt(version.Phase0, params.E2EMainnetTestConfig()))
 	r.run()
 }
+
+func TestEndToEnd_MainnetConfig_MultiClient(t *testing.T) {
+	e2eMainnet(t, false, true, types.StartAt(version.Phase0, params.E2EMainnetTestConfig()), types.WithValidatorCrossClient()).run()
+}

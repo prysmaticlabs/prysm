@@ -28,25 +28,25 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 	if validator != nil {
 		pubkey := bytesutil.ToBytes48(validator.PublicKey)
 		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
-		effectiveBalanceBuf := [32]byte{}
+		var effectiveBalanceBuf [32]byte
 		binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)
 		// Slashed.
-		slashBuf := [32]byte{}
+		var slashBuf [32]byte
 		if validator.Slashed {
 			slashBuf[0] = uint8(1)
 		} else {
 			slashBuf[0] = uint8(0)
 		}
-		activationEligibilityBuf := [32]byte{}
+		var activationEligibilityBuf [32]byte
 		binary.LittleEndian.PutUint64(activationEligibilityBuf[:8], uint64(validator.ActivationEligibilityEpoch))
 
-		activationBuf := [32]byte{}
+		var activationBuf [32]byte
 		binary.LittleEndian.PutUint64(activationBuf[:8], uint64(validator.ActivationEpoch))
 
-		exitBuf := [32]byte{}
+		var exitBuf [32]byte
 		binary.LittleEndian.PutUint64(exitBuf[:8], uint64(validator.ExitEpoch))
 
-		withdrawalBuf := [32]byte{}
+		var withdrawalBuf [32]byte
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
 		// Public key.

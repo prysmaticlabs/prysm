@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -14,14 +14,14 @@ func GenerateMultipleValidatorStatusResponse(pubkeys [][]byte) *ethpb.MultipleVa
 	resp := &ethpb.MultipleValidatorStatusResponse{
 		PublicKeys: make([][]byte, len(pubkeys)),
 		Statuses:   make([]*ethpb.ValidatorStatusResponse, len(pubkeys)),
-		Indices:    make([]types.ValidatorIndex, len(pubkeys)),
+		Indices:    make([]primitives.ValidatorIndex, len(pubkeys)),
 	}
 	for i, key := range pubkeys {
 		resp.PublicKeys[i] = key
 		resp.Statuses[i] = &ethpb.ValidatorStatusResponse{
 			Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		}
-		resp.Indices[i] = types.ValidatorIndex(i)
+		resp.Indices[i] = primitives.ValidatorIndex(i)
 	}
 
 	return resp

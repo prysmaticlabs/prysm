@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -52,8 +52,8 @@ func (c *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) erro
 
 // UnaggregatedAttestations returns all the unaggregated attestations in cache.
 func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
-	c.unAggregateAttLock.Lock()
-	defer c.unAggregateAttLock.Unlock()
+	c.unAggregateAttLock.RLock()
+	defer c.unAggregateAttLock.RUnlock()
 	unAggregatedAtts := c.unAggregatedAtt
 	atts := make([]*ethpb.Attestation, 0, len(unAggregatedAtts))
 	for _, att := range unAggregatedAtts {
@@ -70,7 +70,7 @@ func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (c *AttCaches) UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot types.Slot, committeeIndex types.CommitteeIndex) []*ethpb.Attestation {
+func (c *AttCaches) UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation {
 	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.UnaggregatedAttestationsBySlotIndex")
 	defer span.End()
 

@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -25,6 +26,8 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRecipients := []*apimiddleware.FeeRecipientJson{
 		{
 			ValidatorIndex: "1",
@@ -45,6 +48,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		prepareBeaconProposerTestEndpoint,
 		nil,
 		bytes.NewBuffer(marshalledJsonRecipients),
@@ -77,7 +81,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 	}
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	err = validatorClient.prepareBeaconProposer(protoRecipients)
+	err = validatorClient.prepareBeaconProposer(ctx, protoRecipients)
 	require.NoError(t, err)
 }
 
@@ -85,8 +89,11 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		prepareBeaconProposerTestEndpoint,
 		nil,
 		gomock.Any(),
@@ -97,7 +104,7 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	err := validatorClient.prepareBeaconProposer(nil)
+	err := validatorClient.prepareBeaconProposer(ctx, nil)
 	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }

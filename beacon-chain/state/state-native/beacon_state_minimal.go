@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/custom-types"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -21,12 +21,13 @@ type BeaconState struct {
 	version                             int
 	genesisTime                         uint64
 	genesisValidatorsRoot               [32]byte
-	slot                                eth2types.Slot
+	slot                                primitives.Slot
 	fork                                *ethpb.Fork
 	latestBlockHeader                   *ethpb.BeaconBlockHeader
 	blockRoots                          *customtypes.BlockRoots
 	stateRoots                          *customtypes.StateRoots
 	historicalRoots                     customtypes.HistoricalRoots
+	historicalSummaries                 []*ethpb.HistoricalSummary
 	eth1Data                            *ethpb.Eth1Data
 	eth1DataVotes                       []*ethpb.Eth1Data
 	eth1DepositIndex                    uint64
@@ -48,14 +49,14 @@ type BeaconState struct {
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
 	nextWithdrawalIndex                 uint64
-	nextWithdrawalValidatorIndex        eth2types.ValidatorIndex
+	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
 
 	lock                  sync.RWMutex
-	dirtyFields           map[nativetypes.FieldIndex]bool
-	dirtyIndices          map[nativetypes.FieldIndex][]uint64
-	stateFieldLeaves      map[nativetypes.FieldIndex]*fieldtrie.FieldTrie
-	rebuildTrie           map[nativetypes.FieldIndex]bool
+	dirtyFields           map[types.FieldIndex]bool
+	dirtyIndices          map[types.FieldIndex][]uint64
+	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
+	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
 	merkleLayers          [][][]byte
-	sharedFieldReferences map[nativetypes.FieldIndex]*stateutil.Reference
+	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }

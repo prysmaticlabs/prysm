@@ -198,24 +198,16 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("lighthouse_validator_%d_stdout.log", index)))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("lighthouse_validator_%d_stderr.log", index)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
 	log.Infof("Starting lighthouse validator client %d with flags: %s %s", index, binaryPath, strings.Join(args, " "))

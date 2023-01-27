@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
@@ -14,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -36,20 +37,13 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		blks[i], err = blocks.NewSignedBeaconBlock(b)
@@ -79,20 +73,19 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockAltair()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		syncCommitteeBits := bitfield.NewBitvector512()
+		syncCommitteeBits.SetBitAt(100, true)
+		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
+		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		signedB, err := blocks.NewSignedBeaconBlock(b)
@@ -121,20 +114,35 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		syncCommitteeBits := bitfield.NewBitvector512()
+		syncCommitteeBits.SetBitAt(100, true)
+		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
+		}
+		b.Block.Body.ExecutionPayload = &enginev1.ExecutionPayload{
+			ParentHash:    bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient:  bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:     bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot:  bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:     bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:    bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:   123,
+			GasLimit:      123,
+			GasUsed:       123,
+			Timestamp:     123,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		signedB, err := blocks.NewSignedBeaconBlock(b)
@@ -163,20 +171,49 @@ func fillDBTestBlocksCapella(ctx context.Context, t *testing.T, beaconDB db.Data
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockCapella()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		syncCommitteeBits := bitfield.NewBitvector512()
+		syncCommitteeBits.SetBitAt(100, true)
+		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
+		}
+		b.Block.Body.ExecutionPayload = &enginev1.ExecutionPayloadCapella{
+			ParentHash:    bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient:  bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:     bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot:  bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:     bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:    bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:   123,
+			GasLimit:      123,
+			GasUsed:       123,
+			Timestamp:     123,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+			Withdrawals: []*enginev1.Withdrawal{
+				{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        bytesutil.PadTo([]byte("address1"), 20),
+					Amount:         1,
+				},
+				{
+					Index:          2,
+					ValidatorIndex: 2,
+					Address:        bytesutil.PadTo([]byte("address2"), 20),
+					Amount:         2,
+				},
+			},
+		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		signedB, err := blocks.NewSignedBeaconBlock(b)
@@ -205,20 +242,35 @@ func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconD
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		syncCommitteeBits := bitfield.NewBitvector512()
+		syncCommitteeBits.SetBitAt(100, true)
+		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
+		}
+		b.Block.Body.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
+			ParentHash:       bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient:     bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:        bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot:     bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:        bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:       bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:      123,
+			GasLimit:         123,
+			GasUsed:          123,
+			Timestamp:        123,
+			ExtraData:        bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas:    bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:        bytesutil.PadTo([]byte("block_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		signedB, err := blocks.NewSignedBeaconBlock(b)
@@ -247,20 +299,36 @@ func fillDBTestBlocksCapellaBlinded(ctx context.Context, t *testing.T, beaconDB 
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockCapella()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		att1 := util.NewAttestation()
-		att1.Data.Slot = i
-		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := util.NewAttestation()
-		att2.Data.Slot = i
-		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
-		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
+		syncCommitteeBits := bitfield.NewBitvector512()
+		syncCommitteeBits.SetBitAt(100, true)
+		b.Block.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: bytesutil.PadTo([]byte("signature"), 96),
+		}
+		b.Block.Body.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient:     bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:        bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot:     bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:        bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:       bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:      123,
+			GasLimit:         123,
+			GasUsed:          123,
+			Timestamp:        123,
+			ExtraData:        bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas:    bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:        bytesutil.PadTo([]byte("block_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+			WithdrawalsRoot:  bytesutil.PadTo([]byte("withdrawals_root"), 32),
+		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		signedB, err := blocks.NewSignedBeaconBlock(b)
@@ -493,14 +561,14 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 		tests := []struct {
 			name       string
-			slot       types.Slot
+			slot       primitives.Slot
 			parentRoot []byte
 			want       []*ethpbalpha.SignedBeaconBlock
 			wantErr    bool
 		}{
 			{
 				name: "slot",
-				slot: types.Slot(30),
+				slot: primitives.Slot(30),
 				want: []*ethpbalpha.SignedBeaconBlock{
 					blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 					b1,
@@ -573,7 +641,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			OptimisticModeFetcher: mockChainFetcher,
 			FinalizationFetcher:   mockChainFetcher,
 		}
-		slot := types.Slot(30)
+		slot := primitives.Slot(30)
 		headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 			Slot: &slot,
 		})
@@ -612,7 +680,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		}
 
 		t.Run("true", func(t *testing.T) {
-			slot := types.Slot(999)
+			slot := primitives.Slot(999)
 			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 				Slot: &slot,
 			})
@@ -620,7 +688,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			assert.Equal(t, true, headers.Finalized)
 		})
 		t.Run("false", func(t *testing.T) {
-			slot := types.Slot(1000)
+			slot := primitives.Slot(1000)
 			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 				Slot: &slot,
 			})

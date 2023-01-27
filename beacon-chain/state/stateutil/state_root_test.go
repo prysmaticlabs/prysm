@@ -63,8 +63,8 @@ func setupGenesisState(tb testing.TB, count uint64) *ethpb.BeaconState {
 	genesisState, _, err := interop.GenerateGenesisState(context.Background(), 0, 1)
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
-		someRoot := [32]byte{}
-		someKey := [fieldparams.BLSPubkeyLength]byte{}
+		var someRoot [32]byte
+		var someKey [fieldparams.BLSPubkeyLength]byte
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &ethpb.Validator{

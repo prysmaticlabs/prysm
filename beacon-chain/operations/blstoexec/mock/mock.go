@@ -2,7 +2,7 @@ package mock
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -17,7 +17,7 @@ func (m *PoolMock) PendingBLSToExecChanges() ([]*eth.SignedBLSToExecutionChange,
 }
 
 // BLSToExecChangesForInclusion --
-func (m *PoolMock) BLSToExecChangesForInclusion(_ state.BeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
+func (m *PoolMock) BLSToExecChangesForInclusion(_ state.ReadOnlyBeaconState) ([]*eth.SignedBLSToExecutionChange, error) {
 	return m.Changes, nil
 }
 
@@ -27,11 +27,11 @@ func (m *PoolMock) InsertBLSToExecChange(change *eth.SignedBLSToExecutionChange)
 }
 
 // MarkIncluded --
-func (*PoolMock) MarkIncluded(_ *eth.SignedBLSToExecutionChange) error {
+func (*PoolMock) MarkIncluded(_ *eth.SignedBLSToExecutionChange) {
 	panic("implement me")
 }
 
 // ValidatorExists --
-func (*PoolMock) ValidatorExists(_ types.ValidatorIndex) bool {
+func (*PoolMock) ValidatorExists(_ primitives.ValidatorIndex) bool {
 	panic("implement me")
 }

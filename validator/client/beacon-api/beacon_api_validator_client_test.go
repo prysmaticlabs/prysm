@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -20,27 +20,30 @@ import (
 
 // Make sure that GetAttestationData() returns the same thing as the internal getAttestationData()
 func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	expectedResp, expectedErr := validatorClient.getAttestationData(slot, committeeIndex)
+	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(
 		context.Background(),
@@ -58,27 +61,30 @@ func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
 }
 
 func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
 		errors.New("some specific json error"),
 	).SetArg(
-		1,
+		2,
 		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	expectedResp, expectedErr := validatorClient.getAttestationData(slot, committeeIndex)
+	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(
 		context.Background(),
@@ -97,8 +103,10 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(
+	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 		nil,
@@ -108,7 +116,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	resp, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
 
 	domainTypeArray := bytesutil.ToBytes4(domainType)
-	expectedResp, expectedErr := validatorClient.getDomainData(epoch, domainTypeArray)
+	expectedResp, expectedErr := validatorClient.getDomainData(ctx, epoch, domainTypeArray)
 	assert.DeepEqual(t, expectedErr, err)
 	assert.DeepEqual(t, expectedResp, resp)
 }
@@ -125,9 +133,11 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	ctx := context.Background()
 
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		"/eth/v1/beacon/blocks",
 		map[string]string{"Eth-Consensus-Version": "phase0"},
 		gomock.Any(),
@@ -139,13 +149,14 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.proposeBeaconBlock(
+		ctx,
 		&ethpb.GenericSignedBeaconBlock{
 			Block: generateSignedPhase0Block(),
 		},
 	)
 
 	resp, err := validatorClient.ProposeBeaconBlock(
-		context.Background(),
+		ctx,
 		&ethpb.GenericSignedBeaconBlock{
 			Block: generateSignedPhase0Block(),
 		},
@@ -156,14 +167,14 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 }
 
 func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
+		ctx,
 		"/eth/v1/beacon/blocks",
 		map[string]string{"Eth-Consensus-Version": "phase0"},
 		gomock.Any(),
@@ -175,13 +186,14 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.proposeBeaconBlock(
+		ctx,
 		&ethpb.GenericSignedBeaconBlock{
 			Block: generateSignedPhase0Block(),
 		},
 	)
 
 	resp, err := validatorClient.ProposeBeaconBlock(
-		context.Background(),
+		ctx,
 		&ethpb.GenericSignedBeaconBlock{
 			Block: generateSignedPhase0Block(),
 		},

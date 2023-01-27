@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -16,8 +17,11 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
@@ -26,7 +30,7 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 	assert.ErrorContains(t, "failed to query GET REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }
@@ -37,6 +41,8 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 	altairBeaconBlockBytes, err := json.Marshal(apimiddleware.BeaconBlockAltairJson{})
 	require.NoError(t, err)
 	bellatrixBeaconBlockBytes, err := json.Marshal(apimiddleware.BeaconBlockBellatrixJson{})
+	require.NoError(t, err)
+	capellaBeaconBlockBytes, err := json.Marshal(apimiddleware.BeaconBlockCapellaJson{})
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -84,6 +90,19 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			data:                 bellatrixBeaconBlockBytes,
 		},
 		{
+			name:                 "capella block decoding failed",
+			expectedErrorMessage: "failed to decode capella block response json",
+			beaconBlock:          "foo",
+			consensusVersion:     "capella",
+			data:                 []byte{},
+		},
+		{
+			name:                 "capella block conversion failed",
+			expectedErrorMessage: "failed to get capella block",
+			consensusVersion:     "capella",
+			data:                 capellaBeaconBlockBytes,
+		},
+		{
 			name:                 "unsupported consensus version",
 			expectedErrorMessage: "unsupported consensus version `foo`",
 			consensusVersion:     "foo",
@@ -95,12 +114,15 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			ctx := context.Background()
+
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
 				gomock.Any(),
 				&abstractProduceBlockResponseJson{},
 			).SetArg(
-				1,
+				2,
 				abstractProduceBlockResponseJson{
 					Version: testCase.consensusVersion,
 					Data:    testCase.data,
@@ -111,7 +133,7 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getBeaconBlock(1, []byte{1}, []byte{2})
+			_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}

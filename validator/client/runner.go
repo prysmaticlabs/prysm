@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
@@ -165,11 +165,11 @@ func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
 	}
 }
 
-func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (types.Slot, error) {
+func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot types.Slot
+	var headSlot primitives.Slot
 	firstTime := true
 	for {
 		if !firstTime {
@@ -231,7 +231,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	return headSlot, nil
 }
 
-func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, wg *sync.WaitGroup, span *trace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {
@@ -281,7 +281,7 @@ func isConnectionError(err error) bool {
 	return err != nil && errors.Is(err, iface.ErrConnectionIssue)
 }
 
-func handleAssignmentError(err error, slot types.Slot) {
+func handleAssignmentError(err error, slot primitives.Slot) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,

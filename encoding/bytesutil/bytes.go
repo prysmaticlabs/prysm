@@ -2,130 +2,8 @@
 package bytesutil
 
 import (
-	"encoding/binary"
 	"fmt"
-	"math/big"
-	"math/bits"
-	"regexp"
-
-	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
-
-var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
-
-// ToBytes returns integer x to bytes in little-endian format at the specified length.
-// Spec defines similar method uint_to_bytes(n: uint) -> bytes, which is equivalent to ToBytes(n, 8).
-func ToBytes(x uint64, length int) []byte {
-	if length < 0 {
-		length = 0
-	}
-	makeLength := length
-	if length < 8 {
-		makeLength = 8
-	}
-	bytes := make([]byte, makeLength)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes[:length]
-}
-
-// Bytes1 returns integer x to bytes in little-endian format, x.to_bytes(1, 'little').
-func Bytes1(x uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes[:1]
-}
-
-// Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'little').
-func Bytes2(x uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes[:2]
-}
-
-// Bytes3 returns integer x to bytes in little-endian format, x.to_bytes(3, 'little').
-func Bytes3(x uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes[:3]
-}
-
-// Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'little').
-func Bytes4(x uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes[:4]
-}
-
-// Bytes8 returns integer x to bytes in little-endian format, x.to_bytes(8, 'little').
-func Bytes8(x uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes
-}
-
-// Bytes32 returns integer x to bytes in little-endian format, x.to_bytes(32, 'little').
-func Bytes32(x uint64) []byte {
-	bytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(bytes, x)
-	return bytes
-}
-
-// FromBytes4 returns an integer which is stored in the little-endian format(4, 'little')
-// from a byte array.
-func FromBytes4(x []byte) uint64 {
-	if len(x) < 4 {
-		return 0
-	}
-	empty4bytes := make([]byte, 4)
-	return binary.LittleEndian.Uint64(append(x[:4], empty4bytes...))
-}
-
-// FromBytes8 returns an integer which is stored in the little-endian format(8, 'little')
-// from a byte array.
-func FromBytes8(x []byte) uint64 {
-	if len(x) < 8 {
-		return 0
-	}
-	return binary.LittleEndian.Uint64(x)
-}
-
-// ToBytes4 is a convenience method for converting a byte slice to a fix
-// sized 4 byte array. This method will truncate the input if it is larger
-// than 4 bytes.
-func ToBytes4(x []byte) [4]byte {
-	var y [4]byte
-	copy(y[:], x)
-	return y
-}
-
-// ToBytes20 is a convenience method for converting a byte slice to a fix
-// sized 20 byte array. This method will truncate the input if it is larger
-// than 20 bytes.
-func ToBytes20(x []byte) [20]byte {
-	var y [20]byte
-	copy(y[:], x)
-	return y
-}
-
-// ToBytes32 is a convenience method for converting a byte slice to a fix
-// sized 32 byte array. This method will truncate the input if it is larger
-// than 32 bytes.
-func ToBytes32(x []byte) [32]byte {
-	var y [32]byte
-	copy(y[:], x)
-	return y
-}
-
-// ToBytes48 is a convenience method for converting a byte slice to a fix
-// sized 48 byte array. This method will truncate the input if it is larger
-// than 48 bytes.
-func ToBytes48(x []byte) [48]byte {
-	var y [48]byte
-	copy(y[:], x)
-	return y
-}
 
 // ToBytes48Array is a convenience method for converting an array of
 // byte slices to an array of fixed-sized byte arrays.
@@ -137,37 +15,10 @@ func ToBytes48Array(x [][]byte) [][48]byte {
 	return y
 }
 
-// ToBytes64 is a convenience method for converting a byte slice to a fix
-// sized 64 byte array. This method will truncate the input if it is larger
-// than 64 bytes.
-func ToBytes64(x []byte) [64]byte {
-	var y [64]byte
-	copy(y[:], x)
-	return y
-}
-
-// ToBytes96 is a convenience method for converting a byte slice to a fix
-// sized 96 byte array. This method will truncate the input if it is larger
-// than 96 bytes.
-func ToBytes96(x []byte) [96]byte {
-	var y [96]byte
-	copy(y[:], x)
-	return y
-}
-
 // ToBool is a convenience method for converting a byte to a bool.
 // This method will use the first bit of the 0 byte to generate the returned value.
 func ToBool(x byte) bool {
 	return x&1 == 1
-}
-
-// FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
-// from a byte array.
-func FromBytes2(x []byte) uint16 {
-	if len(x) < 2 {
-		return 0
-	}
-	return binary.LittleEndian.Uint16(x[:2])
 }
 
 // FromBool is a convenience method for converting a bool to a byte.
@@ -203,16 +54,6 @@ func Trunc(x []byte) []byte {
 	return x
 }
 
-// ToLowInt64 returns the lowest 8 bytes interpreted as little endian.
-func ToLowInt64(x []byte) int64 {
-	if len(x) < 8 {
-		return 0
-	}
-	// Use the first 8 bytes.
-	x = x[:8]
-	return int64(binary.LittleEndian.Uint64(x)) // lint:ignore uintcast -- A negative number might be the expected result.
-}
-
 // SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.
 func SafeCopyRootAtIndex(input [][]byte, idx uint64) ([]byte, error) {
 	if input == nil {
@@ -227,7 +68,7 @@ func SafeCopyRootAtIndex(input [][]byte, idx uint64) ([]byte, error) {
 	return item, nil
 }
 
-// SafeCopyBytes will copy and return a non-nil byte array, otherwise it returns nil.
+// SafeCopyBytes will copy and return a non-nil byte slice, otherwise it returns nil.
 func SafeCopyBytes(cp []byte) []byte {
 	if cp != nil {
 		copied := make([]byte, len(cp))
@@ -237,7 +78,7 @@ func SafeCopyBytes(cp []byte) []byte {
 	return nil
 }
 
-// SafeCopy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+// SafeCopy2dBytes will copy and return a non-nil 2d byte slice, otherwise it returns nil.
 func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	if ary != nil {
 		copied := make([][]byte, len(ary))
@@ -249,7 +90,7 @@ func SafeCopy2dBytes(ary [][]byte) [][]byte {
 	return nil
 }
 
-// SafeCopy2d32Bytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+// SafeCopy2d32Bytes will copy and return a non-nil 2d byte slice, otherwise it returns nil.
 func SafeCopy2d32Bytes(ary [][32]byte) [][32]byte {
 	if ary != nil {
 		copied := make([][32]byte, len(ary))
@@ -270,157 +111,10 @@ func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
 // PadTo pads a byte slice to the given size. If the byte slice is larger than the given size, the
 // original slice is returned.
 func PadTo(b []byte, size int) []byte {
-	if len(b) > size {
+	if len(b) >= size {
 		return b
 	}
 	return append(b, make([]byte, size-len(b))...)
-}
-
-// SetBit sets the index `i` of bitlist `b` to 1.
-// It grows and returns a longer bitlist with 1 set
-// if index `i` is out of range.
-func SetBit(b []byte, i int) []byte {
-	if i >= len(b)*8 {
-		h := (i + (8 - i%8)) / 8
-		b = append(b, make([]byte, h-len(b))...)
-	}
-
-	bit := uint8(1 << (i % 8))
-	b[i/8] |= bit
-	return b
-}
-
-// ClearBit clears the index `i` of bitlist `b`.
-// Returns the original bitlist if the index `i`
-// is out of range.
-func ClearBit(b []byte, i int) []byte {
-	if i >= len(b)*8 || i < 0 {
-		return b
-	}
-
-	bit := uint8(1 << (i % 8))
-	b[i/8] &^= bit
-	return b
-}
-
-// MakeEmptyBitlists returns an empty bitlist with
-// input size `i`.
-func MakeEmptyBitlists(i int) []byte {
-	return make([]byte, (i+(8-i%8))/8)
-}
-
-// HighestBitIndex returns the index of the highest
-// bit set from bitlist `b`.
-func HighestBitIndex(b []byte) (int, error) {
-	if len(b) == 0 {
-		return 0, errors.New("input list can't be empty or nil")
-	}
-
-	for i := len(b) - 1; i >= 0; i-- {
-		if b[i] == 0 {
-			continue
-		}
-		return bits.Len8(b[i]) + (i * 8), nil
-	}
-
-	return 0, nil
-}
-
-// HighestBitIndexAt returns the index of the highest
-// bit set from bitlist `b` that is at `index` (inclusive).
-func HighestBitIndexAt(b []byte, index int) (int, error) {
-	bLength := len(b)
-	if b == nil || bLength == 0 {
-		return 0, errors.New("input list can't be empty or nil")
-	}
-	if index < 0 {
-		return 0, errors.Errorf("index is negative: %d", index)
-	}
-
-	start := index / 8
-	if start >= bLength {
-		start = bLength - 1
-	}
-
-	mask := byte(1<<(index%8) - 1)
-	for i := start; i >= 0; i-- {
-		if index/8 > i {
-			mask = 0xff
-		}
-		masked := b[i] & mask
-		minBitsMasked := bits.Len8(masked)
-		if b[i] == 0 || (minBitsMasked == 0 && index/8 <= i) {
-			continue
-		}
-
-		return minBitsMasked + (i * 8), nil
-	}
-
-	return 0, nil
-}
-
-// Uint32ToBytes4 is a convenience method for converting uint32 to a fix
-// sized 4 byte array in big endian order. Returns 4 byte array.
-func Uint32ToBytes4(i uint32) [4]byte {
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, i)
-	return ToBytes4(buf)
-}
-
-// Uint64ToBytesLittleEndian conversion.
-func Uint64ToBytesLittleEndian(i uint64) []byte {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, i)
-	return buf
-}
-
-// Uint64ToBytesBigEndian conversion.
-func Uint64ToBytesBigEndian(i uint64) []byte {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, i)
-	return buf
-}
-
-// BytesToUint64BigEndian conversion. Returns 0 if empty bytes or byte slice with length less
-// than 8.
-func BytesToUint64BigEndian(b []byte) uint64 {
-	if len(b) < 8 { // This will panic otherwise.
-		return 0
-	}
-	return binary.BigEndian.Uint64(b)
-}
-
-// EpochToBytesLittleEndian conversion.
-func EpochToBytesLittleEndian(i types.Epoch) []byte {
-	return Uint64ToBytesLittleEndian(uint64(i))
-}
-
-// EpochToBytesBigEndian conversion.
-func EpochToBytesBigEndian(i types.Epoch) []byte {
-	return Uint64ToBytesBigEndian(uint64(i))
-}
-
-// BytesToEpochBigEndian conversion.
-func BytesToEpochBigEndian(b []byte) types.Epoch {
-	return types.Epoch(BytesToUint64BigEndian(b))
-}
-
-// SlotToBytesBigEndian conversion.
-func SlotToBytesBigEndian(i types.Slot) []byte {
-	return Uint64ToBytesBigEndian(uint64(i))
-}
-
-// BytesToSlotBigEndian conversion.
-func BytesToSlotBigEndian(b []byte) types.Slot {
-	return types.Slot(BytesToUint64BigEndian(b))
-}
-
-// IsHex checks whether the byte array is a hex number prefixed with '0x'.
-func IsHex(b []byte) bool {
-	if b == nil {
-		return false
-	}
-	return hexRegex.Match(b)
 }
 
 // ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
@@ -432,31 +126,4 @@ func ReverseByteOrder(input []byte) []byte {
 		b[i], b[len(b)-i-1] = b[len(b)-i-1], b[i]
 	}
 	return b
-}
-
-// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
-func ZeroRoot(root []byte) bool {
-	return string(make([]byte, fieldparams.RootLength)) == string(root)
-}
-
-// IsRoot checks whether the byte array is a root.
-func IsRoot(root []byte) bool {
-	return len(root) == fieldparams.RootLength
-}
-
-// IsValidRoot checks whether the byte array is a valid root.
-func IsValidRoot(root []byte) bool {
-	return IsRoot(root) && !ZeroRoot(root)
-}
-
-// LittleEndianBytesToBigInt takes bytes of a number stored as little-endian and returns a big integer
-func LittleEndianBytesToBigInt(bytes []byte) *big.Int {
-	// Integers are stored as little-endian, but big.Int expects big-endian. So we need to reverse the byte order before decoding.
-	return new(big.Int).SetBytes(ReverseByteOrder(bytes))
-}
-
-// BigIntToLittleEndianBytes takes a big integer and returns its bytes stored as little-endian
-func BigIntToLittleEndianBytes(bigInt *big.Int) []byte {
-	// big.Int.Bytes() returns bytes in big-endian order, so we need to reverse the byte order
-	return ReverseByteOrder(bigInt.Bytes())
 }

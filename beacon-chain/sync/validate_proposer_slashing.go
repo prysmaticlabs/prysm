@@ -6,7 +6,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -60,7 +60,7 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 }
 
 // Returns true if the node has already received a valid proposer slashing received for the proposer with index
-func (s *Service) hasSeenProposerSlashingIndex(i types.ValidatorIndex) bool {
+func (s *Service) hasSeenProposerSlashingIndex(i primitives.ValidatorIndex) bool {
 	s.seenProposerSlashingLock.RLock()
 	defer s.seenProposerSlashingLock.RUnlock()
 	_, seen := s.seenProposerSlashingCache.Get(i)
@@ -68,7 +68,7 @@ func (s *Service) hasSeenProposerSlashingIndex(i types.ValidatorIndex) bool {
 }
 
 // Set proposer slashing index in proposer slashing cache.
-func (s *Service) setProposerSlashingIndexSeen(i types.ValidatorIndex) {
+func (s *Service) setProposerSlashingIndexSeen(i primitives.ValidatorIndex) {
 	s.seenProposerSlashingLock.Lock()
 	defer s.seenProposerSlashingLock.Unlock()
 	s.seenProposerSlashingCache.Add(i, true)

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -330,7 +330,7 @@ func TestProcessInactivityScores_CanProcessInactivityLeak(t *testing.T) {
 	require.NoError(t, err)
 	defaultScore := uint64(5)
 	require.NoError(t, s.SetInactivityScores([]uint64{defaultScore, defaultScore, defaultScore, defaultScore}))
-	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
+	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch*primitives.Slot(params.BeaconConfig().MinEpochsToInactivityPenalty+2)))
 	validators, balance, err := InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
 	validators, _, err = ProcessEpochParticipation(context.Background(), s, balance, validators)

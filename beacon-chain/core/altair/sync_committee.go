@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -100,7 +100,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*ethpb.SyncCom
 //	        sync_committee_indices.append(candidate_index)
 //	    i += 1
 //	return sync_committee_indices
-func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types.ValidatorIndex, error) {
+func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primitives.ValidatorIndex, error) {
 	epoch := coreTime.NextEpoch(s)
 	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {
@@ -113,10 +113,10 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types
 	count := uint64(len(indices))
 	cfg := params.BeaconConfig()
 	syncCommitteeSize := cfg.SyncCommitteeSize
-	cIndices := make([]types.ValidatorIndex, 0, syncCommitteeSize)
+	cIndices := make([]primitives.ValidatorIndex, 0, syncCommitteeSize)
 	hashFunc := hash.CustomSHA256Hasher()
 
-	for i := types.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
+	for i := primitives.ValidatorIndex(0); uint64(len(cIndices)) < params.BeaconConfig().SyncCommitteeSize; i++ {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -159,7 +159,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types
 //	sync_subcommittee_size = SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT
 //	i = subcommittee_index * sync_subcommittee_size
 //	return sync_committee.pubkeys[i:i + sync_subcommittee_size]
-func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx types.CommitteeIndex) ([][]byte, error) {
+func SyncSubCommitteePubkeys(syncCommittee *ethpb.SyncCommittee, subComIdx primitives.CommitteeIndex) ([][]byte, error) {
 	cfg := params.BeaconConfig()
 	subCommSize := cfg.SyncCommitteeSize / cfg.SyncCommitteeSubnetCount
 	i := uint64(subComIdx) * subCommSize
@@ -190,7 +190,7 @@ func IsSyncCommitteeAggregator(sig []byte) (bool, error) {
 }
 
 // ValidateSyncMessageTime validates sync message to ensure that the provided slot is valid.
-func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
+func ValidateSyncMessageTime(slot primitives.Slot, genesisTime time.Time, clockDisparity time.Duration) error {
 	if err := slots.ValidateClock(slot, uint64(genesisTime.Unix())); err != nil {
 		return err
 	}

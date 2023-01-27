@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -69,7 +69,7 @@ func filterSafeProposals(
 	proposerSlashings []*ethpb.ProposerSlashing,
 ) []*slashertypes.SignedBlockHeaderWrapper {
 	// We initialize a map of proposers that are safe from slashing.
-	safeProposers := make(map[types.ValidatorIndex]*slashertypes.SignedBlockHeaderWrapper, len(proposedBlocks))
+	safeProposers := make(map[primitives.ValidatorIndex]*slashertypes.SignedBlockHeaderWrapper, len(proposedBlocks))
 	for _, proposal := range proposedBlocks {
 		safeProposers[proposal.SignedBeaconBlockHeader.Header.ProposerIndex] = proposal
 	}
