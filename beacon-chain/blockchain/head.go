@@ -63,11 +63,6 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
-	// Only save head if the new head root is different.
-	if !s.isNewHead(newHeadRoot) {
-		return nil
-	}
-
 	// Do nothing if head hasn't changed.
 	var oldHeadRoot [32]byte
 	s.headLock.RLock()
