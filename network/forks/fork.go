@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -41,7 +41,7 @@ func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool,
 
 // ForkDigestFromEpoch retrieves the fork digest from the current schedule determined
 // by the provided epoch.
-func ForkDigestFromEpoch(currentEpoch types.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
+func ForkDigestFromEpoch(currentEpoch primitives.Epoch, genesisValidatorsRoot []byte) ([4]byte, error) {
 	if len(genesisValidatorsRoot) == 0 {
 		return [4]byte{}, errors.New("genesis validators root is not set")
 	}
@@ -83,13 +83,13 @@ func CreateForkDigest(
 // Fork given a target epoch,
 // returns the active fork version during this epoch.
 func Fork(
-	targetEpoch types.Epoch,
+	targetEpoch primitives.Epoch,
 ) (*ethpb.Fork, error) {
 	currentForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
-	forkEpoch := types.Epoch(0)
+	forkEpoch := primitives.Epoch(0)
 	for _, forkVersion := range sortedForkVersions {
 		epoch, ok := fSchedule[forkVersion]
 		if !ok {
@@ -110,7 +110,7 @@ func Fork(
 
 // RetrieveForkDataFromDigest performs the inverse, where it tries to determine the fork version
 // and epoch from a provided digest by looping through our current fork schedule.
-func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, types.Epoch, error) {
+func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([4]byte, primitives.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	for v, e := range fSchedule {
 		rDigest, err := signing.ComputeForkDigest(v[:], genesisValidatorsRoot)
@@ -126,10 +126,10 @@ func RetrieveForkDataFromDigest(digest [4]byte, genesisValidatorsRoot []byte) ([
 
 // NextForkData retrieves the next fork data according to the
 // provided current epoch.
-func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
+func NextForkData(currEpoch primitives.Epoch) ([4]byte, primitives.Epoch, error) {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
-	nextForkEpoch := types.Epoch(math.MaxUint64)
+	nextForkEpoch := primitives.Epoch(math.MaxUint64)
 	var nextForkVersion [4]byte
 	for _, forkVersion := range sortedForkVersions {
 		epoch, ok := fSchedule[forkVersion]
@@ -158,7 +158,7 @@ func NextForkData(currEpoch types.Epoch) ([4]byte, types.Epoch, error) {
 
 // SortedForkVersions sorts the provided fork schedule in ascending order
 // by epoch.
-func SortedForkVersions(forkSchedule map[[4]byte]types.Epoch) [][4]byte {
+func SortedForkVersions(forkSchedule map[[4]byte]primitives.Epoch) [][4]byte {
 	sortedVersions := make([][4]byte, len(forkSchedule))
 	i := 0
 	for k := range forkSchedule {

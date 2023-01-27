@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers"
 	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	syncmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -161,7 +161,7 @@ func TestGetIdentity(t *testing.T) {
 }
 
 func TestSyncStatus(t *testing.T) {
-	currentSlot := new(types.Slot)
+	currentSlot := new(primitives.Slot)
 	*currentSlot = 110
 	state, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -179,8 +179,8 @@ func TestSyncStatus(t *testing.T) {
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
-	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
+	assert.Equal(t, primitives.Slot(100), resp.Data.HeadSlot)
+	assert.Equal(t, primitives.Slot(10), resp.Data.SyncDistance)
 	assert.Equal(t, true, resp.Data.IsSyncing)
 	assert.Equal(t, true, resp.Data.IsOptimistic)
 }

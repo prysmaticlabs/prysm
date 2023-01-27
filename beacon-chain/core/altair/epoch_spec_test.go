@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -47,7 +47,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, current, c)
 	require.DeepEqual(t, next, n)
 
-	require.NoError(t, s.SetSlot(types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch-1))
+	require.NoError(t, s.SetSlot(primitives.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)*params.BeaconConfig().SlotsPerEpoch-1))
 	postState, err = altair.ProcessSyncCommitteeUpdates(context.Background(), s)
 	require.NoError(t, err)
 	c, err = postState.CurrentSyncCommittee()
@@ -59,7 +59,7 @@ func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
 	require.DeepEqual(t, next, c)
 
 	// Test boundary condition.
-	slot := params.BeaconConfig().SlotsPerEpoch * types.Slot(time.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
+	slot := params.BeaconConfig().SlotsPerEpoch * primitives.Slot(time.CurrentEpoch(s)+params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 	require.NoError(t, s.SetSlot(slot))
 	boundaryCommittee, err := altair.NextSyncCommittee(context.Background(), s)
 	require.NoError(t, err)

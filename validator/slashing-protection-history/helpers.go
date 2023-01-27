@@ -8,7 +8,7 @@ import (
 
 	"github.com/k0kubun/go-ansi"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -36,21 +36,21 @@ func Uint64FromString(str string) (uint64, error) {
 }
 
 // EpochFromString converts a string into Epoch.
-func EpochFromString(str string) (types.Epoch, error) {
+func EpochFromString(str string) (primitives.Epoch, error) {
 	e, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		return types.Epoch(e), err
+		return primitives.Epoch(e), err
 	}
-	return types.Epoch(e), nil
+	return primitives.Epoch(e), nil
 }
 
 // SlotFromString converts a string into Slot.
-func SlotFromString(str string) (types.Slot, error) {
+func SlotFromString(str string) (primitives.Slot, error) {
 	s, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		return types.Slot(s), err
+		return primitives.Slot(s), err
 	}
-	return types.Slot(s), nil
+	return primitives.Slot(s), nil
 }
 
 // PubKeyFromHex takes in a hex string, verifies its length as 48 bytes, and converts that representation.

@@ -13,7 +13,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -39,7 +39,7 @@ type HeadUpdater interface {
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time
-	CurrentSlot() types.Slot
+	CurrentSlot() primitives.Slot
 }
 
 // GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
@@ -50,16 +50,16 @@ type GenesisFetcher interface {
 // HeadFetcher defines a common interface for methods in blockchain service which
 // directly retrieve head related data.
 type HeadFetcher interface {
-	HeadSlot() types.Slot
+	HeadSlot() primitives.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
-	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
+	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
-	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
-	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
-	ChainHeads() ([][32]byte, []types.Slot)
+	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
+	HeadValidatorIndexToPublicKey(ctx context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
+	ChainHeads() ([][32]byte, []primitives.Slot)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -118,7 +118,7 @@ func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
 }
 
 // HeadSlot returns the slot of the head of the chain.
-func (s *Service) HeadSlot() types.Slot {
+func (s *Service) HeadSlot() primitives.Slot {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -188,12 +188,12 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
-func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
-		return []types.ValidatorIndex{}, nil
+		return []primitives.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
 }
@@ -265,12 +265,12 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
-func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
+func (s *Service) ChainHeads() ([][32]byte, []primitives.Slot) {
 	return s.cfg.ForkChoiceStore.Tips()
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
-func (s *Service) HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (s *Service) HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	if !s.hasHeadState() {
@@ -280,7 +280,7 @@ func (s *Service) HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLen
 }
 
 // HeadValidatorIndexToPublicKey returns the pubkey of the validator `index`  in current head state.
-func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
+func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 	if !s.hasHeadState() {

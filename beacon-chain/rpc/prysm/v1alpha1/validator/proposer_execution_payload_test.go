@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -71,7 +71,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		Root: b2rCapella[:],
 	}))
 
-	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
 		name              string
@@ -80,8 +80,8 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		forkchoiceErr     error
 		payloadID         *pb.PayloadIDBytes
 		terminalBlockHash common.Hash
-		activationEpoch   types.Epoch
-		validatorIndx     types.ValidatorIndex
+		activationEpoch   primitives.Epoch
+		validatorIndx     primitives.ValidatorIndex
 	}{
 		{
 			name:      "transition completed, nil payload id",
@@ -163,7 +163,7 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 		Root: b1r[:],
 	}))
 
-	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
 	cfg := params.BeaconConfig().Copy()
 	cfg.TerminalBlockHash = common.Hash{'a'}
@@ -207,7 +207,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	}))
 
 	feeRecipient := common.BytesToAddress([]byte("a"))
-	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{
+	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{
 		feeRecipient,
 	}))
 

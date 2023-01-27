@@ -19,7 +19,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -319,7 +319,7 @@ func GenerateFullBlockAltair(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot types.Slot,
+	slot primitives.Slot,
 ) (*ethpb.SignedBeaconBlockAltair, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()

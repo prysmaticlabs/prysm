@@ -2,7 +2,7 @@ package slasher
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // Parameters for slashing detection.
@@ -19,7 +19,7 @@ import (
 type Parameters struct {
 	chunkSize          uint64
 	validatorChunkSize uint64
-	historyLength      types.Epoch
+	historyLength      primitives.Epoch
 }
 
 // DefaultParams defines default values for slasher's important parameters, defined
@@ -47,14 +47,14 @@ func DefaultParams() *Parameters {
 //	span    = [-, -, -, -, -, -]
 //	chunked = [[-, -], [-, -], [-, -]]
 //	                            |-> epoch 4, chunk idx 2
-func (p *Parameters) chunkIndex(epoch types.Epoch) uint64 {
+func (p *Parameters) chunkIndex(epoch primitives.Epoch) uint64 {
 	return uint64(epoch.Mod(uint64(p.historyLength)).Div(p.chunkSize))
 }
 
 // When storing data on disk, we take K validators' chunks. To figure out
 // which validator chunk index a validator index is for, we simply divide
 // the validator index, i, by K.
-func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) uint64 {
+func (p *Parameters) validatorChunkIndex(validatorIndex primitives.ValidatorIndex) uint64 {
 	return uint64(validatorIndex.Div(p.validatorChunkSize))
 }
 
@@ -67,8 +67,8 @@ func (p *Parameters) validatorChunkIndex(validatorIndex types.ValidatorIndex) ui
 //	[[-, -, -], [-, -, -], [-, -, -], ...]
 //	             |
 //	             -> first epoch of chunk 1 equals 3
-func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
-	return types.Epoch(chunkIndex * p.chunkSize)
+func (p *Parameters) firstEpoch(chunkIndex uint64) primitives.Epoch {
+	return primitives.Epoch(chunkIndex * p.chunkSize)
 }
 
 // Returns the epoch at the last index of a chunk at the specified chunk index.
@@ -80,7 +80,7 @@ func (p *Parameters) firstEpoch(chunkIndex uint64) types.Epoch {
 //	[[-, -, -], [-, -, -], [-, -, -], ...]
 //	                   |
 //	                   -> last epoch of chunk 1 equals 5
-func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
+func (p *Parameters) lastEpoch(chunkIndex uint64) primitives.Epoch {
 	return p.firstEpoch(chunkIndex).Add(p.chunkSize - 1)
 }
 
@@ -106,19 +106,19 @@ func (p *Parameters) lastEpoch(chunkIndex uint64) types.Epoch {
 //	 {     }  {     }  {     }
 //	[-, -, -, -, -, -, -, -, -]
 //	                      |-> epoch 1 for val2
-func (p *Parameters) cellIndex(validatorIndex types.ValidatorIndex, epoch types.Epoch) uint64 {
+func (p *Parameters) cellIndex(validatorIndex primitives.ValidatorIndex, epoch primitives.Epoch) uint64 {
 	validatorChunkOffset := p.validatorOffset(validatorIndex)
 	chunkOffset := p.chunkOffset(epoch)
 	return validatorChunkOffset*p.chunkSize + chunkOffset
 }
 
 // Computes the start index of a chunk given an epoch.
-func (p *Parameters) chunkOffset(epoch types.Epoch) uint64 {
+func (p *Parameters) chunkOffset(epoch primitives.Epoch) uint64 {
 	return uint64(epoch.Mod(p.chunkSize))
 }
 
 // Computes the start index of a validator chunk given a validator index.
-func (p *Parameters) validatorOffset(validatorIndex types.ValidatorIndex) uint64 {
+func (p *Parameters) validatorOffset(validatorIndex primitives.ValidatorIndex) uint64 {
 	return uint64(validatorIndex.Mod(p.validatorChunkSize))
 }
 
@@ -147,12 +147,12 @@ func (p *Parameters) flatSliceID(validatorChunkIndex, chunkIndex uint64) []byte 
 
 // Given a validator chunk index, we determine all of the validator
 // indices that will belong in that chunk.
-func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []types.ValidatorIndex {
-	validatorIndices := make([]types.ValidatorIndex, 0)
+func (p *Parameters) validatorIndicesInChunk(validatorChunkIdx uint64) []primitives.ValidatorIndex {
+	validatorIndices := make([]primitives.ValidatorIndex, 0)
 	low := validatorChunkIdx * p.validatorChunkSize
 	high := (validatorChunkIdx + 1) * p.validatorChunkSize
 	for i := low; i < high; i++ {
-		validatorIndices = append(validatorIndices, types.ValidatorIndex(i))
+		validatorIndices = append(validatorIndices, primitives.ValidatorIndex(i))
 	}
 	return validatorIndices
 }

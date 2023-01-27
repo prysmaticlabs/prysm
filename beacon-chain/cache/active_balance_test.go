@@ -9,7 +9,7 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -70,7 +70,7 @@ func TestBalanceCache_BalanceKey(t *testing.T) {
 	}
 	st, err := state_native.InitializeFromProtoPhase0(raw)
 	require.NoError(t, err)
-	require.NoError(t, st.SetSlot(types.Slot(math.MaxUint64)))
+	require.NoError(t, st.SetSlot(primitives.Slot(math.MaxUint64)))
 
 	_, err = balanceCacheKey(st)
 	require.NoError(t, err)

@@ -4,7 +4,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 
@@ -79,7 +79,7 @@ func VerifyBeaconStateFinalizedCheckpointNil(t *testing.T, factory getState) {
 	checkpoint := s.FinalizedCheckpoint()
 	require.Equal(t, (*ethpb.Checkpoint)(nil), checkpoint)
 	epoch := s.FinalizedCheckpointEpoch()
-	require.Equal(t, types.Epoch(0), epoch)
+	require.Equal(t, primitives.Epoch(0), epoch)
 }
 
 func VerifyBeaconStateFinalizedCheckpoint(t *testing.T, factory getStateWithCheckpoint) {

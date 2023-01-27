@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/db/kv"
@@ -218,7 +218,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 		proposals := proposalHistory[i].Proposals
 		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
-		rootsBySlot := make(map[types.Slot][]byte)
+		rootsBySlot := make(map[primitives.Slot][]byte)
 		for _, proposal := range receivedProposalHistory {
 			rootsBySlot[proposal.Slot] = proposal.SigningRoot
 		}

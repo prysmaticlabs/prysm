@@ -15,7 +15,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -30,7 +30,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := transition.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := types.Epoch(2048)
+	epoch := primitives.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -56,7 +56,7 @@ func TestProposeExit_Notification(t *testing.T) {
 	defer opSub.Unsubscribe()
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := types.ValidatorIndex(0)
+	validatorIndex := primitives.ValidatorIndex(0)
 	req := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,
@@ -97,7 +97,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := transition.GenesisBeaconState(ctx, deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
-	epoch := types.Epoch(2048)
+	epoch := primitives.Epoch(2048)
 	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epoch))))
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
@@ -127,7 +127,7 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	require.ErrorContains(t, "voluntary exit does not exist", err, "Expected error for no exit existing")
 
 	// Send the request, expect a result on the state feed.
-	validatorIndex := types.ValidatorIndex(0)
+	validatorIndex := primitives.ValidatorIndex(0)
 	req = &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			Epoch:          epoch,

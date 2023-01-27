@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
@@ -50,7 +50,7 @@ func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Messag
 }
 
 // Register PubSub subscribers
-func (s *Service) registerSubscribers(epoch types.Epoch, digest [4]byte) {
+func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 	s.subscribe(
 		p2p.BlockSubnetTopicFormat,
 		s.validateBeaconBlockPubSub,
@@ -659,7 +659,7 @@ func (s *Service) validPeersExist(subnetTopic string) bool {
 	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
 }
 
-func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
+func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
 	// Persistent subscriptions from validators
 	persistentSubs := s.persistentSubnetIndices()
 	// Update desired topic indices for aggregator
@@ -669,7 +669,7 @@ func (s *Service) retrievePersistentSubs(currSlot types.Slot) []uint64 {
 	return slice.SetUint64(append(persistentSubs, wantedSubs...))
 }
 
-func (_ *Service) retrieveActiveSyncSubnets(currEpoch types.Epoch) []uint64 {
+func (_ *Service) retrieveActiveSyncSubnets(currEpoch primitives.Epoch) []uint64 {
 	subs := cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
 	return slice.SetUint64(subs)
 }

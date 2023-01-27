@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
@@ -141,17 +141,17 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
 	}
-	var nextValidatorIndex types.ValidatorIndex
+	var nextValidatorIndex primitives.ValidatorIndex
 	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
 		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 		}
-		nextValidatorIndex += types.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
-		nextValidatorIndex = nextValidatorIndex % types.ValidatorIndex(st.NumValidators())
+		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
 	} else {
 		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
-		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
+		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
 			nextValidatorIndex = 0
 		}
 	}

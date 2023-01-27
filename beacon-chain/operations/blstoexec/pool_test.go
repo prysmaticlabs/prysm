@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -69,7 +69,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 
 		message := &eth.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -130,7 +130,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		// We want FIFO semantics, which means validator with index 16 shouldn't be returned
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
 		for _, ch := range changes {
-			assert.NotEqual(t, types.ValidatorIndex(15), ch.Message.ValidatorIndex)
+			assert.NotEqual(t, primitives.ValidatorIndex(15), ch.Message.ValidatorIndex)
 		}
 	})
 	t.Run("One Bad change", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges), len(changes))
-		assert.Equal(t, types.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(30), changes[1].Message.ValidatorIndex)
 		signedChanges[1].Message.FromBlsPubkey[5] = saveByte
 	})
 	t.Run("One Bad Signature", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestBLSToExecChangesForInclusion(t *testing.T) {
 		changes, err := pool.BLSToExecChangesForInclusion(st)
 		require.NoError(t, err)
 		assert.Equal(t, int(params.BeaconConfig().MaxBlsToExecutionChanges)-1, len(changes))
-		assert.Equal(t, types.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
+		assert.Equal(t, primitives.ValidatorIndex(29), changes[1].Message.ValidatorIndex)
 	})
 }
 
@@ -164,7 +164,7 @@ func TestInsertBLSToExecChange(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			},
 		}
 		pool.InsertBLSToExecChange(change)
@@ -180,12 +180,12 @@ func TestInsertBLSToExecChange(t *testing.T) {
 		pool := NewPool()
 		old := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			},
 		}
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(1),
+				ValidatorIndex: primitives.ValidatorIndex(1),
 			},
 		}
 		pool.InsertBLSToExecChange(old)
@@ -207,13 +207,13 @@ func TestInsertBLSToExecChange(t *testing.T) {
 		pool := NewPool()
 		old := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			},
 			Signature: []byte("old"),
 		}
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			},
 			Signature: []byte("change"),
 		}
@@ -234,7 +234,7 @@ func TestMarkIncluded(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
 		pool.MarkIncluded(change)
@@ -246,15 +246,15 @@ func TestMarkIncluded(t *testing.T) {
 		pool := NewPool()
 		first := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		second := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(1),
+				ValidatorIndex: primitives.ValidatorIndex(1),
 			}}
 		third := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(2),
+				ValidatorIndex: primitives.ValidatorIndex(2),
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
@@ -268,15 +268,15 @@ func TestMarkIncluded(t *testing.T) {
 		pool := NewPool()
 		first := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		second := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(1),
+				ValidatorIndex: primitives.ValidatorIndex(1),
 			}}
 		third := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(2),
+				ValidatorIndex: primitives.ValidatorIndex(2),
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
@@ -290,15 +290,15 @@ func TestMarkIncluded(t *testing.T) {
 		pool := NewPool()
 		first := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		second := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(1),
+				ValidatorIndex: primitives.ValidatorIndex(1),
 			}}
 		third := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(2),
+				ValidatorIndex: primitives.ValidatorIndex(2),
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
@@ -312,15 +312,15 @@ func TestMarkIncluded(t *testing.T) {
 		pool := NewPool()
 		first := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		second := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(1),
+				ValidatorIndex: primitives.ValidatorIndex(1),
 			}}
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(2),
+				ValidatorIndex: primitives.ValidatorIndex(2),
 			}}
 		pool.InsertBLSToExecChange(first)
 		pool.InsertBLSToExecChange(second)
@@ -344,7 +344,7 @@ func TestValidatorExists(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
 		assert.Equal(t, true, pool.ValidatorExists(0))
@@ -353,17 +353,17 @@ func TestValidatorExists(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
 		change = &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(10),
+				ValidatorIndex: primitives.ValidatorIndex(10),
 			}}
 		pool.InsertBLSToExecChange(change)
 		change = &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(30),
+				ValidatorIndex: primitives.ValidatorIndex(30),
 			}}
 		pool.InsertBLSToExecChange(change)
 
@@ -375,7 +375,7 @@ func TestValidatorExists(t *testing.T) {
 		pool := NewPool()
 		change := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(change)
 		pool.MarkIncluded(change)
@@ -385,17 +385,17 @@ func TestValidatorExists(t *testing.T) {
 		pool := NewPool()
 		firstChange := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(0),
+				ValidatorIndex: primitives.ValidatorIndex(0),
 			}}
 		pool.InsertBLSToExecChange(firstChange)
 		secondChange := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(10),
+				ValidatorIndex: primitives.ValidatorIndex(10),
 			}}
 		pool.InsertBLSToExecChange(secondChange)
 		thirdChange := &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
-				ValidatorIndex: types.ValidatorIndex(30),
+				ValidatorIndex: primitives.ValidatorIndex(30),
 			}}
 		pool.InsertBLSToExecChange(thirdChange)
 

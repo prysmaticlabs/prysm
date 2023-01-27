@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -106,9 +106,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
-	slot types.Slot,
+	slot primitives.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
+	justifiedEpoch, finalizedEpoch primitives.Epoch) (*Node, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
@@ -242,9 +242,9 @@ func (s *Store) prune(ctx context.Context) error {
 
 // tips returns a list of possible heads from fork choice store, it returns the
 // roots and the slots of the leaf nodes.
-func (s *Store) tips() ([][32]byte, []types.Slot) {
+func (s *Store) tips() ([][32]byte, []primitives.Slot) {
 	var roots [][32]byte
-	var slots []types.Slot
+	var slots []primitives.Slot
 
 	s.nodesLock.RLock()
 	defer s.nodesLock.RUnlock()
@@ -259,7 +259,7 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 }
 
 // HighestReceivedBlockSlot returns the highest slot received by the forkchoice
-func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+func (f *ForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	if f.store.highestReceivedNode == nil {

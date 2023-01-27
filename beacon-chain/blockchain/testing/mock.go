@@ -22,7 +22,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -39,7 +39,7 @@ type ChainService struct {
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
+	Slot                        *primitives.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
 	Balance                     *precompute.Balance
 	CanonicalRoots              map[[32]byte]bool
 	Fork                        *ethpb.Fork
@@ -51,7 +51,7 @@ type ChainService struct {
 	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
 	BlocksReceived              []interfaces.SignedBeaconBlock
-	SyncCommitteeIndices        []types.CommitteeIndex
+	SyncCommitteeIndices        []primitives.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
 	Root                        []byte
@@ -259,7 +259,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 }
 
 // HeadSlot mocks HeadSlot method in chain service.
-func (s *ChainService) HeadSlot() types.Slot {
+func (s *ChainService) HeadSlot() primitives.Slot {
 	if s.State == nil {
 		return 0
 	}
@@ -315,9 +315,9 @@ func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkp
 }
 
 // HeadValidatorsIndices mocks the same method in the chain service.
-func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error) {
+func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	if s.State == nil {
-		return []types.ValidatorIndex{}, nil
+		return []primitives.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
 }
@@ -338,11 +338,11 @@ func (s *ChainService) GenesisValidatorsRoot() [32]byte {
 }
 
 // CurrentSlot mocks the same method in the chain service.
-func (s *ChainService) CurrentSlot() types.Slot {
+func (s *ChainService) CurrentSlot() primitives.Slot {
 	if s.Slot != nil {
 		return *s.Slot
 	}
-	return types.Slot(uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
+	return primitives.Slot(uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // Participation mocks the same method in the chain service.
@@ -406,46 +406,46 @@ func (s *ChainService) VerifyFinalizedConsistency(_ context.Context, r []byte) e
 }
 
 // ChainHeads mocks ChainHeads and always return nil.
-func (_ *ChainService) ChainHeads() ([][32]byte, []types.Slot) {
+func (_ *ChainService) ChainHeads() ([][32]byte, []primitives.Slot) {
 	return [][32]byte{
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
 		},
-		[]types.Slot{0, 1}
+		[]primitives.Slot{0, 1}
 }
 
 // HeadPublicKeyToValidatorIndex mocks HeadPublicKeyToValidatorIndex and always return 0 and true.
-func (_ *ChainService) HeadPublicKeyToValidatorIndex(_ [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (_ *ChainService) HeadPublicKeyToValidatorIndex(_ [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	return 0, true
 }
 
 // HeadValidatorIndexToPublicKey mocks HeadValidatorIndexToPublicKey and always return empty and nil.
-func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
+func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error) {
 	return s.PublicKey, nil
 }
 
 // HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
-func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, _ types.ValidatorIndex, _ types.Slot) ([]types.CommitteeIndex, error) {
+func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, _ primitives.ValidatorIndex, _ primitives.Slot) ([]primitives.CommitteeIndex, error) {
 	return s.SyncCommitteeIndices, nil
 }
 
 // HeadSyncCommitteePubKeys mocks HeadSyncCommitteePubKeys and always return empty nil.
-func (s *ChainService) HeadSyncCommitteePubKeys(_ context.Context, _ types.Slot, _ types.CommitteeIndex) ([][]byte, error) {
+func (s *ChainService) HeadSyncCommitteePubKeys(_ context.Context, _ primitives.Slot, _ primitives.CommitteeIndex) ([][]byte, error) {
 	return s.SyncCommitteePubkeys, nil
 }
 
 // HeadSyncCommitteeDomain mocks HeadSyncCommitteeDomain and always return empty nil.
-func (s *ChainService) HeadSyncCommitteeDomain(_ context.Context, _ types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncCommitteeDomain(_ context.Context, _ primitives.Slot) ([]byte, error) {
 	return s.SyncCommitteeDomain, nil
 }
 
 // HeadSyncSelectionProofDomain mocks HeadSyncSelectionProofDomain and always return empty nil.
-func (s *ChainService) HeadSyncSelectionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncSelectionProofDomain(_ context.Context, _ primitives.Slot) ([]byte, error) {
 	return s.SyncSelectionProofDomain, nil
 }
 
 // HeadSyncContributionProofDomain mocks HeadSyncContributionProofDomain and always return empty nil.
-func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
+func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ primitives.Slot) ([]byte, error) {
 	return s.SyncContributionProofDomain, nil
 }
 

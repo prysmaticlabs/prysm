@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
@@ -30,7 +30,7 @@ import (
 //	    ancestor_at_finalized_slot = get_ancestor(store, store.best_justified_checkpoint.root, finalized_slot)
 //	    if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //	        store.justified_checkpoint = store.best_justified_checkpoint
-func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
+func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 	// Reset proposer boost root
 	if err := f.ResetBoostedProposerRoot(ctx); err != nil {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
