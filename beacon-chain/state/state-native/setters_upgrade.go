@@ -50,7 +50,7 @@ func (b *BeaconState) UpgradeToCapella() (state.BeaconState, error) {
 		// Large arrays, increases over time.
 		balances:                   b.balances,
 		historicalRoots:            b.historicalRoots,
-		historicalSummaries:        b.historicalSummaries,
+		historicalSummaries:        make([]*ethpb.HistoricalSummary, 0),
 		validators:                 b.validators,
 		previousEpochParticipation: b.previousEpochParticipation,
 		currentEpochParticipation:  b.currentEpochParticipation,
@@ -131,16 +131,6 @@ func (b *BeaconState) UpgradeToCapella() (state.BeaconState, error) {
 		}
 	}
 
-	if b.merkleLayers != nil {
-		dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
-		for i, layer := range b.merkleLayers {
-			dst.merkleLayers[i] = make([][]byte, len(layer))
-			for j, content := range layer {
-				dst.merkleLayers[i][j] = make([]byte, len(content))
-				copy(dst.merkleLayers[i][j], content)
-			}
-		}
-	}
 	for _, f := range []types.FieldIndex{types.LatestExecutionPayloadHeaderCapella, types.HistoricalSummaries} {
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
