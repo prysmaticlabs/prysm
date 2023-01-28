@@ -7,7 +7,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	bolt "go.etcd.io/bbolt"
@@ -27,7 +27,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 	err = validatorDB.PruneAttestations(context.Background())
 	require.NoError(t, err)
 
-	startEpoch := types.Epoch(0)
+	startEpoch := primitives.Epoch(0)
 	err = checkAttestingHistoryAfterPruning(
 		t,
 		validatorDB,
@@ -58,7 +58,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 
 	// Next, verify that we pruned every epoch
 	// from genesis to SLASHING_PROTECTION_PRUNING_EPOCHS - 1.
-	startEpoch := types.Epoch(0)
+	startEpoch := primitives.Epoch(0)
 	for _, pk := range pks {
 		err := checkAttestingHistoryAfterPruning(
 			t,
@@ -114,7 +114,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
-func setupAttestationsForEveryEpoch(validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
+func setupAttestationsForEveryEpoch(validatorDB *Store, pubKey [48]byte, numEpochs primitives.Epoch) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])
@@ -129,7 +129,7 @@ func setupAttestationsForEveryEpoch(validatorDB *Store, pubKey [48]byte, numEpoc
 		if err != nil {
 			return err
 		}
-		for sourceEpoch := types.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
+		for sourceEpoch := primitives.Epoch(0); sourceEpoch < numEpochs; sourceEpoch++ {
 			targetEpoch := sourceEpoch + 1
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(targetEpoch)
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(sourceEpoch)
@@ -155,7 +155,7 @@ func checkAttestingHistoryAfterPruning(
 	validatorDB *Store,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
 	startEpoch,
-	numEpochs types.Epoch,
+	numEpochs primitives.Epoch,
 	shouldBePruned bool,
 ) error {
 	return validatorDB.view(func(tx *bolt.Tx) error {

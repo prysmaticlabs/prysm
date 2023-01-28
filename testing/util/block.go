@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -83,7 +83,7 @@ func GenerateFullBlock(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot types.Slot,
+	slot primitives.Slot,
 ) (*ethpb.SignedBeaconBlock, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -204,7 +204,7 @@ func GenerateFullBlock(
 func GenerateProposerSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
-	idx types.ValidatorIndex,
+	idx primitives.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
 	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -264,7 +264,7 @@ func generateProposerSlashings(
 func GenerateAttesterSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
-	idx types.ValidatorIndex,
+	idx primitives.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
 	currentEpoch := time.CurrentEpoch(bState)
 
@@ -326,7 +326,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))
-		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), primitives.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +361,7 @@ func generateDepositsAndEth1Data(
 	return currentDeposits[previousDepsLen:], eth1Data, nil
 }
 
-func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx types.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx primitives.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
 	currentEpoch := time.CurrentEpoch(bState)
 	exit := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
@@ -405,12 +405,12 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
+func randValIndex(bState state.BeaconState) (primitives.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
-	return types.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
+	return primitives.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
 }
 
 // HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes

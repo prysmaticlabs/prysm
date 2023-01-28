@@ -3,6 +3,7 @@ package derived
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/tyler-smith/go-bip39"
@@ -24,23 +25,29 @@ func Test_setBip39Lang(t *testing.T) {
 	tests := []struct {
 		lang             string
 		expectedWordlist []string
+		wantErr          error
 	}{
-		{lang: "english", expectedWordlist: wordlists.English},
-		{lang: "chinese_traditional", expectedWordlist: wordlists.ChineseTraditional},
-		{lang: "chinese_simplified", expectedWordlist: wordlists.ChineseSimplified},
-		{lang: "czech", expectedWordlist: wordlists.Czech},
-		{lang: "french", expectedWordlist: wordlists.French},
-		{lang: "japanese", expectedWordlist: wordlists.Japanese},
-		{lang: "korean", expectedWordlist: wordlists.Korean},
-		{lang: "italian", expectedWordlist: wordlists.Italian},
-		{lang: "spanish", expectedWordlist: wordlists.Spanish},
-		{lang: "undefined", expectedWordlist: wordlists.English},
+		{lang: "english", expectedWordlist: wordlists.English, wantErr: nil},
+		{lang: "chinese_traditional", expectedWordlist: wordlists.ChineseTraditional, wantErr: nil},
+		{lang: "chinese_simplified", expectedWordlist: wordlists.ChineseSimplified, wantErr: nil},
+		{lang: "czech", expectedWordlist: wordlists.Czech, wantErr: nil},
+		{lang: "french", expectedWordlist: wordlists.French, wantErr: nil},
+		{lang: "japanese", expectedWordlist: wordlists.Japanese, wantErr: nil},
+		{lang: "korean", expectedWordlist: wordlists.Korean, wantErr: nil},
+		{lang: "italian", expectedWordlist: wordlists.Italian, wantErr: nil},
+		{lang: "spanish", expectedWordlist: wordlists.Spanish, wantErr: nil},
+		{lang: "undefined", expectedWordlist: []string{}, wantErr: errors.Wrapf(ErrUnsupportedMnemonicLanguage, "%s", "undefined")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.lang, func(t *testing.T) {
-			setBip39Lang(tt.lang)
-			wordlist := bip39.GetWordList()
-			assert.DeepEqual(t, tt.expectedWordlist, wordlist, "Expected wordlist to match")
+			err := setBip39Lang(tt.lang)
+			if err != nil {
+				assert.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				assert.Equal(t, tt.wantErr, err)
+				wordlist := bip39.GetWordList()
+				assert.DeepEqual(t, tt.expectedWordlist, wordlist, "Expected wordlist to match")
+			}
 		})
 	}
 }

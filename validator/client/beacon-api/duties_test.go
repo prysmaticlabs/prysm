@@ -13,7 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -27,7 +27,7 @@ const getCommitteesTestEndpoint = "/eth/v1/beacon/states/head/committees"
 
 func TestGetAttesterDuties_Valid(t *testing.T) {
 	stringValidatorIndices := []string{"2", "9"}
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	validatorIndicesBytes, err := json.Marshal(stringValidatorIndices)
 	require.NoError(t, err)
@@ -60,7 +60,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	validatorIndices := []types.ValidatorIndex{2, 9}
+	validatorIndices := []primitives.ValidatorIndex{2, 9}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
 		ctx,
@@ -83,7 +83,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 }
 
 func TestGetAttesterDuties_HttpError(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -109,7 +109,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 }
 
 func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -139,7 +139,7 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 }
 
 func TestGetProposerDuties_Valid(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	expectedProposerDuties := apimiddleware.ProposerDutiesResponseJson{
 		Data: []*apimiddleware.ProposerDutyJson{
@@ -181,7 +181,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 }
 
 func TestGetProposerDuties_HttpError(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -205,7 +205,7 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 }
 
 func TestGetProposerDuties_NilData(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -233,7 +233,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 }
 
 func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -262,7 +262,7 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 
 func TestGetSyncDuties_Valid(t *testing.T) {
 	stringValidatorIndices := []string{"2", "6"}
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	validatorIndicesBytes, err := json.Marshal(stringValidatorIndices)
 	require.NoError(t, err)
@@ -293,7 +293,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	validatorIndices := []types.ValidatorIndex{2, 6}
+	validatorIndices := []primitives.ValidatorIndex{2, 6}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
 		ctx,
@@ -316,7 +316,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 }
 
 func TestGetSyncDuties_HttpError(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -342,7 +342,7 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 }
 
 func TestGetSyncDuties_NilData(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -372,7 +372,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 }
 
 func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -402,7 +402,7 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 }
 
 func TestGetCommittees_Valid(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	expectedCommittees := apimiddleware.StateCommitteesResponseJson{
 		Data: []*apimiddleware.CommitteeJson{
@@ -450,7 +450,7 @@ func TestGetCommittees_Valid(t *testing.T) {
 }
 
 func TestGetCommittees_HttpError(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -474,7 +474,7 @@ func TestGetCommittees_HttpError(t *testing.T) {
 }
 
 func TestGetCommittees_NilData(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -502,7 +502,7 @@ func TestGetCommittees_NilData(t *testing.T) {
 }
 
 func TestGetCommittees_NilCommittee(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -530,12 +530,12 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 }
 
 func TestGetDutiesForEpoch_Error(t *testing.T) {
-	const epoch = types.Epoch(1)
+	const epoch = primitives.Epoch(1)
 	pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
-	validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
-	committeeIndices := []types.CommitteeIndex{25, 26, 27}
-	committeeSlots := []types.Slot{28, 29, 30}
-	proposerSlots := []types.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+	validatorIndices := []primitives.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+	committeeIndices := []primitives.CommitteeIndex{25, 26, 27}
+	committeeSlots := []primitives.Slot{28, 29, 30}
+	proposerSlots := []primitives.Slot{31, 32, 33, 34, 35, 36, 37, 38}
 
 	testCases := []struct {
 		name                     string
@@ -782,12 +782,12 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			const epoch = types.Epoch(1)
+			const epoch = primitives.Epoch(1)
 			pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
-			validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
-			committeeIndices := []types.CommitteeIndex{25, 26, 27}
-			committeeSlots := []types.Slot{28, 29, 30}
-			proposerSlots := []types.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+			validatorIndices := []primitives.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+			committeeIndices := []primitives.CommitteeIndex{25, 26, 27}
+			committeeSlots := []primitives.Slot{28, 29, 30}
+			proposerSlots := []primitives.Slot{31, 32, 33, 34, 35, 36, 37, 38}
 
 			statuses := []ethpb.ValidatorStatus{
 				ethpb.ValidatorStatus_UNKNOWN_STATUS,
@@ -865,34 +865,34 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				).Times(1)
 			}
 
-			var expectedProposerSlots1 []types.Slot
-			var expectedProposerSlots2 []types.Slot
-			var expectedProposerSlots3 []types.Slot
-			var expectedProposerSlots4 []types.Slot
+			var expectedProposerSlots1 []primitives.Slot
+			var expectedProposerSlots2 []primitives.Slot
+			var expectedProposerSlots3 []primitives.Slot
+			var expectedProposerSlots4 []primitives.Slot
 
-			expectedProposerSlots1 = []types.Slot{
+			expectedProposerSlots1 = []primitives.Slot{
 				proposerSlots[0],
 				proposerSlots[1],
 			}
 
-			expectedProposerSlots2 = []types.Slot{
+			expectedProposerSlots2 = []primitives.Slot{
 				proposerSlots[2],
 				proposerSlots[3],
 			}
 
-			expectedProposerSlots3 = []types.Slot{
+			expectedProposerSlots3 = []primitives.Slot{
 				proposerSlots[4],
 				proposerSlots[5],
 			}
 
-			expectedProposerSlots4 = []types.Slot{
+			expectedProposerSlots4 = []primitives.Slot{
 				proposerSlots[6],
 				proposerSlots[7],
 			}
 
 			expectedDuties := []*ethpb.DutiesResponse_Duty{
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[0],
 						validatorIndices[1],
 					},
@@ -903,7 +903,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					ValidatorIndex: validatorIndices[0],
 				},
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[0],
 						validatorIndices[1],
 					},
@@ -914,7 +914,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					ValidatorIndex: validatorIndices[1],
 				},
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[2],
 						validatorIndices[3],
 					},
@@ -925,7 +925,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					ValidatorIndex: validatorIndices[2],
 				},
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[2],
 						validatorIndices[3],
 					},
@@ -936,7 +936,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					ValidatorIndex: validatorIndices[3],
 				},
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[4],
 						validatorIndices[5],
 					},
@@ -948,7 +948,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 					ProposerSlots:  expectedProposerSlots1,
 				},
 				{
-					Committee: []types.ValidatorIndex{
+					Committee: []primitives.ValidatorIndex{
 						validatorIndices[4],
 						validatorIndices[5],
 					},
@@ -1014,7 +1014,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 func TestGetDuties_Valid(t *testing.T) {
 	testCases := []struct {
 		name  string
-		epoch types.Epoch
+		epoch primitives.Epoch
 	}{
 		{
 			name:  "genesis epoch",
@@ -1029,10 +1029,10 @@ func TestGetDuties_Valid(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
-			validatorIndices := []types.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
-			committeeIndices := []types.CommitteeIndex{25, 26, 27}
-			committeeSlots := []types.Slot{28, 29, 30}
-			proposerSlots := []types.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+			validatorIndices := []primitives.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
+			committeeIndices := []primitives.CommitteeIndex{25, 26, 27}
+			committeeSlots := []primitives.Slot{28, 29, 30}
+			proposerSlots := []primitives.Slot{31, 32, 33, 34, 35, 36, 37, 38}
 
 			statuses := []ethpb.ValidatorStatus{
 				ethpb.ValidatorStatus_DEPOSITED,
@@ -1347,7 +1347,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	dutiesProvider := mock.NewMockdutiesProvider(ctrl)
 	dutiesProvider.EXPECT().GetAttesterDuties(
 		ctx,
-		types.Epoch(1),
+		primitives.Epoch(1),
 		gomock.Any(),
 	).Return(
 		nil,
@@ -1367,7 +1367,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	assert.ErrorContains(t, "foo error", err)
 }
 
-func generateValidCommittees(committeeIndices []types.CommitteeIndex, slots []types.Slot, validatorIndices []types.ValidatorIndex) []*apimiddleware.CommitteeJson {
+func generateValidCommittees(committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot, validatorIndices []primitives.ValidatorIndex) []*apimiddleware.CommitteeJson {
 	return []*apimiddleware.CommitteeJson{
 		{
 			Index: strconv.FormatUint(uint64(committeeIndices[0]), 10),
@@ -1396,7 +1396,7 @@ func generateValidCommittees(committeeIndices []types.CommitteeIndex, slots []ty
 	}
 }
 
-func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex, committeeIndices []types.CommitteeIndex, slots []types.Slot) []*apimiddleware.AttesterDutyJson {
+func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot) []*apimiddleware.AttesterDutyJson {
 	return []*apimiddleware.AttesterDutyJson{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[0]),
@@ -1437,7 +1437,7 @@ func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []types.Vali
 	}
 }
 
-func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex, slots []types.Slot) []*apimiddleware.ProposerDutyJson {
+func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, slots []primitives.Slot) []*apimiddleware.ProposerDutyJson {
 	return []*apimiddleware.ProposerDutyJson{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[4]),
@@ -1482,7 +1482,7 @@ func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []types.Vali
 	}
 }
 
-func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []types.ValidatorIndex) []*apimiddleware.SyncCommitteeDuty {
+func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex) []*apimiddleware.SyncCommitteeDuty {
 	return []*apimiddleware.SyncCommitteeDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[5]),

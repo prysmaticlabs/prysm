@@ -176,6 +176,14 @@ func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *
 	return nil
 }
 
+// BroadcastBLSChanges mocks a broadcast BLS change ocurred
+func (p *TestP2P) BroadcastBLSChanges(_ context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
+	if len(changes) > 0 {
+		p.BroadcastCalled = true
+		return
+	}
+}
+
 // SetStreamHandler for RPC.
 func (p *TestP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
 	p.BHost.SetStreamHandler(protocol.ID(topic), handler)

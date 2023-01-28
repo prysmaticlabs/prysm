@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc"
 )
@@ -85,7 +85,7 @@ func GenesisFork() int {
 // conduct the current beacon state during the E2E.
 type Evaluator struct {
 	Name   string
-	Policy func(currentEpoch types.Epoch) bool
+	Policy func(currentEpoch primitives.Epoch) bool
 	// Evaluation accepts one or many/all conns, depending on what is needed by the set of evaluators.
 	Evaluation func(ec *EvaluationContext, conn ...*grpc.ClientConn) error
 }
@@ -112,7 +112,7 @@ type DepositBalancer interface {
 type EvaluationContext struct {
 	DepositBalancer
 	ExitedVals           map[[48]byte]bool
-	SeenVotes            map[types.Slot][]byte
+	SeenVotes            map[primitives.Slot][]byte
 	ExpectedEth1DataVote []byte
 }
 
@@ -121,7 +121,7 @@ func NewEvaluationContext(d DepositBalancer) *EvaluationContext {
 	return &EvaluationContext{
 		DepositBalancer: d,
 		ExitedVals:      make(map[[48]byte]bool),
-		SeenVotes:       make(map[types.Slot][]byte),
+		SeenVotes:       make(map[primitives.Slot][]byte),
 	}
 }
 

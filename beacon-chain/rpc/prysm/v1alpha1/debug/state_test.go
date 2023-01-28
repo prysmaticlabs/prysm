@@ -10,7 +10,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -28,7 +28,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	ctx := context.Background()
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	slot := types.Slot(100)
+	slot := primitives.Slot(100)
 	require.NoError(t, st.SetSlot(slot))
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot

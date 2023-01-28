@@ -10,13 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
-
-const attestationDataEndpoint = "/eth/v1/validator/attestation_data"
 
 func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	ctx := context.Background()
@@ -61,7 +59,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, err := validatorClient.getAttestationData(ctx, types.Slot(expectedSlot), types.CommitteeIndex(expectedCommitteeIndex))
+	resp, err := validatorClient.getAttestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
 	require.NotNil(t, resp)
@@ -205,8 +203,8 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 }
 
 func TestGetAttestationData_JsonResponseError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
 
 	ctx := context.Background()
 

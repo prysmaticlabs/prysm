@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -151,7 +151,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 
 	expectedValidatorStatusResponse := ethpb.MultipleValidatorStatusResponse{
 		PublicKeys: validatorsPubKey,
-		Indices: []types.ValidatorIndex{
+		Indices: []primitives.ValidatorIndex{
 			11111,
 			22222,
 		},
@@ -336,14 +336,14 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		wantedValidatorsPubKey[i] = validatorPubKey
 	}
 
-	wantedValidatorsIndex := []types.ValidatorIndex{
+	wantedValidatorsIndex := []primitives.ValidatorIndex{
 		11111,
 		22222,
 		33333,
 		40000,
 		50000,
-		types.ValidatorIndex(^uint64(0)),
-		types.ValidatorIndex(^uint64(0)),
+		primitives.ValidatorIndex(^uint64(0)),
+		primitives.ValidatorIndex(^uint64(0)),
 	}
 
 	wantedValidatorsStatusResponse := []*ethpb.ValidatorStatusResponse{
@@ -433,7 +433,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	).Times(1)
 
 	wantedValidatorsPubKey := [][]byte{validatorPubKey}
-	wantedValidatorsIndex := []types.ValidatorIndex{40000}
+	wantedValidatorsIndex := []primitives.ValidatorIndex{40000}
 	wantedValidatorsStatusResponse := []*ethpb.ValidatorStatusResponse{
 		{
 			Status:                    ethpb.ValidatorStatus_PENDING,

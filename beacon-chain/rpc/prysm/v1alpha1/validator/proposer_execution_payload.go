@@ -19,7 +19,7 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -43,7 +43,7 @@ var (
 // This returns the execution payload of a given slot.
 // The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot, vIdx primitives.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -157,16 +157,36 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		SafeBlockHash:      finalizedBlockHash,
 		FinalizedBlockHash: finalizedBlockHash,
 	}
-
-	p, err := payloadattribute.New(&enginev1.PayloadAttributes{
-		Timestamp:             uint64(t.Unix()),
-		PrevRandao:            random,
-		SuggestedFeeRecipient: feeRecipient.Bytes(),
-	})
-	if err != nil {
-		return nil, nil, err
+	var attr payloadattribute.Attributer
+	switch st.Version() {
+	case version.Capella, version.Deneb:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, nil, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+	case version.Bellatrix:
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+	default:
+		return nil, nil, errors.New("unknown beacon state version")
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
+
+	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not prepare payload")
 	}
@@ -239,7 +259,7 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 //	  is_activation_epoch_reached = get_current_epoch(state) >= TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
 //	  if is_terminal_block_hash_set and not is_activation_epoch_reached:
 //		return True
-func activationEpochNotReached(slot types.Slot) bool {
+func activationEpochNotReached(slot primitives.Slot) bool {
 	terminalBlockHashSet := bytesutil.ToBytes32(params.BeaconConfig().TerminalBlockHash.Bytes()) != [32]byte{}
 	if terminalBlockHashSet {
 		return params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(slot)

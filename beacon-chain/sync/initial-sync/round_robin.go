@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -83,7 +83,7 @@ func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) e
 	}
 
 	for data := range queue.fetchedData {
-		blobsMap := make(map[types.Slot]*eth.BlobsSidecar)
+		blobsMap := make(map[primitives.Slot]*eth.BlobsSidecar)
 		for _, blob := range data.blobs {
 			blobsMap[blob.BeaconBlockSlot] = blob
 		}
@@ -119,7 +119,7 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 		return err
 	}
 	for data := range queue.fetchedData {
-		blobsMap := make(map[types.Slot]*eth.BlobsSidecar)
+		blobsMap := make(map[primitives.Slot]*eth.BlobsSidecar)
 		for _, blob := range data.blobs {
 			blobsMap[blob.BeaconBlockSlot] = blob
 		}
@@ -139,7 +139,7 @@ func (s *Service) syncToNonFinalizedEpoch(ctx context.Context, genesis time.Time
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedData(
-	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData, blobs map[types.Slot]*eth.BlobsSidecar) {
+	ctx context.Context, genesis time.Time, startSlot primitives.Slot, data *blocksQueueFetchedData, blobs map[primitives.Slot]*eth.BlobsSidecar) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
@@ -150,7 +150,7 @@ func (s *Service) processFetchedData(
 
 // processFetchedData processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
-	ctx context.Context, genesis time.Time, startSlot types.Slot, data *blocksQueueFetchedData, blobs map[types.Slot]*eth.BlobsSidecar) {
+	ctx context.Context, genesis time.Time, startSlot primitives.Slot, data *blocksQueueFetchedData, blobs map[primitives.Slot]*eth.BlobsSidecar) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	blockReceiver := s.cfg.Chain.ReceiveBlock
@@ -207,8 +207,8 @@ func (s *Service) processFetchedDataRegSync(
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
 // Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
-func (s *Service) highestFinalizedEpoch() types.Epoch {
-	highest := types.Epoch(0)
+func (s *Service) highestFinalizedEpoch() primitives.Epoch {
+	highest := primitives.Epoch(0)
 	for _, pid := range s.cfg.P2P.Peers().Connected() {
 		peerChainState, err := s.cfg.P2P.Peers().ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {
@@ -281,7 +281,7 @@ func (s *Service) processBlock(
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn, blobs map[types.Slot]*eth.BlobsSidecar) error {
+	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn, blobs map[primitives.Slot]*eth.BlobsSidecar) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -344,7 +344,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
-func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
+func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot primitives.Slot) {
 	if pid == "" {
 		return
 	}

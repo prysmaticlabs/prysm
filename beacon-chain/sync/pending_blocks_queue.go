@@ -16,7 +16,7 @@ import (
 	blobs2 "github.com/prysmaticlabs/prysm/v3/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz/equality"
@@ -262,7 +262,7 @@ func (s *Service) broadcastBlockAndBlobsSidecar(ctx context.Context, b interface
 func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
 	span *trace.Span,
-	slot types.Slot,
+	slot primitives.Slot,
 	b interfaces.SignedBeaconBlock,
 	blkRoot [32]byte,
 ) (keepProcessing bool, err error) {
@@ -343,13 +343,13 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	return nil
 }
 
-func (s *Service) sortedPendingSlots() []types.Slot {
+func (s *Service) sortedPendingSlots() []primitives.Slot {
 	s.pendingQueueLock.RLock()
 	defer s.pendingQueueLock.RUnlock()
 
 	items := s.slotToPendingBlocks.Items()
 
-	ss1 := make([]types.Slot, 0, len(items))
+	ss1 := make([]primitives.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
 		ss1 = append(ss1, slot)
@@ -439,7 +439,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -498,7 +498,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlkAndBlobToQueue(_ types.Slot, b interfaces.SignedBeaconBlock, r [32]byte, blob *ethpb.BlobsSidecar) error {
+func (s *Service) insertBlkAndBlobToQueue(_ primitives.Slot, b interfaces.SignedBeaconBlock, r [32]byte, blob *ethpb.BlobsSidecar) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -517,7 +517,7 @@ func (s *Service) insertBlkAndBlobToQueue(_ types.Slot, b interfaces.SignedBeaco
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
@@ -586,13 +586,13 @@ func (s *Service) isGenesisTimeSet() bool {
 }
 
 // This converts input string to slot.
-func cacheKeyToSlot(s string) types.Slot {
+func cacheKeyToSlot(s string) primitives.Slot {
 	b := []byte(s)
 	return bytesutil.BytesToSlotBigEndian(b)
 }
 
 // This converts input slot to a key to be used for slotToPendingBlocks cache.
-func slotToCacheKey(s types.Slot) string {
+func slotToCacheKey(s primitives.Slot) string {
 	b := bytesutil.SlotToBytesBigEndian(s)
 	return string(b)
 }
