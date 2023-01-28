@@ -251,7 +251,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    #sha256 = "9d22246c00ec3907ef8dc3ddccdfe6f7153ce46df73deee0a0176fe7e4aa1126",
+    sha256 = "c728947ccf8b628691c76cc92f2f59c02f1c7882a463f26365d32c098bb946b8",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
