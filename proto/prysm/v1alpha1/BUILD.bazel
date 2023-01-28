@@ -133,6 +133,8 @@ ssz_gen_marshal(
         "BlobsSidecar",
         "SignedBeaconBlockAndBlobsSidecar",
         "BuilderBidCapella",
+        "BlobSidecar",
+        "SignedBlobSidecar",
     ],
 )
 

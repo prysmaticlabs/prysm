@@ -77,6 +77,8 @@ message GenericBeaconBlock {
         BeaconBlockDeneb Deneb  = 7;
 
         BlindedBeaconBlockDeneb blinded_Deneb  = 8;
+
+        BeaconBlockDenebWithBlobs DenebBlockAndBlobs = 9;
     }
 }
 
@@ -477,6 +479,11 @@ message BeaconBlockDeneb {
 
     // The beacon block body.
     BeaconBlockBodyDeneb body = 5;
+}
+
+message BeaconBlockDenebWithBlobs {
+    BeaconBlockBodyDeneb block = 1;
+    repeated engine.v1.Blob blobs = 2 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
 message BeaconBlockBodyDeneb {

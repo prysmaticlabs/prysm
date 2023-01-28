@@ -37,3 +37,37 @@ message BlobsSidecar {
         // The aggregated proof for blobs and commitments for validation.
         bytes aggregated_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
+
+message BlobSidecar {
+        bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+        uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
+        uint64 validator_index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+        bytes parent_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+        ethereum.engine.v1.Blob blob = 5;
+        uint64 blob_index = 6;
+        bytes kzg_commitment = 7 [(ethereum.eth.ext.ssz_size) = "48"];
+        bytes kzg_proof = 8 [(ethereum.eth.ext.ssz_size) = "48"];
+}
+
+message SignedBlobSidecar {
+        BlobSidecar message = 1;
+        bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+// class BlobSidecar(Container):
+//    beacon_block_root: Root
+//    beacon_block_slot: Slot
+//    proposer_index: ValidatorIndex
+//    block_parent_root: Root
+//        ## For verifying the fork of the proposer_index
+//        ## TODO: dependent_root? Less information but also less sensitive to reorgs
+//    blob: Blob
+//    blob_index: uint64 # We need the index of the blob, otherwise we cannot do the gossip protections
+//    kzg_commitment: KZGCommitment
+//    kzg_proof: KZGProof # Allows for quick verification of kzg_commitment
+//        ## TODO: aggregation receiver-side?
+//        ## TODO: consider aggregate proof in first sidecar
+//
+//class SignedBlobSidecar(Container):
+//    message: BlobSidecar
+//    signature: Signature
