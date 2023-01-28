@@ -412,17 +412,17 @@ func TestPoolCycleMap(t *testing.T) {
 	pool := NewPool()
 	firstChange := &eth.SignedBLSToExecutionChange{
 		Message: &eth.BLSToExecutionChange{
-			ValidatorIndex: types.ValidatorIndex(0),
+			ValidatorIndex: primitives.ValidatorIndex(0),
 		}}
 	pool.InsertBLSToExecChange(firstChange)
 	secondChange := &eth.SignedBLSToExecutionChange{
 		Message: &eth.BLSToExecutionChange{
-			ValidatorIndex: types.ValidatorIndex(10),
+			ValidatorIndex: primitives.ValidatorIndex(10),
 		}}
 	pool.InsertBLSToExecChange(secondChange)
 	thirdChange := &eth.SignedBLSToExecutionChange{
 		Message: &eth.BLSToExecutionChange{
-			ValidatorIndex: types.ValidatorIndex(30),
+			ValidatorIndex: primitives.ValidatorIndex(30),
 		}}
 	pool.InsertBLSToExecChange(thirdChange)
 
