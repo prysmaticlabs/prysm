@@ -416,16 +416,3 @@ func validateBuilderSignature(signedBid builder.SignedBid) error {
 	}
 	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
 }
-
-func validateCapellaBuilderSignature(bid *ethpb.SignedBuilderBidCapella) error {
-	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
-		nil, /* fork version */
-		nil /* genesis val root */)
-	if err != nil {
-		return err
-	}
-	if bid == nil || bid.Message == nil {
-		return errors.New("nil builder bid")
-	}
-	return signing.VerifySigningRoot(bid.Message, bid.Message.Pubkey, bid.Signature, d)
-}
