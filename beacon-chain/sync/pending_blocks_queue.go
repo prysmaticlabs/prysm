@@ -359,7 +359,7 @@ func (s *Service) sortedPendingSlots() []primitives.Slot {
 	})
 
 	items = s.slotToPendingBlobs.Items()
-	ss2 := make([]types.Slot, 0, len(items))
+	ss2 := make([]primitives.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
 		ss2 = append(ss2, slot)
@@ -531,7 +531,7 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.Signed
 }
 
 // This returns blobs  given input key from slotToPendingBlobs.
-func (s *Service) pendingBlobsInCache(slot types.Slot) []*ethpb.BlobsSidecar {
+func (s *Service) pendingBlobsInCache(slot primitives.Slot) []*ethpb.BlobsSidecar {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlobs.Get(k)
 	if !ok {

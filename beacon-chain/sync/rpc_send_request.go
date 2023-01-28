@@ -197,7 +197,7 @@ func SendBlobsSidecarsByRangeRequest(
 		return nil
 	}
 
-	var prevSlot types.Slot
+	var prevSlot primitives.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := len(sidecars) == 0
 		sidecar, err := ReadChunkedBlobsSidecar(stream, chain, p2pProvider, isFirstChunk)

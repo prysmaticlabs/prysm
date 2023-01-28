@@ -272,24 +272,24 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		if err != nil {
 			return nil, err
 		}
-		fieldRoots[nativetypes.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
+		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
 
 		// Next withdrawal index root.
 		nextWithdrawalIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextWithdrawalIndexRoot, state.nextWithdrawalIndex)
-		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
+		fieldRoots[types.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot
 
 		// Next partial withdrawal validator index root.
 		nextWithdrawalValidatorIndexRoot := make([]byte, 32)
 		binary.LittleEndian.PutUint64(nextWithdrawalValidatorIndexRoot, uint64(state.nextWithdrawalValidatorIndex))
-		fieldRoots[nativetypes.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
+		fieldRoots[types.NextWithdrawalValidatorIndex.RealPosition()] = nextWithdrawalValidatorIndexRoot
 
 		// Historical summary root.
 		historicalSummaryRoot, err := stateutil.HistoricalSummariesRoot(state.historicalSummaries)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute historical summary merkleization")
 		}
-		fieldRoots[nativetypes.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
+		fieldRoots[types.HistoricalSummaries.RealPosition()] = historicalSummaryRoot[:]
 	}
 
 	return fieldRoots, nil

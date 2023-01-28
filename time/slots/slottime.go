@@ -174,7 +174,7 @@ func CurrentSlot(genesisTimeSec uint64) primitives.Slot {
 }
 
 // WithinDataAvailabilityBound returns true if the given slot is within the data availability bound.
-func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch types.Epoch) bool {
+func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch primitives.Epoch) bool {
 	if params.BeaconConfig().DenebForkEpoch > epoch {
 		return false
 	}
@@ -183,7 +183,7 @@ func WithinDataAvailabilityBound(genesisTimeSec uint64, epoch types.Epoch) bool 
 	if now < genesisTimeSec {
 		return false
 	}
-	currentSlot := types.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
+	currentSlot := primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 	currentEpoch := ToEpoch(currentSlot)
 
 	if currentEpoch-params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= epoch {

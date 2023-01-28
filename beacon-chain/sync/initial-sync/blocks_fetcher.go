@@ -277,9 +277,9 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	}
 
 	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
-	var blobStart types.Slot
+	var blobStart primitives.Slot
 	var blobCount uint64
-	for i := types.Slot(0); i < types.Slot(count); i++ {
+	for i := primitives.Slot(0); i < primitives.Slot(count); i++ {
 		if slots.WithinDataAvailabilityBound(uint64(f.chain.GenesisTime().Unix()), slots.ToEpoch(start+i)) {
 			blobStart = start + i
 			blobCount = count - uint64(i)
@@ -323,7 +323,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 func (f *blocksFetcher) fetchBlobsFromPeer(
 	ctx context.Context,
-	start types.Slot, count uint64,
+	start primitives.Slot, count uint64,
 	peers []peer.ID,
 ) ([]*p2ppb.BlobsSidecar, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
