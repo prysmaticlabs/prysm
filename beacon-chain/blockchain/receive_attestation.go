@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -166,59 +165,6 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	s.headLock.RUnlock()
 	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (s *Service) isNewHead(r [32]byte) bool {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-	return r == [32]byte{} || r != s.headRoot()
-}
-
-func (s *Service) isNewProposer() bool {
-	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* root */)
-	return ok
-}
-
-func (s *Service) getHeadStateAndBlock(ctx context.Context, r [32]byte) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
-	if !s.hasBlockInInitSyncOrDB(ctx, r) {
-		return nil, nil, errors.New("block does not exist")
-	}
-	newHeadBlock, err := s.getBlock(ctx, r)
-	if err != nil {
-		return nil, nil, err
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, r)
-	if err != nil {
-		return nil, nil, err
-	}
-	return headState, newHeadBlock, nil
-}
-
-// This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte) error {
-	if !s.isNewHead(newHeadRoot) && !s.isNewProposer() {
-		return nil
-	}
-
-	headState, headBlock, err := s.getHeadStateAndBlock(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get forkchoice update argument")
-		return nil
-	}
-
-	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  newHeadRoot,
-		headBlock: headBlock.Block(),
-	})
-	if err != nil {
-		return err
-	}
-
-	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
 	}
 	return nil
 }
