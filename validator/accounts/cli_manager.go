@@ -13,13 +13,16 @@ import (
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v3/validator/client/validator-client-factory"
 	validatorHelpers "github.com/prysmaticlabs/prysm/v3/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
 // NewCLIManager allows for managing validator accounts via CLI commands.
 func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
-	acc := &AccountsCLIManager{}
+	acc := &AccountsCLIManager{
+		mnemonicLanguage: derived.DefaultMnemonicLanguage,
+	}
 	for _, opt := range opts {
 		if err := opt(acc); err != nil {
 			return nil, err

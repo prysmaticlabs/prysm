@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -37,10 +37,10 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -73,10 +73,10 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockAltair()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -114,10 +114,10 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -171,10 +171,10 @@ func fillDBTestBlocksCapella(ctx context.Context, t *testing.T, beaconDB db.Data
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockCapella()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -242,10 +242,10 @@ func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconD
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -299,10 +299,10 @@ func fillDBTestBlocksCapellaBlinded(ctx context.Context, t *testing.T, beaconDB 
 	util.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
-	count := types.Slot(100)
+	count := primitives.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
-	for i := types.Slot(0); i < count; i++ {
+	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockCapella()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
@@ -561,14 +561,14 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 
 		tests := []struct {
 			name       string
-			slot       types.Slot
+			slot       primitives.Slot
 			parentRoot []byte
 			want       []*ethpbalpha.SignedBeaconBlock
 			wantErr    bool
 		}{
 			{
 				name: "slot",
-				slot: types.Slot(30),
+				slot: primitives.Slot(30),
 				want: []*ethpbalpha.SignedBeaconBlock{
 					blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 					b1,
@@ -641,7 +641,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			OptimisticModeFetcher: mockChainFetcher,
 			FinalizationFetcher:   mockChainFetcher,
 		}
-		slot := types.Slot(30)
+		slot := primitives.Slot(30)
 		headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 			Slot: &slot,
 		})
@@ -680,7 +680,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		}
 
 		t.Run("true", func(t *testing.T) {
-			slot := types.Slot(999)
+			slot := primitives.Slot(999)
 			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 				Slot: &slot,
 			})
@@ -688,7 +688,7 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			assert.Equal(t, true, headers.Finalized)
 		})
 		t.Run("false", func(t *testing.T) {
-			slot := types.Slot(1000)
+			slot := primitives.Slot(1000)
 			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
 				Slot: &slot,
 			})

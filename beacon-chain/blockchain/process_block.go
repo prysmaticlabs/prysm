@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -195,6 +196,22 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
+	}
+	if blockRoot != headRoot {
+		receivedWeight, err := s.ForkChoicer().Weight(blockRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
+		}
+		headWeight, err := s.ForkChoicer().Weight(headRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
+		}
+		log.WithFields(logrus.Fields{
+			"receivedRoot":   fmt.Sprintf("%#x", blockRoot),
+			"receivedWeight": receivedWeight,
+			"headRoot":       fmt.Sprintf("%#x", headRoot),
+			"headWeight":     headWeight,
+		}).Debug("Head block is not the received block")
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
@@ -563,7 +580,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
+			s.ForkChoicer().InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
 		}
 	}
 }

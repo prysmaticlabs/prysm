@@ -3,7 +3,7 @@ package testing
 import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -71,7 +71,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) (interfaces
 }
 
 // SetBlockSlot modifies the block's slot.
-func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) (interfaces.SignedBeaconBlock, error) {
+func SetBlockSlot(b interfaces.SignedBeaconBlock, s primitives.Slot) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
@@ -81,7 +81,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) (interfaces.Sign
 }
 
 // SetProposerIndex modifies the block's proposer index.
-func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) (interfaces.SignedBeaconBlock, error) {
+func SetProposerIndex(b interfaces.SignedBeaconBlock, idx primitives.ValidatorIndex) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },

@@ -6,7 +6,7 @@ import (
 
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -23,7 +23,7 @@ func TestRandaoMix_OK(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     types.Epoch
+		epoch     primitives.Epoch
 		randaoMix []byte
 	}{
 		{
@@ -57,7 +57,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{RandaoMixes: randaoMixes})
 	require.NoError(t, err)
 	tests := []struct {
-		epoch     types.Epoch
+		epoch     primitives.Epoch
 		randaoMix []byte
 	}{
 		{

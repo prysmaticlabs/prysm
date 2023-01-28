@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
@@ -13,23 +12,23 @@ import (
 var _ state.BeaconState = (*BeaconState)(nil)
 
 func init() {
-	fieldMap = make(map[nativetypes.FieldIndex]types.DataType)
+	fieldMap = make(map[types.FieldIndex]types.DataType)
 	// Initialize the fixed sized arrays.
-	fieldMap[nativetypes.BlockRoots] = types.BasicArray
-	fieldMap[nativetypes.StateRoots] = types.BasicArray
-	fieldMap[nativetypes.RandaoMixes] = types.BasicArray
+	fieldMap[types.BlockRoots] = types.BasicArray
+	fieldMap[types.StateRoots] = types.BasicArray
+	fieldMap[types.RandaoMixes] = types.BasicArray
 
 	// Initialize the composite arrays.
-	fieldMap[nativetypes.Eth1DataVotes] = types.CompositeArray
-	fieldMap[nativetypes.Validators] = types.CompositeArray
-	fieldMap[nativetypes.PreviousEpochAttestations] = types.CompositeArray
-	fieldMap[nativetypes.CurrentEpochAttestations] = types.CompositeArray
-	fieldMap[nativetypes.Balances] = types.CompressedArray
+	fieldMap[types.Eth1DataVotes] = types.CompositeArray
+	fieldMap[types.Validators] = types.CompositeArray
+	fieldMap[types.PreviousEpochAttestations] = types.CompositeArray
+	fieldMap[types.CurrentEpochAttestations] = types.CompositeArray
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
 // fieldMap keeps track of each field
 // to its corresponding data type.
-var fieldMap map[nativetypes.FieldIndex]types.DataType
+var fieldMap map[types.FieldIndex]types.DataType
 
 func errNotSupported(funcName string, ver int) error {
 	return fmt.Errorf("%s is not supported for %s", funcName, version.String(ver))

@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -29,7 +29,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -205,7 +205,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
+	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
 		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
@@ -226,8 +226,8 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
-				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
-				assert.Equal(t, types.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
+				assert.Equal(t, primitives.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
+				assert.Equal(t, primitives.Slot(2), s.head.block.Block().Slot(), "Incorrect head block slot")
 			},
 		},
 		{
@@ -370,7 +370,7 @@ func TestHandleBlockBLSToExecutionChanges(t *testing.T) {
 	})
 
 	t.Run("Post Capella some changes", func(t *testing.T) {
-		idx := types.ValidatorIndex(123)
+		idx := primitives.ValidatorIndex(123)
 		change := &ethpb.BLSToExecutionChange{
 			ValidatorIndex: idx,
 		}

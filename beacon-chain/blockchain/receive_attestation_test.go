@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -35,7 +35,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, beaconDB)
 	chainService.genesisTime = time.Now()
 
-	e := types.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
+	e := primitives.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
 	_, err := chainService.AttestationTargetState(context.Background(), &ethpb.Checkpoint{Epoch: e})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
@@ -186,7 +186,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
 	require.Equal(t, true, has)
-	require.Equal(t, types.ValidatorIndex(1), vId)
+	require.Equal(t, primitives.ValidatorIndex(1), vId)
 	require.Equal(t, [8]byte{1}, payloadID)
 
 	// Test zero headRoot returns immediately.

@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -37,7 +37,7 @@ func TestTranslateParticipation(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		pendingAtts = append(pendingAtts, &ethpb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				CommitteeIndex:  types.CommitteeIndex(i),
+				CommitteeIndex:  primitives.CommitteeIndex(i),
 				BeaconBlockRoot: r,
 				Source:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
 				Target:          &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},

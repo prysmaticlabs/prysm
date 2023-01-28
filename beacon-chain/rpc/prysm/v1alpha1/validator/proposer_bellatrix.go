@@ -9,13 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
@@ -69,7 +70,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (interfaces.ExecutionData, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -90,81 +91,65 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
 	defer cancel()
 
-	var wrappedHeader interfaces.ExecutionData
-	if slots.ToEpoch(slot) > params.BeaconConfig().CapellaForkEpoch {
-		bid, err := vs.BlockBuilder.GetHeaderCapella(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
-		if err != nil {
-			return nil, err
-		}
-		if bid == nil || bid.Message == nil {
-			return nil, errors.New("builder returned nil bid")
-		}
-		v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
-		if v.String() == "0" {
-			return nil, errors.New("builder returned header with 0 bid amount")
-		}
-		if err := validateCapellaBuilderSignature(bid); err != nil {
-			return nil, errors.Wrap(err, "could not validate builder signature")
-		}
-		wrappedHeader, err = consensusblocks.WrappedExecutionPayloadHeaderCapella(bid.Message.Header)
-		if err != nil {
-			return nil, err
-		}
-		log.WithFields(logrus.Fields{
-			"value":         v.String(),
-			"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
-			"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
-		}).Info("Received header with bid")
-	} else {
-		bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
-		if err != nil {
-			return nil, err
-		}
-		if bid == nil || bid.Message == nil {
-			return nil, errors.New("builder returned nil bid")
-		}
-		v := bytesutil.LittleEndianBytesToBigInt(bid.Message.Value)
-		if v.String() == "0" {
-			return nil, errors.New("builder returned header with 0 bid amount")
-		}
-		if err := validateBuilderSignature(bid); err != nil {
-			return nil, errors.Wrap(err, "could not validate builder signature")
-		}
-		wrappedHeader, err = consensusblocks.WrappedExecutionPayloadHeader(bid.Message.Header)
-		if err != nil {
-			return nil, err
-		}
-		log.WithFields(logrus.Fields{
-			"value":         v.String(),
-			"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
-			"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
-		}).Info("Received header with bid")
+	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+	if err != nil {
+		return nil, err
+	}
+	if signedBid.IsNil() {
+		return nil, errors.New("builder returned nil bid")
+	}
+	bid, err := signedBid.Message()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get bid")
+	}
+	if bid.IsNil() {
+		return nil, errors.New("builder returned nil bid")
+	}
+
+	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
+	if v.String() == "0" {
+		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
 	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
 	if err != nil {
 		return nil, err
 	}
-	txRoot, err := wrappedHeader.TransactionsRoot()
+	header, err := bid.Header()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get bid header")
+	}
+	txRoot, err := header.TransactionsRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transaction root")
 	}
 	if bytesutil.ToBytes32(txRoot) == emptyRoot {
 		return nil, errors.New("builder returned header with an empty tx root")
 	}
-	if !bytes.Equal(wrappedHeader.ParentHash(), h.BlockHash()) {
-		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", wrappedHeader.ParentHash(), h.BlockHash())
+
+	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
 		return nil, err
 	}
-	if wrappedHeader.Timestamp() != uint64(t.Unix()) {
-		return nil, fmt.Errorf("incorrect timestamp %d != %d", wrappedHeader.Timestamp(), uint64(t.Unix()))
+
+	if header.Timestamp() != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
-	return wrappedHeader, nil
+	if err := validateBuilderSignature(signedBid); err != nil {
+		return nil, errors.Wrap(err, "could not validate builder signature")
+	}
+
+	log.WithFields(logrus.Fields{
+		"value":         v.String(),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
+		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
+	}).Info("Received header with bid")
+	return header, nil
 }
 
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
@@ -201,7 +186,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	randaoReveal := b.Block().Body().RandaoReveal()
 	graffiti := b.Block().Body().Graffiti()
 	sig := b.Signature()
-	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
+	psb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
 			Slot:          b.Block().Slot(),
 			ProposerIndex: b.Block().ProposerIndex(),
@@ -223,6 +208,10 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 		Signature: sig[:],
 	}
 
+	sb, err := consensusblocks.NewSignedBeaconBlock(psb)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signed block")
+	}
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
 		return nil, err
@@ -241,38 +230,46 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 			"%#x != %#x", headerRoot, payloadRoot)
 	}
 
+	pbPayload, err := payload.PbBellatrix()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload")
+	}
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          sb.Block.Slot,
-			ProposerIndex: sb.Block.ProposerIndex,
-			ParentRoot:    sb.Block.ParentRoot,
-			StateRoot:     sb.Block.StateRoot,
+			Slot:          psb.Block.Slot,
+			ProposerIndex: psb.Block.ProposerIndex,
+			ParentRoot:    psb.Block.ParentRoot,
+			StateRoot:     psb.Block.StateRoot,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
+				RandaoReveal:      psb.Block.Body.RandaoReveal,
+				Eth1Data:          psb.Block.Body.Eth1Data,
+				Graffiti:          psb.Block.Body.Graffiti,
+				ProposerSlashings: psb.Block.Body.ProposerSlashings,
+				AttesterSlashings: psb.Block.Body.AttesterSlashings,
+				Attestations:      psb.Block.Body.Attestations,
+				Deposits:          psb.Block.Body.Deposits,
+				VoluntaryExits:    psb.Block.Body.VoluntaryExits,
 				SyncAggregate:     agg,
-				ExecutionPayload:  payload,
+				ExecutionPayload:  pbPayload,
 			},
 		},
-		Signature: sb.Signature,
+		Signature: psb.Signature,
 	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
 		return nil, err
 	}
 
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions from payload")
+	}
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
-		"txs":          len(payload.Transactions),
+		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
 
 	return wb, nil
@@ -331,7 +328,12 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 		Signature: sig[:],
 	}
 
-	payload, err := vs.BlockBuilder.SubmitBlindedBlockCapella(ctx, sb)
+	wrappedSb, err := consensusblocks.NewSignedBeaconBlock(sb)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create signed block")
+	}
+
+	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, wrappedSb)
 	if err != nil {
 		return nil, err
 	}
@@ -349,6 +351,10 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 			"%#x != %#x", headerRoot, payloadRoot)
 	}
 
+	capellaPayload, err := payload.PbCapella()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get payload")
+	}
 	bb := &ethpb.SignedBeaconBlockCapella{
 		Block: &ethpb.BeaconBlockCapella{
 			Slot:          sb.Block.Slot,
@@ -365,7 +371,7 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 				Deposits:          sb.Block.Body.Deposits,
 				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
 				SyncAggregate:     agg,
-				ExecutionPayload:  payload,
+				ExecutionPayload:  capellaPayload,
 			},
 		},
 		Signature: sb.Signature,
@@ -375,29 +381,40 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 		return nil, err
 	}
 
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions from payload")
+	}
 	log.WithFields(logrus.Fields{
 		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
 		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
-		"txs":          len(payload.Transactions),
+		"txs":          len(txs),
 	}).Info("Retrieved full capella payload from builder")
 
 	return wb, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
-func validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
 		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
-	if bid == nil || bid.Message == nil {
+	if signedBid.IsNil() {
 		return errors.New("nil builder bid")
 	}
-	return signing.VerifySigningRoot(bid.Message, bid.Message.Pubkey, bid.Signature, d)
+	bid, err := signedBid.Message()
+	if err != nil {
+		return errors.Wrap(err, "could not get bid")
+	}
+	if bid.IsNil() {
+		return errors.New("builder returned nil bid")
+	}
+	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)
 }
 
 func validateCapellaBuilderSignature(bid *ethpb.SignedBuilderBidCapella) error {

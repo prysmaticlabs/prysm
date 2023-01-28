@@ -1470,7 +1470,7 @@ func TestHeaderByHash_NotFound(t *testing.T) {
 	srv := &Service{}
 	srv.rpcClient = RPCClientBad{}
 
-	_, err := srv.HeaderByHash(context.Background(), common.Hash([32]byte{}))
+	_, err := srv.HeaderByHash(context.Background(), [32]byte{})
 	assert.Equal(t, ethereum.NotFound, err)
 }
 

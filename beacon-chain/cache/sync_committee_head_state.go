@@ -6,7 +6,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
@@ -23,7 +23,7 @@ func NewSyncCommitteeHeadState() *SyncCommitteeHeadStateCache {
 }
 
 // Put `slot` as key and `state` as value onto the cache.
-func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState) error {
+func (c *SyncCommitteeHeadStateCache) Put(slot primitives.Slot, st state.BeaconState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	// Make sure that the provided state is non nil
@@ -41,7 +41,7 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 }
 
 // Get `state` using `slot` as key. Return nil if nothing is found.
-func (c *SyncCommitteeHeadStateCache) Get(slot types.Slot) (state.BeaconState, error) {
+func (c *SyncCommitteeHeadStateCache) Get(slot primitives.Slot) (state.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	val, exists := c.cache.Get(slot)

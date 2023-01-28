@@ -20,7 +20,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
@@ -294,7 +294,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(0), headSlot, "Mismatch slots")
+	assert.Equal(t, primitives.Slot(0), headSlot, "Mismatch slots")
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
@@ -439,13 +439,13 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 	defer ctrl.Finish()
 	client := mock2.NewMockValidatorClient(ctrl)
 
-	slot := types.Slot(1)
+	slot := primitives.Slot(1)
 	v := validator{
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
 			Duties: []*ethpb.DutiesResponse_Duty{
 				{
-					Committee:      []types.ValidatorIndex{},
+					Committee:      []primitives.ValidatorIndex{},
 					AttesterSlot:   10,
 					CommitteeIndex: 20,
 				},
@@ -518,9 +518,9 @@ func TestUpdateDuties_OK(t *testing.T) {
 				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
 				ValidatorIndex: 200,
 				CommitteeIndex: 100,
-				Committee:      []types.ValidatorIndex{0, 1, 2, 3},
+				Committee:      []primitives.ValidatorIndex{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
-				ProposerSlots:  []types.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
+				ProposerSlots:  []primitives.Slot{params.BeaconConfig().SlotsPerEpoch + 1},
 			},
 		},
 	}
@@ -540,7 +540,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []types.ValidatorIndex) (*emptypb.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})
@@ -596,7 +596,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
-	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []types.ValidatorIndex) (*emptypb.Empty, error) {
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
 		wg.Done()
 		return nil, nil
 	})
@@ -695,7 +695,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
-				ProposerSlots:  []types.Slot{0},
+				ProposerSlots:  []primitives.Slot{0},
 				PublicKey:      validatorKey.PublicKey().Marshal(),
 			},
 		},
@@ -713,7 +713,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 }
 
 func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
-	nonexistentIndex := types.ValidatorIndex(^uint64(0))
+	nonexistentIndex := primitives.ValidatorIndex(^uint64(0))
 	type statusTest struct {
 		name   string
 		status *validatorStatus
@@ -975,7 +975,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	})
 	connectionErrorChannel := make(chan error)
 	v.ReceiveBlocks(ctx, connectionErrorChannel)
-	require.Equal(t, types.Slot(0), v.highestValidSlot)
+	require.Equal(t, primitives.Slot(0), v.highestValidSlot)
 }
 
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
@@ -994,7 +994,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	slot := types.Slot(100)
+	slot := primitives.Slot(100)
 	stream.EXPECT().Recv().Return(
 		&ethpb.StreamBlocksResponse{
 			Block: &ethpb.StreamBlocksResponse_Phase0Block{
@@ -1153,7 +1153,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				for i, k := range keys {
 					pkey := k
 					for j := 0; j < attLimit; j++ {
-						att := createAttestation(10+types.Epoch(j), 12+types.Epoch(j))
+						att := createAttestation(10+primitives.Epoch(j), 12+primitives.Epoch(j))
 						rt, err := att.Data.HashTreeRoot()
 						assert.NoError(t, err)
 						assert.NoError(t, db.SaveAttestationForPubKey(context.Background(), pkey, rt, att))
@@ -1247,10 +1247,10 @@ func TestValidatorAttestationsAreOrdered(t *testing.T) {
 	histories, err := db.AttestationHistoryForPubKey(context.Background(), k)
 	assert.NoError(t, err)
 	r := retrieveLatestRecord(histories)
-	assert.Equal(t, r.Target, types.Epoch(14))
+	assert.Equal(t, r.Target, primitives.Epoch(14))
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
@@ -1272,7 +1272,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
-	slot := types.Slot(1)
+	slot := primitives.Slot(1)
 	pubKey := validatorKey.PublicKey().Marshal()
 
 	m.validatorClient.EXPECT().GetSyncSubcommitteeIndex(
@@ -1302,7 +1302,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 			PublicKey: validatorKey.PublicKey().Marshal(),
 			Slot:      1,
 		},
-	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []types.CommitteeIndex{0}}, nil /*err*/)
+	).Return(&ethpb.SyncSubcommitteeIndexResponse{Indices: []primitives.CommitteeIndex{0}}, nil /*err*/)
 
 	aggregator, err = v.isSyncCommitteeAggregator(context.Background(), slot, bytesutil.ToBytes48(pubKey))
 	require.NoError(t, err)
@@ -1410,7 +1410,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	tests := []struct {
 		name                 string
 		validatorSetter      func(t *testing.T) *validator
-		feeRecipientMap      map[types.ValidatorIndex]string
+		feeRecipientMap      map[primitives.ValidatorIndex]string
 		mockExpectedRequests []ExpectedValidatorRegistration
 		err                  string
 		logMessages          []string
@@ -1424,7 +1424,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1480,7 +1480,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&empty.Empty{}, nil)
 				return &v
 			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
+			feeRecipientMap: map[primitives.ValidatorIndex]string{
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
 			},
@@ -1504,7 +1504,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1560,7 +1560,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&empty.Empty{}, nil)
 				return &v
 			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
+			feeRecipientMap: map[primitives.ValidatorIndex]string{
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
 			},
@@ -1580,7 +1580,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1624,7 +1624,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				})
 				return &v
 			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
+			feeRecipientMap: map[primitives.ValidatorIndex]string{
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
 			},
@@ -1639,7 +1639,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1684,7 +1684,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}).Return(nil, nil)
 				return &v
 			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
+			feeRecipientMap: map[primitives.ValidatorIndex]string{
 				1: defaultFeeHex,
 			},
 			mockExpectedRequests: []ExpectedValidatorRegistration{
@@ -1702,7 +1702,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1743,7 +1743,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}).Return(nil, nil)
 				return &v
 			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
+			feeRecipientMap: map[primitives.ValidatorIndex]string{
 				1: defaultFeeHex,
 			},
 			mockExpectedRequests: []ExpectedValidatorRegistration{
@@ -1761,7 +1761,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1806,7 +1806,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				v := validator{
 					validatorClient:              client,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
@@ -1844,7 +1844,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					validatorClient:              client,
 					node:                         nodeClient,
 					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{

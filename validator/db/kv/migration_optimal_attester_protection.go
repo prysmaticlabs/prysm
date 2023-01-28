@@ -6,7 +6,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/progress"
 	bolt "go.etcd.io/bbolt"
@@ -82,7 +82,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(_ context.Context) error {
 			}
 			// For every epoch since genesis up to the highest epoch written, we then
 			// extract historical data and insert it into the new schema.
-			for targetEpoch := types.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
+			for targetEpoch := primitives.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
 				historicalAtt, err := attestingHistory.getTargetData(targetEpoch)
 				if err != nil {
 					return err
@@ -122,8 +122,8 @@ func (s *Store) migrateOptimalAttesterProtectionDown(_ context.Context) error {
 
 	// Next up, we extract the data for attested epochs and signing roots
 	// from the optimized db schema into maps we can use later.
-	signingRootsByTarget := make(map[types.Epoch][]byte)
-	targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
+	signingRootsByTarget := make(map[primitives.Epoch][]byte)
+	targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	err = s.view(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(pubKeysBucket)
 		if bkt == nil {
@@ -147,7 +147,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(_ context.Context) error {
 			}
 			// Next up, extract the target epochs by source.
 			if err := sourceEpochsBucket.ForEach(func(sourceBytes, targetEpochsBytes []byte) error {
-				targetEpochs := make([]types.Epoch, 0)
+				targetEpochs := make([]primitives.Epoch, 0)
 				for i := 0; i < len(targetEpochsBytes); i += 8 {
 					targetEpochs = append(targetEpochs, bytesutil.BytesToEpochBigEndian(targetEpochsBytes[i:i+8]))
 				}
@@ -176,7 +176,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(_ context.Context) error {
 			// Now we write the attesting history using the data we extracted
 			// from the buckets accordingly.
 			history := newDeprecatedAttestingHistory(0)
-			var maxTargetWritten types.Epoch
+			var maxTargetWritten primitives.Epoch
 			for source, targetEpochs := range targetEpochsBySource {
 				for _, target := range targetEpochs {
 					signingRoot := params.BeaconConfig().ZeroHash[:]
