@@ -228,8 +228,8 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
-				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?slot=%d&subcommittee_index=%d&beacon_block_root=%s",
-					uint64(request.Slot), request.SubnetId, blockRoot),
+				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?beacon_block_root=%s&slot=%d&subcommittee_index=%d",
+					blockRoot, uint64(request.Slot), request.SubnetId),
 				&apimiddleware.ProduceSyncCommitteeContributionResponseJson{},
 			).SetArg(
 				2,

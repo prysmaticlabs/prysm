@@ -20,13 +20,22 @@ type MnemonicGenerator struct {
 	skipMnemonicConfirm bool
 }
 
+// ErrUnsupportedMnemonicLanguage is returned when trying to use an unsupported mnemonic langauge.
+var (
+	DefaultMnemonicLanguage        = "english"
+	ErrUnsupportedMnemonicLanguage = errors.New("unsupported mnemonic language")
+)
+
 // GenerateAndConfirmMnemonic requires confirming the generated mnemonics.
 func GenerateAndConfirmMnemonic(mnemonicLanguage string, skipMnemonicConfirm bool) (string, error) {
 	mnemonicRandomness := make([]byte, 32)
 	if _, err := rand.NewGenerator().Read(mnemonicRandomness); err != nil {
 		return "", errors.Wrap(err, "could not initialize mnemonic source of randomness")
 	}
-	setBip39Lang(mnemonicLanguage)
+	err := setBip39Lang(mnemonicLanguage)
+	if err != nil {
+		return "", err
+	}
 	m := &MnemonicGenerator{
 		skipMnemonicConfirm: skipMnemonicConfirm,
 	}
@@ -75,15 +84,18 @@ func (m *MnemonicGenerator) ConfirmAcknowledgement(phrase string) error {
 // Uses the provided mnemonic seed phrase to generate the
 // appropriate seed file for recovering a derived wallets.
 func seedFromMnemonic(mnemonic, mnemonicLanguage, mnemonicPassphrase string) ([]byte, error) {
-	setBip39Lang(mnemonicLanguage)
+	err := setBip39Lang(mnemonicLanguage)
+	if err != nil {
+		return nil, err
+	}
 	if ok := bip39.IsMnemonicValid(mnemonic); !ok {
 		return nil, bip39.ErrInvalidMnemonic
 	}
 	return bip39.NewSeed(mnemonic, mnemonicPassphrase), nil
 }
 
-func setBip39Lang(lang string) {
-	wordlist := wordlists.English
+func setBip39Lang(lang string) error {
+	var wordlist []string
 	allowedLanguages := map[string][]string{
 		"chinese_simplified":  wordlists.ChineseSimplified,
 		"chinese_traditional": wordlists.ChineseTraditional,
@@ -98,6 +110,9 @@ func setBip39Lang(lang string) {
 
 	if wl, ok := allowedLanguages[lang]; ok {
 		wordlist = wl
+	} else {
+		return errors.Wrapf(ErrUnsupportedMnemonicLanguage, "%s", lang)
 	}
 	bip39.SetWordList(wordlist)
+	return nil
 }

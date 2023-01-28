@@ -52,6 +52,7 @@ type testWalletConfig struct {
 	backupDir               string
 	walletDir               string
 	passwordsDir            string
+	mnemonicLanguage        string
 }
 
 func setupWalletCtx(
