@@ -53,21 +53,3 @@ message SignedBlobSidecar {
         BlobSidecar message = 1;
         bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
-
-// class BlobSidecar(Container):
-//    beacon_block_root: Root
-//    beacon_block_slot: Slot
-//    proposer_index: ValidatorIndex
-//    block_parent_root: Root
-//        ## For verifying the fork of the proposer_index
-//        ## TODO: dependent_root? Less information but also less sensitive to reorgs
-//    blob: Blob
-//    blob_index: uint64 # We need the index of the blob, otherwise we cannot do the gossip protections
-//    kzg_commitment: KZGCommitment
-//    kzg_proof: KZGProof # Allows for quick verification of kzg_commitment
-//        ## TODO: aggregation receiver-side?
-//        ## TODO: consider aggregate proof in first sidecar
-//
-//class SignedBlobSidecar(Container):
-//    message: BlobSidecar
-//    signature: Signature
