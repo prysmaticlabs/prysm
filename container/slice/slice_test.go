@@ -599,3 +599,20 @@ func TestUnique(t *testing.T) {
 		require.DeepEqual(t, []uint64{1, 2}, result)
 	})
 }
+
+func TestReverse(t *testing.T) {
+	tests := []struct {
+		value [][32]byte
+		want  [][32]byte
+	}{
+		{[][32]byte{}, [][32]byte{}},
+		{[][32]byte{{'A'}, {'B'}, {'C'}, {'D'}},
+			[][32]byte{{'D'}, {'C'}, {'B'}, {'A'}}},
+		{[][32]byte{{1}, {2}, {3}, {4}},
+			[][32]byte{{4}, {3}, {2}, {1}}},
+	}
+	for _, tt := range tests {
+		b := slice.Reverse(tt.value)
+		require.DeepEqual(t, tt.want, b)
+	}
+}

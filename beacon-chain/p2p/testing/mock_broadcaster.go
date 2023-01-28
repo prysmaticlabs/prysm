@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -32,4 +33,14 @@ func (m *MockBroadcaster) BroadcastAttestation(_ context.Context, _ uint64, a *e
 func (m *MockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
 	m.BroadcastCalled = true
 	return nil
+}
+
+// BroadcastBLSChanges mocks a broadcast BLS change ocurred
+func (m *MockBroadcaster) BroadcastBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
+	for _, change := range changes {
+		err := m.Broadcast(ctx, change)
+		if err != nil {
+			log.WithError(err).Error("could not broadcast Signed BLS change")
+		}
+	}
 }
