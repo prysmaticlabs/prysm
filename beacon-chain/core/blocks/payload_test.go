@@ -7,14 +7,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -603,13 +601,14 @@ func Test_ProcessPayload(t *testing.T) {
 }
 
 func Test_ProcessPayloadCapella(t *testing.T) {
-	spb := &ethpb.BeaconStateCapella{}
-	st, err := state_native.InitializeFromProtoCapella(spb)
-	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateCapella(t, 1)
 	header, err := emptyPayloadHeaderCapella()
 	require.NoError(t, err)
 	require.NoError(t, st.SetLatestExecutionPayloadHeader(header))
 	payload := emptyPayloadCapella()
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	payload.PrevRandao = random
 	wrapped, err := consensusblocks.WrappedExecutionPayloadCapella(payload)
 	require.NoError(t, err)
 	_, err = blocks.ProcessPayload(st, wrapped)

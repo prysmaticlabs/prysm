@@ -54,6 +54,11 @@ func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error)
 	return blst.AggregateCompressedSignatures(multiSigs)
 }
 
+// VerifySignature verifies a single signature. For performance reason, always use VerifyMultipleSignatures if possible.
+func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
+	return blst.VerifySignature(sig, msg, pubKey)
+}
+
 // VerifyMultipleSignatures verifies multiple signatures for distinct messages securely.
 func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
 	return blst.VerifyMultipleSignatures(sigs, msgs, pubKeys)

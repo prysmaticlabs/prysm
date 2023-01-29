@@ -37,7 +37,7 @@ func NewGenesisBlock(stateRoot []byte) *ethpb.SignedBeaconBlock {
 	return block
 }
 
-var ErrUnrecognizedState = errors.New("uknonwn underlying type for state.BeaconState value")
+var ErrUnrecognizedState = errors.New("unknown underlying type for state.BeaconState value")
 
 func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfaces.SignedBeaconBlock, error) {
 	root, err := st.HashTreeRoot(ctx)
@@ -46,7 +46,7 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 	}
 	ps := st.ToProto()
 	switch ps.(type) {
-	case *ethpb.BeaconState, *ethpb.BeaconStateAltair:
+	case *ethpb.BeaconState:
 		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 			Block: &ethpb.BeaconBlock{
 				ParentRoot: params.BeaconConfig().ZeroHash[:],
@@ -58,6 +58,26 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 						BlockHash:   make([]byte, 32),
 					},
 					Graffiti: make([]byte, 32),
+				},
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		})
+	case *ethpb.BeaconStateAltair:
+		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{
+			Block: &ethpb.BeaconBlockAltair{
+				ParentRoot: params.BeaconConfig().ZeroHash[:],
+				StateRoot:  root[:],
+				Body: &ethpb.BeaconBlockBodyAltair{
+					RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
+					SyncAggregate: &ethpb.SyncAggregate{
+						SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+						SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+					},
 				},
 			},
 			Signature: params.BeaconConfig().EmptySignature[:],
@@ -88,6 +108,38 @@ func NewGenesisBlockForState(ctx context.Context, st state.BeaconState) (interfa
 						BaseFeePerGas: make([]byte, 32),
 						BlockHash:     make([]byte, 32),
 						Transactions:  make([][]byte, 0),
+					},
+				},
+			},
+			Signature: params.BeaconConfig().EmptySignature[:],
+		})
+	case *ethpb.BeaconStateCapella:
+		return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{
+			Block: &ethpb.BeaconBlockCapella{
+				ParentRoot: params.BeaconConfig().ZeroHash[:],
+				StateRoot:  root[:],
+				Body: &ethpb.BeaconBlockBodyCapella{
+					RandaoReveal: make([]byte, 96),
+					Eth1Data: &ethpb.Eth1Data{
+						DepositRoot: make([]byte, 32),
+						BlockHash:   make([]byte, 32),
+					},
+					Graffiti: make([]byte, 32),
+					SyncAggregate: &ethpb.SyncAggregate{
+						SyncCommitteeBits:      make([]byte, fieldparams.SyncCommitteeLength/8),
+						SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+					ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+						ParentHash:    make([]byte, 32),
+						FeeRecipient:  make([]byte, 20),
+						StateRoot:     make([]byte, 32),
+						ReceiptsRoot:  make([]byte, 32),
+						LogsBloom:     make([]byte, 256),
+						PrevRandao:    make([]byte, 32),
+						BaseFeePerGas: make([]byte, 32),
+						BlockHash:     make([]byte, 32),
+						Transactions:  make([][]byte, 0),
+						Withdrawals:   make([]*enginev1.Withdrawal, 0),
 					},
 				},
 			},

@@ -53,7 +53,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
@@ -448,6 +448,11 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		return nil
 	}
 	baseDir := cliCtx.String(cmd.DataDirFlag.Name)
+
+	if cliCtx.IsSet(flags.SlasherDirFlag.Name) {
+		baseDir = cliCtx.String(flags.SlasherDirFlag.Name)
+	}
+
 	dbPath := filepath.Join(baseDir, kv.BeaconNodeDbDirName)
 	clearDB := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearDB := cliCtx.Bool(cmd.ForceClearDB.Name)
@@ -815,6 +820,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationsPool:              b.attestationPool,
 		ExitPool:                      b.exitPool,
 		SlashingsPool:                 b.slashingsPool,
+		BLSChangesPool:                b.blsToExecPool,
 		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
 		ExecutionChainService:         web3Service,
@@ -941,9 +947,9 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 	if cliSlice == nil {
 		return nil
 	}
-	tracked := make([]types.ValidatorIndex, len(cliSlice))
+	tracked := make([]primitives.ValidatorIndex, len(cliSlice))
 	for i := range tracked {
-		tracked[i] = types.ValidatorIndex(cliSlice[i])
+		tracked[i] = primitives.ValidatorIndex(cliSlice[i])
 	}
 
 	var chainService *blockchain.Service

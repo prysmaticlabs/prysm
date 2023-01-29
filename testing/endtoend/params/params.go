@@ -154,7 +154,8 @@ const (
 
 	JaegerTracingPort = 9150
 
-	StartupBufferSecs = 5
+	StartupBufferSecs            = 5
+	StartupBufferSecsMulticlient = 10
 )
 
 func logDir() string {
@@ -256,7 +257,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		return err
 	}
 
-	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
+	genTime := uint64(time.Now().Unix()) + StartupBufferSecsMulticlient
 	TestParams = &params{
 		TestPath:                  filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
 		LogPath:                   logPath,

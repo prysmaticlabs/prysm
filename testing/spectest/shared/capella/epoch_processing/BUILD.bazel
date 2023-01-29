@@ -7,7 +7,7 @@ go_library(
         "effective_balance_updates.go",
         "eth1_data_reset.go",
         "helpers.go",
-        "historical_roots_update.go",
+        "historical_summaries_update.go",
         "inactivity_updates.go",
         "justification_and_finalization.go",
         "participation_flag_updates.go",

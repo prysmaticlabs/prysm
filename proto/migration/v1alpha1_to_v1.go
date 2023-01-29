@@ -441,6 +441,10 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		}
 	}
 
+	hRoot, err := state.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get historical roots from state")
+	}
 	result := &ethpbv1.BeaconState{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(state.GenesisValidatorsRoot()),
@@ -459,7 +463,7 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(state.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(state.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(state.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoot),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,

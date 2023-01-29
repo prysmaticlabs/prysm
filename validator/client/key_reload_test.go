@@ -25,11 +25,11 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var activePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
 			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -68,7 +68,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
 			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
@@ -104,7 +104,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("error when getting status", func(t *testing.T) {
 		inactivePrivKey, err := bls.RandKey()
 		require.NoError(t, err)
-		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
+		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		km := &mockKeymanager{
 			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{

@@ -2,7 +2,15 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["bytes.go"],
+    srcs = [
+        "bits.go",
+        "bytes.go",
+        "bytes_go120.go",
+        "bytes_legacy.go",
+        "eth_types.go",
+        "hex.go",
+        "integers.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v3/encoding/bytesutil",
     visibility = ["//visibility:public"],
     deps = [
@@ -15,7 +23,13 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["bytes_test.go"],
+    srcs = [
+        "bits_test.go",
+        "bytes_test.go",
+        "eth_types_test.go",
+        "hex_test.go",
+        "integers_test.go",
+    ],
     deps = [
         ":go_default_library",
         "//config/fieldparams:go_default_library",

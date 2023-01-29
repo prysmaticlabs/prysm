@@ -15,7 +15,7 @@ func TestStore_EIPBlacklistedPublicKeys(t *testing.T) {
 	numValidators := 100
 	publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
 	for i := 0; i < numValidators; i++ {
-		key := [fieldparams.BLSPubkeyLength]byte{}
+		var key [fieldparams.BLSPubkeyLength]byte
 		copy(key[:], fmt.Sprintf("%d", i))
 		publicKeys[i] = key
 	}

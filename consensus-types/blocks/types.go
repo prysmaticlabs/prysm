@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -61,8 +61,8 @@ type BeaconBlockBody struct {
 // BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {
 	version       int
-	slot          types.Slot
-	proposerIndex types.ValidatorIndex
+	slot          primitives.Slot
+	proposerIndex primitives.ValidatorIndex
 	parentRoot    [field_params.RootLength]byte
 	stateRoot     [field_params.RootLength]byte
 	body          *BeaconBlockBody

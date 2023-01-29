@@ -14,14 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
-func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, privKeys []bls.SecretKey) ([]byte, error) {
+func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch primitives.Epoch, privKeys []bls.SecretKey) ([]byte, error) {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	if err != nil {
@@ -31,7 +31,7 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, priv
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	sszEpoch := types.SSZUint64(epoch)
+	sszEpoch := primitives.SSZUint64(epoch)
 	return signing.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 
@@ -52,6 +52,8 @@ func BlockSignature(
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: b})
 	case *ethpb.BeaconBlockBellatrix:
 		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: b})
+	case *ethpb.BeaconBlockCapella:
+		wsb, err = blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockCapella{Block: b})
 	default:
 		return nil, errors.New("unsupported block type")
 	}
@@ -70,17 +72,21 @@ func BlockSignature(
 		b.StateRoot = s[:]
 	case *ethpb.BeaconBlockBellatrix:
 		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockCapella:
+		b.StateRoot = s[:]
 	}
 
 	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
-	var blockSlot types.Slot
+	var blockSlot primitives.Slot
 	switch b := block.(type) {
 	case *ethpb.BeaconBlock:
 		blockSlot = b.Slot
 	case *ethpb.BeaconBlockAltair:
 		blockSlot = b.Slot
 	case *ethpb.BeaconBlockBellatrix:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockCapella:
 		blockSlot = b.Slot
 	}
 
@@ -102,6 +108,8 @@ func BlockSignature(
 	case *ethpb.BeaconBlockAltair:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	case *ethpb.BeaconBlockBellatrix:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockCapella:
 		blockRoot, err = signing.ComputeSigningRoot(b, domain)
 	}
 	if err != nil {

@@ -12,7 +12,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -216,16 +215,22 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 	}
 
 	var pubKeys [][]byte
+	vals := preState.Validators()
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSize; i++ {
-		pubKeys = append(pubKeys, bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength))
+		j := i % uint64(len(vals))
+		pubKeys = append(pubKeys, vals[j].PublicKey)
+	}
+	aggregated, err := bls.AggregatePublicKeys(pubKeys)
+	if err != nil {
+		return nil, err
 	}
 	st.CurrentSyncCommittee = &ethpb.SyncCommittee{
 		Pubkeys:         pubKeys,
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		AggregatePubkey: aggregated.Marshal(),
 	}
 	st.NextSyncCommittee = &ethpb.SyncCommittee{
-		Pubkeys:         bytesutil.SafeCopy2dBytes(pubKeys),
-		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+		Pubkeys:         pubKeys,
+		AggregatePubkey: aggregated.Marshal(),
 	}
 
 	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{

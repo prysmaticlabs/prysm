@@ -21,7 +21,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -50,7 +50,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	assert.NoError(t, err)
 	indices, err := attestation.AttestingIndices(att.AggregationBits, committee)
 	require.NoError(t, err)
-	require.NoError(t, validateIndexInCommittee(ctx, s, att, types.ValidatorIndex(indices[0])))
+	require.NoError(t, validateIndexInCommittee(ctx, s, att, primitives.ValidatorIndex(indices[0])))
 
 	wanted := "validator index 1000 is not within the committee"
 	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
@@ -340,7 +340,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -441,7 +441,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
@@ -560,7 +560,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 
@@ -651,7 +651,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()
 	ai := committee[0]
-	sszUint := types.SSZUint64(att.Data.Slot)
+	sszUint := primitives.SSZUint64(att.Data.Slot)
 	sig, err := signing.ComputeDomainAndSign(beaconState, 0, &sszUint, params.BeaconConfig().DomainSelectionProof, privKeys[ai])
 	require.NoError(t, err)
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{

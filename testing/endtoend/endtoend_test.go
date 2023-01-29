@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/components"
@@ -127,7 +127,7 @@ func (r *testRunner) scenarioRunner() {
 	r.runBase([]runEvent{r.scenarioRun})
 }
 
-func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, extra types.Epoch) error {
+func (r *testRunner) waitExtra(ctx context.Context, e primitives.Epoch, conn *grpc.ClientConn, extra primitives.Epoch) error {
 	spe := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	dl := time.Now().Add(time.Second * time.Duration(uint64(extra)*spe))
 
@@ -169,15 +169,15 @@ func (r *testRunner) waitForChainStart() {
 }
 
 // runEvaluators executes assigned evaluators.
-func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime time.Time) error {
+func (r *testRunner) runEvaluators(ec *e2etypes.EvaluationContext, conns []*grpc.ClientConn, tickingStartTime time.Time) error {
 	t, config := r.t, r.config
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		if config.EvalInterceptor(currentEpoch, conns) {
+		if config.EvalInterceptor(ec, currentEpoch, conns) {
 			continue
 		}
-		r.executeProvidedEvaluators(currentEpoch, conns, config.Evaluators)
+		r.executeProvidedEvaluators(ec, currentEpoch, conns, config.Evaluators)
 
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
@@ -493,8 +493,9 @@ func (r *testRunner) defaultEndToEndRun() error {
 	require.NoError(t, err)
 	tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
+	ec := e2etypes.NewEvaluationContext(r.depositor.History())
 	// Run assigned evaluators.
-	if err := r.runEvaluators(conns, tickingStartTime); err != nil {
+	if err := r.runEvaluators(ec, conns, tickingStartTime); err != nil {
 		return errors.Wrap(err, "one or more evaluators failed")
 	}
 
@@ -519,7 +520,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 	}
 
 	if config.ExtraEpochs > 0 {
-		if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], types.Epoch(config.ExtraEpochs)); err != nil {
+		if err := r.waitExtra(ctx, primitives.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], primitives.Epoch(config.ExtraEpochs)); err != nil {
 			return errors.Wrap(err, "error while waiting for ExtraEpochs")
 		}
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
@@ -574,25 +575,26 @@ func (r *testRunner) scenarioRun() error {
 	require.NoError(t, err)
 	tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
+	ec := e2etypes.NewEvaluationContext(r.depositor.History())
 	// Run assigned evaluators.
-	return r.runEvaluators(conns, tickingStartTime)
+	return r.runEvaluators(ec, conns, tickingStartTime)
 }
+
 func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }
 
-func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grpc.ClientConn, evals []e2etypes.Evaluator) {
+func (r *testRunner) executeProvidedEvaluators(ec *e2etypes.EvaluationContext, currentEpoch uint64, conns []*grpc.ClientConn, evals []e2etypes.Evaluator) {
 	wg := new(sync.WaitGroup)
 	for _, eval := range evals {
 		// Fix reference to evaluator as it will be running
 		// in a separate goroutine.
 		evaluator := eval
 		// Only run if the policy says so.
-		if !evaluator.Policy(types.Epoch(currentEpoch)) {
+		if !evaluator.Policy(primitives.Epoch(currentEpoch)) {
 			continue
 		}
 		wg.Add(1)
-		var ec e2etypes.EvaluationContext = r.depositor.History()
 		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 			err := evaluator.Evaluation(ec, conns...)
 			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
@@ -611,7 +613,7 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grp
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
+func (r *testRunner) multiScenarioMulticlient(ec *e2etypes.EvaluationContext, epoch uint64, conns []*grpc.ClientConn) bool {
 	type ForkchoiceUpdatedResponse struct {
 		Status    *enginev1.PayloadStatus  `json:"payloadStatus"`
 		PayloadId *enginev1.PayloadIDBytes `json:"payloadId"`
@@ -662,9 +664,8 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 		})
 		return true
 	case 15:
-		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
-			ev.OptimisticSyncEnabled,
-		})
+		evs := []e2etypes.Evaluator{ev.OptimisticSyncEnabled}
+		r.executeProvidedEvaluators(ec, epoch, []*grpc.ClientConn{conns[0]}, evs)
 		// Disable Interceptor
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
 		require.NoError(r.t, err)
@@ -690,7 +691,7 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 	return false
 }
 
-func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
+func (r *testRunner) eeOffline(_ *e2etypes.EvaluationContext, epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
@@ -716,7 +717,7 @@ func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool {
+func (r *testRunner) multiScenario(ec *e2etypes.EvaluationContext, epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -747,9 +748,8 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool 
 		})
 		return true
 	case 20:
-		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
-			ev.OptimisticSyncEnabled,
-		})
+		evs := []e2etypes.Evaluator{ev.OptimisticSyncEnabled}
+		r.executeProvidedEvaluators(ec, epoch, []*grpc.ClientConn{conns[0]}, evs)
 		// Disable Interceptor
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
 		require.NoError(r.t, err)
@@ -767,6 +767,6 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool 
 }
 
 // All Epochs are valid.
-func defaultInterceptor(_ uint64, _ []*grpc.ClientConn) bool {
+func defaultInterceptor(_ *e2etypes.EvaluationContext, _ uint64, _ []*grpc.ClientConn) bool {
 	return false
 }

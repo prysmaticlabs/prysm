@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -37,7 +37,7 @@ var ValidatorsAreActive = types.Evaluator{
 }
 
 // ValidatorsParticipatingAtEpoch ensures the expected amount of validators are participating.
-var ValidatorsParticipatingAtEpoch = func(epoch ethtypes.Epoch) types.Evaluator {
+var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluator {
 	return types.Evaluator{
 		Name:       "validators_participating_epoch_%d",
 		Policy:     policies.AfterNthEpoch(epoch),
@@ -53,7 +53,7 @@ var ValidatorSyncParticipation = types.Evaluator{
 	Evaluation: validatorsSyncParticipation,
 }
 
-func validatorsAreActive(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
@@ -76,7 +76,7 @@ func validatorsAreActive(_ types.EvaluationContext, conns ...*grpc.ClientConn) e
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
-		if exitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
+		if ec.ExitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -106,7 +106,7 @@ func validatorsAreActive(_ types.EvaluationContext, conns ...*grpc.ClientConn) e
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpbservice.NewBeaconDebugClient(conn)
@@ -167,7 +167,7 @@ func validatorsParticipating(_ types.EvaluationContext, conns ...*grpc.ClientCon
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
 // sync committee assignments.
-func validatorsSyncParticipation(_ types.EvaluationContext, conns ...*grpc.ClientConn) error {
+func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewNodeClient(conn)
 	altairClient := ethpb.NewBeaconChainClient(conn)

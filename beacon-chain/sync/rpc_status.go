@@ -17,7 +17,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
@@ -111,7 +111,7 @@ func (s *Service) resyncIfBehind() {
 func (s *Service) shouldReSync() bool {
 	syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
 	currentEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
-	prevEpoch := types.Epoch(0)
+	prevEpoch := primitives.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
 	}
@@ -294,7 +294,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
-	maxFinalizedEpoch := types.Epoch(0)
+	maxFinalizedEpoch := primitives.Epoch(0)
 	if maxEpoch > 2 {
 		maxFinalizedEpoch = maxEpoch - 2
 	}

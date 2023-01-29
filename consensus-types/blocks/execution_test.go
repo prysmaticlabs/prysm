@@ -98,10 +98,10 @@ func TestWrapExecutionPayloadCapella(t *testing.T) {
 		BlockHash:     []byte("blockhash"),
 		Transactions:  [][]byte{[]byte("transaction")},
 		Withdrawals: []*enginev1.Withdrawal{{
-			WithdrawalIndex:  55,
-			ValidatorIndex:   66,
-			ExecutionAddress: []byte("executionaddress"),
-			Amount:           77,
+			Index:          55,
+			ValidatorIndex: 66,
+			Address:        []byte("executionaddress"),
+			Amount:         77,
 		}},
 	}
 	payload, err := blocks.WrappedExecutionPayloadCapella(data)

@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -65,8 +65,8 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < uint64(maxCheckpointStateSize+100); i++ {
-		require.NoError(t, st.SetSlot(types.Slot(i)))
-		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: types.Epoch(i), Root: make([]byte, 32)}, st))
+		require.NoError(t, st.SetSlot(primitives.Slot(i)))
+		require.NoError(t, c.AddCheckpointState(&ethpb.Checkpoint{Epoch: primitives.Epoch(i), Root: make([]byte, 32)}, st))
 	}
 
 	assert.Equal(t, maxCheckpointStateSize, len(c.cache.Keys()))

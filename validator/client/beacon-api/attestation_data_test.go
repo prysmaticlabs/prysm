@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -9,15 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	rpcmiddleware "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
-const attestationDataEndpoint = "/eth/v1/validator/attestation_data"
-
 func TestGetAttestationData_ValidAttestation(t *testing.T) {
+	ctx := context.Background()
 	expectedSlot := uint64(5)
 	expectedCommitteeIndex := uint64(6)
 	expectedBeaconBlockRoot := "0x0636045df9bdda3ab96592cf5389032c8ec3977f911e2b53509b348dfe164d4d"
@@ -33,13 +33,14 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", expectedCommitteeIndex, expectedSlot),
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		1,
+		2,
 		rpcmiddleware.ProduceAttestationDataResponseJson{
 			Data: &rpcmiddleware.AttestationDataJson{
 				Slot:            strconv.FormatUint(expectedSlot, 10),
@@ -58,7 +59,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	resp, err := validatorClient.getAttestationData(types.Slot(expectedSlot), types.CommitteeIndex(expectedCommitteeIndex))
+	resp, err := validatorClient.getAttestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
 	require.NotNil(t, resp)
@@ -76,6 +77,8 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 }
 
 func TestGetAttestationData_InvalidData(t *testing.T) {
+	ctx := context.Background()
+
 	testCases := []struct {
 		name                 string
 		generateData         func() rpcmiddleware.ProduceAttestationDataResponseJson
@@ -181,26 +184,29 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
 				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
 				&produceAttestationDataResponseJson,
 			).Return(
 				nil,
 				nil,
 			).SetArg(
-				1,
+				2,
 				testCase.generateData(),
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getAttestationData(1, 2)
+			_, err := validatorClient.getAttestationData(ctx, 1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
 }
 
 func TestGetAttestationData_JsonResponseError(t *testing.T) {
-	const slot = types.Slot(1)
-	const committeeIndex = types.CommitteeIndex(2)
+	const slot = primitives.Slot(1)
+	const committeeIndex = primitives.CommitteeIndex(2)
+
+	ctx := context.Background()
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -208,6 +214,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
@@ -216,7 +223,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getAttestationData(slot, committeeIndex)
+	_, err := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 	assert.ErrorContains(t, "failed to get json response", err)
 	assert.ErrorContains(t, "some specific json response error", err)
 }

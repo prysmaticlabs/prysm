@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -76,7 +76,7 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 // these attestations from a queue, then group them all by validator chunk index.
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
-func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -131,7 +131,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
-func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -171,7 +171,7 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan typ
 }
 
 // Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
-func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.Slot) {
+func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan primitives.Slot) {
 	for {
 		select {
 		case <-slotTicker:
@@ -190,8 +190,8 @@ func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan types.
 // All data before that window is unnecessary for slasher, so can be periodically deleted.
 // Say HISTORY_LENGTH is 4 and we have data for epochs 0, 1, 2, 3. Once we hit epoch 4, the sliding window
 // we care about is 1, 2, 3, 4, so we can delete data for epoch 0.
-func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch types.Epoch) error {
-	var maxPruningEpoch types.Epoch
+func (s *Service) pruneSlasherDataWithinSlidingWindow(ctx context.Context, currentEpoch primitives.Epoch) error {
+	var maxPruningEpoch primitives.Epoch
 	if currentEpoch >= s.params.historyLength {
 		maxPruningEpoch = currentEpoch - s.params.historyLength
 	} else {

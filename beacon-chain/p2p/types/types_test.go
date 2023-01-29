@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -109,13 +109,13 @@ func TestSSZBytes_HashTreeRoot(t *testing.T) {
 }
 
 func TestGoodbyeCodes(t *testing.T) {
-	assert.Equal(t, types.SSZUint64(1), GoodbyeCodeClientShutdown)
-	assert.Equal(t, types.SSZUint64(2), GoodbyeCodeWrongNetwork)
-	assert.Equal(t, types.SSZUint64(3), GoodbyeCodeGenericError)
-	assert.Equal(t, types.SSZUint64(128), GoodbyeCodeUnableToVerifyNetwork)
-	assert.Equal(t, types.SSZUint64(129), GoodbyeCodeTooManyPeers)
-	assert.Equal(t, types.SSZUint64(250), GoodbyeCodeBadScore)
-	assert.Equal(t, types.SSZUint64(251), GoodbyeCodeBanned)
+	assert.Equal(t, primitives.SSZUint64(1), GoodbyeCodeClientShutdown)
+	assert.Equal(t, primitives.SSZUint64(2), GoodbyeCodeWrongNetwork)
+	assert.Equal(t, primitives.SSZUint64(3), GoodbyeCodeGenericError)
+	assert.Equal(t, primitives.SSZUint64(128), GoodbyeCodeUnableToVerifyNetwork)
+	assert.Equal(t, primitives.SSZUint64(129), GoodbyeCodeTooManyPeers)
+	assert.Equal(t, primitives.SSZUint64(250), GoodbyeCodeBadScore)
+	assert.Equal(t, primitives.SSZUint64(251), GoodbyeCodeBanned)
 
 }
 

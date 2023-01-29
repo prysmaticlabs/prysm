@@ -12,8 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // EngineClient --
@@ -22,6 +24,7 @@ type EngineClient struct {
 	PayloadIDBytes              *pb.PayloadIDBytes
 	ForkChoiceUpdatedResp       []byte
 	ExecutionPayload            *pb.ExecutionPayload
+	ExecutionPayloadCapella     *pb.ExecutionPayloadCapella
 	ExecutionBlock              *pb.ExecutionBlock
 	Err                         error
 	ErrLatestExecBlock          error
@@ -53,8 +56,15 @@ func (e *EngineClient) ForkchoiceUpdated(
 }
 
 // GetPayload --
-func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte) (*pb.ExecutionPayload, error) {
-	return e.ExecutionPayload, e.ErrGetPayload
+func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
+	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
+		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella)
+	}
+	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
+	return p, e.ErrGetPayload
 }
 
 // ExchangeTransitionConfiguration --

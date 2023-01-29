@@ -6,6 +6,7 @@ go_library(
         "generate_genesis_state.go",
         "generate_genesis_state_bellatrix.go",
         "generate_keys.go",
+        "premined_genesis_state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/runtime/interop",
     visibility = ["//visibility:public"],

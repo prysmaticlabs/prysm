@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -373,7 +373,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
 		b := util.NewBeaconBlock()
-		b.Block.Slot = types.Slot(i)
+		b.Block.Slot = primitives.Slot(i)
 		var err error
 		totalBlocks[i], err = blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -381,7 +381,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		require.NoError(t, err)
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
-		require.NoError(t, st.SetSlot(types.Slot(i)))
+		require.NoError(t, st.SetSlot(primitives.Slot(i)))
 		require.NoError(t, db.SaveState(context.Background(), st, r))
 		blockRoots = append(blockRoots, r)
 		if i%2 == 0 {
@@ -398,7 +398,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 		if s == nil {
 			continue
 		}
-		assert.Equal(t, types.Slot(1), s.Slot()%2, "State with slot %d should have been deleted", s.Slot())
+		assert.Equal(t, primitives.Slot(1), s.Slot()%2, "State with slot %d should have been deleted", s.Slot())
 	}
 }
 
@@ -566,9 +566,9 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
 	bRoots := make([][32]byte, 0)
-	slotsPerArchivedPoint := types.Slot(128)
+	slotsPerArchivedPoint := primitives.Slot(128)
 	prevRoot := genesisRoot
-	for i := types.Slot(1); i <= slotsPerArchivedPoint; i++ {
+	for i := primitives.Slot(1); i <= slotsPerArchivedPoint; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = prevRoot[:]
@@ -588,12 +588,12 @@ func TestStore_CleanUpDirtyStates_AboveThreshold(t *testing.T) {
 
 	require.NoError(t, db.SaveFinalizedCheckpoint(context.Background(), &ethpb.Checkpoint{
 		Root:  bRoots[len(bRoots)-1][:],
-		Epoch: types.Epoch(slotsPerArchivedPoint / params.BeaconConfig().SlotsPerEpoch),
+		Epoch: primitives.Epoch(slotsPerArchivedPoint / params.BeaconConfig().SlotsPerEpoch),
 	}))
 	require.NoError(t, db.CleanUpDirtyStates(context.Background(), slotsPerArchivedPoint))
 
 	for i, root := range bRoots {
-		if types.Slot(i) >= slotsPerArchivedPoint.SubSlot(slotsPerArchivedPoint.Div(3)) {
+		if primitives.Slot(i) >= slotsPerArchivedPoint.SubSlot(slotsPerArchivedPoint.Div(3)) {
 			require.Equal(t, true, db.HasState(context.Background(), root))
 		} else {
 			require.Equal(t, false, db.HasState(context.Background(), root))
@@ -610,7 +610,7 @@ func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genesisRoot))
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
-	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := primitives.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
@@ -640,7 +640,7 @@ func TestStore_CleanUpDirtyStates_DontDeleteNonFinalized(t *testing.T) {
 	require.NoError(t, db.SaveState(context.Background(), genesisState, genesisRoot))
 
 	var unfinalizedRoots [][32]byte
-	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
+	for i := primitives.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		r, err := b.Block.HashTreeRoot()
@@ -716,10 +716,10 @@ func validators(limit int) []*ethpb.Validator {
 			WithdrawalCredentials:      bytesutil.ToBytes(rand.Uint64(), 32),
 			EffectiveBalance:           rand.Uint64(),
 			Slashed:                    i%2 != 0,
-			ActivationEligibilityEpoch: types.Epoch(rand.Uint64()),
-			ActivationEpoch:            types.Epoch(rand.Uint64()),
-			ExitEpoch:                  types.Epoch(rand.Uint64()),
-			WithdrawableEpoch:          types.Epoch(rand.Uint64()),
+			ActivationEligibilityEpoch: primitives.Epoch(rand.Uint64()),
+			ActivationEpoch:            primitives.Epoch(rand.Uint64()),
+			ExitEpoch:                  primitives.Epoch(rand.Uint64()),
+			WithdrawableEpoch:          primitives.Epoch(rand.Uint64()),
 		}
 		vals = append(vals, val)
 	}

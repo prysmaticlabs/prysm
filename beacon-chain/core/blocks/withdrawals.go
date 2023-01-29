@@ -9,14 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 const executionToBLSPadding = 12
@@ -119,13 +119,13 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		return nil, errInvalidWithdrawalNumber
 	}
 	for i, withdrawal := range withdrawals {
-		if withdrawal.WithdrawalIndex != expected[i].WithdrawalIndex {
+		if withdrawal.Index != expected[i].Index {
 			return nil, errInvalidWithdrawalIndex
 		}
 		if withdrawal.ValidatorIndex != expected[i].ValidatorIndex {
 			return nil, errInvalidValidatorIndex
 		}
-		if !bytes.Equal(withdrawal.ExecutionAddress, expected[i].ExecutionAddress) {
+		if !bytes.Equal(withdrawal.Address, expected[i].Address) {
 			return nil, errInvalidExecutionAddress
 		}
 		if withdrawal.Amount != expected[i].Amount {
@@ -137,16 +137,26 @@ func ProcessWithdrawals(st state.BeaconState, withdrawals []*enginev1.Withdrawal
 		}
 	}
 	if len(withdrawals) > 0 {
-		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].WithdrawalIndex + 1); err != nil {
+		if err := st.SetNextWithdrawalIndex(withdrawals[len(withdrawals)-1].Index + 1); err != nil {
 			return nil, errors.Wrap(err, "could not set next withdrawal index")
 		}
-		nextValidatorIndex := withdrawals[len(withdrawals)-1].ValidatorIndex + 1
-		if nextValidatorIndex == types.ValidatorIndex(st.NumValidators()) {
+	}
+	var nextValidatorIndex primitives.ValidatorIndex
+	if uint64(len(withdrawals)) < params.BeaconConfig().MaxWithdrawalsPerPayload {
+		nextValidatorIndex, err = st.NextWithdrawalValidatorIndex()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get next withdrawal validator index")
+		}
+		nextValidatorIndex += primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+		nextValidatorIndex = nextValidatorIndex % primitives.ValidatorIndex(st.NumValidators())
+	} else {
+		nextValidatorIndex = withdrawals[len(withdrawals)-1].ValidatorIndex + 1
+		if nextValidatorIndex == primitives.ValidatorIndex(st.NumValidators()) {
 			nextValidatorIndex = 0
 		}
-		if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
-			return nil, errors.Wrap(err, "could not set latest withdrawal validator index")
-		}
+	}
+	if err := st.SetNextWithdrawalValidatorIndex(nextValidatorIndex); err != nil {
+		return nil, errors.Wrap(err, "could not set next withdrawal validator index")
 	}
 	return st, nil
 }
@@ -160,14 +170,15 @@ func BLSChangesSignatureBatch(
 		return bls.NewSet(), nil
 	}
 	batch := &bls.SignatureBatch{
-		Signatures: make([][]byte, len(changes)),
-		PublicKeys: make([]bls.PublicKey, len(changes)),
-		Messages:   make([][32]byte, len(changes)),
+		Signatures:   make([][]byte, len(changes)),
+		PublicKeys:   make([]bls.PublicKey, len(changes)),
+		Messages:     make([][32]byte, len(changes)),
+		Descriptions: make([]string, len(changes)),
 	}
-	epoch := slots.ToEpoch(st.Slot())
-	domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	c := params.BeaconConfig()
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not compute signing domain")
 	}
 	for i, change := range changes {
 		batch.Signatures[i] = change.Signature
@@ -181,6 +192,23 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
 		batch.Messages[i] = htr
+		batch.Descriptions[i] = signing.BlsChangeSignature
 	}
 	return batch, nil
+}
+
+// VerifyBLSChangeSignature checks the signature in the SignedBLSToExecutionChange message.
+// It validates the signature with the Capella fork version if the passed state
+// is from a previous fork.
+func VerifyBLSChangeSignature(
+	st state.BeaconState,
+	change *ethpbv2.SignedBLSToExecutionChange,
+) error {
+	c := params.BeaconConfig()
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
+	if err != nil {
+		return errors.Wrap(err, "could not compute signing domain")
+	}
+	publicKey := change.Message.FromBlsPubkey
+	return signing.VerifySigningRoot(change.Message, publicKey, change.Signature, domain)
 }

@@ -492,6 +492,18 @@ func TestCopyBLSToExecutionChanges(t *testing.T) {
 	}
 }
 
+func TestCopyHistoricalSummaries(t *testing.T) {
+	summaries := []*v1alpha1.HistoricalSummary{
+		{BlockSummaryRoot: []byte("block summary root 0"), StateSummaryRoot: []byte("state summary root 0")},
+		{BlockSummaryRoot: []byte("block summary root 1"), StateSummaryRoot: []byte("state summary root 1")},
+	}
+
+	got := v1alpha1.CopyHistoricalSummaries(summaries)
+	if !reflect.DeepEqual(got, summaries) {
+		t.Errorf("TestCopyHistoricalSummariesing() = %v, want %v", got, summaries)
+	}
+}
+
 func genAttestation() *v1alpha1.Attestation {
 	return &v1alpha1.Attestation{
 		AggregationBits: bytes(32),
@@ -878,16 +890,16 @@ func genPayloadCapella() *enginev1.ExecutionPayloadCapella {
 		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
 		Withdrawals: []*enginev1.Withdrawal{
 			{
-				WithdrawalIndex:  123,
-				ValidatorIndex:   123,
-				ExecutionAddress: bytes(20),
-				Amount:           123,
+				Index:          123,
+				ValidatorIndex: 123,
+				Address:        bytes(20),
+				Amount:         123,
 			},
 			{
-				WithdrawalIndex:  124,
-				ValidatorIndex:   456,
-				ExecutionAddress: bytes(20),
-				Amount:           456,
+				Index:          124,
+				ValidatorIndex: 456,
+				Address:        bytes(20),
+				Amount:         456,
 			},
 		},
 	}
@@ -942,10 +954,10 @@ func genWithdrawals(num int) []*enginev1.Withdrawal {
 
 func genWithdrawal() *enginev1.Withdrawal {
 	return &enginev1.Withdrawal{
-		WithdrawalIndex:  123456,
-		ValidatorIndex:   654321,
-		ExecutionAddress: bytes(20),
-		Amount:           55555,
+		Index:          123456,
+		ValidatorIndex: 654321,
+		Address:        bytes(20),
+		Amount:         55555,
 	}
 }
 

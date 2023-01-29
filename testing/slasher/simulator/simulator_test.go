@@ -6,7 +6,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	mockstategen "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen/mock"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -21,11 +21,11 @@ func setupService(t *testing.T, params *Parameters) *Simulator {
 	// We setup validators in the beacon state along with their
 	// private keys used to generate valid signatures in generated objects.
 	validators := make([]*ethpb.Validator, params.NumValidators)
-	privKeys := make(map[types.ValidatorIndex]bls.SecretKey)
+	privKeys := make(map[primitives.ValidatorIndex]bls.SecretKey)
 	for valIdx := range validators {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
-		privKeys[types.ValidatorIndex(valIdx)] = privKey
+		privKeys[primitives.ValidatorIndex(valIdx)] = privKey
 		validators[valIdx] = &ethpb.Validator{
 			PublicKey:             privKey.PublicKey().Marshal(),
 			WithdrawalCredentials: make([]byte, 32),

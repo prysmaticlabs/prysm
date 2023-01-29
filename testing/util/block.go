@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -36,6 +36,7 @@ type BlockGenConfig struct {
 	NumVoluntaryExits    uint64
 	NumTransactions      uint64 // Only for post Bellatrix blocks
 	FullSyncAggregate    bool
+	NumBLSChanges        uint64 // Only for post Capella blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -48,6 +49,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
 		NumTransactions:      0,
+		NumBLSChanges:        0,
 	}
 }
 
@@ -81,7 +83,7 @@ func GenerateFullBlock(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
-	slot types.Slot,
+	slot primitives.Slot,
 ) (*ethpb.SignedBeaconBlock, error) {
 	ctx := context.Background()
 	currentSlot := bState.Slot()
@@ -202,7 +204,7 @@ func GenerateFullBlock(
 func GenerateProposerSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
-	idx types.ValidatorIndex,
+	idx primitives.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
 	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -262,7 +264,7 @@ func generateProposerSlashings(
 func GenerateAttesterSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
-	idx types.ValidatorIndex,
+	idx primitives.ValidatorIndex,
 ) (*ethpb.AttesterSlashing, error) {
 	currentEpoch := time.CurrentEpoch(bState)
 
@@ -324,7 +326,7 @@ func generateAttesterSlashings(
 	randGen := rand.NewDeterministicGenerator()
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))
-		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), types.CommitteeIndex(committeeIndex))
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), primitives.CommitteeIndex(committeeIndex))
 		if err != nil {
 			return nil, err
 		}
@@ -359,6 +361,22 @@ func generateDepositsAndEth1Data(
 	return currentDeposits[previousDepsLen:], eth1Data, nil
 }
 
+func GenerateVoluntaryExits(bState state.BeaconState, k bls.SecretKey, idx primitives.ValidatorIndex) (*ethpb.SignedVoluntaryExit, error) {
+	currentEpoch := time.CurrentEpoch(bState)
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			Epoch:          time.PrevEpoch(bState),
+			ValidatorIndex: idx,
+		},
+	}
+	var err error
+	exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
+	if err != nil {
+		return nil, err
+	}
+	return exit, nil
+}
+
 func generateVoluntaryExits(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
@@ -387,12 +405,12 @@ func generateVoluntaryExits(
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
+func randValIndex(bState state.BeaconState) (primitives.ValidatorIndex, error) {
 	activeCount, err := helpers.ActiveValidatorCount(context.Background(), bState, time.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err
 	}
-	return types.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
+	return primitives.ValidatorIndex(rand.NewGenerator().Uint64() % activeCount), nil
 }
 
 // HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes
@@ -1018,6 +1036,73 @@ func HydrateBlindedBeaconBlockBodyCapella(b *ethpb.BlindedBeaconBlockBodyCapella
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			ExtraData:        make([]byte, 0),
+			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+		}
+	}
+	return b
+}
+
+// HydrateV2SignedBlindedBeaconBlockCapella hydrates a signed blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2SignedBlindedBeaconBlockCapella(b *v2.SignedBlindedBeaconBlockCapella) *v2.SignedBlindedBeaconBlockCapella {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateV2BlindedBeaconBlockCapella(b.Message)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockCapella hydrates a blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockCapella(b *v2.BlindedBeaconBlockCapella) *v2.BlindedBeaconBlockCapella {
+	if b == nil {
+		b = &v2.BlindedBeaconBlockCapella{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateV2BlindedBeaconBlockBodyCapella(b.Body)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockBodyCapella hydrates a blinded beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockBodyCapella(b *v2.BlindedBeaconBlockBodyCapella) *v2.BlindedBeaconBlockBodyCapella {
+	if b == nil {
+		b = &v2.BlindedBeaconBlockBodyCapella{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &v1.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &v1.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayloadHeader == nil {
+		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       make([]byte, 32),
+			FeeRecipient:     make([]byte, 20),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, 256),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 		}
 	}

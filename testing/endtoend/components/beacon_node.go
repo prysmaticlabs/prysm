@@ -14,24 +14,17 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	cmdshared "github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	"github.com/prysmaticlabs/prysm/v3/container/trie"
-	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
-	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
@@ -177,79 +170,9 @@ func NewBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *BeaconNod
 	}
 }
 
-func (node *BeaconNode) generateGenesis(ctx context.Context) (state.BeaconState, error) {
-	if e2e.TestParams.Eth1GenesisBlock == nil {
-		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
-	}
-	gb := e2e.TestParams.Eth1GenesisBlock
-
-	// so the DepositRoot in the BeaconState should be set to the HTR of an empty deposit trie.
-	t, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		return nil, err
-	}
-	dr, err := t.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	e1d := &ethpb.Eth1Data{
-		DepositRoot:  dr[:],
-		DepositCount: 0,
-		BlockHash:    gb.Hash().Bytes(),
-	}
-
-	payload := &enginev1.ExecutionPayload{
-		ParentHash:    gb.ParentHash().Bytes(),
-		FeeRecipient:  gb.Coinbase().Bytes(),
-		StateRoot:     gb.Root().Bytes(),
-		ReceiptsRoot:  gb.ReceiptHash().Bytes(),
-		LogsBloom:     gb.Bloom().Bytes(),
-		PrevRandao:    params.BeaconConfig().ZeroHash[:],
-		BlockNumber:   gb.NumberU64(),
-		GasLimit:      gb.GasLimit(),
-		GasUsed:       gb.GasUsed(),
-		Timestamp:     gb.Time(),
-		ExtraData:     gb.Extra()[:32],
-		BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
-		BlockHash:     gb.Hash().Bytes(),
-		Transactions:  make([][]byte, 0),
-	}
-	genesis, _, err := interop.GenerateGenesisStateBellatrix(ctx, e2e.TestParams.CLGenesisTime, params.BeaconConfig().MinGenesisActiveValidatorCount, payload, e1d)
-	if err != nil {
-		return nil, err
-	}
-	lbhr, err := genesis.LatestBlockHeader.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	si, err := state_native.InitializeFromProtoUnsafeBellatrix(genesis)
-	if err != nil {
-		return nil, err
-	}
-	genb, err := blocks.NewGenesisBlockForState(ctx, si)
-	if err != nil {
-		return nil, err
-	}
-	gbr, err := genb.Block().HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	log.WithField("el_block_time", gb.Time()).
-		WithField("cl_genesis_time", genesis.GenesisTime).
-		WithField("state_root", fmt.Sprintf("%#x", genb.Block().StateRoot())).
-		WithField("latest_block_header_root", fmt.Sprintf("%#x", lbhr)).
-		WithField("latest_block_header_state_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.StateRoot)).
-		WithField("latest_block_header_parent_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.ParentRoot)).
-		WithField("latest_block_header_body_root", fmt.Sprintf("%#x", genesis.LatestBlockHeader.BodyRoot)).
-		WithField("derived_block_root", fmt.Sprintf("%#x", gbr)).
-		WithField("el_block_root", fmt.Sprintf("%#x", genesis.Eth1Data.BlockHash)).
-		Info("genesis eth1 data")
-	return si, nil
-}
-
 func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	// The deposit contract starts with an empty trie, we use the BeaconState to "pre-mine" the validator registry,
-	g, err := node.generateGenesis(ctx)
+	g, err := generateGenesis(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -277,6 +200,17 @@ func (node *BeaconNode) saveGenesis(ctx context.Context) (string, error) {
 	}
 	genesisPath := path.Join(genesisDir, "genesis.ssz")
 	return genesisPath, file.WriteFile(genesisPath, genesisBytes)
+}
+
+func (node *BeaconNode) saveConfig() (string, error) {
+	cfg := params.BeaconConfig().Copy()
+	cfgBytes := params.ConfigToYaml(cfg)
+	cfgDir := path.Join(e2e.TestParams.TestPath, fmt.Sprintf("config/%d", node.index))
+	if err := file.MkdirAll(cfgDir); err != nil {
+		return "", err
+	}
+	cfgPath := path.Join(cfgDir, "beacon-config.yaml")
+	return cfgPath, file.WriteFile(cfgPath, cfgBytes)
 }
 
 // Start starts a fresh beacon node, connecting to all passed in beacon nodes.
@@ -309,6 +243,10 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	cfgPath, err := node.saveConfig()
+	if err != nil {
+		return err
+	}
 	args := []string{
 		fmt.Sprintf("--%s=%s", genesis.StatePath.Name, genesisPath),
 		fmt.Sprintf("--%s=%s/eth2-beacon-node-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
@@ -329,8 +267,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
+		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ForceClearDB.Name,
-		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,
 	}
@@ -347,24 +285,16 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	args = append(args, config.BeaconFlags...)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	// Write stdout and stderr to log files.
-	stdout, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stdout.log", index)))
-	if err != nil {
-		return err
-	}
+	// Write stderr to log files.
 	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("beacon_node_%d_stderr.log", index)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stdout.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stdout file")
-		}
 		if err := stderr.Close(); err != nil {
 			log.WithError(err).Error("Failed to close stderr file")
 		}
 	}()
-	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	log.Infof("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err = cmd.Start(); err != nil {
@@ -412,4 +342,15 @@ func (node *BeaconNode) Stop() error {
 
 func (node *BeaconNode) UnderlyingProcess() *os.Process {
 	return node.cmd.Process
+}
+
+func generateGenesis(ctx context.Context) (state.BeaconState, error) {
+	if e2e.TestParams.Eth1GenesisBlock == nil {
+		return nil, errors.New("Cannot construct bellatrix block, e2e.TestParams.Eth1GenesisBlock == nil")
+	}
+	gb := e2e.TestParams.Eth1GenesisBlock
+	t := e2e.TestParams.CLGenesisTime
+	nvals := params.BeaconConfig().MinGenesisActiveValidatorCount
+	version := e2etypes.GenesisFork()
+	return util.NewPreminedGenesis(ctx, t, nvals, version, gb)
 }

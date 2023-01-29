@@ -51,6 +51,19 @@ func BellatrixToV1Alpha1SignedBlock(bellatrixBlk *ethpbv2.SignedBeaconBlockBella
 	return v1alpha1Block, nil
 }
 
+// CapellaToV1Alpha1SignedBlock converts a v2 SignedBeaconBlockCapella proto to a v1alpha1 proto.
+func CapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBeaconBlockCapella) (*ethpbalpha.SignedBeaconBlockCapella, error) {
+	marshaledBlk, err := proto.Marshal(capellaBlk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBeaconBlockCapella{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
 // BlindedBellatrixToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlockBellatrix proto to a v1alpha1 proto.
 func BlindedBellatrixToV1Alpha1SignedBlock(bellatrixBlk *ethpbv2.SignedBlindedBeaconBlockBellatrix) (*ethpbalpha.SignedBlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(bellatrixBlk)
@@ -58,6 +71,19 @@ func BlindedBellatrixToV1Alpha1SignedBlock(bellatrixBlk *ethpbv2.SignedBlindedBe
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlockBellatrix{}
+	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v1alpha1Block, nil
+}
+
+// BlindedCapellaToV1Alpha1SignedBlock converts a v2 SignedBlindedBeaconBlockCapella proto to a v1alpha1 proto.
+func BlindedCapellaToV1Alpha1SignedBlock(capellaBlk *ethpbv2.SignedBlindedBeaconBlockCapella) (*ethpbalpha.SignedBlindedBeaconBlockCapella, error) {
+	marshaledBlk, err := proto.Marshal(capellaBlk)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v1alpha1Block := &ethpbalpha.SignedBlindedBeaconBlockCapella{}
 	if err := proto.Unmarshal(marshaledBlk, v1alpha1Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -78,6 +104,20 @@ func V1Alpha1BeaconBlockBellatrixToV2(v1alpha1Block *ethpbalpha.BeaconBlockBella
 	return v2Block, nil
 }
 
+// V1Alpha1BeaconBlockCapellaToV2 converts a v1alpha1 Capella beacon block to a v2
+// Capella block.
+func V1Alpha1BeaconBlockCapellaToV2(v1alpha1Block *ethpbalpha.BeaconBlockCapella) (*ethpbv2.BeaconBlockCapella, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BeaconBlockCapella{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
 // V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
 func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
@@ -85,6 +125,19 @@ func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.Bl
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
 	v2Block := &ethpbv2.BlindedBeaconBlockBellatrix{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
+// V1Alpha1BeaconBlockBlindedCapellaToV2Blinded converts a v1alpha1 Blinded Capella beacon block to a v2 Blinded Capella block.
+func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockCapella) (*ethpbv2.BlindedBeaconBlockCapella, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.BlindedBeaconBlockCapella{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
@@ -263,19 +316,6 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 	return v2Block, nil
 }
 
-// V1Alpha1BeaconBlockBlindedCapellaToV2Blinded converts a v1alpha1 blinded Capella beacon block to a v2 blinded Capella block.
-func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockCapella) (*ethpbv2.BlindedBeaconBlockCapella, error) {
-	marshaledBlk, err := proto.Marshal(v1alpha1Block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
-	}
-	v2Block := &ethpbv2.BlindedBeaconBlockCapella{}
-	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	return v2Block, nil
-}
-
 // BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
 func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconState, error) {
 	sourceFork := altairState.Fork()
@@ -331,6 +371,11 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
+	hrs, err := altairState.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconState{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorsRoot()),
@@ -349,7 +394,7 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(altairState.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(altairState.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(altairState.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hrs),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -453,6 +498,11 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		return nil, errors.New("execution payload header has incorrect type")
 	}
 
+	hRoots, err := st.HistoricalRoots()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical roots")
+	}
+
 	result := &ethpbv2.BeaconStateBellatrix{
 		GenesisTime:           st.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(st.GenesisValidatorsRoot()),
@@ -471,7 +521,7 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 		},
 		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
 		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		HistoricalRoots: bytesutil.SafeCopy2dBytes(hRoots),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -598,6 +648,17 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next withdrawal validator index")
 	}
+	summaries, err := st.HistoricalSummaries()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get historical summaries")
+	}
+	sourceHistoricalSummaries := make([]*ethpbv2.HistoricalSummary, len(summaries))
+	for i, summary := range summaries {
+		sourceHistoricalSummaries[i] = &ethpbv2.HistoricalSummary{
+			BlockSummaryRoot: summary.BlockSummaryRoot,
+			StateSummaryRoot: summary.StateSummaryRoot,
+		}
+	}
 
 	result := &ethpbv2.BeaconStateCapella{
 		GenesisTime:           st.GenesisTime(),
@@ -615,9 +676,8 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 			StateRoot:     bytesutil.SafeCopyBytes(sourceLatestBlockHeader.StateRoot),
 			BodyRoot:      bytesutil.SafeCopyBytes(sourceLatestBlockHeader.BodyRoot),
 		},
-		BlockRoots:      bytesutil.SafeCopy2dBytes(st.BlockRoots()),
-		StateRoots:      bytesutil.SafeCopy2dBytes(st.StateRoots()),
-		HistoricalRoots: bytesutil.SafeCopy2dBytes(st.HistoricalRoots()),
+		BlockRoots: bytesutil.SafeCopy2dBytes(st.BlockRoots()),
+		StateRoots: bytesutil.SafeCopy2dBytes(st.StateRoots()),
 		Eth1Data: &ethpbv1.Eth1Data{
 			DepositRoot:  bytesutil.SafeCopyBytes(sourceEth1Data.DepositRoot),
 			DepositCount: sourceEth1Data.DepositCount,
@@ -672,11 +732,13 @@ func BeaconStateCapellaToProto(st state.BeaconState) (*ethpbv2.BeaconStateCapell
 		},
 		NextWithdrawalIndex:          sourceNextWithdrawalIndex,
 		NextWithdrawalValidatorIndex: sourceNextWithdrawalValIndex,
+		HistoricalSummaries:          sourceHistoricalSummaries,
 	}
 
 	return result, nil
 }
 
+// V1Alpha1SignedContributionAndProofToV2 converts a v1alpha1 SignedContributionAndProof object to its v2 equivalent.
 func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.SignedContributionAndProof) *ethpbv2.SignedContributionAndProof {
 	result := &ethpbv2.SignedContributionAndProof{
 		Message: &ethpbv2.ContributionAndProof{
@@ -691,6 +753,30 @@ func V1Alpha1SignedContributionAndProofToV2(alphaContribution *ethpbalpha.Signed
 			SelectionProof: alphaContribution.Message.SelectionProof,
 		},
 		Signature: alphaContribution.Signature,
+	}
+	return result
+}
+
+func V2SignedBLSToExecutionChangeToV1Alpha1(change *ethpbv2.SignedBLSToExecutionChange) *ethpbalpha.SignedBLSToExecutionChange {
+	return &ethpbalpha.SignedBLSToExecutionChange{
+		Message: &ethpbalpha.BLSToExecutionChange{
+			ValidatorIndex:     change.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(change.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(change.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(change.Signature),
+	}
+}
+
+// V1Alpha1SignedBLSToExecChangeToV2 converts a v1alpha1 SignedBLSToExecutionChange object to its v2 equivalent.
+func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecutionChange) *ethpbv2.SignedBLSToExecutionChange {
+	result := &ethpbv2.SignedBLSToExecutionChange{
+		Message: &ethpbv2.BLSToExecutionChange{
+			ValidatorIndex:     alphaChange.Message.ValidatorIndex,
+			FromBlsPubkey:      bytesutil.SafeCopyBytes(alphaChange.Message.FromBlsPubkey),
+			ToExecutionAddress: bytesutil.SafeCopyBytes(alphaChange.Message.ToExecutionAddress),
+		},
+		Signature: bytesutil.SafeCopyBytes(alphaChange.Signature),
 	}
 	return result
 }

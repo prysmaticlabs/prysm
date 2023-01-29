@@ -1,6 +1,7 @@
 package beacon_api
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -32,16 +33,18 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(
+	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	resp, err := validatorClient.getDomainData(epoch, domainType)
+	resp, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -54,40 +57,42 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 }
 
 func TestGetDomainData_GenesisError(t *testing.T) {
-	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(nil, nil, errors.New("foo error")).Times(1)
+	genesisProvider.EXPECT().GetGenesis(ctx).Return(nil, nil, errors.New("foo error")).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	_, err := validatorClient.getDomainData(epoch, domainType)
+	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "failed to get genesis info", err)
 	assert.ErrorContains(t, "foo error", err)
 }
 
 func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
-	const genesisValidatorRoot = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := params.BeaconConfig().DomainBeaconProposer
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	ctx := context.Background()
+
 	// Make sure that GetGenesis() is called exactly once
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
-	genesisProvider.EXPECT().GetGenesis().Return(
+	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: "foo"},
 		nil,
 		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
-	_, err := validatorClient.getDomainData(epoch, domainType)
+	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "invalid genesis validators root: foo", err)
 }

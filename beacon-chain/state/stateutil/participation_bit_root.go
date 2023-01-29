@@ -44,7 +44,7 @@ func packParticipationBits(bytes []byte) ([][32]byte, error) {
 		}
 		// We create chunks from the list of items based on the
 		// indices determined above.
-		chunk := [32]byte{}
+		var chunk [32]byte
 		copy(chunk[:], bytes[i:j])
 		chunks = append(chunks, chunk)
 	}

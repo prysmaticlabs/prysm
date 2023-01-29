@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -42,7 +42,7 @@ func TestHasVoted_OK(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
-	exitEpoch := types.Epoch(199)
+	exitEpoch := primitives.Epoch(199)
 	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{{
 		ExitEpoch: exitEpoch},
 	}}
@@ -56,8 +56,8 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ProperExit(t *testing.T) {
-	exitedEpoch := types.Epoch(100)
-	idx := types.ValidatorIndex(3)
+	exitedEpoch := primitives.Epoch(100)
+	idx := primitives.ValidatorIndex(3)
 	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch},
 		{ExitEpoch: exitedEpoch + 1},
@@ -74,8 +74,8 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 }
 
 func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
-	exitedEpoch := types.Epoch(100)
-	idx := types.ValidatorIndex(4)
+	exitedEpoch := primitives.Epoch(100)
+	idx := primitives.ValidatorIndex(4)
 	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
 		{ExitEpoch: exitedEpoch + 2},
 		{ExitEpoch: exitedEpoch + 2},
@@ -132,7 +132,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 
-	slashedIdx := types.ValidatorIndex(3)
+	slashedIdx := primitives.ValidatorIndex(3)
 
 	proposer, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err, "Could not get proposer")
@@ -167,7 +167,7 @@ func TestSlashValidator_OK(t *testing.T) {
 func TestActivatedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *ethpb.BeaconState
-		wanted []types.ValidatorIndex
+		wanted []primitives.ValidatorIndex
 	}{
 		{
 			state: &ethpb.BeaconState{
@@ -189,7 +189,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0, 1, 3},
+			wanted: []primitives.ValidatorIndex{0, 1, 3},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -199,7 +199,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{},
+			wanted: []primitives.ValidatorIndex{},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -210,7 +210,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0},
+			wanted: []primitives.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {
@@ -224,7 +224,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 func TestSlashedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *ethpb.BeaconState
-		wanted []types.ValidatorIndex
+		wanted []primitives.ValidatorIndex
 	}{
 		{
 			state: &ethpb.BeaconState{
@@ -243,7 +243,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0, 2},
+			wanted: []primitives.ValidatorIndex{0, 2},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -253,7 +253,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{},
+			wanted: []primitives.ValidatorIndex{},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -264,7 +264,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0},
+			wanted: []primitives.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {
@@ -278,7 +278,7 @@ func TestSlashedValidatorIndices(t *testing.T) {
 func TestExitedValidatorIndices(t *testing.T) {
 	tests := []struct {
 		state  *ethpb.BeaconState
-		wanted []types.ValidatorIndex
+		wanted []primitives.ValidatorIndex
 	}{
 		{
 			state: &ethpb.BeaconState{
@@ -300,7 +300,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0, 2},
+			wanted: []primitives.ValidatorIndex{0, 2},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -312,7 +312,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{},
+			wanted: []primitives.ValidatorIndex{},
 		},
 		{
 			state: &ethpb.BeaconState{
@@ -324,7 +324,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 					},
 				},
 			},
-			wanted: []types.ValidatorIndex{0},
+			wanted: []primitives.ValidatorIndex{0},
 		},
 	}
 	for _, tt := range tests {

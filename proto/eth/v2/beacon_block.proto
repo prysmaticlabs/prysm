@@ -98,15 +98,15 @@ message SignedBeaconBlockBellatrix {
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SignedBlindedBeaconBlockBellatrix {
-  BlindedBeaconBlockBellatrix message = 1;
+message SignedBeaconBlockCapella {
+  BeaconBlockCapella message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message SignedBeaconBlockCapella {
-  BeaconBlockCapella message = 1;
+message SignedBlindedBeaconBlockBellatrix {
+  BlindedBeaconBlockBellatrix message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -320,13 +320,12 @@ message BeaconBlockBodyCapella {
   // Sync aggregate object to track sync committee votes for light client support.
   v1.SyncAggregate sync_aggregate = 9;
 
-  // Execution payload: the embedded execution payload of the block [New in Bellatrix]
+  // Execution payload: the embedded execution payload of the block [Modified in Capella]
   ethereum.engine.v1.ExecutionPayloadCapella execution_payload = 10;
 
-  // At most MAX_BLS_TO_EXECUTION_CHANGES. [New in Capella]
-  repeated v2.SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+  // BLS To Execution Changes: signed messages to change withdrawal credentials [New in Capella]
+  repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
-
 
 message BlindedBeaconBlockBodyCapella {
   // The validators RANDAO reveal 96 byte value.
@@ -360,11 +359,11 @@ message BlindedBeaconBlockBodyCapella {
   // Sync aggregate object to track sync committee votes for light client support.
   v1.SyncAggregate sync_aggregate = 9;
 
-  // Execution payload header: the embedded execution payload of the block [New in Bellatrix]
+  // Execution payload header: the embedded execution payload of the block [Modified in Capella]
   ethereum.engine.v1.ExecutionPayloadHeaderCapella execution_payload_header = 10;
 
-  // At most MAX_BLS_TO_EXECUTION_CHANGES. [New in Capella]
-  repeated v2.SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
+  // BLS To Execution Changes: signed messages to change withdrawal credentials [New in Capella]
+  repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
 message BeaconBlockBodyAltair {

@@ -6,7 +6,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -15,25 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
-
-func Test_SignedBeaconBlock_SetBlock(t *testing.T) {
-	b := &eth.BeaconBlockCapella{Slot: 1, Body: &eth.BeaconBlockBodyCapella{ExecutionPayload: &pb.ExecutionPayloadCapella{}}}
-	wb, err := NewBeaconBlock(b)
-	require.NoError(t, err)
-	wsb, err := NewSignedBeaconBlock(&eth.SignedBeaconBlockCapella{
-		Block: &eth.BeaconBlockCapella{StateRoot: bytesutil.PadTo([]byte("stateroot"), 32),
-			ParentRoot: bytesutil.PadTo([]byte("parent"), 32),
-			Body: &eth.BeaconBlockBodyCapella{
-				RandaoReveal:     make([]byte, fieldparams.BLSSignatureLength),
-				Graffiti:         make([]byte, fieldparams.RootLength),
-				ExecutionPayload: &pb.ExecutionPayloadCapella{},
-			}},
-		Signature: make([]byte, fieldparams.BLSSignatureLength),
-	})
-	require.NoError(t, err)
-	require.NoError(t, wsb.SetBlock(wb))
-	require.DeepEqual(t, wsb.Block(), wb)
-}
 
 func Test_BeaconBlockIsNil(t *testing.T) {
 	t.Run("not nil", func(t *testing.T) {
@@ -161,13 +142,13 @@ func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
 func Test_BeaconBlock_Slot(t *testing.T) {
 	b := &BeaconBlock{}
 	b.SetSlot(128)
-	assert.Equal(t, types.Slot(128), b.Slot())
+	assert.Equal(t, primitives.Slot(128), b.Slot())
 }
 
 func Test_BeaconBlock_ProposerIndex(t *testing.T) {
 	b := &BeaconBlock{}
 	b.SetProposerIndex(128)
-	assert.Equal(t, types.ValidatorIndex(128), b.ProposerIndex())
+	assert.Equal(t, primitives.ValidatorIndex(128), b.ProposerIndex())
 }
 
 func Test_BeaconBlock_ParentRoot(t *testing.T) {
