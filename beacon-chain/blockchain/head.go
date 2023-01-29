@@ -276,6 +276,16 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 	return s.head.state.Copy()
 }
 
+// This returns a read only version of the head state.
+// It does not perform a copy of the head state.
+// This is a lock free version.
+func (s *Service) headStateReadOnly(ctx context.Context) state.ReadOnlyBeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockChain.headStateReadOnly")
+	defer span.End()
+
+	return s.head.state
+}
+
 // This returns the genesis validators root of the head state.
 // This is a lock free version.
 func (s *Service) headGenesisValidatorsRoot() [32]byte {
