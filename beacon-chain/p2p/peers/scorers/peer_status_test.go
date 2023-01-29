@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers/scorers"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -75,7 +75,7 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 		{
 			name: "existent peer partial score",
 			update: func(scorer *scorers.PeerStatusScorer) {
-				headSlot := types.Slot(128)
+				headSlot := primitives.Slot(128)
 				scorer.SetHeadSlot(headSlot)
 				scorer.SetPeerStatus("peer1", &pb.Status{
 					HeadRoot: make([]byte, 32),
@@ -95,7 +95,7 @@ func TestScorers_PeerStatus_Score(t *testing.T) {
 		{
 			name: "existent peer full score",
 			update: func(scorer *scorers.PeerStatusScorer) {
-				headSlot := types.Slot(128)
+				headSlot := primitives.Slot(128)
 				scorer.SetHeadSlot(headSlot)
 				scorer.SetPeerStatus("peer1", &pb.Status{
 					HeadRoot: make([]byte, 32),
@@ -191,7 +191,7 @@ func TestScorers_PeerStatus_PeerStatus(t *testing.T) {
 	}, p2ptypes.ErrInvalidEpoch)
 	status, err = peerStatuses.Scorers().PeerStatusScorer().PeerStatus("peer1")
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(128), status.HeadSlot)
+	assert.Equal(t, primitives.Slot(128), status.HeadSlot)
 	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer1"))
 	assert.ErrorContains(t, p2ptypes.ErrInvalidEpoch.Error(), peerStatuses.Scorers().ValidationError("peer2"))
 	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer3"))

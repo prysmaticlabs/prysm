@@ -21,20 +21,21 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	getSignedBlockPath      = "/eth/v2/beacon/blocks"
-	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
-	getForkForStatePath     = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath = "/eth/v1/beacon/weak_subjectivity"
-	getForkSchedulePath     = "/eth/v1/config/fork_schedule"
-	getStatePath            = "/eth/v2/debug/beacon/states"
-	getNodeVersionPath      = "/eth/v1/node/version"
+	getSignedBlockPath       = "/eth/v2/beacon/blocks"
+	getBlockRootPath         = "/eth/v1/beacon/blocks/{{.Id}}/root"
+	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
+	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
+	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
+	getStatePath             = "/eth/v2/debug/beacon/states"
+	getNodeVersionPath       = "/eth/v1/node/version"
+	changeBLStoExecutionPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
 )
 
 // StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
@@ -61,7 +62,7 @@ func IdFromRoot(r [32]byte) StateOrBlockId {
 
 // IdFromSlot encodes a Slot in the format expected by the API in places where a slot can be used to identify
 // a BeaconState or SignedBeaconBlock.
-func IdFromSlot(s types.Slot) StateOrBlockId {
+func IdFromSlot(s primitives.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
 }
 
@@ -146,7 +147,6 @@ func withSSZEncoding() reqOption {
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
-	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -337,10 +337,64 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 		return nil, err
 	}
 	return &WeakSubjectivityData{
-		Epoch:     types.Epoch(epoch),
+		Epoch:     primitives.Epoch(epoch),
 		BlockRoot: bytesutil.ToBytes32(blockRoot),
 		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
+}
+
+// SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
+// If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+	u := c.baseURL.ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
+	body, err := json.Marshal(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal JSON")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewBuffer(body))
+	if err != nil {
+		return errors.Wrap(err, "invalid format, failed to create new POST request object")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		decoder := json.NewDecoder(resp.Body)
+		decoder.DisallowUnknownFields()
+		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		if err := decoder.Decode(errorJson); err != nil {
+			return errors.Wrapf(err, "failed to decode error JSON for %s", resp.Request.URL)
+		}
+		for _, failure := range errorJson.Failures {
+			w := request[failure.Index].Message
+			log.WithFields(log.Fields{
+				"validator_index":    w.ValidatorIndex,
+				"withdrawal_address": w.ToExecutionAddress,
+			}).Error(failure.Message)
+		}
+		return errors.Errorf("POST error %d: %s", errorJson.Code, errorJson.Message)
+	}
+	return nil
+}
+
+// GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
+// Returns a struct representation of json response.
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
+	body, err := c.get(ctx, changeBLStoExecutionPath)
+	if err != nil {
+		return nil, err
+	}
+	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
+	err = json.Unmarshal(body, poolResponse)
+	if err != nil {
+		return nil, err
+	}
+	return poolResponse, nil
 }
 
 func non200Err(response *http.Response) error {
@@ -388,7 +442,7 @@ func (f *forkResponse) Fork() (*ethpb.Fork, error) {
 	return &ethpb.Fork{
 		CurrentVersion:  cSlice,
 		PreviousVersion: pSlice,
-		Epoch:           types.Epoch(epoch),
+		Epoch:           primitives.Epoch(epoch),
 	}, nil
 }
 
@@ -413,7 +467,7 @@ func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, e
 		version := bytesutil.ToBytes4(vSlice)
 		ofs = append(ofs, forks.ForkScheduleEntry{
 			Version: version,
-			Epoch:   types.Epoch(uint64(epoch)),
+			Epoch:   primitives.Epoch(uint64(epoch)),
 		})
 	}
 	sort.Sort(ofs)

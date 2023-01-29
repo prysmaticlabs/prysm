@@ -11,7 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
@@ -67,10 +67,10 @@ func TestBeaconApiHelpers_TestUint64ToString(t *testing.T) {
 	const val = uint64(1234)
 
 	assert.Equal(t, expectedResult, uint64ToString(val))
-	assert.Equal(t, expectedResult, uint64ToString(types.Slot(val)))
-	assert.Equal(t, expectedResult, uint64ToString(types.ValidatorIndex(val)))
-	assert.Equal(t, expectedResult, uint64ToString(types.CommitteeIndex(val)))
-	assert.Equal(t, expectedResult, uint64ToString(types.Epoch(val)))
+	assert.Equal(t, expectedResult, uint64ToString(primitives.Slot(val)))
+	assert.Equal(t, expectedResult, uint64ToString(primitives.ValidatorIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(primitives.CommitteeIndex(val)))
+	assert.Equal(t, expectedResult, uint64ToString(primitives.Epoch(val)))
 }
 
 func TestBuildURL_NoParams(t *testing.T) {

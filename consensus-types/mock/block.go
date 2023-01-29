@@ -4,7 +4,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	field_params "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -102,7 +102,7 @@ type BeaconBlock struct {
 	Htr             [field_params.RootLength]byte
 	HtrErr          error
 	BeaconBlockBody interfaces.BeaconBlockBody
-	BlockSlot       types.Slot
+	BlockSlot       primitives.Slot
 }
 
 func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
@@ -113,11 +113,11 @@ func (m BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	return m.Htr, m.HtrErr
 }
 
-func (m BeaconBlock) Slot() types.Slot {
+func (m BeaconBlock) Slot() primitives.Slot {
 	return m.BlockSlot
 }
 
-func (BeaconBlock) ProposerIndex() types.ValidatorIndex {
+func (BeaconBlock) ProposerIndex() primitives.ValidatorIndex {
 	panic("implement me")
 }
 
@@ -173,11 +173,11 @@ func (BeaconBlock) ToBlinded() (interfaces.BeaconBlock, error) {
 	panic("implement me")
 }
 
-func (BeaconBlock) SetSlot(_ types.Slot) {
+func (BeaconBlock) SetSlot(_ primitives.Slot) {
 	panic("implement me")
 }
 
-func (BeaconBlock) SetProposerIndex(_ types.ValidatorIndex) {
+func (BeaconBlock) SetProposerIndex(_ primitives.ValidatorIndex) {
 	panic("implement me")
 }
 

@@ -8,7 +8,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -41,7 +41,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	stateSlot := types.Slot(1)
+	stateSlot := primitives.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
@@ -58,7 +58,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	assert.Equal(t, fRoot, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
+	assert.Equal(t, primitives.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -103,12 +103,12 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)
-	assert.Equal(t, s1.Slot(), types.Slot(1), "Did not save state")
+	assert.Equal(t, s1.Slot(), primitives.Slot(1), "Did not save state")
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, 1/service.slotsPerArchivedPoint)
 	assert.Equal(t, r1, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(1), lastIndex, "Did not save last archived index")
+	assert.Equal(t, primitives.Slot(1), lastIndex, "Did not save last archived index")
 
 	require.LogsContain(t, hook, "Saved state in DB")
 }
@@ -121,7 +121,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	service := New(beaconDB, doublylinkedtree.New())
 	service.slotsPerArchivedPoint = 1
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	stateSlot := types.Slot(1)
+	stateSlot := primitives.Slot(1)
 	require.NoError(t, beaconState.SetSlot(stateSlot))
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
@@ -204,10 +204,10 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)
-	assert.Equal(t, s1.Slot(), types.Slot(1), "Did not save state")
+	assert.Equal(t, s1.Slot(), primitives.Slot(1), "Did not save state")
 	s4, err := service.beaconDB.State(ctx, r4)
 	require.NoError(t, err)
-	assert.Equal(t, s4.Slot(), types.Slot(4), "Did not save state")
+	assert.Equal(t, s4.Slot(), primitives.Slot(4), "Did not save state")
 
 	gotRoot := service.beaconDB.ArchivedPointRoot(ctx, 1/service.slotsPerArchivedPoint)
 	assert.Equal(t, r1, gotRoot, "Did not save archived root")
@@ -215,7 +215,7 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 	assert.Equal(t, r4, gotRoot, "Did not save archived root")
 	lastIndex, err := service.beaconDB.LastArchivedSlot(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, types.Slot(4), lastIndex, "Did not save last archived index")
+	assert.Equal(t, primitives.Slot(4), lastIndex, "Did not save last archived index")
 	assert.DeepEqual(t, [][32]byte{r7}, service.saveHotStateDB.blockRootsOfSavedStates, "Did not remove all saved hot state roots")
 	require.LogsContain(t, hook, "Saved state in DB")
 }

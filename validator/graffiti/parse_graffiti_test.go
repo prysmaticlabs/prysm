@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -100,7 +100,7 @@ specific:
 
 	wanted := &Graffiti{
 		Hash: hash.Hash(input),
-		Specific: map[types.ValidatorIndex]string{
+		Specific: map[primitives.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",
@@ -149,7 +149,7 @@ specific:
 			"Mr E was here",
 			"Mr F was here",
 		},
-		Specific: map[types.ValidatorIndex]string{
+		Specific: map[primitives.ValidatorIndex]string{
 			1234:   "Yolo",
 			555:    "What's up",
 			703727: "Meow",

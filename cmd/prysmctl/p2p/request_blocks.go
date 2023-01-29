@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
@@ -139,8 +139,8 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		return err
 	}
 
-	startSlot := types.Slot(requestBlocksFlags.StartSlot)
-	var headSlot *types.Slot
+	startSlot := primitives.Slot(requestBlocksFlags.StartSlot)
+	var headSlot *primitives.Slot
 	if startSlot == 0 {
 		headResp, err := c.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 		if err != nil {

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
@@ -18,8 +18,8 @@ func TestDefaultParams(t *testing.T) {
 
 func TestParams_cellIndex(t *testing.T) {
 	type args struct {
-		validatorIndex types.ValidatorIndex
-		epoch          types.Epoch
+		validatorIndex primitives.ValidatorIndex
+		epoch          primitives.Epoch
 	}
 	tests := []struct {
 		name   string
@@ -160,7 +160,7 @@ func TestParams_chunkIndex(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
-		epoch  types.Epoch
+		epoch  primitives.Epoch
 		want   uint64
 	}{
 		{
@@ -311,7 +311,7 @@ func TestParams_validatorChunkIndex(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex types.ValidatorIndex
+		validatorIndex primitives.ValidatorIndex
 		want           uint64
 	}{
 		{
@@ -355,7 +355,7 @@ func TestParams_chunkOffset(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields *Parameters
-		epoch  types.Epoch
+		epoch  primitives.Epoch
 		want   uint64
 	}{
 		{
@@ -399,7 +399,7 @@ func TestParams_validatorOffset(t *testing.T) {
 	tests := []struct {
 		name           string
 		fields         *Parameters
-		validatorIndex types.ValidatorIndex
+		validatorIndex primitives.ValidatorIndex
 		want           uint64
 	}{
 		{
@@ -444,7 +444,7 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 		name              string
 		fields            *Parameters
 		validatorChunkIdx uint64
-		want              []types.ValidatorIndex
+		want              []primitives.ValidatorIndex
 	}{
 		{
 			name: "Returns proper indices",
@@ -452,7 +452,7 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 				validatorChunkSize: 3,
 			},
 			validatorChunkIdx: 2,
-			want:              []types.ValidatorIndex{6, 7, 8},
+			want:              []primitives.ValidatorIndex{6, 7, 8},
 		},
 		{
 			name: "0 validator chunk size returns empty",
@@ -460,7 +460,7 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 				validatorChunkSize: 0,
 			},
 			validatorChunkIdx: 100,
-			want:              []types.ValidatorIndex{},
+			want:              []primitives.ValidatorIndex{},
 		},
 	}
 	for _, tt := range tests {
@@ -480,7 +480,7 @@ func TestParameters_firstEpoch(t *testing.T) {
 		name       string
 		params     *Parameters
 		chunkIndex uint64
-		want       types.Epoch
+		want       primitives.Epoch
 	}{
 		{
 			name:       "first epoch of chunk 0 is 0",
@@ -511,7 +511,7 @@ func TestParameters_lastEpoch(t *testing.T) {
 		name       string
 		params     *Parameters
 		chunkIndex uint64
-		want       types.Epoch
+		want       primitives.Epoch
 	}{
 		{
 			name: "with chunk_size = 3, last epoch of chunk 0 is 2",

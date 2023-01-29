@@ -7,7 +7,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v3/config/validator/service"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/iface"
@@ -43,7 +43,7 @@ type FakeValidator struct {
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
 	UpdateDutiesArg1                  uint64
-	NextSlotRet                       <-chan types.Slot
+	NextSlotRet                       <-chan primitives.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
 	ProposerSettingsErr               error
@@ -112,7 +112,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 }
 
 // CanonicalHeadSlot for mocking.
-func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error) {
+func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
 		return 0, iface.ErrConnectionIssue
@@ -121,19 +121,19 @@ func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (types.Slot, error
 }
 
 // SlotDeadline for mocking.
-func (fv *FakeValidator) SlotDeadline(_ types.Slot) time.Time {
+func (fv *FakeValidator) SlotDeadline(_ primitives.Slot) time.Time {
 	fv.SlotDeadlineCalled = true
 	return prysmTime.Now()
 }
 
 // NextSlot for mocking.
-func (fv *FakeValidator) NextSlot() <-chan types.Slot {
+func (fv *FakeValidator) NextSlot() <-chan primitives.Slot {
 	fv.NextSlotCalled = true
 	return fv.NextSlotRet
 }
 
 // UpdateDuties for mocking.
-func (fv *FakeValidator) UpdateDuties(_ context.Context, slot types.Slot) error {
+func (fv *FakeValidator) UpdateDuties(_ context.Context, slot primitives.Slot) error {
 	fv.UpdateDutiesCalled = true
 	fv.UpdateDutiesArg1 = uint64(slot)
 	return fv.UpdateDutiesRet
@@ -146,7 +146,7 @@ func (fv *FakeValidator) UpdateProtections(_ context.Context, _ uint64) error {
 }
 
 // LogValidatorGainsAndLosses for mocking.
-func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ types.Slot) error {
+func (fv *FakeValidator) LogValidatorGainsAndLosses(_ context.Context, _ primitives.Slot) error {
 	fv.LogValidatorGainsAndLossesCalled = true
 	return nil
 }
@@ -157,7 +157,7 @@ func (fv *FakeValidator) ResetAttesterProtectionData() {
 }
 
 // RolesAt for mocking.
-func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
+func (fv *FakeValidator) RolesAt(_ context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = uint64(slot)
 	vr := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
@@ -166,30 +166,30 @@ func (fv *FakeValidator) RolesAt(_ context.Context, slot types.Slot) (map[[field
 }
 
 // SubmitAttestation for mocking.
-func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (fv *FakeValidator) SubmitAttestation(_ context.Context, slot primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = uint64(slot)
 }
 
 // ProposeBlock for mocking.
-func (fv *FakeValidator) ProposeBlock(_ context.Context, slot types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (fv *FakeValidator) ProposeBlock(_ context.Context, slot primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = uint64(slot)
 }
 
 // SubmitAggregateAndProof for mocking.
-func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // SubmitSyncCommitteeMessage for mocking.
-func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // LogAttestationsSubmitted for mocking.
 func (_ *FakeValidator) LogAttestationsSubmitted() {}
 
 // UpdateDomainDataCaches for mocking.
-func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
+func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
 
 // BalancesByPubkeys for mocking.
 func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]uint64 {
@@ -249,7 +249,7 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // HasProposerSettings for mocking
