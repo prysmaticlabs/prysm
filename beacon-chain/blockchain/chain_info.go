@@ -192,7 +192,7 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 // If the head is nil from service struct,
 // it will attempt to get the head state from DB.
 func (s *Service) HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.HeadState")
+	ctx, span := trace.StartSpan(ctx, "blockChain.HeadStateReadOnly")
 	defer span.End()
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
