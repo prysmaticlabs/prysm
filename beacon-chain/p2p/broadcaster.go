@@ -264,3 +264,7 @@ func attestationToTopic(subnet uint64, forkDigest [4]byte) string {
 func syncCommitteeToTopic(subnet uint64, forkDigest [4]byte) string {
 	return fmt.Sprintf(SyncCommitteeSubnetTopicFormat, forkDigest, subnet)
 }
+
+func blobSidecarToTopic(subnet uint64, forkDigest [4]byte) string {
+	return fmt.Sprintf(BlobSidecarSubnetTopicFormat, forkDigest, subnet)
+}

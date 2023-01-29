@@ -54,6 +54,8 @@ func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
 		iterator = filterNodes(ctx, iterator, s.filterPeerForAttSubnet(index))
 	case strings.Contains(topic, GossipSyncCommitteeMessage):
 		iterator = filterNodes(ctx, iterator, s.filterPeerForSyncSubnet(index))
+	case strings.Contains(topic, GossipBlobMessage):
+		iterator = filterNodes(ctx, iterator, s.filterPeersForBlobSubnet(index))
 	default:
 		return false, errors.New("no subnet exists for provided topic")
 	}
@@ -112,6 +114,26 @@ func (s *Service) filterPeerForAttSubnet(index uint64) func(node *enode.Node) bo
 
 // returns a method with filters peers specifically for a particular sync subnet.
 func (s *Service) filterPeerForSyncSubnet(index uint64) func(node *enode.Node) bool {
+	return func(node *enode.Node) bool {
+		if !s.filterPeer(node) {
+			return false
+		}
+		subnets, err := syncSubnets(node.Record())
+		if err != nil {
+			return false
+		}
+		indExists := false
+		for _, comIdx := range subnets {
+			if comIdx == index {
+				indExists = true
+				break
+			}
+		}
+		return indExists
+	}
+}
+
+func (s *Service) filterPeersForBlobSubnet(index uint64) func(node *enode.Node) bool {
 	return func(node *enode.Node) bool {
 		if !s.filterPeer(node) {
 			return false

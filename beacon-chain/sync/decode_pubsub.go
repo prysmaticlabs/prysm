@@ -35,6 +35,8 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 		// Given that both sync message related subnets have the same message name, we have to
 		// differentiate them below.
+	case strings.Contains(topic, p2p.GossipBlobMessage):
+		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.BlobSidecar{})]
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	}
