@@ -206,7 +206,8 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("could not save head")
 	}
 
-	if err := s.pruneCanonicalAttsFromPool(ctx, newHeadRoot, newHeadBlock); err != nil {
+	// Only need to prune attestations from pool if the head has changed.
+	if err := s.pruneAttsFromPool(newHeadBlock); err != nil {
 		return err
 	}
 

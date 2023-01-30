@@ -595,17 +595,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 	return nil
 }
 
-// This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
-// meaning the block `b` is part of the canonical chain.
-func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
-	canonical, err := s.IsCanonical(ctx, r)
-	if err != nil {
-		return err
-	}
-	if !canonical {
-		return nil
-	}
-
+// This removes the attestations in block `b` from the attestation mem pool.
+func (s *Service) pruneAttsFromPool(b interfaces.SignedBeaconBlock) error {
 	atts := b.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
