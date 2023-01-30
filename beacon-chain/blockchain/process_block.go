@@ -220,7 +220,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 
 	if blockRoot == headRoot {
-		if err := s.pruneAttsFromPool(ctx, signed); err != nil {
+		if err := s.pruneAttsFromPool(signed); err != nil {
 			return err
 		}
 	}
@@ -603,7 +603,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
-func (s *Service) pruneAttsFromPool(ctx context.Context, b interfaces.SignedBeaconBlock) error {
+func (s *Service) pruneAttsFromPool(b interfaces.SignedBeaconBlock) error {
 	atts := b.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {

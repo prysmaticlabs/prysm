@@ -1089,7 +1089,7 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, service.pruneAttsFromPool(ctx, wsb))
+	require.NoError(t, service.pruneAttsFromPool(wsb))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
