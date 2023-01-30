@@ -366,35 +366,45 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	return &emptypb.Empty{}, nil
 }
 
+func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
+	changes := *ptr
+	limit := broadcastBLSChangesRateLimit
+	if len(changes) < broadcastBLSChangesRateLimit {
+		limit = len(changes)
+	}
+	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range changes[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	changes = changes[limit:]
+}
+
 func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
+	bs.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
+
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			limit := broadcastBLSChangesRateLimit
-			if len(changes) < broadcastBLSChangesRateLimit {
-				limit = len(changes)
-			}
-			st, err := bs.ChainInfoFetcher.HeadState(ctx)
-			if err != nil {
-				log.WithError(err).Error("could not get head state")
-				return
-			}
-			for _, ch := range changes[:limit] {
-				if ch != nil {
-					_, err := blocks.ValidateBLSToExecutionChange(st, ch)
-					if err != nil {
-						log.WithError(err).Error("could not validate BLS to execution change")
-						continue
-					}
-					if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
-						log.WithError(err).Error("could not broadcast BLS to execution changes.")
-					}
-				}
-			}
-			changes = changes[limit:]
+			bs.broadcastBLSBatch(ctx, &changes)
 			if len(changes) == 0 {
 				return
 			}

@@ -43,35 +43,44 @@ func (s *Service) broadcastBLSChanges(currSlot types.Slot) {
 	go s.rateBLSChanges(s.ctx, broadcastChanges)
 }
 
+func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLSToExecutionChange) {
+	changes := *ptr
+	limit := broadcastBLSChangesRateLimit
+	if len(changes) < broadcastBLSChangesRateLimit {
+		limit = len(changes)
+	}
+	st, err := s.cfg.chain.HeadState(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range changes[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := s.cfg.p2p.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	changes = changes[limit:]
+}
+
 func (s *Service) rateBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
+	s.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			limit := broadcastBLSChangesRateLimit
-			if len(changes) < broadcastBLSChangesRateLimit {
-				limit = len(changes)
-			}
-			st, err := s.cfg.chain.HeadState(ctx)
-			if err != nil {
-				log.WithError(err).Error("could not get head state")
-				return
-			}
-			for _, ch := range changes[:limit] {
-				if ch != nil {
-					_, err := blocks.ValidateBLSToExecutionChange(st, ch)
-					if err != nil {
-						log.WithError(err).Error("could not validate BLS to execution change")
-						continue
-					}
-					if err := s.cfg.p2p.Broadcast(s.ctx, ch); err != nil {
-						log.WithError(err).Error("could not broadcast BLS to execution changes.")
-					}
-				}
-			}
-			changes = changes[limit:]
+			s.broadcastBLSBatch(ctx, &changes)
 			if len(changes) == 0 {
 				return
 			}
