@@ -6,13 +6,10 @@ package depositsnapshot
 import (
 	"crypto/sha256"
 
-	"context"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	"math/big"
 )
 
 var (
@@ -32,25 +29,7 @@ var (
 	ErrTooManyDeposits = errors.New("number of deposits should not be greater than the capacity of the tree")
 )
 
-type DepositCache struct {
-	depositTrie *depositTrie
-	lock        sync.RWMutex
-}
-
-// FinalizedDeposits stores the trie of deposits that have been included
-// in the beacon state up to the latest finalized checkpoint.
-type FinalizedDeposits struct {
-	Deposits        *depositTrie
-	MerkleTrieIndex int64
-}
-
-func (d *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit
-func (d *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int)
-func (d *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte)
-func (d *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits
-func (d *DepositCache) NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
-
-// DepositTree is the Merkle tree representation of deposits.
+// depositTree is the Merkle tree representation of deposits.
 type depositTree struct {
 	tree                    MerkleTreeNode
 	mixInLength             uint64 // number of deposits in the tree, reference implementation calls this mix_in_length.
@@ -65,10 +44,10 @@ type executionBlock struct {
 // New creates an empty deposit tree.
 //
 //nolint:unused
-func newDepositTrie() *depositTree {
+func newDepositTree() *depositTree {
 	var leaves [][32]byte
 	merkle := create(leaves, DepositContractDepth)
-	return &DepositTree{
+	return &depositTree{
 		tree:                    merkle,
 		mixInLength:             0,
 		finalizedExecutionBlock: executionBlock{},
@@ -93,22 +72,22 @@ func (d *depositTree) getSnapshot() (DepositTreeSnapshot, error) {
 func fromSnapshot(snapshot DepositTreeSnapshot) (*depositTree, error) {
 	root, err := snapshot.CalculateRoot()
 	if err != nil {
-		return DepositTree{}, err
+		return nil, err
 	}
 	if snapshot.depositRoot != root {
-		return DepositTree{}, ErrInvalidSnapshotRoot
+		return nil, ErrInvalidSnapshotRoot
 	}
 	if snapshot.depositCount >= math.PowerOf2(uint64(DepositContractDepth)) {
-		return DepositTree{}, ErrTooManyDeposits
+		return nil, ErrTooManyDeposits
 	}
 	tree, err := fromSnapshotParts(snapshot.finalized, snapshot.depositCount, DepositContractDepth)
 	if err != nil {
-		return DepositTree{}, err
+		return nil, err
 	}
 	if snapshot.depositCount == 0 {
-		return DepositTree{}, ErrNoDeposits
+		return nil, ErrNoDeposits
 	}
-	return DepositTree{
+	return &depositTree{
 		tree:                    tree,
 		mixInLength:             snapshot.depositCount,
 		finalizedExecutionBlock: snapshot.executionBlock,
