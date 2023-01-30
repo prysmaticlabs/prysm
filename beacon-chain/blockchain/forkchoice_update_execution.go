@@ -16,10 +16,16 @@ func (s *Service) isNewProposer() bool {
 func (s *Service) isNewHead(r [32]byte) bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-	return r == [32]byte{} || r != s.headRoot()
+
+	currentHeadRoot := s.originBlockRoot
+	if s.head != nil {
+		currentHeadRoot = s.headRoot()
+	}
+
+	return r == [32]byte{} || r != currentHeadRoot
 }
 
-func (s *Service) getHeadStateAndBlock(ctx context.Context, r [32]byte) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
+func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
 	if !s.hasBlockInInitSyncOrDB(ctx, r) {
 		return nil, nil, errors.New("block does not exist")
 	}
@@ -35,11 +41,12 @@ func (s *Service) getHeadStateAndBlock(ctx context.Context, r [32]byte) (state.B
 }
 
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte) error {
-	if !s.isNewHead(newHeadRoot) && !s.isNewProposer() {
+	isNewHead := s.isNewHead(newHeadRoot)
+	if !isNewHead && !s.isNewProposer() {
 		return nil
 	}
 
-	headState, headBlock, err := s.getHeadStateAndBlock(ctx, newHeadRoot)
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
 		return nil
@@ -54,8 +61,11 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 		return err
 	}
 
-	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
+	if isNewHead {
+		if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+			log.WithError(err).Error("could not save head")
+		}
 	}
+
 	return nil
 }

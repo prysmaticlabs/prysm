@@ -35,12 +35,18 @@ func TestService_isNewHead(t *testing.T) {
 	service.head = &head{root: [32]byte{1}}
 	require.Equal(t, true, service.isNewHead([32]byte{2}))
 	require.Equal(t, false, service.isNewHead([32]byte{1}))
+
+	// Nil head should use origin root
+	service.head = nil
+	service.originBlockRoot = [32]byte{3}
+	require.Equal(t, true, service.isNewHead([32]byte{2}))
+	require.Equal(t, false, service.isNewHead([32]byte{3}))
 }
 
 func TestService_getHeadStateAndBlock(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
-	_, _, err := service.getHeadStateAndBlock(context.Background(), [32]byte{})
+	_, _, err := service.getStateAndBlock(context.Background(), [32]byte{})
 	require.ErrorContains(t, "block does not exist", err)
 
 	blk, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{Signature: []byte{1}}))
