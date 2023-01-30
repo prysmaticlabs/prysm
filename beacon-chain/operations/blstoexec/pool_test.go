@@ -407,3 +407,29 @@ func TestValidatorExists(t *testing.T) {
 		assert.Equal(t, false, pool.ValidatorExists(30))
 	})
 }
+
+func TestPoolCycleMap(t *testing.T) {
+	pool := NewPool()
+	firstChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: primitives.ValidatorIndex(0),
+		}}
+	pool.InsertBLSToExecChange(firstChange)
+	secondChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: primitives.ValidatorIndex(10),
+		}}
+	pool.InsertBLSToExecChange(secondChange)
+	thirdChange := &eth.SignedBLSToExecutionChange{
+		Message: &eth.BLSToExecutionChange{
+			ValidatorIndex: primitives.ValidatorIndex(30),
+		}}
+	pool.InsertBLSToExecChange(thirdChange)
+
+	pool.cycleMap()
+	require.Equal(t, true, pool.ValidatorExists(0))
+	require.Equal(t, true, pool.ValidatorExists(10))
+	require.Equal(t, true, pool.ValidatorExists(30))
+	require.Equal(t, false, pool.ValidatorExists(20))
+
+}
