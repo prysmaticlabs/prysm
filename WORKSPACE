@@ -69,7 +69,7 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "60821f298a7399450b51b9020394904bbad477c18718d2ad6c789f231e5b8b45",
+    sha256 = "e783be1fca064c2eaa8eb3770ab4f5901abdfa85a0268dbfb2cfe6dc8b171dab",
     strip_prefix = "bazel-tools-a2138311856f55add11cd7009a5abc8d4fd6f163",
     urls = ["https://github.com/atlassian/bazel-tools/archive/a2138311856f55add11cd7009a5abc8d4fd6f163.tar.gz"],
 )
