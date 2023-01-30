@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/thread-safe"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -19,7 +20,7 @@ const DomainByteLength = 4
 
 // digestMap maps the fork version and genesis validator root to the
 // resultant fork digest.
-var digestMap = make(map[string][32]byte)
+var digestMap = threadsafe.NewThreadSafeMap(make(map[string][32]byte))
 
 // ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
 // failed to verify.
@@ -244,7 +245,8 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //	       genesis_validators_root=genesis_validators_root,
 //	   ))
 func computeForkDataRoot(version, root []byte) ([32]byte, error) {
-	if val, ok := digestMap[string(version)+string(root)]; ok {
+	key := string(version) + string(root)
+	if val, ok := digestMap.Get(key); ok {
 		return val, nil
 	}
 	r, err := (&ethpb.ForkData{
@@ -257,7 +259,7 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	// Cache result of digest computation
 	// as this is a hot path and doesn't need
 	// to be constantly computed.
-	digestMap[string(version)+string(root)] = r
+	digestMap.Put(key, r)
 	return r, nil
 }
 
