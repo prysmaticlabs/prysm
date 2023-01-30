@@ -189,6 +189,7 @@ filegroup(
 )
 
 consensus_spec_version = "v1.3.0-rc.2"
+
 consensus_spec_test_version = "v1.3.0-rc.2-hotfix"
 
 bls_test_version = "v0.1.1"
