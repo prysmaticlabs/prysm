@@ -224,10 +224,10 @@ func TestStore_Prune_ReturnEarly(t *testing.T) {
 func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{'1'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{'2'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
@@ -235,6 +235,7 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
+	require.Equal(t, len(s.nodeByPayload), 1)
 }
 
 // This test starts with the following branching diagram
@@ -304,10 +305,10 @@ func TestStore_tips(t *testing.T) {
 func TestStore_PruneMapsNodes(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, [32]byte{'1'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, [32]byte{'2'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
@@ -315,6 +316,7 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 	s.finalizedCheckpoint.Root = indexToHash(1)
 	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
+	require.Equal(t, len(s.nodeByPayload), 1)
 
 }
 
