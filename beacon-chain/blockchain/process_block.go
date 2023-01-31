@@ -494,6 +494,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
 
+	var err error
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
@@ -508,25 +509,25 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		s.headLock.RLock()
-		st := s.head.state
-		s.headLock.RUnlock()
-		if err := reportEpochMetrics(ctx, postState, st); err != nil {
-			return err
-		}
-
-		var err error
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
 
 		// Update caches at epoch boundary slot.
-		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
+		// The following updates have shortcut to return nil cheaply if fulfilled during boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
+			return err
+		}
+
+		headSt, err := s.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
 			return err
 		}
 	}
