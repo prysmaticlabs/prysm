@@ -189,8 +189,11 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 }
 
 // HeadStateReadOnly returns the read only head state of the chain.
-// If the head is nil from service struct,
-// it will attempt to get the head state from DB.
+// If the head is nil from service struct, it will attempt to get the
+// head state from DB. Any callers of this method MUST only use the
+// state instance to read fields from the state. Any type assertions back
+// to the concrete type and subsequent use of it could lead to corruption
+// of the state.
 func (s *Service) HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.HeadStateReadOnly")
 	defer span.End()
