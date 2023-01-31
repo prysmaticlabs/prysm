@@ -91,9 +91,15 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
 	// Exit early if no matching validators we found or we don't want to further filter validators by status.
 	if len(valContainers) == 0 || len(req.Status) == 0 {
-		return &ethpb.StateValidatorsResponse{Data: valContainers, ExecutionOptimistic: isOptimistic}, nil
+		return &ethpb.StateValidatorsResponse{Data: valContainers, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 	}
 
 	filterStatus := make(map[ethpb.ValidatorStatus]bool, len(req.Status))
@@ -123,12 +129,6 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 			filteredVals = append(filteredVals, vc)
 		}
 	}
-
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
-	}
-	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateValidatorsResponse{Data: filteredVals, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
