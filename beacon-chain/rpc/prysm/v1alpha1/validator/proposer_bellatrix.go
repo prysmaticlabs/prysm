@@ -337,19 +337,6 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 	if err != nil {
 		return nil, err
 	}
-	headerRoot, err := header.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-
-	payloadRoot, err := payload.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	if headerRoot != payloadRoot {
-		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
-			"%#x != %#x", headerRoot, payloadRoot)
-	}
 
 	capellaPayload, err := payload.PbCapella()
 	if err != nil {
