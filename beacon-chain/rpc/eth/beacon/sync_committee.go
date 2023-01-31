@@ -96,12 +96,19 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
 	return &ethpbv2.StateSyncCommitteesResponse{
 		Data: &ethpbv2.SyncCommitteeValidators{
 			Validators:          committeeIndices,
 			ValidatorAggregates: subcommittees,
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
