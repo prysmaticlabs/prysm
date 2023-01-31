@@ -162,6 +162,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
