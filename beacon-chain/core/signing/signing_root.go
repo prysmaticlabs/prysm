@@ -1,6 +1,8 @@
 package signing
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
