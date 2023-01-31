@@ -39,6 +39,12 @@ type DepositFetcher interface {
 	NonFinalizedDeposits(ctx context.Context, lastFinalizedIndex int64, untilBlk *big.Int) []*ethpb.Deposit
 }
 
+type DepositInserter interface {
+	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
+	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
+	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64)
+}
+
 // FinalizedDeposits stores the trie of deposits that have been included
 // in the beacon state up to the latest finalized checkpoint.
 type FinalizedDeposits struct {
