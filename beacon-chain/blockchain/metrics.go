@@ -227,7 +227,7 @@ func reportSlotMetrics(stateSlot, headSlot, clockSlot primitives.Slot, finalized
 }
 
 // reportEpochMetrics reports epoch related metrics.
-func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconState) error {
+func reportEpochMetrics(ctx context.Context, postState, headState state.ReadOnlyBeaconState) error {
 	currentEpoch := primitives.Epoch(postState.Slot() / params.BeaconConfig().SlotsPerEpoch)
 
 	// Validator instances
