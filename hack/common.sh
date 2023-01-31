@@ -23,7 +23,7 @@ readonly system
 findutil="find"
 # On OSX `find` is not GNU find compatible, so require "findutils" package.
 if [ "$system" == "darwin" ]; then
-    if [[ ! -x "/usr/local/bin/gfind" ]]; then
+    if [[ ! -x "/usr/local/bin/gfind" && ! -x "/opt/homebrew/bin/gfind" ]]; then
         color 31 "Make sure that GNU 'findutils' package is installed: brew install findutils"
         exit 1
     else
