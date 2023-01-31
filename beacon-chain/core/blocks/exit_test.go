@@ -269,7 +269,7 @@ func TestExitSignatureBatch(t *testing.T) {
 		v.PublicKey = pubkey
 
 		message := &ethpb.VoluntaryExit{
-			ValidatorIndex: types.ValidatorIndex(i),
+			ValidatorIndex: primitives.ValidatorIndex(i),
 		}
 
 		validators[i] = v
