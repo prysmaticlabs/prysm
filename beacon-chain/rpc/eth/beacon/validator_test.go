@@ -184,6 +184,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -208,6 +209,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		idNums := []primitives.ValidatorIndex{20, 66, 90, 100}
@@ -236,6 +238,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -266,6 +269,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -288,6 +292,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 
@@ -317,6 +322,7 @@ func TestListValidators(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
