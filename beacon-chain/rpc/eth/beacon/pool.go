@@ -315,7 +315,7 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitSignedBLSToExecutionChanges")
 	defer span.End()
-	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -372,7 +372,7 @@ func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.Sign
 	if len(changes) < broadcastBLSChangesRateLimit {
 		limit = len(changes)
 	}
-	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
 		return
