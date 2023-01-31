@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
@@ -23,6 +24,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+const broadcastBLSChangesRateLimit = 128
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -347,7 +350,7 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 			toBroadcast = append(toBroadcast, alphaChange)
 		}
 	}
-	bs.Broadcaster.BroadcastBLSChanges(ctx, toBroadcast)
+	go bs.broadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
 		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
@@ -361,6 +364,52 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation")
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
+	changes := *ptr
+	limit := broadcastBLSChangesRateLimit
+	if len(changes) < broadcastBLSChangesRateLimit {
+		limit = len(changes)
+	}
+	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range changes[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	changes = changes[limit:]
+}
+
+func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
+	bs.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			bs.broadcastBLSBatch(ctx, &changes)
+			if len(changes) == 0 {
+				return
+			}
+		}
+	}
 }
 
 // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
