@@ -22,7 +22,7 @@ func (s *Service) isNewHead(r [32]byte) bool {
 		currentHeadRoot = s.headRoot()
 	}
 
-	return r == [32]byte{} || r != currentHeadRoot
+	return r != currentHeadRoot || r == [32]byte{}
 }
 
 func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
