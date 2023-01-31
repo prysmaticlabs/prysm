@@ -232,6 +232,48 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 	})
 }
 
+func TestRetrieveHead_ReadOnly(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	oldBlock := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, util.NewBeaconBlock())
+	oldRoot, err := oldBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.head = &head{
+		root:  oldRoot,
+		block: oldBlock,
+	}
+
+	newHeadSignedBlock := util.NewBeaconBlock()
+	newHeadSignedBlock.Block.Slot = 1
+	newHeadBlock := newHeadSignedBlock.Block
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+
+	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
+	newRoot, err := newHeadBlock.HashTreeRoot()
+	require.NoError(t, err)
+	state, blkRoot, err := prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(1))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
+
+	rOnlyState, err := service.HeadStateReadOnly(ctx)
+	require.NoError(t, err)
+
+	assert.Equal(t, rOnlyState, service.head.state, "Head is not the same object")
+}
+
 func TestSaveOrphanedAtts(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
