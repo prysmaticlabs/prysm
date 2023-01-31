@@ -163,47 +163,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
 		return err
-	}
-	return nil
-}
-
-// This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
-	s.headLock.RLock()
-	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
-		s.headLock.RUnlock()
-		return nil
-	}
-	s.headLock.RUnlock()
-
-	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
-		log.Debug("New head does not exist in DB. Do nothing")
-		return nil // We don't have the block, don't notify the engine and update head.
-	}
-
-	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get new head block")
-		return nil
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get state from db")
-		return nil
-	}
-	arg := &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  newHeadRoot,
-		headBlock: newHeadBlock.Block(),
-	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
-	if err != nil {
-		return err
-	}
-	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
-		log.WithError(err).Error("could not save head")
 	}
 	return nil
 }
