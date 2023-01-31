@@ -62,7 +62,13 @@ func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorReq
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
-	return &ethpb.StateValidatorResponse{Data: valContainer[0], ExecutionOptimistic: isOptimistic}, nil
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	return &ethpb.StateValidatorResponse{Data: valContainer[0], ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // ListValidators returns filterable list of validators with their balance, status and index.
@@ -118,7 +124,13 @@ func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidators
 		}
 	}
 
-	return &ethpb.StateValidatorsResponse{Data: filteredVals, ExecutionOptimistic: isOptimistic}, nil
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	return &ethpb.StateValidatorsResponse{Data: filteredVals, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // ListValidatorBalances returns a filterable list of validator balances.
@@ -148,7 +160,13 @@ func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.Validato
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
-	return &ethpb.ValidatorBalancesResponse{Data: valBalances, ExecutionOptimistic: isOptimistic}, nil
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	return &ethpb.ValidatorBalancesResponse{Data: valBalances, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // ListCommittees retrieves the committees for the given state at the given epoch.
@@ -207,7 +225,13 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
-	return &ethpb.StateCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic}, nil
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	return &ethpb.StateCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // This function returns the validator object based on the passed in ID. The validator ID could be its public key,

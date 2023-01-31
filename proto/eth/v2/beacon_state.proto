@@ -193,6 +193,7 @@ message BeaconStateResponseV2 {
   Version version = 1;
   BeaconStateContainer data = 2;
   bool execution_optimistic = 3;
+  bool finalized = 4;
 }
 
 message BeaconStateSSZResponseV2 {
