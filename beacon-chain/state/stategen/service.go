@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -96,8 +97,11 @@ func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...St
 	for _, o := range opts {
 		o(s)
 	}
-	fc.SetBalancesByRooter(s.BalancesByRoot)
-
+	if !features.Get().EnableDefensivePull {
+		fc.SetBalancesByRooter(s.BalancesByRoot)
+	} else {
+		fc.SetBalancesByRooter(s.NonSlashedBalancesByRoot)
+	}
 	return s
 }
 

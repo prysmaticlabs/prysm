@@ -93,7 +93,7 @@ func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch primit
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
 	finalized := finalizedEpoch == n.finalizedEpoch || finalizedEpoch == 0
 	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
-		if n.unrealizedJustifiedEpoch+1 >= currentEpoch {
+		if n.unrealizedJustifiedEpoch+1 >= currentEpoch && n.justifiedEpoch+2 >= currentEpoch {
 			justified = true
 		}
 		if n.unrealizedFinalizedEpoch >= finalizedEpoch {

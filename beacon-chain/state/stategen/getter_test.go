@@ -48,6 +48,14 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, beaconState.SetSlot(1))
+	val, err := beaconState.ValidatorAtIndex(0)
+	require.NoError(t, err)
+	val.Slashed = true
+	require.NoError(t, beaconState.UpdateValidatorAtIndex(0, val))
+	roval, err := beaconState.ValidatorAtIndexReadOnly(0)
+	require.NoError(t, err)
+	require.Equal(t, true, roval.Slashed())
+
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
 	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
@@ -61,6 +69,9 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	for i := range bal {
 		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, bal[i])
 	}
+	nonSlashedBals, err := service.NonSlashedBalancesByRoot(ctx, bRoot)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), nonSlashedBals[0])
 }
 
 func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {
