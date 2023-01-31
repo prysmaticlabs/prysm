@@ -115,6 +115,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
+
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")
@@ -135,7 +136,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
-
 	if header.Timestamp() != uint64(t.Unix()) {
 		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
