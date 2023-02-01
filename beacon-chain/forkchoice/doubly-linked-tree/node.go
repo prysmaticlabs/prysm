@@ -89,7 +89,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 // viableForHead returns true if the node is viable to head.
 // Any node with different finalized or justified epoch than
 // the ones in fork choice store should not be viable to head.
-func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
+func (n *Node) viableForHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
 	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
 		if n.unrealizedJustifiedEpoch+1 >= currentEpoch && n.justifiedEpoch+2 >= currentEpoch {
@@ -101,9 +101,9 @@ func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch primit
 
 func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
 	if n.bestDescendant == nil {
-		return n.viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch)
+		return n.viableForHead(justifiedEpoch, currentEpoch)
 	}
-	return n.bestDescendant.viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch)
+	return n.bestDescendant.viableForHead(justifiedEpoch, currentEpoch)
 }
 
 // setNodeAndParentValidated sets the current node and all the ancestors as validated (i.e. non-optimistic).

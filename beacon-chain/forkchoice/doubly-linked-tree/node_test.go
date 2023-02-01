@@ -144,18 +144,16 @@ func TestNode_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
 		justifiedEpoch primitives.Epoch
-		finalizedEpoch primitives.Epoch
 		want           bool
 	}{
-		{&Node{}, 0, 0, true},
-		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
+		{&Node{}, 0, true},
+		{&Node{}, 1, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
 	}
 	for _, tc := range tests {
-		got := tc.n.viableForHead(tc.justifiedEpoch, tc.finalizedEpoch, 5)
+		got := tc.n.viableForHead(tc.justifiedEpoch, 5)
 		assert.Equal(t, tc.want, got)
 	}
 }
