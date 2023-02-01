@@ -32,6 +32,7 @@ import (
 // churnLimit is normally 4 unless the validator set is extremely large.
 var churnLimit = 4
 var depositValCount = e2e.DepositCount
+var numOfExits = 20
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
 var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
@@ -71,21 +72,21 @@ var DepositedValidatorsAreActive = e2etypes.Evaluator{
 // ProposeVoluntaryExit sends a voluntary exit from randomly selected validator in the genesis set.
 var ProposeVoluntaryExit = e2etypes.Evaluator{
 	Name:       "propose_voluntary_exit_epoch_%d",
-	Policy:     policies.OnEpoch(4),
+	Policy:     policies.OnEpoch(7),
 	Evaluation: proposeVoluntaryExit,
 }
 
 // ValidatorsHaveExited checks the beacon state for the exited validator and ensures its marked as exited.
 var ValidatorsHaveExited = e2etypes.Evaluator{
 	Name:       "voluntary_has_exited_%d",
-	Policy:     policies.OnEpoch(5),
+	Policy:     policies.OnEpoch(8),
 	Evaluation: validatorsHaveExited,
 }
 
 // SubmitWithdrawal sends a withdrawal from a previously exited validator.
 var SubmitWithdrawal = e2etypes.Evaluator{
 	Name:       "submit_withdrawal_epoch_%d",
-	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch + 1),
+	Policy:     policies.BetweenEpochs(helpers.CapellaE2EForkEpoch-1, helpers.CapellaE2EForkEpoch),
 	Evaluation: submitWithdrawal,
 }
 
@@ -93,7 +94,7 @@ var SubmitWithdrawal = e2etypes.Evaluator{
 var ValidatorsHaveWithdrawn = e2etypes.Evaluator{
 	Name:       "validator_has_withdrawn_%d",
 	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch + 1),
-	Evaluation: validatorsHaveExited,
+	Evaluation: validatorsAreWithdrawn,
 }
 
 // ValidatorsVoteWithTheMajority verifies whether validator vote for eth1data using the majority algorithm.
@@ -359,8 +360,8 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	if err != nil {
 		return err
 	}
-	if len(execIndices) > 20 {
-		execIndices = execIndices[:20]
+	if len(execIndices) > numOfExits {
+		execIndices = execIndices[:numOfExits]
 	}
 
 	deposits, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
@@ -398,15 +399,24 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		ec.ExitedVals[pubk] = true
 		return nil
 	}
-	randIndex := primitives.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
-	if err := sendExit(randIndex); err != nil {
-		return err
-	}
 
+	// Send exits for keys which already contain execution credentials.
 	for _, idx := range execIndices {
 		if err := sendExit(primitives.ValidatorIndex(idx)); err != nil {
 			return err
 		}
+	}
+
+	// Send an exit for a non-exited validator.
+	for i := 0; i < numOfExits; {
+		randIndex := primitives.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
+		if ec.ExitedVals[bytesutil.ToBytes48(privKeys[randIndex].PublicKey().Marshal())] {
+			continue
+		}
+		if err := sendExit(randIndex); err != nil {
+			return err
+		}
+		i++
 	}
 
 	return nil
@@ -557,7 +567,14 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		return err
 	}
 	changes := make([]*v2.SignedBLSToExecutionChange, 0)
+	// Only send half the number of changes each time, to allow us to test
+	// at the fork boundary.
+	wantedChanges := numOfExits / 2
 	for _, idx := range exitedIndices {
+		// Exit sending more change messages.
+		if len(changes) >= wantedChanges {
+			break
+		}
 		val, err := st.ValidatorAtIndex(idx)
 		if err != nil {
 			return err
@@ -591,4 +608,44 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	_, err = beaconAPIClient.SubmitSignedBLSToExecutionChanges(ctx, &v2.SubmitBLSToExecutionChangesRequest{Changes: changes})
 
 	return err
+}
+
+func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	beaconClient := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpb.NewDebugClient(conn)
+
+	ctx := context.Background()
+	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "could not get chain head")
+	}
+	stObj, err := debugClient.GetBeaconState(ctx, &ethpb.BeaconStateRequest{QueryFilter: &ethpb.BeaconStateRequest_Slot{Slot: chainHead.HeadSlot}})
+	if err != nil {
+		return errors.Wrap(err, "could not get state object")
+	}
+	versionedMarshaler, err := detect.FromState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state marshaler")
+	}
+	st, err := versionedMarshaler.UnmarshalBeaconState(stObj.Encoded)
+	if err != nil {
+		return errors.Wrap(err, "could not get state")
+	}
+
+	for key, _ := range ec.ExitedVals {
+		valIdx, ok := st.ValidatorIndexByPubkey(key)
+		if !ok {
+			return errors.Errorf("pubkey %#x does not exist in our state", key)
+		}
+		bal, err := st.BalanceAtIndex(valIdx)
+		if err != nil {
+			return err
+		}
+		if bal != 0 {
+			return errors.Errorf("Validator index %d with key %#x hasn't withdrawn. Their balance is %d.", valIdx, key, bal)
+		}
+
+	}
+	return nil
 }

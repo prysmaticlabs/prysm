@@ -1,9 +1,9 @@
 package params
 
 const (
-	AltairE2EForkEpoch    = 0
-	BellatrixE2EForkEpoch = 0
-	CapellaE2EForkEpoch   = 4
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
+	CapellaE2EForkEpoch   = 10
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.

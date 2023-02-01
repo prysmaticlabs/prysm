@@ -21,7 +21,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -47,6 +47,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
 		ev.SubmitWithdrawal,
+		ev.ValidatorsHaveWithdrawn,
 		ev.ProcessesDepositsInBlocks,
 		ev.ActivatesDepositedValidators,
 		ev.DepositedValidatorsAreActive,
@@ -99,7 +100,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
