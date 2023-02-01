@@ -91,16 +91,12 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 // the ones in fork choice store should not be viable to head.
 func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
 	justified := justifiedEpoch == n.justifiedEpoch || justifiedEpoch == 0
-	finalized := finalizedEpoch == n.finalizedEpoch || finalizedEpoch == 0
 	if features.Get().EnableDefensivePull && !justified && justifiedEpoch+1 == currentEpoch {
 		if n.unrealizedJustifiedEpoch+1 >= currentEpoch && n.justifiedEpoch+2 >= currentEpoch {
 			justified = true
 		}
-		if n.unrealizedFinalizedEpoch >= finalizedEpoch {
-			finalized = true
-		}
 	}
-	return justified && finalized
+	return justified
 }
 
 func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
