@@ -41,8 +41,9 @@ func (m *Map[K, V]) Do(fn func(mp map[K]V)) {
 
 // Keys returns the keys of a thread-safe map.
 func (m *Map[K, V]) Keys() []K {
-	r := make([]K, 0, len(m.items))
+	var r []K
 	m.view(func(mp map[K]V) {
+		r = make([]K, 0, len(m.items))
 		for k := range mp {
 			key := k
 			r = append(r, key)
