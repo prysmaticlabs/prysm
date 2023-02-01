@@ -366,8 +366,7 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	return &emptypb.Empty{}, nil
 }
 
-func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
-	changes := *ptr
+func (bs *Server) broadcastBLSBatch(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) []*ethpbalpha.SignedBLSToExecutionChange {
 	limit := broadcastBLSChangesRateLimit
 	if len(changes) < broadcastBLSChangesRateLimit {
 		limit = len(changes)
@@ -375,7 +374,7 @@ func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.Sign
 	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
-		return
+		return changes
 	}
 	for _, ch := range changes[:limit] {
 		if ch != nil {
@@ -390,10 +389,11 @@ func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.Sign
 		}
 	}
 	changes = changes[limit:]
+	return changes
 }
 
 func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
-	bs.broadcastBLSBatch(ctx, &changes)
+	changes = bs.broadcastBLSBatch(ctx, changes)
 	if len(changes) == 0 {
 		return
 	}
@@ -404,7 +404,7 @@ func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			bs.broadcastBLSBatch(ctx, &changes)
+			changes = bs.broadcastBLSBatch(ctx, changes)
 			if len(changes) == 0 {
 				return
 			}
