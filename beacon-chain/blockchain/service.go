@@ -95,7 +95,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
-		cfg:                  &config{},
+		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
