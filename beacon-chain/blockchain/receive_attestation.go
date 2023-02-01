@@ -132,6 +132,43 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	}()
 }
 
+// UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
+// It requires no external inputs.
+func (s *Service) UpdateHead(ctx context.Context) error {
+	// Only one process can process attestations and update head at a time.
+	s.processAttestationsLock.Lock()
+	defer s.processAttestationsLock.Unlock()
+
+	start := time.Now()
+	s.processAttestations(ctx)
+	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
+	justified := s.ForkChoicer().JustifiedCheckpoint()
+	balances, err := s.justifiedBalances.get(ctx, justified.Root)
+	if err != nil {
+		return err
+	}
+	start = time.Now()
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	if err != nil {
+		log.WithError(err).Error("Could not compute head from new attestations")
+	}
+	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+
+	s.headLock.RLock()
+	if s.headRoot() != newHeadRoot {
+		log.WithFields(logrus.Fields{
+			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+		}).Debug("Head changed due to attestations")
+	}
+	s.headLock.RUnlock()
+	if err := s.forkchoiceUpdateWithExecution(ctx, newHeadRoot); err != nil {
+		return err
+	}
+	return nil
+}
+
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
 func (s *Service) processAttestations(ctx context.Context) {
 	atts := s.cfg.AttPool.ForkchoiceAttestations()
