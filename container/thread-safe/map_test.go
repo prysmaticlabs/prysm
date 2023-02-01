@@ -56,6 +56,30 @@ func BenchmarkMap_Generic(b *testing.B) {
 		}
 	}
 }
+func BenchmarkMap_GenericTx(b *testing.B) {
+	items := make(map[int]string)
+	mm := NewThreadSafeMap(items)
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			mm.Do(func(mp map[int]string) {
+				mp[j] = "foo"
+				_ = mp[j]
+				delete(mp, j)
+			})
+		}
+	}
+}
+func BenchmarkMap_Old(b *testing.B) {
+	items := make(map[int]string)
+	mm := NewThreadSafeOldMap(items)
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < 1000; j++ {
+			mm.Put(j, "foo")
+			mm.Get(j)
+			mm.Delete(j)
+		}
+	}
+}
 
 func TestMap(t *testing.T) {
 	m := map[int]string{

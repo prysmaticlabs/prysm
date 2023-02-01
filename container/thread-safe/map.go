@@ -17,12 +17,24 @@ func NewThreadSafeMap[K comparable, V any](m map[K]V) *Map[K, V] {
 	}
 }
 
-func (m *Map[K, V]) do(fn func(mp map[K]V)) {
+func (m *Map[K, V]) view(fn func(mp map[K]V)) {
 	m.lock.RLock()
-	defer m.lock.RUnlock()
 	fn(m.items)
+	m.lock.RUnlock()
 }
 
+func (m *Map[K, V]) do(fn func(mp map[K]V)) {
+	m.lock.Lock()
+	fn(m.items)
+	m.lock.Unlock()
+}
+
+// View an immutable snapshot of the map
+func (m *Map[K, V]) View(fn func(mp map[K]V)) {
+	m.view(fn)
+}
+
+// Do an action on the thread safe map
 func (m *Map[K, V]) Do(fn func(mp map[K]V)) {
 	m.do(fn)
 }
@@ -30,7 +42,7 @@ func (m *Map[K, V]) Do(fn func(mp map[K]V)) {
 // Keys returns the keys of a thread-safe map.
 func (m *Map[K, V]) Keys() []K {
 	r := make([]K, 0, len(m.items))
-	m.do(func(mp map[K]V) {
+	m.view(func(mp map[K]V) {
 		for k := range mp {
 			key := k
 			r = append(r, key)
@@ -41,7 +53,7 @@ func (m *Map[K, V]) Keys() []K {
 
 // Len of the thread-safe map.
 func (m *Map[K, V]) Len() (l int) {
-	m.do(func(mp map[K]V) {
+	m.view(func(mp map[K]V) {
 		l = len(m.items)
 	})
 	return
@@ -49,7 +61,7 @@ func (m *Map[K, V]) Len() (l int) {
 
 // Get an item from a thread-safe map.
 func (m *Map[K, V]) Get(k K) (v V, ok bool) {
-	m.do(func(mp map[K]V) {
+	m.view(func(mp map[K]V) {
 		v, ok = mp[k]
 	})
 	return v, ok
@@ -70,13 +82,15 @@ func (m *Map[K, V]) Delete(k K) {
 }
 
 // Range runs the function fn(k K, v V) bool for each key value pair
+// The keys are determined by a snapshot taken at the beginning of the range call
 // If fn returns false, then the loop stops
-// Only one invocation of fn will be active at one time
-// The order is unspecified
-func (m *Map[K, V]) Range(fn func(k K, v V)) {
-	m.do(func(mp map[K]V) {
+// Only one invocation of fn will be active at one time, the iteration order is unspecified.
+func (m *Map[K, V]) Range(fn func(k K, v V) bool) {
+	m.view(func(mp map[K]V) {
 		for k, v := range mp {
-			fn(k, v)
+			if !fn(k, v) {
+				return
+			}
 		}
 	})
 }
