@@ -17,32 +17,20 @@ func NewThreadSafeMap[K comparable, V any](m map[K]V) *Map[K, V] {
 	}
 }
 
-func (m *Map[K, V]) view(fn func(mp map[K]V)) {
-	m.lock.RLock()
-	fn(m.items)
-	m.lock.RUnlock()
-}
-
-func (m *Map[K, V]) do(fn func(mp map[K]V)) {
-	m.lock.Lock()
-	fn(m.items)
-	m.lock.Unlock()
-}
-
-// View an immutable snapshot of the map
+// view an immutable snapshot of the map
 func (m *Map[K, V]) View(fn func(mp map[K]V)) {
-	m.view(fn)
+	m.read(fn)
 }
 
 // Do an action on the thread safe map
 func (m *Map[K, V]) Do(fn func(mp map[K]V)) {
-	m.do(fn)
+	m.write(fn)
 }
 
 // Keys returns the keys of a thread-safe map.
 func (m *Map[K, V]) Keys() []K {
 	var r []K
-	m.view(func(mp map[K]V) {
+	m.View(func(mp map[K]V) {
 		r = make([]K, 0, len(m.items))
 		for k := range mp {
 			key := k
@@ -54,7 +42,7 @@ func (m *Map[K, V]) Keys() []K {
 
 // Len of the thread-safe map.
 func (m *Map[K, V]) Len() (l int) {
-	m.view(func(mp map[K]V) {
+	m.View(func(mp map[K]V) {
 		l = len(m.items)
 	})
 	return
@@ -62,24 +50,10 @@ func (m *Map[K, V]) Len() (l int) {
 
 // Get an item from a thread-safe map.
 func (m *Map[K, V]) Get(k K) (v V, ok bool) {
-	m.view(func(mp map[K]V) {
+	m.View(func(mp map[K]V) {
 		v, ok = mp[k]
 	})
 	return v, ok
-}
-
-// Put an item into a thread-safe map.
-func (m *Map[K, V]) Put(k K, v V) {
-	m.do(func(mp map[K]V) {
-		mp[k] = v
-	})
-}
-
-// Delete an item from a thread-safe map.
-func (m *Map[K, V]) Delete(k K) {
-	m.do(func(mp map[K]V) {
-		delete(m.items, k)
-	})
 }
 
 // Range runs the function fn(k K, v V) bool for each key value pair
@@ -87,11 +61,37 @@ func (m *Map[K, V]) Delete(k K) {
 // If fn returns false, then the loop stops
 // Only one invocation of fn will be active at one time, the iteration order is unspecified.
 func (m *Map[K, V]) Range(fn func(k K, v V) bool) {
-	m.view(func(mp map[K]V) {
+	m.View(func(mp map[K]V) {
 		for k, v := range mp {
 			if !fn(k, v) {
 				return
 			}
 		}
 	})
+}
+
+// Put an item into a thread-safe map.
+func (m *Map[K, V]) Put(k K, v V) {
+	m.Do(func(mp map[K]V) {
+		mp[k] = v
+	})
+}
+
+// Delete an item from a thread-safe map.
+func (m *Map[K, V]) Delete(k K) {
+	m.Do(func(mp map[K]V) {
+		delete(m.items, k)
+	})
+}
+
+func (m *Map[K, V]) read(fn func(mp map[K]V)) {
+	m.lock.RLock()
+	fn(m.items)
+	m.lock.RUnlock()
+}
+
+func (m *Map[K, V]) write(fn func(mp map[K]V)) {
+	m.lock.Lock()
+	fn(m.items)
+	m.lock.Unlock()
 }
