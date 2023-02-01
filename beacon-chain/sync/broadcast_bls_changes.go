@@ -49,7 +49,7 @@ func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLS
 	if len(changes) < broadcastBLSChangesRateLimit {
 		limit = len(changes)
 	}
-	st, err := s.cfg.chain.HeadState(ctx)
+	st, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
 		return
