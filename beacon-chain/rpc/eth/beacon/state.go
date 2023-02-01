@@ -75,12 +75,18 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
 			Root: stateRoot,
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
@@ -98,6 +104,11 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
@@ -106,6 +117,7 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 			Epoch:           fork.Epoch,
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
@@ -123,6 +135,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	return &ethpb.StateFinalityCheckpointResponse{
 		Data: &ethpb.StateFinalityCheckpointResponse_StateFinalityCheckpoint{
@@ -131,6 +148,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
@@ -173,9 +191,16 @@ func (bs *Server) GetRandao(ctx context.Context, req *eth2.RandaoRequest) (*eth2
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
 	return &eth2.RandaoResponse{
 		Data:                &eth2.RandaoResponse_Randao{Randao: randao},
 		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}, nil
 }
 
