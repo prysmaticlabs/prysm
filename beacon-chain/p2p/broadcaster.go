@@ -19,8 +19,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const broadcastBLSChangesRateLimit = 128
-
 // ErrMessageNotMapped occurs on a Broadcast attempt when a message has not been defined in the
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
@@ -52,36 +50,6 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 		return errors.Errorf("message of %T does not support marshaller interface", msg)
 	}
 	return s.broadcastObject(ctx, castMsg, fmt.Sprintf(topic, forkDigest))
-}
-
-// BroadcastBLSChanges spins up a go routine that rate limits and broadcasts BLS
-// to execution changes at prescribed intervals.
-func (s *Service) BroadcastBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
-	go s.broadcastBLSChanges(ctx, changes)
-}
-
-func (s *Service) broadcastBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
-	ticker := time.NewTicker(500 * time.Millisecond)
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-ticker.C:
-			limit := broadcastBLSChangesRateLimit
-			if len(changes) < broadcastBLSChangesRateLimit {
-				limit = len(changes)
-			}
-			for _, ch := range changes[:limit] {
-				if err := s.Broadcast(ctx, ch); err != nil {
-					log.WithError(err).Error("could not broadcast BLS to execution changes.")
-				}
-			}
-			changes = changes[limit:]
-			if len(changes) == 0 {
-				return
-			}
-		}
-	}
 }
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
