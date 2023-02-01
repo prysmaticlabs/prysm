@@ -37,8 +37,9 @@ const (
 	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
 	fileBufferSize        = 64 * 1024
 	maxFileBufferSize     = 1024 * 1024
-	AltairE2EForkEpoch    = 6
-	BellatrixE2EForkEpoch = 8
+	AltairE2EForkEpoch    = params.AltairE2EForkEpoch
+	BellatrixE2EForkEpoch = params.BellatrixE2EForkEpoch
+	CapellaE2EForkEpoch   = params.CapellaE2EForkEpoch
 )
 
 // Graffiti is a list of sample graffiti strings.

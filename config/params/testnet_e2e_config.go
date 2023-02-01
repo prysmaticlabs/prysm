@@ -1,8 +1,9 @@
 package params
 
 const (
-	altairE2EForkEpoch    = 6
-	bellatrixE2EForkEpoch = 8
+	AltairE2EForkEpoch    = 0
+	BellatrixE2EForkEpoch = 0
+	CapellaE2EForkEpoch   = 4
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -26,14 +27,16 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"
@@ -64,14 +67,16 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.ShardCommitteePeriod = 4
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"

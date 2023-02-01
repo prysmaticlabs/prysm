@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/params"
 	clparams "github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // defaultMinerAddress is used to send deposits and test transactions in the e2e test.
@@ -83,6 +84,14 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 	if !ok {
 		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
 	}
+	var shanghaiTime *big.Int
+	if cfg.CapellaForkEpoch != math.MaxUint64 {
+		startSlot, err := slots.EpochStart(cfg.CapellaForkEpoch)
+		if err == nil {
+			startTime := slots.StartTime(genesisTime, startSlot)
+			shanghaiTime = big.NewInt(startTime.Unix())
+		}
+	}
 	cc := &params.ChainConfig{
 		ChainID:                       big.NewInt(defaultTestChainId),
 		HomesteadBlock:                bigz,
@@ -106,6 +115,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 			Period: cfg.SecondsPerETH1Block,
 			Epoch:  20000,
 		},
+		ShanghaiTime: shanghaiTime,
 	}
 	da := defaultDepositContractAllocation(cfg.DepositContractAddress)
 	ma := minerAllocation()
