@@ -16,7 +16,7 @@ import (
 type MockBuilderService struct {
 	HasConfigured         bool
 	Payload               *v1.ExecutionPayload
-	CapellaPayload        *v1.ExecutionPayloadCapella
+	PayloadCapella        *v1.ExecutionPayloadCapella
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	ErrGetHeader          error
@@ -37,7 +37,7 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 		}
 		return w, s.ErrSubmitBlindedBlock
 	}
-	w, err := blocks.WrappedExecutionPayloadCapella(s.CapellaPayload)
+	w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap capella payload")
 	}

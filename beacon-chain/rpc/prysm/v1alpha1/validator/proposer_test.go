@@ -571,7 +571,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				HeadFetcher:       c,
 				BlockNotifier:     c.BlockNotifier(),
 				P2P:               mockp2p.NewTestP2P(t),
-				BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, CapellaPayload: emptyPayloadCapella()},
+				BlockBuilder:      &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)

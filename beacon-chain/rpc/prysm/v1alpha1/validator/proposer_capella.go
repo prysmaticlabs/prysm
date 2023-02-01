@@ -35,12 +35,12 @@ func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.B
 	}
 }
 
-func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "block is nil")
 	}
 
-	// No-op if the input block is not version blind and bellatrix.
+	// No-op if the input block is not version blind and capella.
 	if b.Version() != version.Capella || !b.IsBlinded() {
 		return b, nil
 	}
@@ -51,15 +51,15 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 
 	agg, err := b.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get execution header")
 	}
 	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
 	if !ok {
-		return nil, errors.New("execution data must be execution payload header")
+		return nil, errors.New("execution data must be execution payload header capella")
 	}
 	parentRoot := b.Block().ParentRoot()
 	stateRoot := b.Block().StateRoot()
@@ -95,7 +95,7 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, wrappedSb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not submit blinded block")
 	}
 
 	capellaPayload, err := payload.PbCapella()
@@ -125,7 +125,7 @@ func (vs *Server) unblindBuilderCapellaBlock(ctx context.Context, b interfaces.S
 	}
 	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create signed block")
 	}
 
 	txs, err := payload.Transactions()
