@@ -369,7 +369,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		return err
 	}
 
-	var sendExit = func(exitedIndex types.ValidatorIndex) error {
+	var sendExit = func(exitedIndex primitives.ValidatorIndex) error {
 		voluntaryExit := &ethpb.VoluntaryExit{
 			Epoch:          chainHead.HeadEpoch,
 			ValidatorIndex: exitedIndex,
@@ -399,13 +399,13 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		ec.ExitedVals[pubk] = true
 		return nil
 	}
-	randIndex := types.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
+	randIndex := primitives.ValidatorIndex(rand.Uint64() % params.BeaconConfig().MinGenesisActiveValidatorCount)
 	if err := sendExit(randIndex); err != nil {
 		return err
 	}
 
 	for _, idx := range execIndices {
-		if err := sendExit(types.ValidatorIndex(idx)); err != nil {
+		if err := sendExit(primitives.ValidatorIndex(idx)); err != nil {
 			return err
 		}
 	}
@@ -544,7 +544,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		return errors.Wrap(err, "could not get state")
 	}
 	wantedEpoch := slots.ToEpoch(st.Slot())
-	exitedIndices := make([]types.ValidatorIndex, 0)
+	exitedIndices := make([]primitives.ValidatorIndex, 0)
 
 	for key, _ := range ec.ExitedVals {
 		valIdx, ok := st.ValidatorIndexByPubkey(key)

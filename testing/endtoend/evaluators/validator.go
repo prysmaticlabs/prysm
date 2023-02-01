@@ -177,7 +177,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 	}
 	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := slots.ToEpoch(currSlot)
-	lowestBound := ethtypes.Epoch(0)
+	lowestBound := primitives.Epoch(0)
 	if currEpoch >= 1 {
 		lowestBound = currEpoch - 1
 	}
