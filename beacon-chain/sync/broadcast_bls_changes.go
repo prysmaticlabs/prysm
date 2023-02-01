@@ -43,8 +43,7 @@ func (s *Service) broadcastBLSChanges(currSlot types.Slot) {
 	go s.rateBLSChanges(s.ctx, broadcastChanges)
 }
 
-func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLSToExecutionChange) {
-	changes := *ptr
+func (s *Service) broadcastBLSBatch(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) []*ethpb.SignedBLSToExecutionChange {
 	limit := broadcastBLSChangesRateLimit
 	if len(changes) < broadcastBLSChangesRateLimit {
 		limit = len(changes)
@@ -52,7 +51,7 @@ func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLS
 	st, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
-		return
+		return changes
 	}
 	for _, ch := range changes[:limit] {
 		if ch != nil {
@@ -67,10 +66,11 @@ func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLS
 		}
 	}
 	changes = changes[limit:]
+	return changes
 }
 
 func (s *Service) rateBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
-	s.broadcastBLSBatch(ctx, &changes)
+	changes = s.broadcastBLSBatch(ctx, changes)
 	if len(changes) == 0 {
 		return
 	}
@@ -80,7 +80,7 @@ func (s *Service) rateBLSChanges(ctx context.Context, changes []*ethpb.SignedBLS
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			s.broadcastBLSBatch(ctx, &changes)
+			changes = s.broadcastBLSBatch(ctx, changes)
 			if len(changes) == 0 {
 				return
 			}
