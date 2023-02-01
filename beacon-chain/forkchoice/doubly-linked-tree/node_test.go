@@ -149,7 +149,7 @@ func TestNode_ViableForHead(t *testing.T) {
 	}{
 		{&Node{}, 0, 0, true},
 		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, false},
+		{&Node{}, 0, 1, true},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
 		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
 		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
