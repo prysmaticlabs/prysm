@@ -367,17 +367,16 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 }
 
 func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
-	changes := *ptr
 	limit := broadcastBLSChangesRateLimit
-	if len(changes) < broadcastBLSChangesRateLimit {
-		limit = len(changes)
+	if len(*ptr) < broadcastBLSChangesRateLimit {
+		limit = len(*ptr)
 	}
 	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
 		return
 	}
-	for _, ch := range changes[:limit] {
+	for _, ch := range (*ptr)[:limit] {
 		if ch != nil {
 			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
 			if err != nil {
@@ -389,7 +388,7 @@ func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.Sign
 			}
 		}
 	}
-	changes = changes[limit:]
+	*ptr = (*ptr)[limit:]
 }
 
 func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
