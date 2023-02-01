@@ -54,7 +54,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch, currentEpoch); err != nil {
 			return err
 		}
-		childLeadsToViableHead := child.leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch)
+		childLeadsToViableHead := child.leadsToViableHead(justifiedEpoch, currentEpoch)
 		if childLeadsToViableHead && !hasViableDescendant {
 			// The child leads to a viable head, but the current
 			// parent's best child doesn't.
@@ -99,7 +99,7 @@ func (n *Node) viableForHead(justifiedEpoch, currentEpoch primitives.Epoch) bool
 	return justified
 }
 
-func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch, currentEpoch primitives.Epoch) bool {
+func (n *Node) leadsToViableHead(justifiedEpoch, currentEpoch primitives.Epoch) bool {
 	if n.bestDescendant == nil {
 		return n.viableForHead(justifiedEpoch, currentEpoch)
 	}

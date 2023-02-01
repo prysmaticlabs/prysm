@@ -177,10 +177,10 @@ func TestNode_LeadsToViableHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 3, 5))
-	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 3, 5))
+	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 5))
+	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 5))
 }
 
 func TestNode_SetFullyValidated(t *testing.T) {
