@@ -89,6 +89,7 @@ func TestGetStateRoot(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 
@@ -116,6 +117,7 @@ func TestGetStateRoot(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
@@ -124,6 +126,40 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconStateRoot: stateRoot[:],
+				BeaconState:     fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.Finalized)
 	})
 }
 
@@ -148,6 +184,7 @@ func TestGetStateFork(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 
@@ -177,6 +214,7 @@ func TestGetStateFork(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
@@ -185,6 +223,39 @@ func TestGetStateFork(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.Finalized)
 	})
 }
 
@@ -216,6 +287,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 
@@ -247,6 +319,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
@@ -255,6 +328,39 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.Finalized)
 	})
 }
 
@@ -287,6 +393,7 @@ func TestGetRandao(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 
@@ -339,6 +446,7 @@ func TestGetRandao(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
@@ -347,5 +455,37 @@ func TestGetRandao(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := headSt.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetRandao(context.Background(), &eth2.RandaoRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.Finalized)
 	})
 }

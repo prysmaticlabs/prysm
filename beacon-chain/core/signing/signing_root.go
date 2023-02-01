@@ -1,6 +1,8 @@
 package signing
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -16,6 +18,11 @@ const ForkVersionByteLength = 4
 
 // DomainByteLength length of domain byte array.
 const DomainByteLength = 4
+
+// digestMap maps the fork version and genesis validator root to the
+// resultant fork digest.
+var digestMapLock sync.RWMutex
+var digestMap = make(map[string][32]byte)
 
 // ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
 // failed to verify.
@@ -240,6 +247,12 @@ func domain(domainType [DomainByteLength]byte, forkDataRoot []byte) []byte {
 //	       genesis_validators_root=genesis_validators_root,
 //	   ))
 func computeForkDataRoot(version, root []byte) ([32]byte, error) {
+	digestMapLock.RLock()
+	if val, ok := digestMap[string(version)+string(root)]; ok {
+		digestMapLock.RUnlock()
+		return val, nil
+	}
+	digestMapLock.RUnlock()
 	r, err := (&ethpb.ForkData{
 		CurrentVersion:        version,
 		GenesisValidatorsRoot: root,
@@ -247,6 +260,12 @@ func computeForkDataRoot(version, root []byte) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
+	// Cache result of digest computation
+	// as this is a hot path and doesn't need
+	// to be constantly computed.
+	digestMapLock.Lock()
+	digestMap[string(version)+string(root)] = r
+	digestMapLock.Unlock()
 	return r, nil
 }
 

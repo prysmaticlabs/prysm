@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
@@ -23,6 +24,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+const broadcastBLSChangesRateLimit = 128
 
 // ListPoolAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -312,11 +315,13 @@ func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVo
 func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *ethpbv2.SubmitBLSToExecutionChangesRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitSignedBLSToExecutionChanges")
 	defer span.End()
-	st, err := bs.ChainInfoFetcher.HeadState(ctx)
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	var failures []*helpers.SingleIndexedVerificationFailure
+	var toBroadcast []*ethpbalpha.SignedBLSToExecutionChange
+
 	for i, change := range req.GetChanges() {
 		alphaChange := migration.V2SignedBLSToExecutionChangeToV1Alpha1(change)
 		_, err = blocks.ValidateBLSToExecutionChange(st, alphaChange)
@@ -342,15 +347,10 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		})
 		bs.BLSChangesPool.InsertBLSToExecChange(alphaChange)
 		if st.Version() >= version.Capella {
-			if err := bs.Broadcaster.Broadcast(ctx, alphaChange); err != nil {
-				failures = append(failures, &helpers.SingleIndexedVerificationFailure{
-					Index:   i,
-					Message: "Could not broadcast BLSToExecutionChange: " + err.Error(),
-				})
-				continue
-			}
+			toBroadcast = append(toBroadcast, alphaChange)
 		}
 	}
+	go bs.broadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
 		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
 		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
@@ -364,6 +364,52 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 		return nil, status.Errorf(codes.InvalidArgument, "One or more BLSToExecutionChange failed validation")
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
+	changes := *ptr
+	limit := broadcastBLSChangesRateLimit
+	if len(changes) < broadcastBLSChangesRateLimit {
+		limit = len(changes)
+	}
+	st, err := bs.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range changes[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := bs.Broadcaster.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	changes = changes[limit:]
+}
+
+func (bs *Server) broadcastBLSChanges(ctx context.Context, changes []*ethpbalpha.SignedBLSToExecutionChange) {
+	bs.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			bs.broadcastBLSBatch(ctx, &changes)
+			if len(changes) == 0 {
+				return
+			}
+		}
+	}
 }
 
 // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block

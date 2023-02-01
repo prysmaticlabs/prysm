@@ -59,6 +59,18 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		Root: b2r[:],
 	}))
 
+	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&pb.ExecutionPayloadHeaderCapella{BlockNumber: 1})
+	require.NoError(t, err)
+	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
+	b2pbCapella := util.NewBeaconBlockCapella()
+	b2rCapella, err := b2pbCapella.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pbCapella)
+	require.NoError(t, capellaTransitionState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Root: b2rCapella[:],
+	}))
+
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
@@ -84,6 +96,12 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		{
 			name:          "transition completed, happy case (doesn't have fee recipient in Db)",
 			st:            transitionSt,
+			payloadID:     &pb.PayloadIDBytes{0x1},
+			validatorIndx: 1,
+		},
+		{
+			name:          "transition completed, capella, happy case (doesn't have fee recipient in Db)",
+			st:            capellaTransitionState,
 			payloadID:     &pb.PayloadIDBytes{0x1},
 			validatorIndx: 1,
 		},
