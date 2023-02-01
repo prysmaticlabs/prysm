@@ -10,8 +10,8 @@ func AfterNthEpoch(afterEpoch primitives.Epoch) func(epoch primitives.Epoch) boo
 }
 
 // OnwardsNthEpoch runs for every epoch from the provided epoch.
-func OnwardsNthEpoch(onwardsEpoch types.Epoch) func(epoch types.Epoch) bool {
-	return func(currentEpoch types.Epoch) bool {
+func OnwardsNthEpoch(onwardsEpoch primitives.Epoch) func(epoch primitives.Epoch) bool {
+	return func(currentEpoch primitives.Epoch) bool {
 		return currentEpoch >= onwardsEpoch
 	}
 }
