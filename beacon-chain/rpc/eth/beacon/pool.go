@@ -366,6 +366,9 @@ func (bs *Server) SubmitSignedBLSToExecutionChanges(ctx context.Context, req *et
 	return &emptypb.Empty{}, nil
 }
 
+// broadcastBLSBatch broadcasts the first `broadcastBLSChangesRateLimit` messages from the slice pointed to by ptr.
+// It validates the messages again because they could have been invalidated by being included in blocks since the last validation.
+// It removes the messages from the slice and modifies it in place.
 func (bs *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpbalpha.SignedBLSToExecutionChange) {
 	limit := broadcastBLSChangesRateLimit
 	if len(*ptr) < broadcastBLSChangesRateLimit {
