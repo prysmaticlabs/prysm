@@ -64,17 +64,10 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
-	var oldHeadRoot [32]byte
-	s.headLock.RLock()
-	if s.head == nil {
-		oldHeadRoot = s.originBlockRoot
-	} else {
-		oldHeadRoot = s.head.root
-	}
-	s.headLock.RUnlock()
-	if newHeadRoot == oldHeadRoot {
+	if !s.isNewHead(newHeadRoot) {
 		return nil
 	}
+
 	if err := blocks.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
@@ -101,6 +94,11 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	newStateRoot := headBlock.Block().StateRoot()
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
+	r, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get old head root")
+	}
+	oldHeadRoot := bytesutil.ToBytes32(r)
 	if headBlock.Block().ParentRoot() != oldHeadRoot {
 		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
@@ -274,6 +272,16 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 	defer span.End()
 
 	return s.head.state.Copy()
+}
+
+// This returns a read only version of the head state.
+// It does not perform a copy of the head state.
+// This is a lock free version.
+func (s *Service) headStateReadOnly(ctx context.Context) state.ReadOnlyBeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockChain.headStateReadOnly")
+	defer span.End()
+
+	return s.head.state
 }
 
 // This returns the genesis validators root of the head state.
