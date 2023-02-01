@@ -180,6 +180,7 @@ go_test(
         "proposer_attestations_test.go",
         "proposer_bellatrix_test.go",
         "proposer_builder_test.go",
+        "proposer_capella_test.go",
         "proposer_deposits_test.go",
         "proposer_empty_block_test.go",
         "proposer_execution_payload_test.go",
