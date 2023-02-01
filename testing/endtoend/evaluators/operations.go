@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v3/testing/util"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -543,7 +542,6 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	if err != nil {
 		return errors.Wrap(err, "could not get state")
 	}
-	wantedEpoch := slots.ToEpoch(st.Slot())
 	exitedIndices := make([]primitives.ValidatorIndex, 0)
 
 	for key, _ := range ec.ExitedVals {
@@ -567,15 +565,23 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		if val.WithdrawalCredentials[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
 			continue
 		}
+		if !bytes.Equal(val.PublicKey, privKeys[idx].PublicKey().Marshal()) {
+			return errors.New("pubkey is not equal")
+		}
 		message := &v2.BLSToExecutionChange{
 			ValidatorIndex:     idx,
 			FromBlsPubkey:      privKeys[idx].PublicKey().Marshal(),
 			ToExecutionAddress: bytesutil.ToBytes(uint64(idx), 20),
 		}
-		signature, err := signing.ComputeDomainAndSign(st, wantedEpoch, message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[idx])
+		domain, err := signing.ComputeDomain(params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisForkVersion, st.GenesisValidatorsRoot())
 		if err != nil {
-			return errors.Wrap(err, "could not get signature")
+			return err
 		}
+		sigRoot, err := signing.ComputeSigningRoot(message, domain)
+		if err != nil {
+			return err
+		}
+		signature := privKeys[idx].Sign(sigRoot[:]).Marshal()
 		change := &v2.SignedBLSToExecutionChange{
 			Message:   message,
 			Signature: signature,
