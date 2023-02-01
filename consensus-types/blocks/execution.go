@@ -715,6 +715,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	txs, err := data.Transactions()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
+		break
 	case err != nil:
 		return false, err
 	default:
@@ -726,6 +727,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	ws, err := data.Withdrawals()
 	switch {
 	case errors.Is(err, ErrUnsupportedGetter):
+		break
 	case err != nil:
 		return false, err
 	default:
