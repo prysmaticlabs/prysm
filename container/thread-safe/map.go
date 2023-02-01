@@ -17,6 +17,18 @@ func NewThreadSafeMap[K comparable, V any](m map[K]V) *Map[K, V] {
 	}
 }
 
+// Keys returns the keys of a thread-safe map.
+func (m *Map[K, V]) Keys() map[K]V {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	r := make([]K, 0, len(m.items))
+	for k := range m.items {
+		key := k
+		r = append(r, key)
+	}
+	return r
+}
+
 // Len of the thread-safe map.
 func (m *Map[K, V]) Len() int {
 	m.lock.RLock()
