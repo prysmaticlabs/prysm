@@ -171,6 +171,7 @@ func TestListSyncCommittees(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
@@ -214,11 +215,45 @@ func TestListSyncCommittees(t *testing.T) {
 			},
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
 			BeaconDB:              db,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &mock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := &Server{
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := s.ListSyncCommittees(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 
@@ -272,6 +307,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
 		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{}
