@@ -234,6 +234,149 @@ func Test_executionPayloadHeaderCapella_Pb(t *testing.T) {
 	require.ErrorIs(t, err, blocks.ErrUnsupportedGetter)
 }
 
+func TestIsEmptyExecutionData(t *testing.T) {
+	t.Run("nil transactions", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  nil,
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, true, isEmpty)
+	})
+	t.Run("empty transactions", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  [][]byte{},
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, true, isEmpty)
+	})
+	t.Run("non-empty transactions", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  [][]byte{[]byte("transaction")},
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, false, isEmpty)
+	})
+	t.Run("nil withdrawals", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  [][]byte{},
+			Withdrawals:   nil,
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, true, isEmpty)
+	})
+	t.Run("empty withdrawals", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  [][]byte{},
+			Withdrawals:   []*enginev1.Withdrawal{},
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, true, isEmpty)
+	})
+	t.Run("non-empty withdrawals", func(t *testing.T) {
+		data, err := blocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     []byte{},
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  [][]byte{},
+			Withdrawals: []*enginev1.Withdrawal{{
+				Index:          123,
+				ValidatorIndex: 0,
+				Address:        nil,
+				Amount:         0,
+			}},
+		})
+		require.NoError(t, err)
+		isEmpty, err := blocks.IsEmptyExecutionData(data)
+		require.NoError(t, err)
+		assert.Equal(t, false, isEmpty)
+	})
+}
+
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 	wsb, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),

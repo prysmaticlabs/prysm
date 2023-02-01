@@ -723,6 +723,17 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		}
 	}
 
+	ws, err := data.Withdrawals()
+	switch {
+	case errors.Is(err, ErrUnsupportedGetter):
+	case err != nil:
+		return false, err
+	default:
+		if len(ws) != 0 {
+			return false, nil
+		}
+	}
+
 	if len(data.ExtraData()) != 0 {
 		return false, nil
 	}
