@@ -20,7 +20,7 @@ func TestSetNextWithdrawalIndex(t *testing.T) {
 	require.Equal(t, true, s.dirtyFields[types.NextWithdrawalIndex])
 }
 
-func TestSetLastWithdrawalValidatorIndex(t *testing.T) {
+func TestSetNextWithdrawalValidatorIndex(t *testing.T) {
 	s := BeaconState{
 		version:                      version.Capella,
 		nextWithdrawalValidatorIndex: 3,

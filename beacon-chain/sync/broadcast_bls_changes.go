@@ -44,17 +44,16 @@ func (s *Service) broadcastBLSChanges(currSlot types.Slot) {
 }
 
 func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLSToExecutionChange) {
-	changes := *ptr
 	limit := broadcastBLSChangesRateLimit
-	if len(changes) < broadcastBLSChangesRateLimit {
-		limit = len(changes)
+	if len(*ptr) < broadcastBLSChangesRateLimit {
+		limit = len(*ptr)
 	}
 	st, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		log.WithError(err).Error("could not get head state")
 		return
 	}
-	for _, ch := range changes[:limit] {
+	for _, ch := range (*ptr)[:limit] {
 		if ch != nil {
 			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
 			if err != nil {
@@ -66,7 +65,7 @@ func (s *Service) broadcastBLSBatch(ctx context.Context, ptr *[]*ethpb.SignedBLS
 			}
 		}
 	}
-	changes = changes[limit:]
+	*ptr = (*ptr)[limit:]
 }
 
 func (s *Service) rateBLSChanges(ctx context.Context, changes []*ethpb.SignedBLSToExecutionChange) {
