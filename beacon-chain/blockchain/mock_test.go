@@ -30,18 +30,14 @@ func testServiceOptsNoDB() []Option {
 	}
 }
 
-type mockStateByRooter struct {
+type mockBalanceByRooter struct {
 	state state.BeaconState
 	err   error
 }
 
-var _ stateByRooter = &mockStateByRooter{}
+var _ balanceByRooter = &mockBalanceByRooter{}
 
-func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.BeaconState, error) {
-	return m.state, m.err
-}
-
-func (m mockStateByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+func (m mockBalanceByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
 	return m.state.Balances(), m.err
 }
 
@@ -50,5 +46,5 @@ func (m mockStateByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint
 // always return an error if used.
 func satisfactoryStateBalanceCache() *stateBalanceCache {
 	err := errors.New("satisfactoryStateBalanceCache doesn't perform real caching")
-	return &stateBalanceCache{stateGen: mockStateByRooter{err: err}}
+	return &stateBalanceCache{stateGen: mockBalanceByRooter{err: err}}
 }

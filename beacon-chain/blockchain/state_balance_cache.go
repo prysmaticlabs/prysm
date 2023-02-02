@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 )
 
@@ -13,11 +12,10 @@ type stateBalanceCache struct {
 	sync.Mutex
 	balances []uint64
 	root     [32]byte
-	stateGen stateByRooter
+	stateGen balanceByRooter
 }
 
-type stateByRooter interface {
-	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
+type balanceByRooter interface {
 	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
 }
 
