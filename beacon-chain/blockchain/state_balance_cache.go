@@ -2,12 +2,9 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 )
 
@@ -15,11 +12,11 @@ type stateBalanceCache struct {
 	sync.Mutex
 	balances []uint64
 	root     [32]byte
-	stateGen stateByRooter
+	stateGen balanceByRooter
 }
 
-type stateByRooter interface {
-	StateByRoot(context.Context, [32]byte) (state.BeaconState, error)
+type balanceByRooter interface {
+	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
 }
 
 // newStateBalanceCache exists to remind us that stateBalanceCache needs a state gen
@@ -38,26 +35,10 @@ func newStateBalanceCache(sg *stategen.State) (*stateBalanceCache, error) {
 // WARNING: this is not thread-safe on its own, relies on get() for locking
 func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) ([]uint64, error) {
 	stateBalanceCacheMiss.Inc()
-	justifiedState, err := c.stateGen.StateByRoot(ctx, justifiedRoot)
-	if err != nil {
-		return nil, err
-	}
-	if justifiedState == nil || justifiedState.IsNil() {
-		return nil, errNilStateFromStategen
-	}
-	epoch := time.CurrentEpoch(justifiedState)
 
-	justifiedBalances := make([]uint64, justifiedState.NumValidators())
-	var balanceAccumulator = func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
-			justifiedBalances[idx] = val.EffectiveBalance()
-		} else {
-			justifiedBalances[idx] = 0
-		}
-		return nil
-	}
-	if err := justifiedState.ReadFromEveryValidator(balanceAccumulator); err != nil {
-		return nil, err
+	justifiedBalances, err := c.stateGen.BalancesByRoot(ctx, justifiedRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get balances")
 	}
 
 	c.balances = justifiedBalances
