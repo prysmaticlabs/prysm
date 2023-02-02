@@ -358,6 +358,7 @@ func (s *Service) Start() {
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 			ForkFetcher:           s.cfg.ForkFetcher,
+			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
