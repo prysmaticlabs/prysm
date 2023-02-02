@@ -41,6 +41,10 @@ func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.Bea
 	return m.state, m.err
 }
 
+func (m mockStateByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+	return m.state.Balances(), m.err
+}
+
 // returns an instance of the state balance cache that can be used
 // to satisfy the requirement for one in NewService, but which will
 // always return an error if used.
