@@ -34,6 +34,116 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+
+func TestCapella_PayloadBodiesByHash(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+
+		// [A, B, C] but no B in the server means
+		// we get [Abody, null, Cbody].
+		executionPayloadBodies := make([]*pb.ExecutionPayloadBody, 3)
+		executionPayloadBodies[0] = {
+		Withdrawals: ...,
+			Transactions: ...
+		}
+		executionPayloadBodies[1] = nil
+		executionPayloadBodies[2] = {
+		Withdrawals: ...,
+			Transactions: ...
+		}
+
+		results, err := json.Marshal(executionPayloadBodies)
+		require.NoError(t, err)
+
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  results,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+
+	service.GetPayloadBodiesByHash(ctx, []common.Hash{1, 2, 3})
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+		enc, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		jsonRequestString := string(enc)
+
+		reqArg, err := json.Marshal(payload)
+		require.NoError(t, err)
+
+		// We expect the JSON string RPC request contains the right arguments.
+		require.Equal(t, true, strings.Contains(
+			jsonRequestString, string(reqArg),
+		))
+		resp := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  status,
+		}
+		err = json.NewEncoder(w).Encode(resp)
+		require.NoError(t, err)
+	}))
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 var (
 	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&Service{})

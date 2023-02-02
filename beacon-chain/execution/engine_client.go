@@ -15,6 +15,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -48,6 +49,10 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// GetPayloadBodiesByHash
+	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
+	// GetPayloadBodiesByRange
+	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
 )
@@ -439,6 +444,33 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return hdr, err
 }
 
+// GetPayloadBodiesByHash --
+func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHashes []common.Hash) ([]*pb.ExecutionPayload, error) {
+	if !features.Get().EnableCapellaEngineMethods {
+		return nil, errors.New("capella engine methods not enabled")
+	}
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayloadBodiesByHashV1")
+	defer span.End()
+
+	// TODO: Might need to check if execution client is syncing.
+	// What's the consequence if we do not?
+
+	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+
+	// TODO: Does our code handle this response well?
+	// {
+	// withdrawals: null,
+	// 	transactions: []transactions
+	// }
+
+	// TODO: Does our code handle this response well?
+	// request: [a, b ,c]
+	// response: [abody, null, cbody]
+
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadBodiesByHashV1, hashes)
+	return result, handleRPCError(err)
+}
+
 // ReconstructFullBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBlock(
@@ -670,6 +702,9 @@ func handleRPCError(err error) error {
 	case -38003:
 		errInvalidPayloadAttributesCount.Inc()
 		return ErrInvalidPayloadAttributes
+	case -38004:
+		errRequestTooLargeCount.Inc()
+		return ErrRequestTooLarge
 	case -32000:
 		errServerErrorCount.Inc()
 		// Only -32000 status codes are data errors in the RPC specification.
