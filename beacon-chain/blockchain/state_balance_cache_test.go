@@ -34,7 +34,8 @@ func testStateFixture(opts ...testStateOpt) state.BeaconState {
 	for _, o := range opts {
 		o(a)
 	}
-	s, _ := state_native.InitializeFromProtoUnsafeAltair(a)
+	s, err := state_native.InitializeFromProtoUnsafeAltair(a)
+	_ = err
 	return s
 }
 
