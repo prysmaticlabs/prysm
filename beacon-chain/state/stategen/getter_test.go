@@ -66,12 +66,10 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	bal, err := service.BalancesByRoot(ctx, bRoot)
 	require.NoError(t, err)
 	require.Equal(t, 32, len(bal))
-	for i := range bal {
-		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, bal[i])
+	for _, balance := range bal[1:] {
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, balance)
 	}
-	nonSlashedBals, err := service.NonSlashedBalancesByRoot(ctx, bRoot)
-	require.NoError(t, err)
-	require.Equal(t, uint64(0), nonSlashedBals[0])
+	require.Equal(t, uint64(0), bal[0])
 }
 
 func TestStateByRootIfCachedNoCopy_HotState(t *testing.T) {

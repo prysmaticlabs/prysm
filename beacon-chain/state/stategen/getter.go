@@ -79,33 +79,6 @@ func (s *State) BalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint6
 
 	balances := make([]uint64, st.NumValidators())
 	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
-			balances[idx] = val.EffectiveBalance()
-		} else {
-			balances[idx] = 0
-		}
-		return nil
-	}
-	if err := st.ReadFromEveryValidator(balanceAccretor); err != nil {
-		return nil, err
-	}
-	return balances, nil
-}
-
-// NonSlashedBalancesByRoot retrieves the effective balances of all active non slashed validators at the
-// state with a given root
-func (s *State) NonSlashedBalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint64, error) {
-	st, err := s.StateByRoot(ctx, blockRoot)
-	if err != nil {
-		return nil, err
-	}
-	if st == nil || st.IsNil() {
-		return nil, errNilState
-	}
-	epoch := time.CurrentEpoch(st)
-
-	balances := make([]uint64, st.NumValidators())
-	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
 		if helpers.IsActiveNonSlashedValidatorUsingTrie(val, epoch) {
 			balances[idx] = val.EffectiveBalance()
 		} else {

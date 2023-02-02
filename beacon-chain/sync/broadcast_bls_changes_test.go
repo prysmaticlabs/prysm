@@ -118,3 +118,44 @@ func TestRateBLSChanges(t *testing.T) {
 	require.Equal(t, true, p1.BroadcastCalled)
 	require.LogsDoNotContain(t, logHook, "could not")
 }
+
+func TestBroadcastBLSBatch_changes_slice(t *testing.T) {
+	message := &ethpb.BLSToExecutionChange{
+		FromBlsPubkey:      make([]byte, 48),
+		ToExecutionAddress: make([]byte, 20),
+	}
+	signed := &ethpb.SignedBLSToExecutionChange{
+		Message:   message,
+		Signature: make([]byte, 96),
+	}
+	changes := make([]*ethpb.SignedBLSToExecutionChange, 200)
+	for i := 0; i < len(changes); i++ {
+		changes[i] = signed
+	}
+	p1 := mockp2p.NewTestP2P(t)
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	s := NewService(context.Background(),
+		WithP2P(p1),
+		WithInitialSync(&mockSync.Sync{IsSyncing: false}),
+		WithChainService(chainService),
+		WithStateNotifier(chainService.StateNotifier()),
+		WithOperationNotifier(chainService.OperationNotifier()),
+		WithBlsToExecPool(blstoexec.NewPool()),
+	)
+	beaconDB := testingdb.SetupDB(t)
+	s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
+	s.cfg.beaconDB = beaconDB
+	s.initCaches()
+	st, _ := util.DeterministicGenesisStateCapella(t, 32)
+	s.cfg.chain = &mockChain.ChainService{
+		ValidatorsRoot: [32]byte{'A'},
+		Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
+		State:          st,
+	}
+
+	s.broadcastBLSBatch(s.ctx, &changes)
+	require.Equal(t, 200-128, len(changes))
+}

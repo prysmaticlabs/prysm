@@ -1072,7 +1072,7 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	}
 }
 
-func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
+func TestRemoveBlockAttestationsInPool(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1089,27 +1089,8 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
+	require.NoError(t, service.pruneAttsFromPool(wsb))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
-}
-
-func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
-	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
-	assert.NoError(t, err)
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-
-	atts := b.Block.Body.Attestations
-	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
-	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
 
 func Test_getStateVersionAndPayload(t *testing.T) {
