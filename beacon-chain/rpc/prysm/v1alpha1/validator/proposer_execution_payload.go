@@ -42,7 +42,7 @@ var (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot, vIdx primitives.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot, vIdx primitives.ValidatorIndex, headRoot [32]byte, st state.BeaconState) (interfaces.ExecutionData, []byte, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
@@ -62,21 +62,21 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 				"Please refer to our documentation for instructions")
 		}
 	default:
-		return nil, errors.Wrap(err, "could not get fee recipient in db")
+		return nil, nil, errors.Wrap(err, "could not get fee recipient in db")
 	}
 
 	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, value, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
-			return payload, nil
+			return payload, value, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
-			return nil, errors.Wrap(err, "could not get cached payload from execution client")
+			return nil, nil, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
 
@@ -84,53 +84,61 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	var hasTerminalBlock bool
 	mergeComplete, err := blocks.IsMergeTransitionComplete(st)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if mergeComplete {
 		header, err := st.LatestExecutionPayloadHeader()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			payload, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
+			if err != nil {
+				return nil, nil, err
+			}
+			return payload, nil, nil
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !hasTerminalBlock {
-			return consensusblocks.WrappedExecutionPayload(emptyPayload())
+			payload, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
+			if err != nil {
+				return nil, nil, err
+			}
+			return payload, nil, nil
 		}
 	}
 	payloadIDCacheMiss.Inc()
 
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
 	finalizedRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
 	if finalizedRoot != [32]byte{} { // finalized root could be zeros before the first finalized block.
 		finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if err := consensusblocks.BeaconBlockIsNil(finalizedBlock); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 		default:
 			finalizedPayload, err := finalizedBlock.Block().Body().Execution()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			finalizedBlockHash = finalizedPayload.BlockHash()
 		}
@@ -146,7 +154,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
@@ -155,7 +163,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 			Withdrawals:           withdrawals,
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
@@ -164,25 +172,25 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 			SuggestedFeeRecipient: feeRecipient.Bytes(),
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	default:
-		return nil, errors.New("unknown beacon state version")
+		return nil, nil, errors.New("unknown beacon state version")
 	}
 
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not prepare payload")
+		return nil, nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
+		return nil, nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, value, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
-	return payload, nil
+	return payload, value, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not

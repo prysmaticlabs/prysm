@@ -78,7 +78,7 @@ type EngineCaller interface {
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
-	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error)
+	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, []byte, error)
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
@@ -198,7 +198,7 @@ func (s *Service) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
-func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, []byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -211,20 +211,29 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	defer cancel()
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
-		result := &pb.ExecutionPayloadCapella{}
+		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
-			return nil, handleRPCError(err)
+			return nil, nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadCapella(result)
+		payload, err := blocks.WrappedExecutionPayloadCapella(result.Payload)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return payload, result.Value, nil
 	}
 
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	if err != nil {
-		return nil, handleRPCError(err)
+		return nil, nil, handleRPCError(err)
 	}
-	return blocks.WrappedExecutionPayload(result)
+	payload, err := blocks.WrappedExecutionPayload(result)
+	if err != nil {
+		return nil, nil, err
+	}
+	return payload, nil, nil
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
