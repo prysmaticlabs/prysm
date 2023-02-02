@@ -22,7 +22,6 @@ func (s *Service) forkWatcher() {
 				// the updated fork digest. These repeatedly does
 				// this over the epoch, which might be slightly wasteful
 				// but is fine nonetheless.
-
 				if s.dv5Listener != nil { // make sure it's not a local network
 					_, err := addForkEntry(s.dv5Listener.LocalNode(), s.genesisTime, s.genesisValidatorsRoot)
 					if err != nil {
