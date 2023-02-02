@@ -433,7 +433,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, *e := range errs {
+	for _, e := range errs {
 		err := *e
 		if err != nil {
 			return nil, err
