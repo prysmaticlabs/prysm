@@ -390,30 +390,31 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
 	execBlks := make([]*pb.ExecutionBlock, 0, numOfHashes)
-	errs := make([]error, 0, numOfHashes)
+	errs := make([]*error, 0, numOfHashes)
 	if numOfHashes == 0 {
 		return execBlks, nil
 	}
 	for _, h := range hashes {
 		blk := &pb.ExecutionBlock{}
-		err := error(nil)
 		newH := h
-		elems = append(elems, gethRPC.BatchElem{
+		el := gethRPC.BatchElem{
 			Method: ExecutionBlockByHashMethod,
 			Args:   []interface{}{newH, withTxs},
 			Result: blk,
-			Error:  err,
-		})
+			Error:  error(nil),
+		}
+		elems = append(elems, el)
 		execBlks = append(execBlks, blk)
-		errs = append(errs, err)
+		errs = append(errs, &el.Error)
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
 	for _, e := range errs {
-		if e != nil {
-			return nil, handleRPCError(e)
+		err := *e
+		if err != nil {
+			return nil, handleRPCError(err)
 		}
 	}
 	return execBlks, nil
