@@ -128,7 +128,7 @@ func TestStateBalanceCache(t *testing.T) {
 			root:     bytesutil.ToBytes32([]byte{'A'}),
 			balances: sentinelBalances,
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					err: sentinelCacheMiss,
 				},
 				root:     bytesutil.ToBytes32([]byte{'A'}),
@@ -141,7 +141,7 @@ func TestStateBalanceCache(t *testing.T) {
 		// this also tells us stategen errors are propagated
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					err: sentinelCacheMiss,
 				},
 				root: bytesutil.ToBytes32([]byte{'B'}),
@@ -152,7 +152,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{},
+				stateGen: &mockBalanceByRooter{},
 				root:     bytesutil.ToBytes32([]byte{'B'}),
 			},
 			err:  errNilStateFromStategen,
@@ -161,7 +161,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfExpiredValidators)),
@@ -173,7 +173,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfQueuedValidators)),
@@ -185,7 +185,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),
@@ -197,7 +197,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),
