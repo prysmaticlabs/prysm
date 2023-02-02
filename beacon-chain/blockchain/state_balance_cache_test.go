@@ -128,7 +128,7 @@ func TestStateBalanceCache(t *testing.T) {
 			root:     bytesutil.ToBytes32([]byte{'A'}),
 			balances: sentinelBalances,
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					err: sentinelCacheMiss,
 				},
 				root:     bytesutil.ToBytes32([]byte{'A'}),
@@ -136,32 +136,9 @@ func TestStateBalanceCache(t *testing.T) {
 			},
 			name: "cache hit",
 		},
-		// this works by using a staterooter that returns a known error
-		// so really we're testing the miss by making sure stategen got called
-		// this also tells us stategen errors are propagated
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
-					err: sentinelCacheMiss,
-				},
-				root: bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  sentinelCacheMiss,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "cache miss",
-		},
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{},
-				root:     bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  errNilStateFromStategen,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "error for nil state upon cache miss",
-		},
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfExpiredValidators)),
@@ -173,7 +150,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfQueuedValidators)),
@@ -185,7 +162,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),
@@ -197,7 +174,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),

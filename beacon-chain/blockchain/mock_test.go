@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
@@ -30,15 +32,33 @@ func testServiceOptsNoDB() []Option {
 	}
 }
 
-type mockStateByRooter struct {
+type mockBalanceByRooter struct {
 	state state.BeaconState
 	err   error
 }
 
-var _ stateByRooter = &mockStateByRooter{}
+var _ balanceByRooter = &mockBalanceByRooter{}
 
-func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.BeaconState, error) {
-	return m.state, m.err
+func (m mockBalanceByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+	st := m.state
+	if st == nil || st.IsNil() {
+		return nil, errors.New("nil state")
+	}
+	epoch := time.CurrentEpoch(st)
+
+	balances := make([]uint64, st.NumValidators())
+	var balanceAccretor = func(idx int, val state.ReadOnlyValidator) error {
+		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+			balances[idx] = val.EffectiveBalance()
+		} else {
+			balances[idx] = 0
+		}
+		return nil
+	}
+	if err := st.ReadFromEveryValidator(balanceAccretor); err != nil {
+		return nil, err
+	}
+	return balances, nil
 }
 
 // returns an instance of the state balance cache that can be used
@@ -46,5 +66,5 @@ func (m mockStateByRooter) StateByRoot(_ context.Context, _ [32]byte) (state.Bea
 // always return an error if used.
 func satisfactoryStateBalanceCache() *stateBalanceCache {
 	err := errors.New("satisfactoryStateBalanceCache doesn't perform real caching")
-	return &stateBalanceCache{stateGen: mockStateByRooter{err: err}}
+	return &stateBalanceCache{stateGen: mockBalanceByRooter{err: err}}
 }

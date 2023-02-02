@@ -21,8 +21,6 @@ var (
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
 	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
 	errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
-	// errNilStateFromStategen is returned when a nil state is returned from the state generator.
-	errNilStateFromStategen = errors.New("justified state can't be nil")
 	// errWSBlockNotFound is returned when a block is not found in the WS cache or DB.
 	errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
