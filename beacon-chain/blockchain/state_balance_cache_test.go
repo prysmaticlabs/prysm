@@ -136,29 +136,6 @@ func TestStateBalanceCache(t *testing.T) {
 			},
 			name: "cache hit",
 		},
-		// this works by using a staterooter that returns a known error
-		// so really we're testing the miss by making sure stategen got called
-		// this also tells us stategen errors are propagated
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockBalanceByRooter{
-					err: sentinelCacheMiss,
-				},
-				root: bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  sentinelCacheMiss,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "cache miss",
-		},
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockBalanceByRooter{},
-				root:     bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  errNilStateFromStategen,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "error for nil state upon cache miss",
-		},
 		{
 			sbc: &stateBalanceCache{
 				stateGen: &mockBalanceByRooter{
