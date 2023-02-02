@@ -19,6 +19,7 @@ type MockBuilderService struct {
 	PayloadCapella        *v1.ExecutionPayloadCapella
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
+	BidCapella            *ethpb.SignedBuilderBidCapella
 	ErrGetHeader          error
 	ErrRegisterValidator  error
 }
