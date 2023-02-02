@@ -49,7 +49,7 @@ func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) 
 
 	justifiedBalances := make([]uint64, justifiedState.NumValidators())
 	var balanceAccumulator = func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, epoch) {
+		if helpers.IsActiveNonSlashedValidatorUsingTrie(val, epoch) {
 			justifiedBalances[idx] = val.EffectiveBalance()
 		} else {
 			justifiedBalances[idx] = 0
