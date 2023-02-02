@@ -519,16 +519,15 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			}, nil
 		}
 	}
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if optimistic {
+		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
+	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
-		// After Bellatrix, return blinded block.
-		optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
-		}
-		if optimistic {
-			return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
-		}
 		blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
@@ -540,16 +539,8 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	// Capella return blinded block
 	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
-		optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
-		}
-		if optimistic {
-			return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
-		}
 		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
@@ -636,7 +627,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
-		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
+		block, err := migration.V1Alpha1BeaconBlockCapellaToV2Blinded(capellaBlock.Capella)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
 		}
