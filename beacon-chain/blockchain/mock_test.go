@@ -39,7 +39,7 @@ type mockBalanceByRooter struct {
 
 var _ balanceByRooter = &mockBalanceByRooter{}
 
-func (m mockBalanceByRooter) BalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+func (m mockBalanceByRooter) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
 	st := m.state
 	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
