@@ -63,7 +63,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
 
-	bal, err := service.BalancesByRoot(ctx, bRoot)
+	bal, err := service.ActiveNonSlashedBalancesByRoot(ctx, bRoot)
 	require.NoError(t, err)
 	require.Equal(t, 32, len(bal))
 	for _, balance := range bal[1:] {
