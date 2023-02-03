@@ -16,7 +16,7 @@ type stateBalanceCache struct {
 }
 
 type balanceByRooter interface {
-	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
+	ActiveNonSlashedBalancesByRoot(context.Context, [32]byte) ([]uint64, error)
 }
 
 // newStateBalanceCache exists to remind us that stateBalanceCache needs a state gen
