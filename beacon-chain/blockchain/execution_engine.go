@@ -98,7 +98,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, nil
 			}
 
-			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
+			r, err := s.cfg.ForkChoiceStore.Head(ctx)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"slot":                 headBlk.Slot(),

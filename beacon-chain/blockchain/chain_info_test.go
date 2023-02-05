@@ -96,7 +96,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	cp = service.CurrentJustifiedCheckpt()
 	assert.DeepEqual(t, [32]byte{}, bytesutil.ToBytes32(cp.Root))
 	// check that forkchoice has the right genesis root as the node root
-	root, err := fcs.Head(ctx, []uint64{})
+	root, err := fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, service.originBlockRoot, root)
 

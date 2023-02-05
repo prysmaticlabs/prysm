@@ -56,7 +56,6 @@ type Service struct {
 	checkpointStateCache    *cache.CheckpointStateCache
 	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
 	initSyncBlocksLock      sync.RWMutex
-	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
 	processAttestationsLock sync.Mutex
 }
@@ -103,12 +102,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 	var err error
-	if srv.justifiedBalances == nil {
-		srv.justifiedBalances, err = newStateBalanceCache(srv.cfg.StateGen)
-		if err != nil {
-			return nil, err
-		}
-	}
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err

@@ -410,7 +410,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r32}
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(jc))
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, []uint64{})
+	_, err = service.cfg.ForkChoiceStore.Head(ctx)
 	require.NoError(t, err)
 	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
 	require.NoError(t, err)

@@ -302,8 +302,7 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	service.justifiedBalances.balances = []uint64{50, 100, 200}
-	require.NoError(t, err)
+	fcs.SetJustifiedBalances([]uint64{50, 100, 200})
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
@@ -419,8 +418,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	service.cfg.ForkChoiceStore = fcs
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	service.justifiedBalances.balances = []uint64{50, 100, 200}
-	require.NoError(t, err)
+	fcs.SetJustifiedBalances([]uint64{50, 100, 200})
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
@@ -452,7 +450,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	fcs.ProcessAttestation(ctx, []uint64{2}, brg, 1)
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: bra}
 	require.NoError(t, fcs.UpdateJustifiedCheckpoint(jc))
-	headRoot, err := fcs.Head(ctx, []uint64{50, 100, 200})
+	headRoot, err := fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, brg, headRoot)
 
@@ -476,7 +474,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, brf, InvalidBlockRoot(err))
 
 	// Ensure Head is D
-	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
+	headRoot, err = fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, brd, headRoot)
 
@@ -953,6 +951,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	twentyfc := &ethpb.Checkpoint{Epoch: 20, Root: validRoot[:]}
 	state, blkRoot, err = prepareForkchoiceState(ctx, 640, validRoot, genesisRoot, params.BeaconConfig().ZeroHash, twentyjc, twentyfc)
 	require.NoError(t, err)
+	fcs.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return []uint64{}, nil })
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validRoot))

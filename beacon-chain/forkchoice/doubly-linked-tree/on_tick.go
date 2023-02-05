@@ -65,11 +65,16 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 			f.store.checkpointsLock.Lock()
 			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
+			if err := f.updateJustifiedBalances(ctx, bjcp.Root); err != nil {
+				log.Error("could not update justified balances")
+			}
 			f.store.checkpointsLock.Unlock()
 		}
 	}
 	if !features.Get().DisablePullTips {
-		f.updateUnrealizedCheckpoints()
+		if err := f.updateUnrealizedCheckpoints(ctx); err != nil {
+			return errors.Wrap(err, "could not update unrealized checkpoints")
+		}
 	}
 	return f.store.prune(ctx)
 }

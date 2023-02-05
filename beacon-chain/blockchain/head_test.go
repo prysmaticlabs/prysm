@@ -152,20 +152,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.LogsContain(t, hook, "depth=1")
 }
 
-func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-	ctx := context.Background()
-
-	state, _ := util.DeterministicGenesisState(t, 100)
-	r := [32]byte{'a'}
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: r[:]}))
-	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-	balances, err := service.justifiedBalances.get(ctx, r)
-	require.NoError(t, err)
-	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
-}
-
 func Test_notifyNewHeadEvent(t *testing.T) {
 	t.Run("genesis_state_root", func(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)
@@ -559,7 +545,8 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	st, blkRoot, err = prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
-	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx, []uint64{1, 2})
+	fcs.SetJustifiedBalances([]uint64{1, 2})
+	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, headRoot, newRoot)
 	require.Equal(t, headRoot, service.headRoot())

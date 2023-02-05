@@ -10,6 +10,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -125,13 +126,17 @@ func TestProcessAttestations_Ok(t *testing.T) {
 
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	ctx := context.Background()
-	opts := testServiceOptsWithDB(t)
+	beaconDB := testDB.SetupDB(t)
 	fcs := doublylinkedtree.New()
-	opts = append(opts,
+	newStateGen := stategen.New(beaconDB, fcs)
+	fcs.SetBalancesByRooter(newStateGen.ActiveNonSlashedBalancesByRoot)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(newStateGen),
 		WithAttestationPool(attestations.NewPool()),
 		WithStateNotifier(&mockBeaconNode{}),
 		WithForkChoiceStore(fcs),
-	)
+	}
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
