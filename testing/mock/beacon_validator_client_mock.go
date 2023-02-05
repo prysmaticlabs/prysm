@@ -338,26 +338,6 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) StreamBlocksAltair(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocksAltair", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).StreamBlocksAltair), varargs...)
 }
 
-// StreamDuties mocks base method.
-func (m *MockBeaconNodeValidatorClient) StreamDuties(arg0 context.Context, arg1 *eth.DutiesRequest, arg2 ...grpc.CallOption) (eth.BeaconNodeValidator_StreamDutiesClient, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "StreamDuties", varargs...)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamDutiesClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StreamDuties indicates an expected call of StreamDuties.
-func (mr *MockBeaconNodeValidatorClientMockRecorder) StreamDuties(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamDuties", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).StreamDuties), varargs...)
-}
-
 // SubmitAggregateSelectionProof mocks base method.
 func (m *MockBeaconNodeValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *eth.AggregateSelectionRequest, arg2 ...grpc.CallOption) (*eth.AggregateSelectionResponse, error) {
 	m.ctrl.T.Helper()
