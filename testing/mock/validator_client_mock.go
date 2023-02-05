@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -262,21 +262,6 @@ func (mr *MockValidatorClientMockRecorder) StreamBlocksAltair(arg0, arg1 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocksAltair", reflect.TypeOf((*MockValidatorClient)(nil).StreamBlocksAltair), arg0, arg1)
 }
 
-// StreamDuties mocks base method.
-func (m *MockValidatorClient) StreamDuties(arg0 context.Context, arg1 *eth.DutiesRequest) (eth.BeaconNodeValidator_StreamDutiesClient, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamDuties", arg0, arg1)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamDutiesClient)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StreamDuties indicates an expected call of StreamDuties.
-func (mr *MockValidatorClientMockRecorder) StreamDuties(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamDuties", reflect.TypeOf((*MockValidatorClient)(nil).StreamDuties), arg0, arg1)
-}
-
 // SubmitAggregateSelectionProof mocks base method.
 func (m *MockValidatorClient) SubmitAggregateSelectionProof(arg0 context.Context, arg1 *eth.AggregateSelectionRequest) (*eth.AggregateSelectionResponse, error) {
 	m.ctrl.T.Helper()
@@ -353,7 +338,7 @@ func (mr *MockValidatorClientMockRecorder) SubmitValidatorRegistrations(arg0, ar
 }
 
 // SubscribeCommitteeSubnets mocks base method.
-func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest, arg2 []types.ValidatorIndex) (*emptypb.Empty, error) {
+func (m *MockValidatorClient) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest, arg2 []primitives.ValidatorIndex) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscribeCommitteeSubnets", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*emptypb.Empty)
