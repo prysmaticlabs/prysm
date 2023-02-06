@@ -67,12 +67,12 @@ func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
 			if !features.Get().EnableDefensivePull {
-				if f.store.unrealizedJustifiedCheckpoint.Epoch > f.store.justifiedCheckpoint.Epoch {
+				if f.store.unrealizedJustifiedCheckpoint.Epoch != f.store.justifiedCheckpoint.Epoch {
 					if err := f.updateJustifiedBalances(ctx, f.store.unrealizedJustifiedCheckpoint.Root); err != nil {
 						return errors.Wrap(err, "could not update justified balances")
 					}
+					f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 				}
-				f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			}
 			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
