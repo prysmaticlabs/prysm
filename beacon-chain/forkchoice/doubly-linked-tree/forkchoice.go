@@ -211,7 +211,12 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			}
 		} else {
 			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: bytesutil.ToBytes32(jc.Root)}
+			jcRoot := bytesutil.ToBytes32(jc.Root)
+			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
+			if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
+				f.store.checkpointsLock.Unlock()
+				return errors.Wrap(err, "could not update justified balances")
+			}
 		}
 	}
 	// Update finalization
