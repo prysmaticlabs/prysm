@@ -402,7 +402,6 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 
 	// Send exits for keys which already contain execution credentials.
 	for _, idx := range execIndices {
-		fmt.Printf("Sending exit for %d \n", idx)
 		if err := sendExit(primitives.ValidatorIndex(idx)); err != nil {
 			return err
 		}
@@ -414,7 +413,6 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		if ec.ExitedVals[bytesutil.ToBytes48(privKeys[randIndex].PublicKey().Marshal())] {
 			continue
 		}
-		fmt.Printf("Sending random exit for %d \n", randIndex)
 		if err := sendExit(randIndex); err != nil {
 			return err
 		}
@@ -605,10 +603,8 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			Message:   message,
 			Signature: signature,
 		}
-		fmt.Printf("sending change for %d \n", idx)
 		changes = append(changes, change)
 	}
-	fmt.Printf("sending %d changes", len(changes))
 	_, err = beaconAPIClient.SubmitSignedBLSToExecutionChanges(ctx, &v2.SubmitBLSToExecutionChangesRequest{Changes: changes})
 
 	return err
