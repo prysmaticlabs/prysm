@@ -1037,6 +1037,16 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 
 	for _, k := range pubkeys {
+		// Default case: Define fee recipient to burn address
+		var feeRecipient common.Address
+		isFeeRecipientDefined := false
+
+		// If fee recipient is defined in default configuration, use it
+		if v.ProposerSettings() != nil && v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
+			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipientConfig.FeeRecipient // Use cli config for fee recipient.
+			isFeeRecipientDefined = true
+		}
+
 		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
 		if !ok {
@@ -1044,33 +1054,40 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			if err != nil {
 				return nil, err
 			}
+
 			if !ok { // Nothing we can do if RPC server doesn't have validator index.
 				continue
 			}
+
 			validatorIndex = i
 			v.pubkeyToValidatorIndex[k] = i
 		}
-		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
-		if v.ProposerSettings().DefaultConfig != nil {
-			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipient // Use cli config for fee recipient.
-		}
-		if v.ProposerSettings().ProposeConfig != nil {
+
+		// If fee recipient is defined for this specific pubkey in proposer configuration, use it
+		if v.ProposerSettings() != nil && v.ProposerSettings().ProposeConfig != nil {
 			config, ok := v.ProposerSettings().ProposeConfig[k]
-			if ok && config != nil {
-				feeRecipient = config.FeeRecipient // Use file config for fee recipient.
+
+			if ok && config != nil && config.FeeRecipientConfig != nil {
+				feeRecipient = config.FeeRecipientConfig.FeeRecipient // Use file config for fee recipient.
+				isFeeRecipientDefined = true
 			}
 		}
-		prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			ValidatorIndex: validatorIndex,
-			FeeRecipient:   feeRecipient[:],
-		})
-		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
-			log.WithFields(logrus.Fields{
-				"validatorIndex": validatorIndex,
-				"feeRecipient":   feeRecipient,
-			}).Warn("Fee recipient is burn address")
+
+		if isFeeRecipientDefined {
+			prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				ValidatorIndex: validatorIndex,
+				FeeRecipient:   feeRecipient[:],
+			})
+
+			if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
+				log.WithFields(logrus.Fields{
+					"validatorIndex": validatorIndex,
+					"feeRecipient":   feeRecipient,
+				}).Warn("Fee recipient is burn address")
+			}
 		}
 	}
+
 	return prepareProposerReqs, nil
 }
 
@@ -1081,18 +1098,22 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
-		if v.ProposerSettings().DefaultConfig != nil {
-			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipient // Use cli config for fee recipient.
-			config := v.ProposerSettings().DefaultConfig.BuilderConfig
-			if config != nil && config.Enabled {
-				gasLimit = uint64(config.GasLimit) // Use cli config for gas limit.
+
+		if v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
+			defaultConfig := v.ProposerSettings().DefaultConfig
+			feeRecipient = defaultConfig.FeeRecipientConfig.FeeRecipient // Use cli defaultBuilderConfig for fee recipient.
+			defaultBuilderConfig := defaultConfig.BuilderConfig
+
+			if defaultBuilderConfig != nil && defaultBuilderConfig.Enabled {
+				gasLimit = uint64(defaultBuilderConfig.GasLimit) // Use cli config for gas limit.
 				enabled = true
 			}
 		}
+
 		if v.ProposerSettings().ProposeConfig != nil {
 			config, ok := v.ProposerSettings().ProposeConfig[k]
-			if ok && config != nil {
-				feeRecipient = config.FeeRecipient // Use file config for fee recipient.
+			if ok && config != nil && config.FeeRecipientConfig != nil {
+				feeRecipient = config.FeeRecipientConfig.FeeRecipient // Use file config for fee recipient.
 				builderConfig := config.BuilderConfig
 				if builderConfig != nil {
 					if builderConfig.Enabled {
@@ -1104,15 +1125,18 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 				}
 			}
 		}
+
 		if !enabled {
 			continue
 		}
+
 		req := &ethpb.ValidatorRegistrationV1{
 			FeeRecipient: feeRecipient[:],
 			GasLimit:     gasLimit,
 			Timestamp:    uint64(time.Now().UTC().Unix()),
 			Pubkey:       pubkeys[i][:],
 		}
+
 		signedReq, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -1121,7 +1145,9 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			}).Error(err)
 			continue
 		}
+
 		signedValRegRegs = append(signedValRegRegs, signedReq)
+
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
