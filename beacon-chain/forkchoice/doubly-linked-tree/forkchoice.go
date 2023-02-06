@@ -712,6 +712,7 @@ func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
 }
 
 // updateJustifiedBalances updates the validators balances on the justified checkpoint pointed by root
+// This function requires a lock on checkpointsLock being held by the caller.
 func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte) error {
 	balances, err := f.balancesByRoot(ctx, root)
 	if err != nil {
