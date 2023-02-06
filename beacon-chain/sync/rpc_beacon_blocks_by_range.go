@@ -175,6 +175,8 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			break
 		}
 	}
+
+	fullBlocks := make([]interfaces.SignedBeaconBlockWriteOnly, len(blks))
 	if blindedExists {
 		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
 		if err != nil {
@@ -182,10 +184,10 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
-		copy(blks[blindedIndex:], reconstructedBlks)
+		copy(fullBlocks[blindedIndex:], reconstructedBlks)
 	}
 
-	for _, b := range blks {
+	for _, b := range fullBlocks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
