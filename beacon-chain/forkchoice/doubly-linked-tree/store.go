@@ -86,7 +86,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		bestDescendant = justifiedNode
 	}
 	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
-	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch, currentEpoch) {
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, currentEpoch) {
 		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
@@ -218,8 +218,8 @@ func (s *Store) prune(ctx context.Context) error {
 	defer s.nodesLock.Unlock()
 	s.checkpointsLock.RLock()
 	finalizedRoot := s.finalizedCheckpoint.Root
+	finalizedEpoch := s.finalizedCheckpoint.Epoch
 	s.checkpointsLock.RUnlock()
-
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
 		return errors.WithMessage(errUnknownFinalizedRoot, fmt.Sprintf("%#x", finalizedRoot))
@@ -238,6 +238,22 @@ func (s *Store) prune(ctx context.Context) error {
 	s.treeRootNode = finalizedNode
 
 	prunedCount.Inc()
+	// Prune all children of the finalized checkpoint block that are incompatible with it
+	checkpointMaxSlot, err := slots.EpochStart(finalizedEpoch)
+	if err != nil {
+		return errors.Wrap(err, "could not compute epoch start")
+	}
+	if finalizedNode.slot == checkpointMaxSlot {
+		return nil
+	}
+
+	for _, child := range finalizedNode.children {
+		if child != nil && child.slot <= checkpointMaxSlot {
+			if err := s.pruneFinalizedNodeByRootMap(ctx, child, finalizedNode); err != nil {
+				return errors.Wrap(err, "could not prune incompatible finalized child")
+			}
+		}
+	}
 	return nil
 }
 
