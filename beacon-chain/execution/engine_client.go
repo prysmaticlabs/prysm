@@ -65,7 +65,7 @@ type ForkchoiceUpdatedResponse struct {
 type ExecutionPayloadReconstructor interface {
 	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
-	) (interfaces.SignedBeaconBlock, error)
+	) (interfaces.SignedBeaconBlockWriteOnly, error)
 	ReconstructFullBellatrixBlockBatch(
 		ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlockWriteOnly, error)
