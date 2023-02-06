@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/blockfetcher"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/events"
@@ -314,6 +315,10 @@ func (s *Service) Start() {
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
+		},
+		BlockFetcher: &blockfetcher.BlockProvider{
+			BeaconDB:         s.cfg.BeaconDB,
+			ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 		},
 		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                   s.cfg.HeadFetcher,

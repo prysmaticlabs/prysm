@@ -11,6 +11,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/blockfetcher"
 	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -36,23 +37,6 @@ const versionHeader = "eth-consensus-version"
 var (
 	errNilBlock = errors.New("nil block")
 )
-
-// blockIdParseError represents an error scenario where a block ID could not be parsed.
-type blockIdParseError struct {
-	message string
-}
-
-// newBlockIdParseError creates a new error instance.
-func newBlockIdParseError(reason error) blockIdParseError {
-	return blockIdParseError{
-		message: errors.Wrapf(reason, "could not parse block ID").Error(),
-	}
-}
-
-// Error returns the underlying error message.
-func (e *blockIdParseError) Error() string {
-	return e.message
-}
 
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
@@ -100,7 +84,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -288,7 +272,7 @@ func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*eth
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -311,7 +295,7 @@ func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -333,7 +317,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockV2")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -387,7 +371,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZV2")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -529,7 +513,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockAttestations")
 	defer span.End()
 
-	blk, err := bs.blockFromBlockID(ctx, req.BlockId)
+	blk, err := bs.BlockFetcher.Block(ctx, req.BlockId)
 	err = handleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
@@ -556,68 +540,8 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}, nil
 }
 
-func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {
-	var err error
-	var blk interfaces.SignedBeaconBlock
-	switch string(blockId) {
-	case "head":
-		blk, err = bs.ChainInfoFetcher.HeadBlock(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve head block")
-		}
-	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
-		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
-		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
-		if err != nil {
-			return nil, errors.New("could not get finalized block from db")
-		}
-	case "genesis":
-		blk, err = bs.BeaconDB.GenesisBlock(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve blocks for genesis slot")
-		}
-	default:
-		if len(blockId) == 32 {
-			blk, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(blockId))
-			if err != nil {
-				return nil, errors.Wrap(err, "could not retrieve block")
-			}
-		} else {
-			slot, err := strconv.ParseUint(string(blockId), 10, 64)
-			if err != nil {
-				e := newBlockIdParseError(err)
-				return nil, &e
-			}
-			blks, err := bs.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
-			}
-			_, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not retrieve block roots for slot %d", slot)
-			}
-			numBlks := len(blks)
-			if numBlks == 0 {
-				return nil, nil
-			}
-			for i, b := range blks {
-				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
-				}
-				if canonical {
-					blk = b
-					break
-				}
-			}
-		}
-	}
-	return blk, nil
-}
-
 func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
-	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
+	if invalidBlockIdErr, ok := err.(*blockfetcher.BlockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
 	if err != nil {
