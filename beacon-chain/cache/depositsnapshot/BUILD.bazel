@@ -27,6 +27,7 @@ go_test(
         "merkle_tree_test.go",
         "spec_test.go",
     ],
+    data = ["test_cases.yaml"],
     embed = [":go_default_library"],
     deps = [
         "//proto/eth/v1:go_default_library",

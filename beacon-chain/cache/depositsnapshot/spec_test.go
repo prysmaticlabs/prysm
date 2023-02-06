@@ -12,6 +12,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"gopkg.in/yaml.v3"
+	"reflect"
 )
 
 type testCase struct {
@@ -251,8 +252,18 @@ func TestDepositCases(t *testing.T) {
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
 		assert.NoError(t, err)
-		assert.Equal(t, c.Eth1Data.DepositRoot, c.Snapshot.depositRoot)
-		assert.Equal(t, c.Eth1Data.DepositRoot, tree.getRoot())
+		if c.Eth1Data.DepositRoot != c.Snapshot.depositRoot {
+			t.Fatalf(
+				"Eth1data deposit root %#x != snapshot deposit root %#x",
+				c.Eth1Data.DepositRoot,
+				c.Snapshot.depositRoot,
+			)
+			t.Fatalf(
+				"Eth1data deposit root %#x != tree root %#x",
+				c.Eth1Data.DepositRoot,
+				tree.getRoot(),
+			)
+		}
 	}
 }
 
@@ -276,7 +287,11 @@ func TestFinalization(t *testing.T) {
 	assert.Equal(t, tree.getRoot(), originalRoot)
 	snapshotData, err := tree.getSnapshot()
 	assert.NoError(t, err)
-	assert.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
+
+	want := testCases[100].Snapshot.DepositTreeSnapshot
+	if !reflect.DeepEqual(want, snapshotData) {
+		t.Fatalf("Snapshot and data not equal: %+v but got %+v", want, snapshotData)
+	}
 	// create a copy of the tree from a snapshot by replaying
 	// the deposits after the finalized deposit
 	cp := cloneFromSnapshot(t, snapshotData, testCases[101:128])
