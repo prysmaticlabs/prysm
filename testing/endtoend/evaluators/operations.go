@@ -556,7 +556,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	}
 	exitedIndices := make([]primitives.ValidatorIndex, 0)
 
-	for key, _ := range ec.ExitedVals {
+	for key := range ec.ExitedVals {
 		valIdx, ok := st.ValidatorIndexByPubkey(key)
 		if !ok {
 			return errors.Errorf("pubkey %#x does not exist in our state", key)
@@ -637,7 +637,7 @@ func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.Clien
 		return errors.Wrap(err, "could not get state")
 	}
 
-	for key, _ := range ec.ExitedVals {
+	for key := range ec.ExitedVals {
 		valIdx, ok := st.ValidatorIndexByPubkey(key)
 		if !ok {
 			return errors.Errorf("pubkey %#x does not exist in our state", key)
