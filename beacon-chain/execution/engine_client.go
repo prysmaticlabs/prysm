@@ -443,7 +443,7 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
-) (interfaces.SignedBeaconBlock, error) {
+) (interfaces.SignedBeaconBlockWriteOnly, error) {
 	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
 		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
 	}
