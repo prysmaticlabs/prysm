@@ -84,12 +84,13 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) cor
 	if !ok {
 		panic(fmt.Sprintf("unable to parse TerminalTotalDifficulty as an integer = %s", clparams.BeaconConfig().TerminalTotalDifficulty))
 	}
-	var shanghaiTime *big.Int
+	var shanghaiTime *uint64
 	if cfg.CapellaForkEpoch != math.MaxUint64 {
 		startSlot, err := slots.EpochStart(cfg.CapellaForkEpoch)
 		if err == nil {
 			startTime := slots.StartTime(genesisTime, startSlot)
-			shanghaiTime = big.NewInt(startTime.Unix())
+			newTime := uint64(startTime.Unix())
+			shanghaiTime = &newTime
 		}
 	}
 	cc := &params.ChainConfig{
