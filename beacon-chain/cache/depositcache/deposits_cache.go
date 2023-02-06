@@ -153,7 +153,8 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 	if int(eth1DepositIndex) < insertIndex {
 		return
 	}
-	for _, d := range dc.deposits {
+	snapshot := make([][32]byte, len(dc.deposits))
+	for i, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 			continue
 		}
@@ -165,15 +166,13 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 			log.WithError(err).Error("Could not hash deposit data. Finalized deposit cache not updated.")
 			return
 		}
-		if err = depositTrie.Insert(depHash[:], insertIndex); err != nil {
-			log.WithError(err).Error("Could not insert deposit hash")
-			return
-		}
-		insertIndex++
+		snapshot[i] = depHash
 	}
 
+	tree, err := snapshottree.fromSnapshot(snapshot)
+
 	dc.finalizedDeposits = &FinalizedDeposits{
-		Deposits:        depositTrie,
+		Tree:            tree,
 		MerkleTrieIndex: eth1DepositIndex,
 	}
 }
