@@ -133,7 +133,6 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		tracing.AnnotateError(span, err)
 		return err
 	}
-
 	// handle genesis case
 	if startSlot == 0 {
 		genBlock, genRoot, err := s.retrieveGenesisBlock(ctx)
