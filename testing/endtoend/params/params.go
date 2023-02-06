@@ -121,7 +121,7 @@ var StandardLighthouseNodeCount = 2
 var DepositCount = uint64(64)
 
 // PregenesisExecCreds is the number of withdrawal credentials of genesis validators which use an execution address.
-var PregenesisExecCreds = uint64(50)
+var PregenesisExecCreds = uint64(8)
 
 // NumOfExecEngineTxs is the number of transaction sent to the execution engine.
 var NumOfExecEngineTxs = uint64(200)

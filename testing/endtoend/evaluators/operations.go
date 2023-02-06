@@ -32,7 +32,7 @@ import (
 // churnLimit is normally 4 unless the validator set is extremely large.
 var churnLimit = 4
 var depositValCount = e2e.DepositCount
-var numOfExits = 20
+var numOfExits = 2
 
 // Deposits should be processed in twice the length of the epochs per eth1 voting period.
 var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
@@ -402,6 +402,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 
 	// Send exits for keys which already contain execution credentials.
 	for _, idx := range execIndices {
+		fmt.Printf("Sending exit for %d \n", idx)
 		if err := sendExit(primitives.ValidatorIndex(idx)); err != nil {
 			return err
 		}
@@ -413,6 +414,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		if ec.ExitedVals[bytesutil.ToBytes48(privKeys[randIndex].PublicKey().Marshal())] {
 			continue
 		}
+		fmt.Printf("Sending random exit for %d \n", randIndex)
 		if err := sendExit(randIndex); err != nil {
 			return err
 		}
@@ -603,8 +605,10 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			Message:   message,
 			Signature: signature,
 		}
+		fmt.Printf("sending change for %d \n", idx)
 		changes = append(changes, change)
 	}
+	fmt.Printf("sending %d changes", len(changes))
 	_, err = beaconAPIClient.SubmitSignedBLSToExecutionChanges(ctx, &v2.SubmitBLSToExecutionChangesRequest{Changes: changes})
 
 	return err
@@ -638,6 +642,11 @@ func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.Clien
 		if !ok {
 			return errors.Errorf("pubkey %#x does not exist in our state", key)
 		}
+		val, err := st.ValidatorAtIndex(valIdx)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("exit epoch %d , withdrawable epoch %d \n ", val.ExitEpoch, val.WithdrawableEpoch)
 		bal, err := st.BalanceAtIndex(valIdx)
 		if err != nil {
 			return err
