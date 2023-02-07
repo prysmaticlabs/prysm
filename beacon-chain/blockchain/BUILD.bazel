@@ -118,6 +118,7 @@ go_test(
         "receive_attestation_test.go",
         "receive_block_test.go",
         "service_test.go",
+        "state_balance_cache_test.go",
         "weak_subjectivity_checks_test.go",
     ],
     embed = [":go_default_library"],
