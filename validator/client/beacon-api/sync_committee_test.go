@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"

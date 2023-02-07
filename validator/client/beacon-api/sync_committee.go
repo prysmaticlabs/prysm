@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"net/url"
 	"strconv"
+
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
