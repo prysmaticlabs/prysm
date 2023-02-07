@@ -317,12 +317,13 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 
 func TestServer_GetForkChoice(t *testing.T) {
 	store := doublylinkedtree.New()
+	ctx := context.Background()
 	fRoot := [32]byte{'a'}
 	jRoot := [32]byte{'b'}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
 	jc := &forkchoicetypes.Checkpoint{Epoch: 3, Root: jRoot}
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
-	require.NoError(t, store.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, store.UpdateJustifiedCheckpoint(ctx, jc))
 	bs := &Server{ForkFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)

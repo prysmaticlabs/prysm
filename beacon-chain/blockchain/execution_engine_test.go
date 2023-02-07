@@ -449,7 +449,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	fcs.ProcessAttestation(ctx, []uint64{1}, brf, 1)
 	fcs.ProcessAttestation(ctx, []uint64{2}, brg, 1)
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: bra}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, jc))
 	headRoot, err := fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, brg, headRoot)
@@ -884,7 +884,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	fjc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(fjc))
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, fjc))
 	require.NoError(t, fcs.UpdateFinalizedCheckpoint(fjc))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, genesisRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)

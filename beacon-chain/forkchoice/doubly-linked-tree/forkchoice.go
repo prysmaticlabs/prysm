@@ -495,7 +495,7 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index primitives.Vali
 }
 
 // UpdateJustifiedCheckpoint sets the justified checkpoint to the given one
-func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) error {
+func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoicetypes.Checkpoint) error {
 	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
@@ -506,6 +506,9 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	bj := f.store.bestJustifiedCheckpoint
 	if bj == nil || bj.Root == params.BeaconConfig().ZeroHash || jc.Epoch > bj.Epoch {
 		f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
+		if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {
+			return errors.Wrap(err, "could not update justified balances")
+		}
 	}
 	return nil
 }

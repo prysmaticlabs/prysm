@@ -92,7 +92,7 @@ func TestStore_LongFork(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'b'}, [32]byte{'D'}, 2, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	require.NoError(t, f.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 2, Root: ha}))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{Epoch: 2, Root: ha}))
 	headRoot, err = f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'d'}, headRoot)
@@ -173,7 +173,7 @@ func TestStore_NoDeadLock(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	ha := [32]byte{'a'}
-	require.NoError(t, f.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1, Root: ha}))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{Epoch: 1, Root: ha}))
 	headRoot, err = f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'i'}, headRoot)

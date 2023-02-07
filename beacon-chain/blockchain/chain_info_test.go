@@ -115,7 +115,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 
 	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(cp))
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
 	jp := service.CurrentJustifiedCheckpt()
 	assert.Equal(t, cp.Epoch, jp.Epoch, "Unexpected justified epoch")
 	require.Equal(t, cp.Root, bytesutil.ToBytes32(jp.Root))

@@ -77,7 +77,7 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
-	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
+	UpdateJustifiedCheckpoint(context.Context, *forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)

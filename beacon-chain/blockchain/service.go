@@ -200,7 +200,8 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+	ctx := context.Background()
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
 		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}

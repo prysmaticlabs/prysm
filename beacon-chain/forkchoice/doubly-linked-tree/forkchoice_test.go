@@ -357,11 +357,12 @@ func indexToHash(i uint64) [32]byte {
 
 func TestForkChoice_UpdateJustifiedAndFinalizedCheckpoints(t *testing.T) {
 	f := setup(1, 1)
+	ctx := context.Background()
 	jr := [32]byte{'j'}
 	fr := [32]byte{'f'}
 	jc := &forkchoicetypes.Checkpoint{Root: jr, Epoch: 3}
 	fc := &forkchoicetypes.Checkpoint{Root: fr, Epoch: 2}
-	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(ctx, jc))
 	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
 	require.Equal(t, f.store.justifiedCheckpoint.Epoch, jc.Epoch)
 	require.Equal(t, f.store.justifiedCheckpoint.Root, jc.Root)
