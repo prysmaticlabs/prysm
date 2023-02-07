@@ -5,13 +5,14 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
@@ -1250,7 +1251,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1275,6 +1276,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 		Changes: signedChanges,
 	})
 	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages))
 
@@ -1356,7 +1358,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(stc, time.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1450,7 +1452,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1475,6 +1477,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
 		Changes: signedChanges,
 	})
+	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
 	require.ErrorContains(t, "One or more BLSToExecutionChange failed validation", err)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages)+1)

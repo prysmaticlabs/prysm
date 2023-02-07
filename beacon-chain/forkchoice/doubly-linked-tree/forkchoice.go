@@ -168,37 +168,42 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		}
-		currentSlot := slots.CurrentSlot(f.store.genesisTime)
-		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-				Root: bytesutil.ToBytes32(jc.Root)}
-		} else {
-			currentJcp := f.store.justifiedCheckpoint
-			currentRoot := currentJcp.Root
-			if currentRoot == params.BeaconConfig().ZeroHash {
-				currentRoot = f.store.originRoot
-			}
-			jSlot, err := slots.EpochStart(currentJcp.Epoch)
-			if err != nil {
-				f.store.checkpointsLock.Unlock()
-				return err
-			}
-			jcRoot := bytesutil.ToBytes32(jc.Root)
-			// Releasing here the checkpoints lock because
-			// AncestorRoot acquires a lock on nodes and that can
-			// cause a double lock.
-			f.store.checkpointsLock.Unlock()
-			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
-			if err != nil {
-				return err
-			}
-			f.store.checkpointsLock.Lock()
-			if root == currentRoot {
+		if !features.Get().EnableDefensivePull {
+			currentSlot := slots.CurrentSlot(f.store.genesisTime)
+			if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-					Root: jcRoot}
+					Root: bytesutil.ToBytes32(jc.Root)}
+			} else {
+				currentJcp := f.store.justifiedCheckpoint
+				currentRoot := currentJcp.Root
+				if currentRoot == params.BeaconConfig().ZeroHash {
+					currentRoot = f.store.originRoot
+				}
+				jSlot, err := slots.EpochStart(currentJcp.Epoch)
+				if err != nil {
+					f.store.checkpointsLock.Unlock()
+					return err
+				}
+				jcRoot := bytesutil.ToBytes32(jc.Root)
+				// Releasing here the checkpoints lock because
+				// AncestorRoot acquires a lock on nodes and that can
+				// cause a double lock.
+				f.store.checkpointsLock.Unlock()
+				root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
+				if err != nil {
+					return err
+				}
+				f.store.checkpointsLock.Lock()
+				if root == currentRoot {
+					f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
+					f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+						Root: jcRoot}
+				}
 			}
+		} else {
+			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
+			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: bytesutil.ToBytes32(jc.Root)}
 		}
 	}
 	// Update finalization
@@ -208,8 +213,10 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 	}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
 		Root: bytesutil.ToBytes32(fc.Root)}
-	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-		Root: bytesutil.ToBytes32(jc.Root)}
+	if !features.Get().EnableDefensivePull {
+		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+			Root: bytesutil.ToBytes32(jc.Root)}
+	}
 	f.store.checkpointsLock.Unlock()
 	return f.store.prune(ctx)
 }

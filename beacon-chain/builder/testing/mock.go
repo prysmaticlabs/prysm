@@ -16,6 +16,7 @@ import (
 type MockBuilderService struct {
 	HasConfigured         bool
 	Payload               *v1.ExecutionPayload
+	PayloadCapella        *v1.ExecutionPayloadCapella
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	ErrGetHeader          error
@@ -29,9 +30,16 @@ func (s *MockBuilderService) Configured() bool {
 
 // SubmitBlindedBlock for mocking.
 func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
-	w, err := blocks.WrappedExecutionPayload(s.Payload)
+	if s.Payload != nil {
+		w, err := blocks.WrappedExecutionPayload(s.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not wrap payload")
+		}
+		return w, s.ErrSubmitBlindedBlock
+	}
+	w, err := blocks.WrappedExecutionPayloadCapella(s.PayloadCapella)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not wrap payload")
+		return nil, errors.Wrap(err, "could not wrap capella payload")
 	}
 	return w, s.ErrSubmitBlindedBlock
 }

@@ -284,6 +284,11 @@ func (s *ChainService) HeadState(context.Context) (state.BeaconState, error) {
 	return s.State, nil
 }
 
+// HeadStateReadOnly mocks HeadStateReadOnly method in chain service.
+func (s *ChainService) HeadStateReadOnly(context.Context) (state.ReadOnlyBeaconState, error) {
+	return s.State, nil
+}
+
 // CurrentFork mocks HeadState method in chain service.
 func (s *ChainService) CurrentFork() *ethpb.Fork {
 	return s.Fork

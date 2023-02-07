@@ -89,6 +89,10 @@ var (
 			Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000, 20000, 24000},
 		},
 	)
+	arrivalBlockPropagationGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "block_arrival_latency_milliseconds_gauge",
+		Help: "Captures blocks propagation time. Blocks arrival in milliseconds",
+	})
 
 	// Attestation processing granular error tracking.
 	attBadBlockCount = promauto.NewCounter(prometheus.CounterOpts{

@@ -24,6 +24,21 @@ type Node[T any] struct {
 	next  *Node[T]
 }
 
+// Copy returns a copy of the origina list.
+func (l *List[T]) Copy() *List[T] {
+	if l == nil {
+		return nil
+	}
+	list := &List[T]{}
+	if l.len == 0 {
+		return list
+	}
+	for n := l.First(); n != nil; n = n.next {
+		list.Append(n.Copy())
+	}
+	return list
+}
+
 // First gets the reference to the first node in the list.
 func (l *List[T]) First() *Node[T] {
 	return l.first
@@ -110,4 +125,13 @@ func (n *Node[T]) Value() (T, error) {
 		return *new(T), errValueOnNil
 	}
 	return n.value, nil
+}
+
+// Copy copies the given node and returns a new one. It does not do a deep copy
+// of T.
+func (n *Node[T]) Copy() *Node[T] {
+	if n == nil {
+		return nil
+	}
+	return NewNode(n.value)
 }

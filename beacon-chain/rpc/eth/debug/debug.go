@@ -45,6 +45,11 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
+	blockRoot, err := beaconSt.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+	}
+	isFinalized := ds.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	switch beaconSt.Version() {
 	case version.Phase0:
@@ -58,6 +63,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 				State: &ethpbv2.BeaconStateContainer_Phase0State{Phase0State: protoSt},
 			},
 			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
 		}, nil
 	case version.Altair:
 		protoState, err := migration.BeaconStateAltairToProto(beaconSt)
@@ -70,6 +76,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 				State: &ethpbv2.BeaconStateContainer_AltairState{AltairState: protoState},
 			},
 			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
 		}, nil
 	case version.Bellatrix:
 		protoState, err := migration.BeaconStateBellatrixToProto(beaconSt)
@@ -82,6 +89,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 				State: &ethpbv2.BeaconStateContainer_BellatrixState{BellatrixState: protoState},
 			},
 			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
 		}, nil
 	case version.Capella:
 		protoState, err := migration.BeaconStateCapellaToProto(beaconSt)
@@ -94,6 +102,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconState
 				State: &ethpbv2.BeaconStateContainer_CapellaState{CapellaState: protoState},
 			},
 			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
 		}, nil
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")
