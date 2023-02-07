@@ -72,7 +72,7 @@ type BeaconBlockBody interface {
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 }
 
-type SignedBeaconBlockWriteOnly interface {
+type SignedBeaconBlockWithWriteAccess interface {
 	SignedBeaconBlock
 	SetExecution(ExecutionData) error
 	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error

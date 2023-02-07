@@ -15,7 +15,7 @@ import (
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlockWriteOnly, headState state.BeaconState) {
+func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlockWithWriteAccess, headState state.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}

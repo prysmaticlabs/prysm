@@ -1724,7 +1724,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 	})
 }
 
-func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlockWriteOnly) {
+func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlockWithWriteAccess) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
 
