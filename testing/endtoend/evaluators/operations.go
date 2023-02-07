@@ -638,11 +638,6 @@ func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.Clien
 		if !ok {
 			return errors.Errorf("pubkey %#x does not exist in our state", key)
 		}
-		val, err := st.ValidatorAtIndex(valIdx)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("exit epoch %d , withdrawable epoch %d \n ", val.ExitEpoch, val.WithdrawableEpoch)
 		bal, err := st.BalanceAtIndex(valIdx)
 		if err != nil {
 			return err

@@ -23,8 +23,8 @@ func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
 	// E2E sets EL block production rate equal to SecondsPerETH1Block to keep the math simple.
 	ttd := uint64(c.BellatrixForkEpoch) * uint64(c.SlotsPerEpoch) * c.SecondsPerSlot
 	c.TerminalTotalDifficulty = fmt.Sprintf("%d", ttd)
-	// Temporarily disable capella for mainnet, as we require
-	// lighthouse to release a capella compatible version.
+	// TODO: Remove this once lighthouse has released a capella
+	// compatible release.
 	if c.ConfigName == params.EndToEndMainnetName {
 		c.CapellaForkEpoch = math.MaxUint64
 	}
