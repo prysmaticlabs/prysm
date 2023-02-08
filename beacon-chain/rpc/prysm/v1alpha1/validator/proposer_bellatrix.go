@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -49,27 +48,31 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Proposer: failed to check if builder can be used")
 	} else if canUseBuilder {
-		builderPayload, builderV, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+		builderPayload, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
 		if err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
 			// Compare payload with local builder and choose the one with higher value.
-			localPayload, localV, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+			localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
 			if err != nil {
 				return errors.Wrap(err, "failed to get execution payload")
 			}
-
-			localValue := big.NewInt(0).SetBytes(localV)
-			builderValue := big.NewInt(0).SetBytes(builderV)
-			if builderValue.Cmp(localValue) > 0 {
+			localValue, err := localPayload.Value()
+			if err != nil {
+				return errors.Wrap(err, "failed to get local payload value")
+			}
+			builderValue, err := builderPayload.Value()
+			if err != nil {
+				log.WithError(err).Warn("Proposer: failed to get builder payload value")
+			} else if builderValue.Cmp(localValue) > 0 {
 				blk.SetBlinded(true)
 				return blk.Body().SetExecution(builderPayload)
 			}
 			return blk.Body().SetExecution(localPayload)
 		}
 	}
-	executionData, _, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
 	}
@@ -78,22 +81,22 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, []byte, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, nil, err
+		return nil, err
 	}
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
@@ -101,55 +104,55 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 
 	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if signedBid.IsNil() {
-		return nil, nil, errors.New("builder returned nil bid")
+		return nil, errors.New("builder returned nil bid")
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get bid")
+		return nil, errors.Wrap(err, "could not get bid")
 	}
 	if bid.IsNil() {
-		return nil, nil, errors.New("builder returned nil bid")
+		return nil, errors.New("builder returned nil bid")
 	}
 
 	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
 	if v.String() == "0" {
-		return nil, nil, errors.New("builder returned header with 0 bid amount")
+		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
 	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	header, err := bid.Header()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get bid header")
+		return nil, errors.Wrap(err, "could not get bid header")
 	}
 	txRoot, err := header.TransactionsRoot()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get transaction root")
+		return nil, errors.Wrap(err, "could not get transaction root")
 	}
 	if bytesutil.ToBytes32(txRoot) == emptyRoot {
-		return nil, nil, errors.New("builder returned header with an empty tx root")
+		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
 	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
-		return nil, nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if header.Timestamp() != uint64(t.Unix()) {
-		return nil, nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
 	if err := validateBuilderSignature(signedBid); err != nil {
-		return nil, nil, errors.Wrap(err, "could not validate builder signature")
+		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
 	log.WithFields(logrus.Fields{
@@ -157,7 +160,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		"builderPubKey": fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":     fmt.Sprintf("%#x", header.BlockHash()),
 	}).Info("Received header with bid")
-	return header, bid.Value(), nil
+	return header, nil
 }
 
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
@@ -287,7 +290,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 func validateBuilderSignature(signedBid builder.SignedBid) error {
 	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
 		nil, /* fork version */
-		nil  /* genesis val root */)
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
