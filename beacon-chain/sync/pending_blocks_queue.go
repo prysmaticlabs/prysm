@@ -211,7 +211,7 @@ func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
 	span *trace.Span,
 	slot primitives.Slot,
-	b interfaces.SignedBeaconBlock,
+	b interfaces.ReadOnlySignedBeaconBlock,
 	blkRoot [32]byte,
 ) (keepProcessing bool, err error) {
 	parentIsBad := s.hasBadBlock(b.Block().ParentRoot())
@@ -353,7 +353,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -366,7 +366,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 		return err
 	}
 
-	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		blkPb, err := blk.Proto()
 		if err != nil {
@@ -398,7 +398,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.ReadOnlySignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -414,21 +414,21 @@ func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.Sign
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOnlySignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
-		return []interfaces.SignedBeaconBlock{}
+		return []interfaces.ReadOnlySignedBeaconBlock{}
 	}
-	blks, ok := value.([]interfaces.SignedBeaconBlock)
+	blks, ok := value.([]interfaces.ReadOnlySignedBeaconBlock)
 	if !ok {
-		return []interfaces.SignedBeaconBlock{}
+		return []interfaces.ReadOnlySignedBeaconBlock{}
 	}
 	return blks
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
+func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}

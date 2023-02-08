@@ -38,7 +38,7 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
@@ -74,7 +74,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockAltair()
@@ -115,7 +115,7 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockBellatrix()
@@ -172,7 +172,7 @@ func fillDBTestBlocksCapella(ctx context.Context, t *testing.T, beaconDB db.Data
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlockCapella()
@@ -243,7 +243,7 @@ func fillDBTestBlocksBellatrixBlinded(ctx context.Context, t *testing.T, beaconD
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -300,7 +300,7 @@ func fillDBTestBlocksCapellaBlinded(ctx context.Context, t *testing.T, beaconDB 
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := primitives.Slot(100)
-	blks := make([]interfaces.SignedBeaconBlock, count)
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := primitives.Slot(0); i < count; i++ {
 		b := util.NewBlindedBeaconBlockCapella()

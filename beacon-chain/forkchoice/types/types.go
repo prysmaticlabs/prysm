@@ -25,7 +25,7 @@ type Checkpoint struct {
 
 // BlockAndCheckpoints to call the InsertOptimisticChain function
 type BlockAndCheckpoints struct {
-	Block               interfaces.BeaconBlock
+	Block               interfaces.ReadOnlyBeaconBlock
 	JustifiedCheckpoint *ethpb.Checkpoint
 	FinalizedCheckpoint *ethpb.Checkpoint
 }
