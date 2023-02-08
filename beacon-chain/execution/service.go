@@ -413,30 +413,27 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*types.HeaderInfo, 0, requestRange)
-	errs := make([]*error, 0, requestRange)
 	if requestRange == 0 {
 		return headers, nil
 	}
 	for i := startBlock; i <= endBlock; i++ {
 		header := &types.HeaderInfo{}
-		el := gethRPC.BatchElem{
+		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
 			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(0).SetUint64(i)), false},
 			Result: header,
 			Error:  error(nil),
-		}
-		elems = append(elems, el)
+		})
 		headers = append(headers, header)
-		errs = append(errs, &el.Error)
+
 	}
 	ioErr := s.rpcClient.BatchCall(elems)
 	if ioErr != nil {
 		return nil, ioErr
 	}
-	for _, e := range errs {
-		err := *e
-		if err != nil {
-			return nil, err
+	for _, e := range elems {
+		if e.Error != nil {
+			return nil, e.Error
 		}
 	}
 	for _, h := range headers {
