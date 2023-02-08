@@ -53,7 +53,6 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
-			// Compare payload with local builder and choose the one with higher value.
 			localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
 			if err != nil {
 				return errors.Wrap(err, "failed to get execution payload")
@@ -62,9 +61,11 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 			if err != nil {
 				return errors.Wrap(err, "failed to get local payload value")
 			}
+
+			// Compare payload values between local and builder. Default to the local value if it is higher.
 			builderValue, err := builderPayload.Value()
 			if err != nil {
-				log.WithError(err).Warn("Proposer: failed to get builder payload value")
+				log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
 			} else if builderValue.Cmp(localValue) > 0 {
 				blk.SetBlinded(true)
 				return blk.Body().SetExecution(builderPayload)
