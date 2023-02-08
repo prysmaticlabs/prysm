@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v3/consensus-types/payload-attribute"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -78,7 +78,7 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, types.Slot) (interfaces.ExecutionData, error) {
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
 	return nil, nil
 }
 

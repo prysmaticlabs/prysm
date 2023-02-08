@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/math"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
@@ -64,17 +64,10 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
-	var oldHeadRoot [32]byte
-	s.headLock.RLock()
-	if s.head == nil {
-		oldHeadRoot = s.originBlockRoot
-	} else {
-		oldHeadRoot = s.head.root
-	}
-	s.headLock.RUnlock()
-	if newHeadRoot == oldHeadRoot {
+	if !s.isNewHead(newHeadRoot) {
 		return nil
 	}
+
 	if err := blocks.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
@@ -101,6 +94,11 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	newStateRoot := headBlock.Block().StateRoot()
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
+	r, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get old head root")
+	}
+	oldHeadRoot := bytesutil.ToBytes32(r)
 	if headBlock.Block().ParentRoot() != oldHeadRoot {
 		commonRoot, forkSlot, err := s.ForkChoicer().CommonAncestor(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
@@ -241,7 +239,7 @@ func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaco
 
 // This returns the head slot.
 // This is a lock free version.
-func (s *Service) headSlot() types.Slot {
+func (s *Service) headSlot() primitives.Slot {
 	if s.head == nil || s.head.block == nil || s.head.block.Block() == nil {
 		return 0
 	}
@@ -276,6 +274,16 @@ func (s *Service) headState(ctx context.Context) state.BeaconState {
 	return s.head.state.Copy()
 }
 
+// This returns a read only version of the head state.
+// It does not perform a copy of the head state.
+// This is a lock free version.
+func (s *Service) headStateReadOnly(ctx context.Context) state.ReadOnlyBeaconState {
+	ctx, span := trace.StartSpan(ctx, "blockChain.headStateReadOnly")
+	defer span.End()
+
+	return s.head.state
+}
+
 // This returns the genesis validators root of the head state.
 // This is a lock free version.
 func (s *Service) headGenesisValidatorsRoot() [32]byte {
@@ -285,14 +293,14 @@ func (s *Service) headGenesisValidatorsRoot() [32]byte {
 // This returns the validator referenced by the provided index in
 // the head state.
 // This is a lock free version.
-func (s *Service) headValidatorAtIndex(index types.ValidatorIndex) (state.ReadOnlyValidator, error) {
+func (s *Service) headValidatorAtIndex(index primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
 	return s.head.state.ValidatorAtIndexReadOnly(index)
 }
 
 // This returns the validator index referenced by the provided pubkey in
 // the head state.
 // This is a lock free version.
-func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool) {
+func (s *Service) headValidatorIndexAtPubkey(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	return s.head.state.ValidatorIndexByPubkey(pubKey)
 }
 
@@ -306,7 +314,7 @@ func (s *Service) hasHeadState() bool {
 // chain head is determined, set, and saved to disk.
 func (s *Service) notifyNewHeadEvent(
 	ctx context.Context,
-	newHeadSlot types.Slot,
+	newHeadSlot primitives.Slot,
 	newHeadState state.BeaconState,
 	newHeadStateRoot,
 	newHeadRoot []byte,
@@ -314,7 +322,7 @@ func (s *Service) notifyNewHeadEvent(
 	previousDutyDependentRoot := s.originBlockRoot[:]
 	currentDutyDependentRoot := s.originBlockRoot[:]
 
-	var previousDutyEpoch types.Epoch
+	var previousDutyEpoch primitives.Epoch
 	currentDutyEpoch := slots.ToEpoch(newHeadSlot)
 	if currentDutyEpoch > 0 {
 		previousDutyEpoch = currentDutyEpoch.Sub(1)

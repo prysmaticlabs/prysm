@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
@@ -13,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -35,7 +34,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	chainService := setupBeaconChain(t, beaconDB)
 	chainService.genesisTime = time.Now()
 
-	e := types.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
+	e := primitives.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
 	_, err := chainService.AttestationTargetState(context.Background(), &ethpb.Checkpoint{Epoch: e})
 	require.ErrorContains(t, "exceeds max allowed value relative to the local clock", err)
 }
@@ -122,77 +121,6 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.LogsDoNotContain(t, hook, "Could not process attestation for fork choice")
-}
-
-func TestNotifyEngineIfChangedHead(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	opts := testServiceOptsWithDB(t)
-
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, service.headRoot()))
-	hookErr := "could not notify forkchoice update"
-	invalidStateErr := "Could not get state from db"
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, err)
-	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
-	require.LogsContain(t, hook, invalidStateErr)
-
-	hook.Reset()
-	service.head = &head{
-		root:  [32]byte{'a'},
-		block: nil, /* should not panic if notify head uses correct head */
-	}
-
-	// Block in Cache
-	b := util.NewBeaconBlock()
-	b.Block.Slot = 2
-	wsb, err := blocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	r1, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, service.saveInitSyncBlock(ctx, r1, wsb))
-	st, _ := util.DeterministicGenesisState(t, 1)
-	service.head = &head{
-		root:  r1,
-		block: wsb,
-		state: st,
-	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-
-	// Block in DB
-	b = util.NewBeaconBlock()
-	b.Block.Slot = 3
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
-	r1, err = b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	st, _ = util.DeterministicGenesisState(t, 1)
-	service.head = &head{
-		root:  r1,
-		block: wsb,
-		state: st,
-	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
-	require.Equal(t, true, has)
-	require.Equal(t, types.ValidatorIndex(1), vId)
-	require.Equal(t, [8]byte{1}, payloadID)
-
-	// Test zero headRoot returns immediately.
-	headRoot := service.headRoot()
-	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{}))
-	require.Equal(t, service.headRoot(), headRoot)
 }
 
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {

@@ -2,7 +2,7 @@ package blocks
 
 import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -15,13 +15,13 @@ func (b *SignedBeaconBlock) SetSignature(sig []byte) {
 
 // SetSlot sets the respective slot of the block.
 // This function is not thread safe, it is only used during block creation.
-func (b *BeaconBlock) SetSlot(slot types.Slot) {
+func (b *BeaconBlock) SetSlot(slot primitives.Slot) {
 	b.slot = slot
 }
 
 // SetProposerIndex sets the proposer index of the beacon block.
 // This function is not thread safe, it is only used during block creation.
-func (b *BeaconBlock) SetProposerIndex(proposerIndex types.ValidatorIndex) {
+func (b *BeaconBlock) SetProposerIndex(proposerIndex primitives.ValidatorIndex) {
 	b.proposerIndex = proposerIndex
 }
 

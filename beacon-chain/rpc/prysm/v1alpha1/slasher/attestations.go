@@ -3,7 +3,7 @@ package slasher
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,9 +31,9 @@ func (s *Server) IsSlashableAttestation(
 func (s *Server) HighestAttestations(
 	ctx context.Context, req *ethpb.HighestAttestationRequest,
 ) (*ethpb.HighestAttestationResponse, error) {
-	valIndices := make([]types.ValidatorIndex, len(req.ValidatorIndices))
+	valIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
 	for i, valIdx := range req.ValidatorIndices {
-		valIndices[i] = types.ValidatorIndex(valIdx)
+		valIndices[i] = primitives.ValidatorIndex(valIdx)
 	}
 	atts, err := s.SlashingChecker.HighestAttestations(ctx, valIndices)
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"sync"
 
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
@@ -27,7 +27,7 @@ func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 }
 
 // GetProposerPayloadIDs returns the proposer and  payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot, r [32]byte) (types.ValidatorIndex, [8]byte, bool) {
+func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot primitives.Slot, r [32]byte) (primitives.ValidatorIndex, [8]byte, bool) {
 	f.RLock()
 	defer f.RUnlock()
 	ids, ok := f.slotToProposerAndPayloadIDs[idKey(slot, r)]
@@ -40,11 +40,11 @@ func (f *ProposerPayloadIDsCache) GetProposerPayloadIDs(slot types.Slot, r [32]b
 	var pId [pIdLength]byte
 	copy(pId[:], b)
 
-	return types.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), pId, true
+	return primitives.ValidatorIndex(bytesutil.BytesToUint64BigEndian(vId)), pId, true
 }
 
 // SetProposerAndPayloadIDs sets the proposer and payload IDs for the given slot.
-func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId types.ValidatorIndex, pId [8]byte, r [32]byte) {
+func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot primitives.Slot, vId primitives.ValidatorIndex, pId [8]byte, r [32]byte) {
 	f.Lock()
 	defer f.Unlock()
 	var vIdBytes [vIdLength]byte
@@ -64,19 +64,19 @@ func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId 
 }
 
 // PrunePayloadIDs removes the payload id entries that's current than input slot.
-func (f *ProposerPayloadIDsCache) PrunePayloadIDs(slot types.Slot) {
+func (f *ProposerPayloadIDsCache) PrunePayloadIDs(slot primitives.Slot) {
 	f.Lock()
 	defer f.Unlock()
 
 	for k := range f.slotToProposerAndPayloadIDs {
-		s := types.Slot(bytesutil.BytesToUint64BigEndian(k[:8]))
+		s := primitives.Slot(bytesutil.BytesToUint64BigEndian(k[:8]))
 		if slot > s {
 			delete(f.slotToProposerAndPayloadIDs, k)
 		}
 	}
 }
 
-func idKey(slot types.Slot, r [32]byte) [40]byte {
+func idKey(slot primitives.Slot, r [32]byte) [40]byte {
 	var k [40]byte
 	copy(k[:], append(bytesutil.Uint64ToBytesBigEndian(uint64(slot)), r[:]...))
 	return k

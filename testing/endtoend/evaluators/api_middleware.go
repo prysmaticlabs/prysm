@@ -11,7 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -208,7 +208,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 	validatorClient := service.NewBeaconValidatorClient(conn)
 	resp, err := validatorClient.GetAttesterDuties(ctx, &ethpbv1.AttesterDutiesRequest{
 		Epoch: helpers.AltairE2EForkEpoch,
-		Index: []types.ValidatorIndex{0},
+		Index: []primitives.ValidatorIndex{0},
 	})
 	if err != nil {
 		return err

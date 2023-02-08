@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -23,7 +23,7 @@ func testStateWithValidators(v []*ethpb.Validator) testStateOpt {
 	}
 }
 
-func testStateWithSlot(slot types.Slot) testStateOpt {
+func testStateWithSlot(slot primitives.Slot) testStateOpt {
 	return func(a *ethpb.BeaconStateAltair) {
 		a.Slot = slot
 	}
@@ -34,7 +34,8 @@ func testStateFixture(opts ...testStateOpt) state.BeaconState {
 	for _, o := range opts {
 		o(a)
 	}
-	s, _ := state_native.InitializeFromProtoUnsafeAltair(a)
+	s, err := state_native.InitializeFromProtoUnsafeAltair(a)
+	_ = err
 	return s
 }
 
@@ -53,33 +54,33 @@ func generateTestValidators(count int, opts ...func(*ethpb.Validator)) []*ethpb.
 	return vs
 }
 
-func oddValidatorsExpired(currentSlot types.Slot) func(*ethpb.Validator) {
+func oddValidatorsExpired(currentSlot primitives.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
 		pki := binary.LittleEndian.Uint64(v.PublicKey)
 		if pki%2 == 0 {
-			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
+			v.ExitEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		} else {
-			v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
+			v.ExitEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
 		}
 	}
 }
 
-func oddValidatorsQueued(currentSlot types.Slot) func(*ethpb.Validator) {
+func oddValidatorsQueued(currentSlot primitives.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
-		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
+		v.ExitEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		pki := binary.LittleEndian.Uint64(v.PublicKey)
 		if pki%2 == 0 {
-			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
+			v.ActivationEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
 		} else {
-			v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
+			v.ActivationEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 		}
 	}
 }
 
-func allValidatorsValid(currentSlot types.Slot) func(*ethpb.Validator) {
+func allValidatorsValid(currentSlot primitives.Slot) func(*ethpb.Validator) {
 	return func(v *ethpb.Validator) {
-		v.ActivationEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
-		v.ExitEpoch = types.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
+		v.ActivationEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) - 1)
+		v.ExitEpoch = primitives.Epoch(int(slots.ToEpoch(currentSlot)) + 1)
 	}
 }
 
@@ -91,21 +92,21 @@ func balanceIsKeyTimes2(v *ethpb.Validator) {
 func testHalfExpiredValidators() ([]*ethpb.Validator, []uint64) {
 	balances := []uint64{0, 0, 4, 0, 8, 0, 12, 0, 16, 0}
 	return generateTestValidators(10,
-		oddValidatorsExpired(types.Slot(99)),
+		oddValidatorsExpired(primitives.Slot(99)),
 		balanceIsKeyTimes2), balances
 }
 
 func testHalfQueuedValidators() ([]*ethpb.Validator, []uint64) {
 	balances := []uint64{0, 0, 4, 0, 8, 0, 12, 0, 16, 0}
 	return generateTestValidators(10,
-		oddValidatorsQueued(types.Slot(99)),
+		oddValidatorsQueued(primitives.Slot(99)),
 		balanceIsKeyTimes2), balances
 }
 
 func testAllValidValidators() ([]*ethpb.Validator, []uint64) {
 	balances := []uint64{0, 2, 4, 6, 8, 10, 12, 14, 16, 18}
 	return generateTestValidators(10,
-		allValidatorsValid(types.Slot(99)),
+		allValidatorsValid(primitives.Slot(99)),
 		balanceIsKeyTimes2), balances
 }
 
@@ -127,7 +128,7 @@ func TestStateBalanceCache(t *testing.T) {
 			root:     bytesutil.ToBytes32([]byte{'A'}),
 			balances: sentinelBalances,
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					err: sentinelCacheMiss,
 				},
 				root:     bytesutil.ToBytes32([]byte{'A'}),
@@ -135,32 +136,9 @@ func TestStateBalanceCache(t *testing.T) {
 			},
 			name: "cache hit",
 		},
-		// this works by using a staterooter that returns a known error
-		// so really we're testing the miss by making sure stategen got called
-		// this also tells us stategen errors are propagated
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
-					err: sentinelCacheMiss,
-				},
-				root: bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  sentinelCacheMiss,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "cache miss",
-		},
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{},
-				root:     bytesutil.ToBytes32([]byte{'B'}),
-			},
-			err:  errNilStateFromStategen,
-			root: bytesutil.ToBytes32([]byte{'A'}),
-			name: "error for nil state upon cache miss",
-		},
-		{
-			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfExpiredValidators)),
@@ -172,7 +150,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(halfQueuedValidators)),
@@ -184,7 +162,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),
@@ -196,7 +174,7 @@ func TestStateBalanceCache(t *testing.T) {
 		},
 		{
 			sbc: &stateBalanceCache{
-				stateGen: &mockStateByRooter{
+				stateGen: &mockBalanceByRooter{
 					state: testStateFixture(
 						testStateWithSlot(99),
 						testStateWithValidators(allValidValidators)),

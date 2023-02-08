@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
@@ -71,7 +71,7 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Status Message
 	RPCStatusTopicV1: new(pb.Status),
 	// RPC Goodbye Message
-	RPCGoodByeTopicV1: new(types.SSZUint64),
+	RPCGoodByeTopicV1: new(primitives.SSZUint64),
 	// RPC Block By Range Message
 	RPCBlocksByRangeTopicV1: new(pb.BeaconBlocksByRangeRequest),
 	RPCBlocksByRangeTopicV2: new(pb.BeaconBlocksByRangeRequest),
@@ -79,7 +79,7 @@ var RPCTopicMappings = map[string]interface{}{
 	RPCBlocksByRootTopicV1: new(p2ptypes.BeaconBlockByRootsReq),
 	RPCBlocksByRootTopicV2: new(p2ptypes.BeaconBlockByRootsReq),
 	// RPC Ping Message
-	RPCPingTopicV1: new(types.SSZUint64),
+	RPCPingTopicV1: new(primitives.SSZUint64),
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
@@ -224,7 +224,7 @@ func (r RPCTopic) Version() string {
 
 // TopicFromMessage constructs the rpc topic from the provided message
 // type and epoch.
-func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
+func TopicFromMessage(msg string, epoch primitives.Epoch) (string, error) {
 	if !messageMapping[msg] {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}

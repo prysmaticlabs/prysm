@@ -136,6 +136,25 @@ func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	}
 }
 
+func TestDigestMap(t *testing.T) {
+	testVersion := []byte{'A', 'B', 'C', 'D'}
+	testValRoot := [32]byte{'t', 'e', 's', 't', 'r', 'o', 'o', 't'}
+	digest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+
+	cachedDigest, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.Equal(t, digest, cachedDigest)
+	testVersion[3] = 'E'
+	cachedDigest, err = signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest)
+	testValRoot[5] = 'z'
+	cachedDigest2, err := signing.ComputeForkDigest(testVersion, testValRoot[:])
+	assert.NoError(t, err)
+	assert.NotEqual(t, digest, cachedDigest2)
+	assert.NotEqual(t, cachedDigest, cachedDigest2)
+}
 func TestBlockSignatureBatch_NoSigVerification(t *testing.T) {
 	tests := []struct {
 		pubkey          []byte

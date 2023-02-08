@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // Helper function to simulate the block being on time or delayed for proposer
 // boost. It alters the genesisTime tracked by the store.
-func driftGenesisTime(f *ForkChoice, slot types.Slot, delay uint64) {
+func driftGenesisTime(f *ForkChoice, slot primitives.Slot, delay uint64) {
 	f.SetGenesisTime(uint64(time.Now().Unix()) - uint64(slot)*params.BeaconConfig().SecondsPerSlot - delay)
 }
 
@@ -25,7 +25,7 @@ func driftGenesisTime(f *ForkChoice, slot types.Slot, delay uint64) {
 // If the honest proposal is boosted at slot n+2, it will win against this attacker.
 func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	ctx := context.Background()
-	jEpoch, fEpoch := types.Epoch(0), types.Epoch(0)
+	jEpoch, fEpoch := primitives.Epoch(0), primitives.Epoch(0)
 	zeroHash := params.BeaconConfig().ZeroHash
 	balances := make([]uint64, 64) // 64 active validators.
 	for i := 0; i < len(balances); i++ {
@@ -43,7 +43,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         0
 		//         |
 		//         1 <- HEAD
-		slot := types.Slot(1)
+		slot := primitives.Slot(1)
 		driftGenesisTime(f, slot, 0)
 		newRoot := indexToHash(1)
 		state, blkRoot, err := prepareForkchoiceState(
@@ -68,7 +68,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         1
 		//         |
 		//         2 <- HEAD
-		slot = types.Slot(2)
+		slot = primitives.Slot(2)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(2)
 		state, blkRoot, err = prepareForkchoiceState(
@@ -95,7 +95,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         2
 		//         |
 		//         3 <- HEAD
-		slot = types.Slot(3)
+		slot = primitives.Slot(3)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(3)
 		state, blkRoot, err = prepareForkchoiceState(
@@ -123,7 +123,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//        / \
 		//       3   |
 		//           4 <- HEAD
-		slot = types.Slot(4)
+		slot = primitives.Slot(4)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(4)
 		state, blkRoot, err = prepareForkchoiceState(
@@ -188,7 +188,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//      (B?) \
 		//            \
 		//             C <- Slot 2 HEAD
-		honestBlockSlot := types.Slot(2)
+		honestBlockSlot := primitives.Slot(2)
 		driftGenesisTime(f, honestBlockSlot, 0)
 		honestBlock := indexToHash(2)
 		state, blkRoot, err := prepareForkchoiceState(
@@ -206,7 +206,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
-		maliciouslyWithheldBlockSlot := types.Slot(1)
+		maliciouslyWithheldBlockSlot := primitives.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
@@ -253,7 +253,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//	(B?) \
 		//            \
 		//             C <- Slot 2 HEAD
-		honestBlockSlot := types.Slot(2)
+		honestBlockSlot := primitives.Slot(2)
 		driftGenesisTime(f, honestBlockSlot, 0)
 		honestBlock := indexToHash(2)
 		state, blkRoot, err := prepareForkchoiceState(
@@ -273,7 +273,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
-		maliciouslyWithheldBlockSlot := types.Slot(1)
+		maliciouslyWithheldBlockSlot := primitives.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
@@ -324,7 +324,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, zeroHash, r, "Incorrect head with genesis")
 
-		cSlot := types.Slot(2)
+		cSlot := primitives.Slot(2)
 		driftGenesisTime(f, cSlot, 0)
 		c := indexToHash(2)
 		state, blkRoot, err := prepareForkchoiceState(
@@ -344,7 +344,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, c, r, "Incorrect head for justified epoch at slot 2")
 
-		bSlot := types.Slot(1)
+		bSlot := primitives.Slot(1)
 		b := indexToHash(1)
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
@@ -368,7 +368,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		f.ProcessAttestation(ctx, votes, c, fEpoch)
 
 		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
-		dSlot := types.Slot(3)
+		dSlot := primitives.Slot(3)
 		d := indexToHash(3)
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
@@ -418,8 +418,8 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 
 	t.Run("does not boost block from different slot", func(t *testing.T) {
 		f := setup(0, 0)
-		slot := types.Slot(0)
-		currentSlot := types.Slot(1)
+		slot := primitives.Slot(0)
+		currentSlot := primitives.Slot(1)
 		driftGenesisTime(f, currentSlot, 0)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)
@@ -428,8 +428,8 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 	})
 	t.Run("does not boost untimely block from same slot", func(t *testing.T) {
 		f := setup(0, 0)
-		slot := types.Slot(1)
-		currentSlot := types.Slot(1)
+		slot := primitives.Slot(1)
+		currentSlot := primitives.Slot(1)
 		driftGenesisTime(f, currentSlot, params.BeaconConfig().SecondsPerSlot-1)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)
@@ -438,8 +438,8 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 	})
 	t.Run("boosts perfectly timely block from same slot", func(t *testing.T) {
 		f := setup(0, 0)
-		slot := types.Slot(1)
-		currentSlot := types.Slot(1)
+		slot := primitives.Slot(1)
+		currentSlot := primitives.Slot(1)
 		driftGenesisTime(f, currentSlot, 0)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)
@@ -448,8 +448,8 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 	})
 	t.Run("boosts timely block from same slot", func(t *testing.T) {
 		f := setup(0, 0)
-		slot := types.Slot(1)
-		currentSlot := types.Slot(1)
+		slot := primitives.Slot(1)
+		currentSlot := primitives.Slot(1)
 		driftGenesisTime(f, currentSlot, 1)
 		state, blkRoot, err := prepareForkchoiceState(ctx, slot, root, zeroHash, zeroHash, 0, 0)
 		require.NoError(t, err)

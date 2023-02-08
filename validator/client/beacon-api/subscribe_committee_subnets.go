@@ -8,12 +8,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
-func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []types.ValidatorIndex) error {
+func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []primitives.ValidatorIndex) error {
 	if in == nil {
 		return errors.New("committee subnets subscribe request is nil")
 	}
@@ -22,7 +22,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 		return errors.New("arrays `in.CommitteeIds`, `in.Slots`, `in.IsAggregator` and `validatorIndices` don't have the same length")
 	}
 
-	slotToCommitteesAtSlotMap := make(map[types.Slot]uint64)
+	slotToCommitteesAtSlotMap := make(map[primitives.Slot]uint64)
 	jsonCommitteeSubscriptions := make([]*apimiddleware.BeaconCommitteeSubscribeJson, len(in.CommitteeIds))
 	for index := range in.CommitteeIds {
 		subscribeSlot := in.Slots[index]
@@ -50,7 +50,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 					return errors.Wrapf(err, "failed to parse CommitteesAtSlot `%s`", duty.CommitteesAtSlot)
 				}
 
-				slotToCommitteesAtSlotMap[types.Slot(dutySlot)] = committees
+				slotToCommitteesAtSlotMap[primitives.Slot(dutySlot)] = committees
 			}
 
 			// If the slot still isn't in the map, we either received bad data from the beacon node or the caller of this function gave us bad data

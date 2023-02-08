@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -65,7 +65,7 @@ func verifySignature(signedData, pub, signature, domain []byte) error {
 
 // VerifyBlockSignature verifies the proposer signature of a beacon block.
 func VerifyBlockSignature(beaconState state.ReadOnlyBeaconState,
-	proposerIndex types.ValidatorIndex,
+	proposerIndex primitives.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) error {
 	currentEpoch := slots.ToEpoch(beaconState.Slot())
@@ -120,7 +120,7 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 
 // BlockSignatureBatch retrieves the block signature batch from the provided block and its corresponding state.
 func BlockSignatureBatch(beaconState state.ReadOnlyBeaconState,
-	proposerIndex types.ValidatorIndex,
+	proposerIndex primitives.ValidatorIndex,
 	sig []byte,
 	rootFunc func() ([32]byte, error)) (*bls.SignatureBatch, error) {
 	currentEpoch := slots.ToEpoch(beaconState.Slot())
@@ -204,7 +204,7 @@ func createAttestationSignatureBatch(
 		indices := ia.AttestingIndices
 		pubkeys := make([][]byte, len(indices))
 		for i := 0; i < len(indices); i++ {
-			pubkeyAtIdx := beaconState.PubkeyAtIndex(types.ValidatorIndex(indices[i]))
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))
 			pubkeys[i] = pubkeyAtIdx[:]
 		}
 		aggP, err := bls.AggregatePublicKeys(pubkeys)

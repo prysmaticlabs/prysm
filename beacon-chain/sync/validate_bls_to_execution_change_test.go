@@ -148,7 +148,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 			want: pubsub.ValidationIgnore,
 		},
 		{
-			name: "Non-capella Head state",
+			name: "Non-Capella HeadState Valid Execution Change Message",
 			svc: NewService(context.Background(),
 				WithP2P(mockp2p.NewTestP2P(t)),
 				WithInitialSync(&mockSync.Sync{IsSyncing: false}),
@@ -161,13 +161,23 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				s.cfg.stateGen = stategen.New(beaconDB, doublylinkedtree.New())
 				s.cfg.beaconDB = beaconDB
 				s.initCaches()
-				st, _ := util.DeterministicGenesisStateBellatrix(t, 128)
+				st, keys := util.DeterministicGenesisStateBellatrix(t, 128)
 				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(10)),
 					State:          st,
 				}
 
+				msg.Message.ValidatorIndex = 50
+				// Provide invalid withdrawal key for validator
+				msg.Message.FromBlsPubkey = keys[51].PublicKey().Marshal()
+				msg.Message.ToExecutionAddress = wantedExecAddress
+				epoch := slots.ToEpoch(st.Slot())
+				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+				assert.NoError(t, err)
+				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				assert.NoError(t, err)
+				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
 			},
 			args: args{
@@ -182,7 +192,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 					},
 					Signature: emptySig[:],
 				}},
-			want: pubsub.ValidationIgnore,
+			want: pubsub.ValidationAccept,
 		},
 		{
 			name: "Non-existent Validator Index",

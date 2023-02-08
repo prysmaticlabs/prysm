@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/time"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
@@ -19,7 +19,7 @@ import (
 func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	SetRPCStreamDeadlines(stream)
 
-	m, ok := msg.(*types.SSZUint64)
+	m, ok := msg.(*primitives.SSZUint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
 	}
@@ -39,7 +39,7 @@ func (s *Service) pingHandler(_ context.Context, msg interface{}, stream libp2pc
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	sq := types.SSZUint64(s.cfg.p2p.MetadataSeq())
+	sq := primitives.SSZUint64(s.cfg.p2p.MetadataSeq())
 	if _, err := s.cfg.p2p.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	metadataSeq := types.SSZUint64(s.cfg.p2p.MetadataSeq())
+	metadataSeq := primitives.SSZUint64(s.cfg.p2p.MetadataSeq())
 	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
-	msg := new(types.SSZUint64)
+	msg := new(primitives.SSZUint64)
 	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 }
 
 // validates the peer's sequence number.
-func (s *Service) validateSequenceNum(seq types.SSZUint64, id peer.ID) (bool, error) {
+func (s *Service) validateSequenceNum(seq primitives.SSZUint64, id peer.ID) (bool, error) {
 	md, err := s.cfg.p2p.Peers().Metadata(id)
 	if err != nil {
 		return false, err

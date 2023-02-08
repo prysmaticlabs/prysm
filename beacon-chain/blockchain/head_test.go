@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -36,7 +36,7 @@ func TestSaveHead_Same(t *testing.T) {
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 1)
 	require.NoError(t, service.saveHead(context.Background(), r, b, st))
-	assert.Equal(t, types.Slot(0), service.headSlot(), "Head did not stay the same")
+	assert.Equal(t, primitives.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
 
@@ -79,7 +79,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
-	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
+	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -134,7 +134,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
 	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
-	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
+	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
@@ -230,6 +230,48 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		}
 		require.DeepSSZEqual(t, wanted, eventHead)
 	})
+}
+
+func TestRetrieveHead_ReadOnly(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	oldBlock := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, util.NewBeaconBlock())
+	oldRoot, err := oldBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.head = &head{
+		root:  oldRoot,
+		block: oldBlock,
+	}
+
+	newHeadSignedBlock := util.NewBeaconBlock()
+	newHeadSignedBlock.Block.Slot = 1
+	newHeadBlock := newHeadSignedBlock.Block
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+
+	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
+	newRoot, err := newHeadBlock.HashTreeRoot()
+	require.NoError(t, err)
+	state, blkRoot, err := prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(1))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
+
+	rOnlyState, err := service.HeadStateReadOnly(ctx)
+	require.NoError(t, err)
+
+	assert.Equal(t, rOnlyState, service.head.state, "Head is not the same object")
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {

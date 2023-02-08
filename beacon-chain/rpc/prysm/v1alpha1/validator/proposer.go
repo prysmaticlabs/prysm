@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
@@ -36,8 +36,7 @@ var eth1DataNotification bool
 const eth1dataTimeout = 2 * time.Second
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot. Returns phase0 beacon blocks
-// before the Altair fork epoch and Altair blocks post-fork epoch.
+// by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
@@ -134,13 +133,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
+		if blk.IsBlinded() {
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}}, nil
+		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
 	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && !blk.IsBlinded() {
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
+		if blk.IsBlinded() {
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
+		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch && blk.IsBlinded() {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}}, nil
@@ -167,7 +169,7 @@ func (vs *Server) PrepareBeaconProposer(
 	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
-	var validatorIndices []types.ValidatorIndex
+	var validatorIndices []primitives.ValidatorIndex
 
 	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
@@ -178,9 +180,9 @@ func (vs *Server) PrepareBeaconProposer(
 		case err != nil:
 			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
 		default:
-		}
-		if common.BytesToAddress(r.FeeRecipient) != f {
-			newRecipients = append(newRecipients, r)
+			if common.BytesToAddress(r.FeeRecipient) != f {
+				newRecipients = append(newRecipients, r)
+			}
 		}
 	}
 	if len(newRecipients) == 0 {
@@ -248,9 +250,16 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
-	blk, err = vs.unblindBuilderBlock(ctx, blk)
-	if err != nil {
-		return nil, err
+	if slots.ToEpoch(blk.Block().Slot()) >= params.BeaconConfig().CapellaForkEpoch {
+		blk, err = vs.unblindBuilderBlockCapella(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		blk, err = vs.unblindBuilderBlock(ctx, blk)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.

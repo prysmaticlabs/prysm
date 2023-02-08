@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -196,13 +197,25 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	if blockRoot != headRoot {
+		receivedWeight, err := s.ForkChoicer().Weight(blockRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
+		}
+		headWeight, err := s.ForkChoicer().Weight(headRoot)
+		if err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
+		}
+		log.WithFields(logrus.Fields{
+			"receivedRoot":   fmt.Sprintf("%#x", blockRoot),
+			"receivedWeight": receivedWeight,
+			"headRoot":       fmt.Sprintf("%#x", headRoot),
+			"headWeight":     headWeight,
+		}).Debug("Head block is not the received block")
+	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
-		return err
-	}
-
-	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
+	if err := s.forkchoiceUpdateWithExecution(ctx, headRoot); err != nil {
 		return err
 	}
 
@@ -477,6 +490,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	ctx, span := trace.StartSpan(ctx, "blockChain.handleEpochBoundary")
 	defer span.End()
 
+	var err error
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		copied := postState.Copy()
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
@@ -491,25 +505,25 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		s.headLock.RLock()
-		st := s.head.state
-		s.headLock.RUnlock()
-		if err := reportEpochMetrics(ctx, postState, st); err != nil {
-			return err
-		}
-
-		var err error
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
 			return err
 		}
 
 		// Update caches at epoch boundary slot.
-		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
+		// The following updates have shortcut to return nil cheaply if fulfilled during boundary slot - 1.
 		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
+			return err
+		}
+
+		headSt, err := s.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
 			return err
 		}
 	}
@@ -557,29 +571,13 @@ func (s *Service) handleBlockAttestations(ctx context.Context, blk interfaces.Be
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
-	if blk.Version() < version.Capella {
-		return nil
-	}
-	changes, err := blk.Body().BLSToExecutionChanges()
-	if err != nil {
-		return errors.Wrap(err, "could not get BLSToExecutionChanges")
-	}
-	for _, change := range changes {
-		if err := s.cfg.BLSToExecPool.MarkIncluded(change); err != nil {
-			return errors.Wrap(err, "could not mark BLSToExecutionChange as included")
-		}
-	}
-	return nil
-}
-
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
+			s.ForkChoicer().InsertSlashedIndex(ctx, primitives.ValidatorIndex(index))
 		}
 	}
 }
@@ -598,17 +596,8 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 	return nil
 }
 
-// This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
-// meaning the block `b` is part of the canonical chain.
-func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
-	canonical, err := s.IsCanonical(ctx, r)
-	if err != nil {
-		return err
-	}
-	if !canonical {
-		return nil
-	}
-
+// This removes the attestations in block `b` from the attestation mem pool.
+func (s *Service) pruneAttsFromPool(b interfaces.SignedBeaconBlock) error {
 	atts := b.Block().Body().Attestations()
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {

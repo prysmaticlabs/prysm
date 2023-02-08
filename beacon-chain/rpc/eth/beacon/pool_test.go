@@ -5,13 +5,14 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/v3/api/grpc"
 	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
@@ -21,7 +22,7 @@ import (
 	p2pMock "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	eth2types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
@@ -159,7 +160,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("slot request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
+		slot := primitives.Slot(2)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot: &slot,
 		}
@@ -172,7 +173,7 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("index request", func(t *testing.T) {
-		index := eth2types.CommitteeIndex(4)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			CommitteeIndex: &index,
 		}
@@ -185,8 +186,8 @@ func TestListPoolAttestations(t *testing.T) {
 	})
 
 	t.Run("both slot + index request", func(t *testing.T) {
-		slot := eth2types.Slot(2)
-		index := eth2types.CommitteeIndex(4)
+		slot := primitives.Slot(2)
+		index := primitives.CommitteeIndex(4)
 		req := &ethpbv1.AttestationsPoolRequest{
 			Slot:           &slot,
 			CommitteeIndex: &index,
@@ -574,7 +575,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	require.NoError(t, err)
 	validator := &ethpbv1alpha1.Validator{
 		PublicKey:         keys[0].PublicKey().Marshal(),
-		WithdrawableEpoch: eth2types.Epoch(1),
+		WithdrawableEpoch: primitives.Epoch(1),
 	}
 	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
 		state.Validators = []*ethpbv1alpha1.Validator{validator}
@@ -1230,7 +1231,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1250,7 +1251,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1275,6 +1276,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 		Changes: signedChanges,
 	})
 	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages))
 
@@ -1322,7 +1324,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1356,7 +1358,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(stc, time.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1430,7 +1432,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 		message := &ethpbv2.BLSToExecutionChange{
 			ToExecutionAddress: executionAddress,
-			ValidatorIndex:     eth2types.ValidatorIndex(i),
+			ValidatorIndex:     primitives.ValidatorIndex(i),
 			FromBlsPubkey:      pubkey,
 		}
 
@@ -1450,7 +1452,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 
 	signedChanges := make([]*ethpbv2.SignedBLSToExecutionChange, numValidators)
 	for i, message := range blsChanges {
-		signature, err := signing.ComputeDomainAndSign(st, time.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
+		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
 		signed := &ethpbv2.SignedBLSToExecutionChange{
@@ -1475,6 +1477,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	_, err = s.SubmitSignedBLSToExecutionChanges(ctx, &ethpbv2.SubmitBLSToExecutionChangesRequest{
 		Changes: signedChanges,
 	})
+	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
 	require.ErrorContains(t, "One or more BLSToExecutionChange failed validation", err)
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages)+1)

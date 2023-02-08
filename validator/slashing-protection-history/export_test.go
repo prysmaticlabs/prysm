@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	dbtest "github.com/prysmaticlabs/prysm/v3/validator/db/testing"
@@ -42,8 +42,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 		assert.Equal(t, 0, len(signedAttestations))
 
 		// We write a real attesting history to disk for the public key.
-		lowestSourceEpoch := types.Epoch(0)
-		lowestTargetEpoch := types.Epoch(4)
+		lowestSourceEpoch := primitives.Epoch(0)
+		lowestTargetEpoch := primitives.Epoch(4)
 
 		require.NoError(t, validatorDB.SaveAttestationForPubKey(ctx, pubKeys[0], [32]byte{4}, createAttestation(
 			lowestSourceEpoch,
@@ -86,8 +86,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 
 		// We write a real attesting history to disk for the public key with
 		// source epoch 0 and target epoch 1000.
-		lowestSourceEpoch := types.Epoch(0)
-		lowestTargetEpoch := types.Epoch(1000)
+		lowestSourceEpoch := primitives.Epoch(0)
+		lowestTargetEpoch := primitives.Epoch(1000)
 
 		// Next up, we simulate a DB affected by the bug where the next entry
 		// has a target epoch less than the previous one.
@@ -128,8 +128,8 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 
 		// We write a real attesting history to disk for the public key with
 		// source epoch 1 and target epoch 1000.
-		lowestSourceEpoch := types.Epoch(1)
-		lowestTargetEpoch := types.Epoch(1000)
+		lowestSourceEpoch := primitives.Epoch(1)
+		lowestTargetEpoch := primitives.Epoch(1000)
 
 		// Next up, we simulate a DB affected by the bug where the next entry
 		// has a target epoch less than the previous one.

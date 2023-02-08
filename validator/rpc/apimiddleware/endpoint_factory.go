@@ -42,6 +42,7 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 	case "/eth/v1/validator/{pubkey}/feerecipient":
 		endpoint.GetResponse = &GetFeeRecipientByPubkeyResponseJson{}
 		endpoint.PostRequest = &SetFeeRecipientByPubkeyRequestJson{}
+		endpoint.DeleteRequest = &DeleteFeeRecipientByPubkeyRequestJson{}
 	case "/eth/v1/validator/{pubkey}/gas_limit":
 		endpoint.GetResponse = &GetGasLimitResponseJson{}
 		endpoint.PostRequest = &SetGasLimitRequestJson{}

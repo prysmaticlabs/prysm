@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -195,8 +195,8 @@ func TestRecomputeFromLayer_VariableSizedArray(t *testing.T) {
 	val2.ExitEpoch = 40
 
 	changedVals := []*ethpb.Validator{val1, val2}
-	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[0]), changedVals[0]))
-	require.NoError(t, newState.UpdateValidatorAtIndex(types.ValidatorIndex(changedIdx[1]), changedVals[1]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[0]), changedVals[0]))
+	require.NoError(t, newState.UpdateValidatorAtIndex(primitives.ValidatorIndex(changedIdx[1]), changedVals[1]))
 
 	expectedRoot, err := stateutil.ValidatorRegistryRoot(newState.Validators())
 	require.NoError(t, err)

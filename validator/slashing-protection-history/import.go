@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
-	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/slashings"
@@ -246,7 +246,7 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 	//     then we consider that proposer public key as slashable.
 	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
-		seenSigningRootsBySlot := make(map[types.Slot][]byte)
+		seenSigningRootsBySlot := make(map[primitives.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
 				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
@@ -269,8 +269,8 @@ func filterSlashablePubKeysFromAttestations(
 	// First we need to find attestations that are slashable with respect to other
 	// attestations within the same JSON import.
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		signingRootsByTarget := make(map[types.Epoch][32]byte)
-		targetEpochsBySource := make(map[types.Epoch][]types.Epoch)
+		signingRootsByTarget := make(map[primitives.Epoch][32]byte)
+		targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	Loop:
 		for _, att := range signedAtts {
 			// Check for double votes.
@@ -367,7 +367,7 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 	return historicalAtts, nil
 }
 
-func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
 	return &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{
