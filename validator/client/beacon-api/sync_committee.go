@@ -7,13 +7,12 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {

@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v3/time/slots"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -18,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/prysmaticlabs/prysm/v3/validator/client/beacon-api/mock"
 )
 
