@@ -175,7 +175,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 	}
 
-	var reconstructedBlock []interfaces.SignedBeaconBlockWithWriteAccess
+	var reconstructedBlock []interfaces.SignedBeaconBlockWriteable
 	if blindedExists {
 		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
 		if err != nil {

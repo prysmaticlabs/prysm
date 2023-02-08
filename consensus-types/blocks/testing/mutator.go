@@ -15,7 +15,7 @@ type blockMutator struct {
 	Capella   func(beaconBlock *eth.SignedBeaconBlockCapella)
 }
 
-func (m blockMutator) apply(b interfaces.SignedBeaconBlockWithWriteAccess) (interfaces.SignedBeaconBlockWithWriteAccess, error) {
+func (m blockMutator) apply(b interfaces.SignedBeaconBlockWriteable) (interfaces.SignedBeaconBlockWriteable, error) {
 	switch b.Version() {
 	case version.Phase0:
 		bb, err := b.PbPhase0Block()
@@ -51,7 +51,7 @@ func (m blockMutator) apply(b interfaces.SignedBeaconBlockWithWriteAccess) (inte
 }
 
 // SetBlockStateRoot modifies the block's state root.
-func SetBlockStateRoot(b interfaces.SignedBeaconBlockWithWriteAccess, sr [32]byte) (interfaces.SignedBeaconBlockWithWriteAccess, error) {
+func SetBlockStateRoot(b interfaces.SignedBeaconBlockWriteable, sr [32]byte) (interfaces.SignedBeaconBlockWriteable, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
@@ -61,7 +61,7 @@ func SetBlockStateRoot(b interfaces.SignedBeaconBlockWithWriteAccess, sr [32]byt
 }
 
 // SetBlockParentRoot modifies the block's parent root.
-func SetBlockParentRoot(b interfaces.SignedBeaconBlockWithWriteAccess, pr [32]byte) (interfaces.SignedBeaconBlockWithWriteAccess, error) {
+func SetBlockParentRoot(b interfaces.SignedBeaconBlockWriteable, pr [32]byte) (interfaces.SignedBeaconBlockWriteable, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
@@ -71,7 +71,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlockWithWriteAccess, pr [32]by
 }
 
 // SetBlockSlot modifies the block's slot.
-func SetBlockSlot(b interfaces.SignedBeaconBlockWithWriteAccess, s primitives.Slot) (interfaces.SignedBeaconBlockWithWriteAccess, error) {
+func SetBlockSlot(b interfaces.SignedBeaconBlockWriteable, s primitives.Slot) (interfaces.SignedBeaconBlockWriteable, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
@@ -81,7 +81,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlockWithWriteAccess, s primitives.Sl
 }
 
 // SetProposerIndex modifies the block's proposer index.
-func SetProposerIndex(b interfaces.SignedBeaconBlockWithWriteAccess, idx primitives.ValidatorIndex) (interfaces.SignedBeaconBlockWithWriteAccess, error) {
+func SetProposerIndex(b interfaces.SignedBeaconBlockWriteable, idx primitives.ValidatorIndex) (interfaces.SignedBeaconBlockWriteable, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },

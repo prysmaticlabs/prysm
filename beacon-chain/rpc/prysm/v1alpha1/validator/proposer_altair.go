@@ -15,7 +15,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBeaconBlockWithWriteAccess) {
+func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBeaconBlockWriteable) {
 	if blk.Version() < version.Altair {
 		return
 	}
