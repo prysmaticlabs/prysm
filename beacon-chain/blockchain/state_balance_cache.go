@@ -16,7 +16,7 @@ type stateBalanceCache struct {
 }
 
 type balanceByRooter interface {
-	BalancesByRoot(context.Context, [32]byte) ([]uint64, error)
+	ActiveNonSlashedBalancesByRoot(context.Context, [32]byte) ([]uint64, error)
 }
 
 // newStateBalanceCache exists to remind us that stateBalanceCache needs a state gen
@@ -36,7 +36,7 @@ func newStateBalanceCache(sg *stategen.State) (*stateBalanceCache, error) {
 func (c *stateBalanceCache) update(ctx context.Context, justifiedRoot [32]byte) ([]uint64, error) {
 	stateBalanceCacheMiss.Inc()
 
-	justifiedBalances, err := c.stateGen.BalancesByRoot(ctx, justifiedRoot)
+	justifiedBalances, err := c.stateGen.ActiveNonSlashedBalancesByRoot(ctx, justifiedRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get balances")
 	}
