@@ -1123,6 +1123,215 @@ func TestProduceBlockV2(t *testing.T) {
 
 		assert.DeepEqual(t, payload, blk.Body.ExecutionPayload)
 	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig().Copy()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
+		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(1, bytesutil.PadTo([]byte("prev_randao"), 32)))
+
+		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:   bytesutil.PadTo([]byte("parent_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 33
+			Timestamp:     768,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			// Must be equal to payload.ParentHash
+			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
+			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
+			WithdrawalsRoot:  bytesutil.PadTo([]byte("withdrawals_root"), 32),
+		})
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
+
+		payload := &enginev1.ExecutionPayloadCapella{
+			// Must be equal to payloadHeader.BlockHash
+			ParentHash:   bytesutil.PadTo([]byte("equal_hash"), 32),
+			FeeRecipient: bytesutil.PadTo([]byte("fee_recipient"), 20),
+			StateRoot:    bytesutil.PadTo([]byte("state_root"), 32),
+			ReceiptsRoot: bytesutil.PadTo([]byte("receipts_root"), 32),
+			LogsBloom:    bytesutil.PadTo([]byte("logs_bloom"), 256),
+			PrevRandao:   bytesutil.PadTo([]byte("prev_randao"), 32),
+			BlockNumber:  123,
+			GasLimit:     123,
+			GasUsed:      123,
+			// State time at slot 33
+			Timestamp:     768,
+			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
+			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
+			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
+			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+		}
+
+		stateRoot, err := beaconState.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		var payloadIdBytes enginev1.PayloadIDBytes
+		copy(payloadIdBytes[:], "payload_id")
+		mockChainService := &mockChain.ChainService{State: beaconState, Root: parentRoot[:]}
+		mockExecutionChain := &mockExecution.Chain{}
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				OverrideValidHash:       bytesutil.ToBytes32([]byte("parent_hash")),
+				PayloadIDBytes:          &payloadIdBytes,
+				ExecutionPayloadCapella: payload,
+			},
+			TimeFetcher:            mockChainService,
+			HeadFetcher:            mockChainService,
+			OptimisticModeFetcher:  mockChainService,
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          mockChainService,
+			HeadUpdater:            mockChainService,
+			ChainStartFetcher:      mockExecutionChain,
+			Eth1InfoFetcher:        mockExecutionChain,
+			Eth1BlockFetcher:       mockExecutionChain,
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+		for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxProposerSlashings; i++ {
+			proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+				beaconState,
+				privKeys[i],
+				i,
+			)
+			require.NoError(t, err)
+			proposerSlashings[i] = proposerSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+			require.NoError(t, err)
+		}
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+			attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+				beaconState,
+				privKeys[i+params.BeaconConfig().MaxProposerSlashings],
+				primitives.ValidatorIndex(i+params.BeaconConfig().MaxProposerSlashings), /* validator index */
+			)
+			require.NoError(t, err)
+			attSlashings[i] = attesterSlashing
+			err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+			require.NoError(t, err)
+		}
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), beaconState)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(beaconState, coreTime.CurrentEpoch(beaconState), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch + 1,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+		resp, err := v1Server.ProduceBlockV2(ctx, req)
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_CapellaBlock)
+		require.Equal(t, true, ok)
+		blk := containerBlock.CapellaBlock
+		assert.Equal(t, req.Slot, blk.Slot, "Expected block to have slot of 1")
+		assert.DeepEqual(t, parentRoot[:], blk.ParentRoot, "Expected block to have correct parent root")
+		assert.DeepEqual(t, randaoReveal, blk.Body.RandaoReveal, "Expected block to have correct randao reveal")
+		assert.DeepEqual(t, req.Graffiti, blk.Body.Graffiti, "Expected block to have correct graffiti")
+		assert.Equal(t, params.BeaconConfig().MaxProposerSlashings, uint64(len(blk.Body.ProposerSlashings)))
+
+		expectedPropSlashings := make([]*ethpbv1.ProposerSlashing, len(proposerSlashings))
+		for i, slash := range proposerSlashings {
+			expectedPropSlashings[i] = migration.V1Alpha1ProposerSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedPropSlashings, blk.Body.ProposerSlashings)
+
+		assert.Equal(t, params.BeaconConfig().MaxAttesterSlashings, uint64(len(blk.Body.AttesterSlashings)))
+		expectedAttSlashings := make([]*ethpbv1.AttesterSlashing, len(attSlashings))
+		for i, slash := range attSlashings {
+			expectedAttSlashings[i] = migration.V1Alpha1AttSlashingToV1(slash)
+		}
+		assert.DeepEqual(t, expectedAttSlashings, blk.Body.AttesterSlashings)
+
+		expectedBits := bitfield.NewBitvector512()
+		for i := 0; i <= 15; i++ {
+			expectedBits[i] = 0xAA
+		}
+		assert.DeepEqual(t, expectedBits, blk.Body.SyncAggregate.SyncCommitteeBits)
+		assert.DeepEqual(t, aggregatedSig, blk.Body.SyncAggregate.SyncCommitteeSignature)
+
+		assert.DeepEqual(t, payload, blk.Body.ExecutionPayload)
+	})
 }
 
 func TestProduceBlockV2SSZ(t *testing.T) {
@@ -1679,6 +1888,233 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 					BaseFeePerGas: make([]byte, 32),
 					BlockHash:     make([]byte, 32),
 					Transactions:  nil,
+				},
+			},
+		}
+		expectedData, err := expectedBlock.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
+
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
+		require.NoError(t, err)
+		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, bs.SetNextSyncCommittee(syncCommittee))
+
+		stateRoot, err := bs.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				ExecutionBlock: &enginev1.ExecutionBlock{
+					TotalDifficulty: "0x1",
+				},
+			},
+			TimeFetcher:            &mockChain.ChainService{},
+			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+			bs,
+			privKeys[0],
+			0,
+		)
+		require.NoError(t, err)
+		proposerSlashings[0] = proposerSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), bs, proposerSlashing)
+		require.NoError(t, err)
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+			bs,
+			privKeys[1],
+			1,
+		)
+		require.NoError(t, err)
+		attSlashings[0] = attesterSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), bs, attesterSlashing)
+		require.NoError(t, err)
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), bs)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(bs, coreTime.CurrentEpoch(bs), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+		resp, err := v1Server.ProduceBlockV2SSZ(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		expectedBlock := &ethpbv2.BeaconBlockCapella{
+			Slot:          33,
+			ProposerIndex: 348,
+			ParentRoot:    []byte{228, 15, 208, 120, 31, 194, 202, 144, 41, 107, 98, 126, 162, 234, 190, 94, 174, 176, 69, 177, 103, 82, 69, 254, 0, 230, 192, 67, 158, 29, 141, 85},
+			StateRoot:     []byte{143, 107, 161, 135, 58, 60, 195, 107, 55, 142, 122, 111, 184, 1, 19, 233, 145, 204, 160, 226, 148, 67, 194, 102, 79, 196, 74, 242, 174, 108, 68, 82},
+			Body: &ethpbv2.BeaconBlockBodyCapella{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &ethpbv1.Eth1Data{
+					DepositRoot:  []byte{40, 2, 99, 184, 81, 91, 153, 196, 115, 217, 104, 93, 31, 202, 27, 153, 42, 224, 148, 156, 116, 43, 161, 28, 155, 166, 37, 217, 205, 152, 69, 6},
+					DepositCount: params.BeaconConfig().SyncCommitteeSize,
+					BlockHash:    []byte{226, 231, 104, 45, 7, 68, 48, 54, 228, 109, 84, 245, 125, 45, 227, 127, 135, 155, 63, 38, 241, 251, 129, 192, 248, 49, 9, 120, 146, 18, 34, 228},
+				},
+				Graffiti: graffiti[:],
+				ProposerSlashings: []*ethpbv1.ProposerSlashing{
+					{
+						SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_1.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_1.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_1.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_1.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_1.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_1.Signature,
+						},
+						SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_2.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_2.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_2.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_2.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_2.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_2.Signature,
+						},
+					},
+				},
+				AttesterSlashings: []*ethpbv1.AttesterSlashing{
+					{
+						Attestation_1: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_1.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_1.Data.Slot,
+								Index:           attesterSlashing.Attestation_1.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_1.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_1.Signature,
+						},
+						Attestation_2: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_2.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_2.Data.Slot,
+								Index:           attesterSlashing.Attestation_2.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_2.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_2.Signature,
+						},
+					},
+				},
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					SyncCommitteeSignature: []byte{153, 51, 238, 112, 158, 23, 41, 26, 18, 53, 3, 111, 57, 180, 45, 131, 90, 249, 28, 23, 153, 188, 171, 204, 45, 180, 133, 236, 47, 203, 119, 132, 162, 17, 61, 60, 122, 161, 45, 136, 130, 174, 120, 60, 64, 144, 6, 34, 24, 87, 41, 77, 16, 223, 36, 125, 80, 185, 178, 234, 74, 184, 196, 45, 242, 47, 124, 178, 83, 65, 106, 26, 179, 178, 27, 4, 72, 79, 191, 128, 114, 51, 246, 147, 3, 55, 210, 64, 148, 78, 144, 45, 97, 182, 157, 206},
+				},
+				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
+					ParentHash:    make([]byte, 32),
+					FeeRecipient:  make([]byte, 20),
+					StateRoot:     make([]byte, 32),
+					ReceiptsRoot:  make([]byte, 32),
+					LogsBloom:     make([]byte, 256),
+					PrevRandao:    make([]byte, 32),
+					ExtraData:     nil,
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
+					Transactions:  nil,
+					Withdrawals:   nil,
 				},
 			},
 		}
@@ -2919,6 +3355,226 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 					BaseFeePerGas:    make([]byte, 32),
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: []byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
+				},
+			},
+		}
+		expectedData, err := expectedBlock.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
+	t.Run("Capella", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		ctx := context.Background()
+
+		params.SetupTestConfigCleanup(t)
+		bc := params.BeaconConfig()
+		bc.AltairForkEpoch = primitives.Epoch(0)
+		bc.BellatrixForkEpoch = primitives.Epoch(1)
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		params.OverrideBeaconConfig(bc)
+
+		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
+		require.NoError(t, err)
+		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
+		require.NoError(t, bs.SetNextSyncCommittee(syncCommittee))
+
+		stateRoot, err := bs.HashTreeRoot(ctx)
+		require.NoError(t, err, "Could not hash genesis state")
+		genesisBlock := util.NewBeaconBlockCapella()
+		genesisBlock.Block.StateRoot = stateRoot[:]
+		util.SaveBlock(t, ctx, db, genesisBlock)
+		parentRoot, err := genesisBlock.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
+		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+		v1Alpha1Server := &v1alpha1validator.Server{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
+				ExecutionBlock: &enginev1.ExecutionBlock{
+					TotalDifficulty: "0x1",
+				},
+			},
+			TimeFetcher:            &mockChain.ChainService{},
+			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
+			SyncChecker:            &mockSync.Sync{IsSyncing: false},
+			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
+			MockEth1Votes:          true,
+			AttPool:                attestations.NewPool(),
+			SlashingsPool:          slashings.NewPool(),
+			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
+			StateGen:               stategen.New(db, doublylinkedtree.New()),
+			SyncCommitteePool:      synccommittee.NewStore(),
+			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		}
+
+		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
+		proposerSlashing, err := util.GenerateProposerSlashingForValidator(
+			bs,
+			privKeys[0],
+			0,
+		)
+		require.NoError(t, err)
+		proposerSlashings[0] = proposerSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertProposerSlashing(context.Background(), bs, proposerSlashing)
+		require.NoError(t, err)
+
+		attSlashings := make([]*ethpbalpha.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+		attesterSlashing, err := util.GenerateAttesterSlashingForValidator(
+			bs,
+			privKeys[1],
+			1,
+		)
+		require.NoError(t, err)
+		attSlashings[0] = attesterSlashing
+		err = v1Alpha1Server.SlashingsPool.InsertAttesterSlashing(context.Background(), bs, attesterSlashing)
+		require.NoError(t, err)
+
+		aggregationBits := bitfield.NewBitvector128()
+		for i := range aggregationBits {
+			aggregationBits[i] = 0xAA
+		}
+
+		syncCommitteeIndices, err := altair.NextSyncCommitteeIndices(context.Background(), bs)
+		require.NoError(t, err)
+		sigs := make([]bls.Signature, 0, len(syncCommitteeIndices))
+		for i, indice := range syncCommitteeIndices {
+			if aggregationBits.BitAt(uint64(i)) {
+				b := p2pType.SSZBytes(parentRoot[:])
+				sb, err := signing.ComputeDomainAndSign(bs, coreTime.CurrentEpoch(bs), &b, params.BeaconConfig().DomainSyncCommittee, privKeys[indice])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				sigs = append(sigs, sig)
+			}
+		}
+		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+		contribution := &ethpbalpha.SyncCommitteeContribution{
+			Slot:              params.BeaconConfig().SlotsPerEpoch + 1,
+			BlockRoot:         parentRoot[:],
+			SubcommitteeIndex: 0,
+			AggregationBits:   aggregationBits,
+			Signature:         aggregatedSig,
+		}
+		require.NoError(t, v1Alpha1Server.SyncCommitteePool.SaveSyncCommitteeContribution(contribution))
+
+		v1Server := &Server{
+			V1Alpha1Server: v1Alpha1Server,
+			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+		}
+		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
+		require.NoError(t, err)
+		graffiti := bytesutil.ToBytes32([]byte("eth2"))
+
+		req := &ethpbv1.ProduceBlockRequest{
+			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			RandaoReveal: randaoReveal,
+			Graffiti:     graffiti[:],
+		}
+		v1Server.V1Alpha1Server.BeaconDB = db
+		resp, err := v1Server.ProduceBlindedBlockSSZ(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
+
+		expectedBlock := &ethpbv2.BlindedBeaconBlockCapella{
+			Slot:          33,
+			ProposerIndex: 348,
+			ParentRoot:    []byte{228, 15, 208, 120, 31, 194, 202, 144, 41, 107, 98, 126, 162, 234, 190, 94, 174, 176, 69, 177, 103, 82, 69, 254, 0, 230, 192, 67, 158, 29, 141, 85},
+			StateRoot:     []byte{143, 107, 161, 135, 58, 60, 195, 107, 55, 142, 122, 111, 184, 1, 19, 233, 145, 204, 160, 226, 148, 67, 194, 102, 79, 196, 74, 242, 174, 108, 68, 82},
+			Body: &ethpbv2.BlindedBeaconBlockBodyCapella{
+				RandaoReveal: randaoReveal,
+				Eth1Data: &ethpbv1.Eth1Data{
+					DepositRoot:  []byte{40, 2, 99, 184, 81, 91, 153, 196, 115, 217, 104, 93, 31, 202, 27, 153, 42, 224, 148, 156, 116, 43, 161, 28, 155, 166, 37, 217, 205, 152, 69, 6},
+					DepositCount: params.BeaconConfig().SyncCommitteeSize,
+					BlockHash:    []byte{226, 231, 104, 45, 7, 68, 48, 54, 228, 109, 84, 245, 125, 45, 227, 127, 135, 155, 63, 38, 241, 251, 129, 192, 248, 49, 9, 120, 146, 18, 34, 228},
+				},
+				Graffiti: graffiti[:],
+				ProposerSlashings: []*ethpbv1.ProposerSlashing{
+					{
+						SignedHeader_1: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_1.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_1.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_1.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_1.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_1.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_1.Signature,
+						},
+						SignedHeader_2: &ethpbv1.SignedBeaconBlockHeader{
+							Message: &ethpbv1.BeaconBlockHeader{
+								Slot:          proposerSlashing.Header_2.Header.Slot,
+								ProposerIndex: proposerSlashing.Header_2.Header.ProposerIndex,
+								ParentRoot:    proposerSlashing.Header_2.Header.ParentRoot,
+								StateRoot:     proposerSlashing.Header_2.Header.StateRoot,
+								BodyRoot:      proposerSlashing.Header_2.Header.BodyRoot,
+							},
+							Signature: proposerSlashing.Header_2.Signature,
+						},
+					},
+				},
+				AttesterSlashings: []*ethpbv1.AttesterSlashing{
+					{
+						Attestation_1: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_1.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_1.Data.Slot,
+								Index:           attesterSlashing.Attestation_1.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_1.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_1.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_1.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_1.Signature,
+						},
+						Attestation_2: &ethpbv1.IndexedAttestation{
+							AttestingIndices: attesterSlashing.Attestation_2.AttestingIndices,
+							Data: &ethpbv1.AttestationData{
+								Slot:            attesterSlashing.Attestation_2.Data.Slot,
+								Index:           attesterSlashing.Attestation_2.Data.CommitteeIndex,
+								BeaconBlockRoot: attesterSlashing.Attestation_2.Data.BeaconBlockRoot,
+								Source: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Source.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Source.Root,
+								},
+								Target: &ethpbv1.Checkpoint{
+									Epoch: attesterSlashing.Attestation_2.Data.Target.Epoch,
+									Root:  attesterSlashing.Attestation_2.Data.Target.Root,
+								},
+							},
+							Signature: attesterSlashing.Attestation_2.Signature,
+						},
+					},
+				},
+				SyncAggregate: &ethpbv1.SyncAggregate{
+					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					SyncCommitteeSignature: []byte{153, 51, 238, 112, 158, 23, 41, 26, 18, 53, 3, 111, 57, 180, 45, 131, 90, 249, 28, 23, 153, 188, 171, 204, 45, 180, 133, 236, 47, 203, 119, 132, 162, 17, 61, 60, 122, 161, 45, 136, 130, 174, 120, 60, 64, 144, 6, 34, 24, 87, 41, 77, 16, 223, 36, 125, 80, 185, 178, 234, 74, 184, 196, 45, 242, 47, 124, 178, 83, 65, 106, 26, 179, 178, 27, 4, 72, 79, 191, 128, 114, 51, 246, 147, 3, 55, 210, 64, 148, 78, 144, 45, 97, 182, 157, 206},
+				},
+				ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{
+					ParentHash:       make([]byte, 32),
+					FeeRecipient:     make([]byte, 20),
+					StateRoot:        make([]byte, 32),
+					ReceiptsRoot:     make([]byte, 32),
+					LogsBloom:        make([]byte, 256),
+					PrevRandao:       make([]byte, 32),
+					ExtraData:        nil,
+					BaseFeePerGas:    make([]byte, 32),
+					BlockHash:        make([]byte, 32),
+					TransactionsRoot: []byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
+					WithdrawalsRoot:  make([]byte, 32),
 				},
 			},
 		}
