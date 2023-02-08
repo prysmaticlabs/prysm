@@ -144,18 +144,16 @@ func TestNode_ViableForHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
 		justifiedEpoch primitives.Epoch
-		finalizedEpoch primitives.Epoch
 		want           bool
 	}{
-		{&Node{}, 0, 0, true},
-		{&Node{}, 1, 0, false},
-		{&Node{}, 0, 1, false},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
+		{&Node{}, 0, true},
+		{&Node{}, 1, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
 	}
 	for _, tc := range tests {
-		got := tc.n.viableForHead(tc.justifiedEpoch, tc.finalizedEpoch, 5)
+		got := tc.n.viableForHead(tc.justifiedEpoch, 5)
 		assert.Equal(t, tc.want, got)
 	}
 }
@@ -179,10 +177,10 @@ func TestNode_LeadsToViableHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 3, 5))
-	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 3, 5))
-	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 3, 5))
+	require.Equal(t, true, f.store.treeRootNode.leadsToViableHead(4, 5))
+	require.Equal(t, true, f.store.nodeByRoot[indexToHash(5)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(2)].leadsToViableHead(4, 5))
+	require.Equal(t, false, f.store.nodeByRoot[indexToHash(4)].leadsToViableHead(4, 5))
 }
 
 func TestNode_SetFullyValidated(t *testing.T) {
