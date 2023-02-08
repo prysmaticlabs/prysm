@@ -21,6 +21,7 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
@@ -1981,7 +1982,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		ti := time.Unix(0, 0)
-		ts, err := slots.ToTime(uint64(ti.Unix()), 33)
+		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch+1)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
@@ -2161,12 +2162,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = primitives.Epoch(0)
 		bc.BellatrixForkEpoch = primitives.Epoch(1)
-		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch + 1
-		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch
+		bc.CapellaForkEpoch = primitives.Epoch(2)
+		bc.MaxBuilderConsecutiveMissedSlots = params.BeaconConfig().SlotsPerEpoch*2 + 1
+		bc.MaxBuilderEpochMissedSlots = params.BeaconConfig().SlotsPerEpoch * 2
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
-		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
@@ -2194,7 +2196,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		ti := time.Unix(0, 0)
-		ts, err := slots.ToTime(uint64(ti.Unix()), 33)
+		ts, err := slots.ToTime(uint64(ti.Unix()), params.BeaconConfig().SlotsPerEpoch*2+1)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
@@ -2245,6 +2247,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
 			ExitPool:               voluntaryexits.NewPool(),
+			BLSChangesPool:         blstoexec.NewPool(),
 			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -2305,7 +2308,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
 		contribution := &ethpbalpha.SyncCommitteeContribution{
-			Slot:              params.BeaconConfig().SlotsPerEpoch,
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
 			BlockRoot:         parentRoot[:],
 			SubcommitteeIndex: 0,
 			AggregationBits:   aggregationBits,
@@ -2324,7 +2327,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
 		copied := beaconState.Copy()
-		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		require.NoError(t, copied.SetSlot(params.BeaconConfig().SlotsPerEpoch*2+1))
 		idx, err := helpers.BeaconProposerIndex(ctx, copied)
 		require.NoError(t, err)
 		require.NoError(t,
@@ -2332,7 +2335,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 				[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: make([]byte, 20), Pubkey: make([]byte, 48)}}))
 
 		req := &ethpbv1.ProduceBlockRequest{
-			Slot:         params.BeaconConfig().SlotsPerEpoch + 1,
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
