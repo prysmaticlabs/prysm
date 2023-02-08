@@ -87,7 +87,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, err
 	}
 	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, err
+		return nil, nil
 	}
 
 	h, err := b.Block().Body().Execution()

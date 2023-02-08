@@ -217,12 +217,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 			return nil, handleRPCError(err)
 		}
 
-		payload, err := blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(result.Value))
-		if err != nil {
-			return nil, err
-		}
-
-		return payload, nil
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(result.Value))
 	}
 
 	result := &pb.ExecutionPayload{}
@@ -230,11 +225,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
-	payload, err := blocks.WrappedExecutionPayload(result)
-	if err != nil {
-		return nil, err
-	}
-	return payload, nil
+	return blocks.WrappedExecutionPayload(result)
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.

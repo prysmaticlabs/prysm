@@ -99,22 +99,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot primitives.Slot,
 		parentHash = header.BlockHash()
 	} else {
 		if activationEpochNotReached(slot) {
-			payload, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
-			if err != nil {
-				return nil, err
-			}
-			return payload, nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
 		if !hasTerminalBlock {
-			payload, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
-			if err != nil {
-				return nil, err
-			}
-			return payload, nil
+			return consensusblocks.WrappedExecutionPayload(emptyPayload())
 		}
 	}
 	payloadIDCacheMiss.Inc()
