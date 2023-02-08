@@ -38,6 +38,7 @@ type EngineClient struct {
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
 	OverrideValidHash           [32]byte
+	BlockValue                  *big.Int
 }
 
 // NewPayload --
@@ -58,7 +59,7 @@ func (e *EngineClient) ForkchoiceUpdated(
 // GetPayload --
 func (e *EngineClient) GetPayload(_ context.Context, _ [8]byte, s primitives.Slot) (interfaces.ExecutionData, error) {
 	if slots.ToEpoch(s) >= params.BeaconConfig().CapellaForkEpoch {
-		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella)
+		return blocks.WrappedExecutionPayloadCapella(e.ExecutionPayloadCapella, e.BlockValue)
 	}
 	p, err := blocks.WrappedExecutionPayload(e.ExecutionPayload)
 	if err != nil {
