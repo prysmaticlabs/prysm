@@ -28,7 +28,7 @@ var (
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
-func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
+func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlockWriteable, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -120,7 +120,7 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 // BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
 // given beacon block and the appropriate signature. This method may be used to easily create a
 // signed beacon block.
-func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
+func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlockWriteable, error) {
 	pb, err := blk.Proto()
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 // a full, signed beacon block by specifying an execution payload.
 func BuildSignedBeaconBlockFromExecutionPayload(
 	blk interfaces.SignedBeaconBlock, payload interface{},
-) (interfaces.SignedBeaconBlock, error) {
+) (interfaces.SignedBeaconBlockWriteable, error) {
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}

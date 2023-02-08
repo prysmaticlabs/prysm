@@ -65,10 +65,10 @@ type ForkchoiceUpdatedResponse struct {
 type ExecutionPayloadReconstructor interface {
 	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
-	) (interfaces.SignedBeaconBlock, error)
+	) (interfaces.SignedBeaconBlockWriteable, error)
 	ReconstructFullBellatrixBlockBatch(
 		ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
-	) ([]interfaces.SignedBeaconBlock, error)
+	) ([]interfaces.SignedBeaconBlockWriteable, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -443,7 +443,7 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
-) (interfaces.SignedBeaconBlock, error) {
+) (interfaces.SignedBeaconBlockWriteable, error) {
 	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
 		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
 	}
@@ -494,9 +494,9 @@ func (s *Service) ReconstructFullBlock(
 // them with a full execution payload for each block via the engine API.
 func (s *Service) ReconstructFullBellatrixBlockBatch(
 	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
-) ([]interfaces.SignedBeaconBlock, error) {
+) ([]interfaces.SignedBeaconBlockWriteable, error) {
 	if len(blindedBlocks) == 0 {
-		return []interfaces.SignedBeaconBlock{}, nil
+		return []interfaces.SignedBeaconBlockWriteable{}, nil
 	}
 	executionHashes := []common.Hash{}
 	validExecPayloads := []int{}
@@ -532,6 +532,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 
 	// For each valid payload, we reconstruct the full block from it with the
 	// blinded block.
+	fullBlocks := make([]interfaces.SignedBeaconBlockWriteable, len(blindedBlocks))
 	for sliceIdx, realIdx := range validExecPayloads {
 		b := execBlocks[sliceIdx]
 		if b == nil {
@@ -549,7 +550,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		blindedBlocks[realIdx] = fullBlock
+		fullBlocks[realIdx] = fullBlock
 	}
 	// For blocks that are pre-merge we simply reconstruct them via an empty
 	// execution payload.
@@ -559,10 +560,10 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		if err != nil {
 			return nil, err
 		}
-		blindedBlocks[realIdx] = fullBlock
+		fullBlocks[realIdx] = fullBlock
 	}
 	reconstructedExecutionPayloadCount.Add(float64(len(blindedBlocks)))
-	return blindedBlocks, nil
+	return fullBlocks, nil
 }
 
 func fullPayloadFromExecutionBlock(

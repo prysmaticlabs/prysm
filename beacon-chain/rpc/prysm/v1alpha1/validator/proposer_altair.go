@@ -15,12 +15,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlock) {
+func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBeaconBlockWriteable) {
 	if blk.Version() < version.Altair {
 		return
 	}
 
-	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Slot()-1, blk.ParentRoot())
+	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Block().Slot()-1, blk.Block().ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
 		emptySig := [96]byte{0xC0}
@@ -28,14 +28,14 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.BeaconBlo
 			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize),
 			SyncCommitteeSignature: emptySig[:],
 		}
-		if err := blk.Body().SetSyncAggregate(emptyAggregate); err != nil {
+		if err := blk.SetSyncAggregate(emptyAggregate); err != nil {
 			log.WithError(err).Error("Could not set sync aggregate")
 		}
 		return
 	}
 
 	// Can not error. We already filter block versioning at the top. Phase 0 is impossible.
-	if err := blk.Body().SetSyncAggregate(syncAggregate); err != nil {
+	if err := blk.SetSyncAggregate(syncAggregate); err != nil {
 		log.WithError(err).Error("Could not set sync aggregate")
 	}
 }
