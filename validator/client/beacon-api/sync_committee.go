@@ -117,7 +117,7 @@ func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context,
 	for _, idx := range syncDuty.ValidatorSyncCommitteeIndices {
 		syncCommIdx, err := strconv.ParseUint(idx, 10, 64)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse validator sync committee index")
+			return nil, errors.Wrapf(err, "failed to parse validator sync committee index %s", idx)
 		}
 
 		indices = append(indices, primitives.CommitteeIndex(syncCommIdx))
