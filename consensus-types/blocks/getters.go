@@ -18,7 +18,7 @@ import (
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
+func BeaconBlockIsNil(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
 		return ErrNilSignedBeaconBlock
 	}
@@ -31,7 +31,7 @@ func (b *SignedBeaconBlock) Signature() [field_params.BLSSignatureLength]byte {
 }
 
 // Block returns the underlying beacon block object.
-func (b *SignedBeaconBlock) Block() interfaces.BeaconBlock {
+func (b *SignedBeaconBlock) Block() interfaces.ReadOnlyBeaconBlock {
 	return b.block
 }
 
@@ -41,7 +41,7 @@ func (b *SignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b == nil {
 		return nil, nil
 	}
@@ -188,7 +188,7 @@ func (b *SignedBeaconBlock) PbBlindedCapellaBlock() (*eth.SignedBlindedBeaconBlo
 }
 
 // ToBlinded converts a non-blinded block to its blinded equivalent.
-func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b.version < version.Bellatrix {
 		return nil, ErrUnsupportedVersion
 	}
@@ -475,7 +475,7 @@ func (b *BeaconBlock) StateRoot() [field_params.RootLength]byte {
 }
 
 // Body returns the underlying block body.
-func (b *BeaconBlock) Body() interfaces.BeaconBlockBody {
+func (b *BeaconBlock) Body() interfaces.ReadOnlyBeaconBlockBody {
 	return b.body
 }
 
@@ -732,7 +732,7 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 	}
 }
 
-func (b *BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
+func (b *BeaconBlock) Copy() (interfaces.ReadOnlyBeaconBlock, error) {
 	if b == nil {
 		return nil, nil
 	}

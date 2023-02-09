@@ -190,11 +190,11 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
-	var blk interfaces.SignedBeaconBlock
+	var blk interfaces.ReadOnlySignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {

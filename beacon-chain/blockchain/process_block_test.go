@@ -157,7 +157,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), primitives.Slot(i))
@@ -200,7 +200,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 
-	var blks []interfaces.SignedBeaconBlock
+	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 	blkCount := 4
 	for i := 0; i <= blkCount; i++ {
