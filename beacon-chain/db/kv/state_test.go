@@ -368,7 +368,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 100
-	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {

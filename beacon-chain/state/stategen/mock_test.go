@@ -74,7 +74,7 @@ type mockHistorySpec struct {
 }
 
 type mockHistory struct {
-	blocks                         map[[32]byte]interfaces.SignedBeaconBlock
+	blocks                         map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 	slotMap                        map[primitives.Slot][32]byte
 	slotIndex                      slotList
 	canonical                      map[[32]byte]bool
@@ -131,7 +131,7 @@ func (m *mockHistory) GenesisBlockRoot(_ context.Context) ([32]byte, error) {
 	return genesisRoot, nil
 }
 
-func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if b, ok := m.blocks[blockRoot]; ok {
 		return b, nil
 	}
@@ -154,7 +154,7 @@ func (m *mockHistory) CurrentSlot() primitives.Slot {
 	return m.current
 }
 
-func (h *mockHistory) addBlock(root [32]byte, b interfaces.SignedBeaconBlock, canon bool) {
+func (h *mockHistory) addBlock(root [32]byte, b interfaces.ReadOnlySignedBeaconBlock, canon bool) {
 	h.blocks[root] = b
 	h.slotMap[b.Block().Slot()] = root
 	h.canonical[root] = canon
@@ -190,7 +190,7 @@ func (h *mockHistory) validateRoots() error {
 func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slot) *mockHistory {
 	ctx := context.Background()
 	mh := &mockHistory{
-		blocks:       map[[32]byte]interfaces.SignedBeaconBlock{},
+		blocks:       map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{},
 		canonical:    map[[32]byte]bool{},
 		states:       map[[32]byte]state.BeaconState{},
 		hiddenStates: map[[32]byte]state.BeaconState{},

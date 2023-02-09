@@ -241,7 +241,7 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 	}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -294,7 +294,7 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedBeaconBlock) ([]byte, error) {
+func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")

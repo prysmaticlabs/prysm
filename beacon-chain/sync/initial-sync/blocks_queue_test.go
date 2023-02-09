@@ -259,7 +259,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
-			processBlock := func(block interfaces.SignedBeaconBlock) error {
+			processBlock := func(block interfaces.ReadOnlySignedBeaconBlock) error {
 				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
@@ -270,7 +270,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				return mc.ReceiveBlock(ctx, block, root)
 			}
 
-			var blocks []interfaces.SignedBeaconBlock
+			var blocks []interfaces.ReadOnlySignedBeaconBlock
 			for data := range queue.fetchedData {
 				for _, block := range data.blocks {
 					if err := processBlock(block); err != nil {
@@ -533,7 +533,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
-			blocks: []interfaces.SignedBeaconBlock{
+			blocks: []interfaces.ReadOnlySignedBeaconBlock{
 				wsb,
 				wsbCopy,
 			},
@@ -542,7 +542,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			state: stateScheduled,
 		}
 		assert.Equal(t, peer.ID(""), fsm.pid)
-		assert.DeepSSZEqual(t, []interfaces.SignedBeaconBlock(nil), fsm.blocks)
+		assert.DeepSSZEqual(t, []interfaces.ReadOnlySignedBeaconBlock(nil), fsm.blocks)
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
@@ -631,7 +631,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.machines[256].pid = pidDataParsed
-		queue.smm.machines[256].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[256].blocks = []interfaces.ReadOnlySignedBeaconBlock{
 			wsb,
 		}
 
@@ -663,7 +663,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[320].blocks = []interfaces.ReadOnlySignedBeaconBlock{
 			wsb,
 		}
 
@@ -692,7 +692,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.SignedBeaconBlock{
+		queue.smm.machines[320].blocks = []interfaces.ReadOnlySignedBeaconBlock{
 			wsb,
 		}
 
@@ -1317,7 +1317,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	})
 
 	require.NoError(t, queue.start())
-	isProcessedBlock := func(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
+	isProcessedBlock := func(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) bool {
 		cp := mc.FinalizedCheckpt()
 		finalizedSlot, err := slots.EpochStart(cp.Epoch)
 		if err != nil {

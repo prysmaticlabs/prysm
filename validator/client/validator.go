@@ -338,7 +338,7 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		if res == nil || res.Block == nil {
 			continue
 		}
-		var blk interfaces.SignedBeaconBlock
+		var blk interfaces.ReadOnlySignedBeaconBlock
 		switch b := res.Block.(type) {
 		case *ethpb.StreamBlocksResponse_Phase0Block:
 			blk, err = blocks.NewSignedBeaconBlock(b.Phase0Block)

@@ -15,7 +15,7 @@ import (
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlockWriteable, headState state.BeaconState) {
+func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState state.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}
@@ -35,7 +35,7 @@ func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlockWriteable, he
 	}
 }
 
-func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlockCapella(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, errors.Wrap(err, "block is nil")
 	}

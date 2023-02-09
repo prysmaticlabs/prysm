@@ -88,8 +88,8 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 
 // ReconstructFullBlock --
 func (e *EngineClient) ReconstructFullBlock(
-	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
-) (interfaces.SignedBeaconBlockWriteable, error) {
+	_ context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
+) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("block must be blinded")
 	}
@@ -107,9 +107,9 @@ func (e *EngineClient) ReconstructFullBlock(
 
 // ReconstructFullBellatrixBlockBatch --
 func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
-	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
-) ([]interfaces.SignedBeaconBlockWriteable, error) {
-	fullBlocks := make([]interfaces.SignedBeaconBlockWriteable, 0, len(blindedBlocks))
+	ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
+) ([]interfaces.SignedBeaconBlock, error) {
+	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
 	for _, b := range blindedBlocks {
 		newBlock, err := e.ReconstructFullBlock(ctx, b)
 		if err != nil {

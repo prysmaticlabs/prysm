@@ -23,7 +23,7 @@ const executionToBLSPadding = 12
 
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
-	signed interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	signed interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 	if signed.Version() < version.Capella {
 		return st, nil
 	}

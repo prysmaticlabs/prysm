@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
-func headerFromBlock(b interfaces.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+func headerFromBlock(b interfaces.ReadOnlySignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
 	bodyRoot, err := b.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, err
