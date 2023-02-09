@@ -172,7 +172,7 @@ func capellaForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) er
 		return err
 	}
 	if blk.Block().Slot() < fSlot {
-		return errors.Errorf("wanted a block >= %d but received %d", fSlot, blk.Block().Slot())
+		return errors.Errorf("wanted a block at slot >= %d but received %d", fSlot, blk.Block().Slot())
 	}
 	return nil
 }
