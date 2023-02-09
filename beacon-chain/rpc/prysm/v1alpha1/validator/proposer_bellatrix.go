@@ -53,6 +53,7 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
+			// Can only check values if block is Capella or later.
 			if blk.Version() >= version.Capella {
 				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
@@ -62,7 +63,6 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-
 				// Compare payload values between local and builder. Default to the local value if it is higher.
 				builderValue, err := builderPayload.Value()
 				if err != nil {
@@ -81,7 +81,6 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 			}
 		}
-
 	}
 
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
@@ -138,7 +137,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
-
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")

@@ -6,11 +6,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/client/builder"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // MockBuilderService to mock builder.
@@ -20,6 +22,7 @@ type MockBuilderService struct {
 	PayloadCapella        *v1.ExecutionPayloadCapella
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
+	BidCapella            *ethpb.SignedBuilderBidCapella
 	ErrGetHeader          error
 	ErrRegisterValidator  error
 }
@@ -46,7 +49,10 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(context.Context, primitives.Slot, [32]byte, [48]byte) (builder.SignedBid, error) {
+func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot, hr [32]byte, pb [48]byte) (builder.SignedBid, error) {
+	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
+		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
+	}
 	w, err := builder.WrappedSignedBuilderBid(s.Bid)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap bid")
