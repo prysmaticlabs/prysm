@@ -30,7 +30,7 @@ func NewVotes() *votes {
 	}
 }
 
-func (v *votes) Insert(blk interfaces.BeaconBlock) {
+func (v *votes) Insert(blk interfaces.ReadOnlyBeaconBlock) {
 	v.l.Lock()
 	defer v.l.Unlock()
 
