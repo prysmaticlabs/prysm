@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func getEmptyBlock(slot primitives.Slot) (interfaces.SignedBeaconBlockWriteable, error) {
-	var sBlk interfaces.SignedBeaconBlockWriteable
+func getEmptyBlock(slot primitives.Slot) (interfaces.SignedBeaconBlock, error) {
+	var sBlk interfaces.SignedBeaconBlock
 	var err error
 	switch {
 	case slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch:

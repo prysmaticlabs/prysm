@@ -16,7 +16,7 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 		return nil, errors.New("failed to cast request object to block")
 	}
 	if beaconBlock == nil {
-		return nil, errors.New("invalid sign request: BeaconBlock is nil")
+		return nil, errors.New("invalid sign request: ReadOnlyBeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
@@ -120,7 +120,7 @@ func GetBlockAltairSignRequest(request *validatorpb.SignRequest, genesisValidato
 		return nil, errors.New("failed to cast request object to block altair")
 	}
 	if beaconBlockAltair == nil {
-		return nil, errors.New("invalid sign request: BeaconBlock is nil")
+		return nil, errors.New("invalid sign request: ReadOnlyBeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
@@ -276,7 +276,7 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
-	var b interfaces.BeaconBlock
+	var b interfaces.ReadOnlyBeaconBlock
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_BlindedBlockBellatrix:
 		blindedBlockBellatrix, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockBellatrix)

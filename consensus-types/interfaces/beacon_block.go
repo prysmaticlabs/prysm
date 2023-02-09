@@ -10,18 +10,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// SignedBeaconBlock is an interface describing the method set of
+// ReadOnlySignedBeaconBlock is an interface describing the method set of
 // a signed beacon block.
-type SignedBeaconBlock interface {
-	Block() BeaconBlock
+type ReadOnlySignedBeaconBlock interface {
+	Block() ReadOnlyBeaconBlock
 	Signature() [field_params.BLSSignatureLength]byte
 	IsNil() bool
-	Copy() (SignedBeaconBlock, error)
+	Copy() (ReadOnlySignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
-	ToBlinded() (SignedBeaconBlock, error)
+	ToBlinded() (ReadOnlySignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
@@ -33,14 +33,14 @@ type SignedBeaconBlock interface {
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
-// BeaconBlock describes an interface which states the methods
+// ReadOnlyBeaconBlock describes an interface which states the methods
 // employed by an object that is a beacon block.
-type BeaconBlock interface {
+type ReadOnlyBeaconBlock interface {
 	Slot() primitives.Slot
 	ProposerIndex() primitives.ValidatorIndex
 	ParentRoot() [field_params.RootLength]byte
 	StateRoot() [field_params.RootLength]byte
-	Body() BeaconBlockBody
+	Body() ReadOnlyBeaconBlockBody
 	IsNil() bool
 	IsBlinded() bool
 	HashTreeRoot() ([field_params.RootLength]byte, error)
@@ -50,12 +50,12 @@ type BeaconBlock interface {
 	ssz.HashRoot
 	Version() int
 	AsSignRequestObject() (validatorpb.SignRequestObject, error)
-	Copy() (BeaconBlock, error)
+	Copy() (ReadOnlyBeaconBlock, error)
 }
 
-// BeaconBlockBody describes the method set employed by an object
+// ReadOnlyBeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
-type BeaconBlockBody interface {
+type ReadOnlyBeaconBlockBody interface {
 	RandaoReveal() [field_params.BLSSignatureLength]byte
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte
@@ -72,8 +72,8 @@ type BeaconBlockBody interface {
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 }
 
-type SignedBeaconBlockWriteable interface {
-	SignedBeaconBlock
+type SignedBeaconBlock interface {
+	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error
 	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error
 	SetSyncAggregate(*ethpb.SyncAggregate) error
