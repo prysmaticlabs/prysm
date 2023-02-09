@@ -6,6 +6,7 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
@@ -158,7 +159,7 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 
 // Header --
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(b.p.Value))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.p.Value)))
 }
 
 // Version --
