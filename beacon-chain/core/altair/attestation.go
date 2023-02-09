@@ -24,7 +24,7 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.SignedBeaconBlock,
+	b interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err

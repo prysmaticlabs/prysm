@@ -61,7 +61,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name           string
-		head           interfaces.SignedBeaconBlock
+		head           interfaces.ReadOnlySignedBeaconBlock
 		mock           *builderTest.MockBuilderService
 		fetcher        *blockchainTest.ChainService
 		err            string
@@ -71,7 +71,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			name: "head is not bellatrix ready",
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 					require.NoError(t, err)
 					return wb
@@ -85,7 +85,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Bid:          sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
@@ -105,7 +105,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				},
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
@@ -127,7 +127,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				},
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
@@ -141,7 +141,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 				Bid: sBid,
 			},
 			fetcher: &blockchainTest.ChainService{
-				Block: func() interfaces.SignedBeaconBlock {
+				Block: func() interfaces.ReadOnlySignedBeaconBlock {
 					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
@@ -176,10 +176,10 @@ func TestServer_getBuilderBlock(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		blk         interfaces.SignedBeaconBlock
+		blk         interfaces.ReadOnlySignedBeaconBlock
 		mock        *builderTest.MockBuilderService
 		err         string
-		returnedBlk interfaces.SignedBeaconBlock
+		returnedBlk interfaces.ReadOnlySignedBeaconBlock
 	}{
 		{
 			name: "nil block",
@@ -188,12 +188,12 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		},
 		{
 			name: "old block version",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
@@ -201,7 +201,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		},
 		{
 			name: "not configured",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -209,7 +209,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			mock: &builderTest.MockBuilderService{
 				HasConfigured: false,
 			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
@@ -217,7 +217,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		},
 		{
 			name: "submit blind block error",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -234,7 +234,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		},
 		{
 			name: "head and payload root mismatch",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -246,7 +246,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				HasConfigured: true,
 				Payload:       p,
 			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -259,7 +259,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		},
 		{
 			name: "can get payload",
-			blk: func() interfaces.SignedBeaconBlock {
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
@@ -285,7 +285,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				HasConfigured: true,
 				Payload:       p,
 			},
-			returnedBlk: func() interfaces.SignedBeaconBlock {
+			returnedBlk: func() interfaces.ReadOnlySignedBeaconBlock {
 				b := util.NewBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2

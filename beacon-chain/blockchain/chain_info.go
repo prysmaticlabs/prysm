@@ -52,7 +52,7 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() primitives.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
@@ -158,7 +158,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 

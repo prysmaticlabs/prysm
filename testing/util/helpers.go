@@ -41,7 +41,7 @@ func BlockSignature(
 	block interface{},
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
-	var wsb interfaces.SignedBeaconBlock
+	var wsb interfaces.ReadOnlySignedBeaconBlock
 	var err error
 	// copy the state since we need to process slots
 	bState = bState.Copy()

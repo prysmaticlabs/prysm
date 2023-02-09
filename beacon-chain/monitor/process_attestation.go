@@ -53,7 +53,7 @@ func logMessageTimelyFlagsForIndex(idx primitives.ValidatorIndex, data *ethpb.At
 }
 
 // processAttestations logs the event for the tracked validators' attestations inclusion in block
-func (s *Service) processAttestations(ctx context.Context, state state.BeaconState, blk interfaces.BeaconBlock) {
+func (s *Service) processAttestations(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) {
 	if blk == nil || blk.Body() == nil {
 		return
 	}

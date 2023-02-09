@@ -35,7 +35,7 @@ type BlockProcessedData struct {
 	// BlockRoot of the processed block.
 	BlockRoot [32]byte
 	// SignedBlock is the physical processed block.
-	SignedBlock interfaces.SignedBeaconBlock
+	SignedBlock interfaces.ReadOnlySignedBeaconBlock
 	// Verified is true if the block's BLS contents have been verified.
 	Verified bool
 }
