@@ -220,7 +220,7 @@ func (v *ValidatorService) Start() {
 	// the inner type of the feed before hand. So that
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
-	tempChan := make(chan interfaces.SignedBeaconBlock)
+	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
 	sub := valStruct.blockFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)

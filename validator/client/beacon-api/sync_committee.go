@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
@@ -91,6 +92,37 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	}
 
 	return convertSyncContributionJsonToProto(resp.Data)
+}
+
+func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+	validatorIndexResponse, err := c.validatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: in.PublicKey})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get validator index")
+	}
+
+	syncDuties, err := c.dutiesProvider.GetSyncDuties(ctx, slots.ToEpoch(in.Slot), []primitives.ValidatorIndex{validatorIndexResponse.Index})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get sync committee duties")
+	}
+
+	if len(syncDuties) == 0 {
+		return nil, errors.Errorf("no sync committee duty for the given slot %d", in.Slot)
+	}
+
+	// First sync duty is required since we requested sync duties for one validator index.
+	syncDuty := syncDuties[0]
+
+	var indices []primitives.CommitteeIndex
+	for _, idx := range syncDuty.ValidatorSyncCommitteeIndices {
+		syncCommIdx, err := strconv.ParseUint(idx, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator sync committee index %s", idx)
+		}
+
+		indices = append(indices, primitives.CommitteeIndex(syncCommIdx))
+	}
+
+	return &ethpb.SyncSubcommitteeIndexResponse{Indices: indices}, nil
 }
 
 func convertSyncContributionJsonToProto(contribution *apimiddleware.SyncCommitteeContributionJson) (*ethpb.SyncCommitteeContribution, error) {
