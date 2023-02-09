@@ -583,7 +583,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			continue
 		}
 		if !bytes.Equal(val.PublicKey, privKeys[idx].PublicKey().Marshal()) {
-			return errors.New("pubkey is not equal")
+			return errors.Errorf("pubkey is not equal, wanted %#x but received %#x", val.PublicKey, privKeys[idx].PublicKey().Marshal())
 		}
 		message := &v2.BLSToExecutionChange{
 			ValidatorIndex:     idx,
