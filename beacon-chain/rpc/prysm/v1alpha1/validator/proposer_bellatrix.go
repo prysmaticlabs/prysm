@@ -63,11 +63,28 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 					return errors.Wrap(err, "failed to get local payload value")
 				}
 
+				// Compare withdrawal roots. Default to local if they don't match.
+				r1, err := localPayload.WithdrawalsRoot()
+				if err != nil {
+					return errors.Wrap(err, "failed to get local withdrawals root")
+				}
+				r2, err := builderPayload.WithdrawalsRoot()
+				if err != nil {
+					return errors.Wrap(err, "failed to get builder withdrawals root")
+				}
+				matchWithdrawalRoot := bytes.Equal(r1, r2)
+				if !matchWithdrawalRoot {
+					log.WithFields(logrus.Fields{
+						"local":  r1,
+						"remote": r2,
+					}).Warn("Proposer: withdrawal roots don't match, using local")
+				}
+
 				// Compare payload values between local and builder. Default to the local value if it is higher.
 				builderValue, err := builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-				} else if builderValue.Cmp(localValue) > 0 {
+				} else if builderValue.Cmp(localValue) > 0 && matchWithdrawalRoot {
 					blk.SetBlinded(true)
 					return blk.SetExecution(builderPayload)
 				}
