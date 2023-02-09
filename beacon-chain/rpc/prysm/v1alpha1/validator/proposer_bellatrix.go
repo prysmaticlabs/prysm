@@ -53,24 +53,40 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
-			localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
-			if err != nil {
-				return errors.Wrap(err, "failed to get execution payload")
-			}
-			localValue, err := localPayload.Value()
-			if err != nil {
-				return errors.Wrap(err, "failed to get local payload value")
+			if blk.Version() >= version.Capella {
+				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+				if err != nil {
+					return errors.Wrap(err, "failed to get execution payload")
+				}
+				localValue, err := localPayload.Value()
+				if err != nil {
+					return errors.Wrap(err, "failed to get local payload value")
+				}
+
+				// Compare payload values between local and builder. Default to the local value if it is higher.
+				builderValue, err := builderPayload.Value()
+				if err != nil {
+					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
+				} else if builderValue.Cmp(localValue) > 0 {
+					blk.SetBlinded(true)
+					return blk.Body().SetExecution(builderPayload)
+				}
+				return blk.Body().SetExecution(localPayload)
+			} else {
+				h, err := vs.getPayloadHeaderFromBuilder(ctx, slot, idx)
+				if err != nil {
+					builderGetPayloadMissCount.Inc()
+					log.WithError(err).Warn("Proposer: failed to get payload header from builder")
+				} else {
+					blk.SetBlinded(true)
+					if err := blk.SetExecution(h); err != nil {
+						log.WithError(err).Warn("Proposer: failed to set execution payload")
+					} else {
+						return nil
+					}
+				}
 			}
 
-			// Compare payload values between local and builder. Default to the local value if it is higher.
-			builderValue, err := builderPayload.Value()
-			if err != nil {
-				log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-			} else if builderValue.Cmp(localValue) > 0 {
-				blk.SetBlinded(true)
-				return blk.Body().SetExecution(builderPayload)
-			}
-			return blk.Body().SetExecution(localPayload)
 		}
 	}
 	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
