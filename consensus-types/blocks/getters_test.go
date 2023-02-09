@@ -25,7 +25,7 @@ func Test_BeaconBlockIsNil(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 	t.Run("nil signed block", func(t *testing.T) {
-		var i interfaces.SignedBeaconBlock
+		var i interfaces.ReadOnlySignedBeaconBlock
 		var sb *SignedBeaconBlock
 		i = sb
 		err := BeaconBlockIsNil(i)
