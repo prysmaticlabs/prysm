@@ -72,9 +72,9 @@ func main() {
 	fmt.Println(v.Report())
 }
 
-func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.BeaconBlock {
+func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock {
 	var err error
-	var wb interfaces.SignedBeaconBlock
+	var wb interfaces.ReadOnlySignedBeaconBlock
 	switch bb := b.Block.(type) {
 	case *v1alpha1.BeaconBlockContainer_Phase0Block:
 		wb, err = blocks.NewSignedBeaconBlock(bb.Phase0Block)

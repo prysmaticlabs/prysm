@@ -11,14 +11,14 @@ import (
 )
 
 type SignedBeaconBlock struct {
-	BeaconBlock interfaces.BeaconBlock
+	BeaconBlock interfaces.ReadOnlyBeaconBlock
 }
 
 func (SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
+func (m SignedBeaconBlock) Block() interfaces.ReadOnlyBeaconBlock {
 	return m.BeaconBlock
 }
 
@@ -34,7 +34,7 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+func (SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -90,7 +90,7 @@ func (SignedBeaconBlock) IsBlinded() bool {
 	return false
 }
 
-func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+func (SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -101,7 +101,7 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 type BeaconBlock struct {
 	Htr             [field_params.RootLength]byte
 	HtrErr          error
-	BeaconBlockBody interfaces.BeaconBlockBody
+	BeaconBlockBody interfaces.ReadOnlyBeaconBlockBody
 	BlockSlot       primitives.Slot
 }
 
@@ -129,7 +129,7 @@ func (BeaconBlock) StateRoot() [field_params.RootLength]byte {
 	panic("implement me")
 }
 
-func (m BeaconBlock) Body() interfaces.BeaconBlockBody {
+func (m BeaconBlock) Body() interfaces.ReadOnlyBeaconBlockBody {
 	return m.BeaconBlockBody
 }
 
@@ -169,7 +169,7 @@ func (BeaconBlock) Version() int {
 	panic("implement me")
 }
 
-func (BeaconBlock) ToBlinded() (interfaces.BeaconBlock, error) {
+func (BeaconBlock) ToBlinded() (interfaces.ReadOnlyBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -189,7 +189,7 @@ func (BeaconBlock) SetBlinded(_ bool) {
 	panic("implement me")
 }
 
-func (BeaconBlock) Copy() (interfaces.BeaconBlock, error) {
+func (BeaconBlock) Copy() (interfaces.ReadOnlyBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -299,6 +299,6 @@ func (b *BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionCh
 	panic("implement me")
 }
 
-var _ interfaces.SignedBeaconBlock = &SignedBeaconBlock{}
-var _ interfaces.BeaconBlock = &BeaconBlock{}
-var _ interfaces.BeaconBlockBody = &BeaconBlockBody{}
+var _ interfaces.ReadOnlySignedBeaconBlock = &SignedBeaconBlock{}
+var _ interfaces.ReadOnlyBeaconBlock = &BeaconBlock{}
+var _ interfaces.ReadOnlyBeaconBlockBody = &BeaconBlockBody{}
