@@ -114,7 +114,11 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}
+	jroot := [32]byte{'j'}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
+
 	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
 	jp := service.CurrentJustifiedCheckpt()
 	assert.Equal(t, cp.Epoch, jp.Epoch, "Unexpected justified epoch")

@@ -2107,6 +2107,12 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.Equal(t, blk, nil)
 
 	service.cfg.ForkChoiceStore = doublylinkedtree.New()
+	justified, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+
+	jroot := bytesutil.ToBytes32(justified.Root)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, jroot))
+	service.cfg.ForkChoiceStore.SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup

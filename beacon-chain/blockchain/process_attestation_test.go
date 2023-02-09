@@ -409,6 +409,8 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
 	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r32}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, bState, r32))
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, jc))
 	_, err = service.cfg.ForkChoiceStore.Head(ctx)
 	require.NoError(t, err)
