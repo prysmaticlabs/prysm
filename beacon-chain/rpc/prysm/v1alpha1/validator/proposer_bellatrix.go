@@ -37,9 +37,9 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlock, headState state.BeaconState) error {
-	idx := blk.ProposerIndex()
-	slot := blk.Slot()
+func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlockWriteable, headState state.BeaconState) error {
+	idx := blk.Block().ProposerIndex()
+	slot := blk.Block().Slot()
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
@@ -54,18 +54,18 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.BeaconBlo
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
 			blk.SetBlinded(true)
-			if err := blk.Body().SetExecution(h); err != nil {
+			if err := blk.SetExecution(h); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set execution payload")
 			} else {
 				return nil
 			}
 		}
 	}
-	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.ParentRoot(), headState)
+	executionData, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload")
 	}
-	return blk.Body().SetExecution(executionData)
+	return blk.SetExecution(executionData)
 }
 
 // This function retrieves the payload header given the slot number and the validator index.

@@ -71,12 +71,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 	}
 
-	blk := sBlk.Block()
 	// Set slot, graffiti, randao reveal, and parent root.
-	blk.SetSlot(req.Slot)
-	blk.Body().SetGraffiti(req.Graffiti)
-	blk.Body().SetRandaoReveal(req.RandaoReveal)
-	blk.SetParentRoot(parentRoot)
+	sBlk.SetSlot(req.Slot)
+	sBlk.SetGraffiti(req.Graffiti)
+	sBlk.SetRandaoReveal(req.RandaoReveal)
+	sBlk.SetParentRoot(parentRoot)
 
 	// Set eth1 data.
 	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
@@ -84,62 +83,62 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
 		log.WithError(err).Error("Could not get eth1data")
 	}
-	blk.Body().SetEth1Data(eth1Data)
+	sBlk.SetEth1Data(eth1Data)
 
 	// Set deposit and attestation.
 	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
 	if err != nil {
-		blk.Body().SetDeposits([]*ethpb.Deposit{})
-		blk.Body().SetAttestations([]*ethpb.Attestation{})
+		sBlk.SetDeposits([]*ethpb.Deposit{})
+		sBlk.SetAttestations([]*ethpb.Attestation{})
 		log.WithError(err).Error("Could not pack deposits and attestations")
 	}
-	blk.Body().SetDeposits(deposits)
-	blk.Body().SetAttestations(atts)
+	sBlk.SetDeposits(deposits)
+	sBlk.SetAttestations(atts)
 
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate proposer index %v", err)
 	}
-	blk.SetProposerIndex(idx)
+	sBlk.SetProposerIndex(idx)
 
 	// Set slashings.
 	validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-	blk.Body().SetProposerSlashings(validProposerSlashings)
-	blk.Body().SetAttesterSlashings(validAttSlashings)
+	sBlk.SetProposerSlashings(validProposerSlashings)
+	sBlk.SetAttesterSlashings(validAttSlashings)
 
 	// Set exits.
-	blk.Body().SetVoluntaryExits(vs.getExits(head, req.Slot))
+	sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
 
 	// Set sync aggregate. New in Altair.
-	vs.setSyncAggregate(ctx, blk)
+	vs.setSyncAggregate(ctx, sBlk)
 
 	// Set execution data. New in Bellatrix.
-	if err := vs.setExecutionData(ctx, blk, head); err != nil {
+	if err := vs.setExecutionData(ctx, sBlk, head); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
 	// Set bls to execution change. New in Capella.
-	vs.setBlsToExecData(blk, head)
+	vs.setBlsToExecData(sBlk, head)
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
-	blk.SetStateRoot(sr)
+	sBlk.SetStateRoot(sr)
 
-	pb, err := blk.Proto()
+	pb, err := sBlk.Block().Proto()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-		if blk.IsBlinded() {
+		if sBlk.IsBlinded() {
 			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}}, nil
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}}, nil
 	}
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		if blk.IsBlinded() {
+		if sBlk.IsBlinded() {
 			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}}, nil
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}}, nil

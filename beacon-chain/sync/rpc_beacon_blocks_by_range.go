@@ -174,18 +174,37 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			break
 		}
 	}
+
+	var reconstructedBlock []interfaces.SignedBeaconBlockWriteable
 	if blindedExists {
-		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
+		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
 		if err != nil {
 			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
-		copy(blks[blindedIndex:], reconstructedBlks)
 	}
 
 	for _, b := range blks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
+			continue
+		}
+		if b.IsBlinded() {
+			continue
+		}
+		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			tracing.AnnotateError(span, chunkErr)
+			return chunkErr
+		}
+	}
+
+	for _, b := range reconstructedBlock {
+		if err := blocks.BeaconBlockIsNil(b); err != nil {
+			continue
+		}
+		if b.IsBlinded() {
 			continue
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {

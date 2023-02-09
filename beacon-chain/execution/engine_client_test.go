@@ -769,7 +769,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
 		require.NoError(t, err)
-		require.DeepEqual(t, []interfaces.SignedBeaconBlock{wantedWrapped}, reconstructed)
+		require.DeepEqual(t, []interfaces.SignedBeaconBlockWriteable{wantedWrapped}, reconstructed)
 	})
 	t.Run("properly reconstructs block batch with correct payload", func(t *testing.T) {
 		fix := fixtures()
