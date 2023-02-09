@@ -435,7 +435,7 @@ func (e *ExecutionPayloadCapellaWithValue) UnmarshalJSON(enc []byte) error {
 		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
 	}
 
-	*e = ExecutionPayloadCapellaWithValue{}
+	*e = ExecutionPayloadCapellaWithValue{Payload: &ExecutionPayloadCapella{}}
 	e.Payload.ParentHash = dec.ExecutionPayload.ParentHash.Bytes()
 	e.Payload.FeeRecipient = dec.ExecutionPayload.FeeRecipient.Bytes()
 	e.Payload.StateRoot = dec.ExecutionPayload.StateRoot.Bytes()
