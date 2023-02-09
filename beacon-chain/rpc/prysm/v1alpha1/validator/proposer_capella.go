@@ -15,11 +15,11 @@ import (
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.BeaconState) {
+func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlockWriteable, headState state.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}
-	if err := blk.Body().SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{}); err != nil {
+	if err := blk.SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{}); err != nil {
 		log.WithError(err).Error("Could not set bls to execution data in block")
 		return
 	}
@@ -28,7 +28,7 @@ func (vs *Server) setBlsToExecData(blk interfaces.BeaconBlock, headState state.B
 		log.WithError(err).Error("Could not get bls to execution changes")
 		return
 	} else {
-		if err := blk.Body().SetBLSToExecutionChanges(changes); err != nil {
+		if err := blk.SetBLSToExecutionChanges(changes); err != nil {
 			log.WithError(err).Error("Could not set bls to execution changes")
 			return
 		}

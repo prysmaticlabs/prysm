@@ -127,7 +127,7 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	b.Block().SetSlot(100)
+	b.SetSlot(100)
 	c.head = &head{block: b, state: s}
 	assert.Equal(t, primitives.Slot(100), c.HeadSlot())
 }
