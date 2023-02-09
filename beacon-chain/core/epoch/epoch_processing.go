@@ -262,10 +262,13 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 		if val == nil {
 			return false, nil, fmt.Errorf("validator %d is nil in state", idx)
 		}
-		if idx >= len(bals) {
-			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
+		if idx >= bals.Len() {
+			return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, bals.Len())
 		}
-		balance := bals[idx]
+		balance, err := bals.At(uint64(idx))
+		if err != nil {
+			return false, nil, err
+		}
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
 			effectiveBal := maxEffBalance

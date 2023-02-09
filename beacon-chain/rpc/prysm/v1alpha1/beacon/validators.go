@@ -72,7 +72,7 @@ func (bs *Server) ListValidatorBalances(
 
 	vals := requestedState.Validators()
 	balances := requestedState.Balances()
-	balancesCount := len(balances)
+	balancesCount := balances.Len()
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key.
 		if len(pubKey) == 0 {
@@ -90,35 +90,43 @@ func (bs *Server) ListValidatorBalances(
 		}
 		filtered[index] = true
 
-		if uint64(index) >= uint64(len(balances)) {
+		if uint64(index) >= uint64(balances.Len()) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
-				index, len(balances))
+				index, balances.Len())
 		}
 
 		val := vals[index]
 		st := validatorStatus(val, requestedEpoch)
+		bal, err := balances.At(uint64(index))
+		if err != nil {
+			return nil, err
+		}
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
 			Index:     index,
-			Balance:   balances[index],
+			Balance:   bal,
 			Status:    st.String(),
 		})
 		balancesCount = len(res)
 	}
 
 	for _, index := range req.Indices {
-		if uint64(index) >= uint64(len(balances)) {
+		if uint64(index) >= uint64(balances.Len()) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= balance list %d",
-				index, len(balances))
+				index, balances.Len())
 		}
 
 		if !filtered[index] {
 			val := vals[index]
 			st := validatorStatus(val, requestedEpoch)
+			bal, err := balances.At(uint64(index))
+			if err != nil {
+				return nil, err
+			}
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: vals[index].PublicKey,
 				Index:     index,
-				Balance:   balances[index],
+				Balance:   bal,
 				Status:    st.String(),
 			})
 		}
@@ -155,10 +163,14 @@ func (bs *Server) ListValidatorBalances(
 			pubkey := requestedState.PubkeyAtIndex(types.ValidatorIndex(i))
 			val := vals[i]
 			st := validatorStatus(val, requestedEpoch)
+			bal, err := balances.At(uint64(i))
+			if err != nil {
+				return nil, err
+			}
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: pubkey[:],
 				Index:     types.ValidatorIndex(i),
-				Balance:   balances[i],
+				Balance:   bal,
 				Status:    st.String(),
 			})
 		}

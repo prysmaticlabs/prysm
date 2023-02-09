@@ -5,11 +5,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	types2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 // ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
@@ -177,7 +179,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // Balances of validators participating in consensus on the beacon chain.
-func (b *BeaconState) Balances() []uint64 {
+func (b *BeaconState) Balances() *types2.ValidatorBalancesReadOnly {
 	if b.balances == nil {
 		return nil
 	}
@@ -185,7 +187,7 @@ func (b *BeaconState) Balances() []uint64 {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.balancesVal()
+	return types2.NewValidatorBalances(b.balances)
 }
 
 // balancesVal of validators participating in consensus on the beacon chain.
@@ -197,6 +199,8 @@ func (b *BeaconState) balancesVal() []uint64 {
 
 	res := make([]uint64, len(b.balances))
 	copy(res, b.balances)
+	log.Warn("copy balances")
+	//debug.PrintStack()
 	return res
 }
 

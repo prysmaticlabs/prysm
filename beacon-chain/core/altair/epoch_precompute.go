@@ -231,7 +231,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 
-	balances := beaconState.Balances()
+	balances := beaconState.Balances().Value()
 	for i := 0; i < numOfVals; i++ {
 		vals[i].BeforeEpochTransitionBalance = balances[i]
 
