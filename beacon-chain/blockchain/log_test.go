@@ -25,11 +25,11 @@ func Test_logStateTransitionData(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name string
-		b    func() interfaces.BeaconBlock
+		b    func() interfaces.ReadOnlyBeaconBlock
 		want string
 	}{
 		{name: "empty block body",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return wb
@@ -37,7 +37,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" prefix=blockchain slot=0",
 		},
 		{name: "has attestation",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{{}}}})
 				require.NoError(t, err)
 				return wb
@@ -45,7 +45,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" attestations=1 prefix=blockchain slot=0",
 		},
 		{name: "has deposit",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(
 					&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 						Attestations: []*ethpb.Attestation{{}},
@@ -56,7 +56,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" attestations=1 deposits=1 prefix=blockchain slot=0",
 		},
 		{name: "has attester slashing",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					AttesterSlashings: []*ethpb.AttesterSlashing{{}}}})
 				require.NoError(t, err)
@@ -65,7 +65,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" attesterSlashings=1 prefix=blockchain slot=0",
 		},
 		{name: "has proposer slashing",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					ProposerSlashings: []*ethpb.ProposerSlashing{{}}}})
 				require.NoError(t, err)
@@ -74,7 +74,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" prefix=blockchain proposerSlashings=1 slot=0",
 		},
 		{name: "has exit",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					VoluntaryExits: []*ethpb.SignedVoluntaryExit{{}}}})
 				require.NoError(t, err)
@@ -83,7 +83,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" prefix=blockchain slot=0 voluntaryExits=1",
 		},
 		{name: "has everything",
-			b: func() interfaces.BeaconBlock {
+			b: func() interfaces.ReadOnlyBeaconBlock {
 				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					Attestations:      []*ethpb.Attestation{{}},
 					Deposits:          []*ethpb.Deposit{{}},
@@ -96,7 +96,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			want: "\"Finished applying state transition\" attestations=1 attesterSlashings=1 deposits=1 prefix=blockchain proposerSlashings=1 slot=0 voluntaryExits=1",
 		},
 		{name: "has payload",
-			b:    func() interfaces.BeaconBlock { return wrappedPayloadBlk },
+			b:    func() interfaces.ReadOnlyBeaconBlock { return wrappedPayloadBlk },
 			want: "\"Finished applying state transition\" payloadHash=0x010203 prefix=blockchain slot=0 syncBitsCount=0 txCount=2",
 		},
 	}

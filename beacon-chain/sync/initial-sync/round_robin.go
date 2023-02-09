@@ -22,10 +22,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
+type blockReceiverFn func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte) error
+type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -184,7 +184,7 @@ func (s *Service) highestFinalizedEpoch() primitives.Epoch {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.BeaconBlock, blkRoot [32]byte) {
+func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.ReadOnlyBeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(1)
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -204,7 +204,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.BeaconBlock, b
 }
 
 // logBatchSyncStatus and increments the block processing counter.
-func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.SignedBeaconBlock, blkRoot [32]byte) {
+func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(int64(len(blks)))
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -226,7 +226,7 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.Signed
 func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
-	blk interfaces.SignedBeaconBlock,
+	blk interfaces.ReadOnlySignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
 	blkRoot, err := blk.Block().HashTreeRoot()
@@ -245,7 +245,7 @@ func (s *Service) processBlock(
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.ReadOnlySignedBeaconBlock, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -304,7 +304,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot primitives.Slot) 
 }
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
-func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
+func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) bool {
 	cp := s.cfg.Chain.FinalizedCheckpt()
 	finalizedSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
