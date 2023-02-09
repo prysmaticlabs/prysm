@@ -55,6 +55,7 @@ var Commands = []*cli.Command{
 					VerifyOnlyFlag,
 					cmd.ConfigFileFlag,
 					cmd.AcceptTosFlag,
+					flags.BeaconRESTApiProviderFlag,
 				},
 				Before: func(cliCtx *cli.Context) error {
 					if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {

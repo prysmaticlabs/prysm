@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -160,7 +161,12 @@ func findWithdrawalFiles(path string) ([]string, error) {
 func verifyWithdrawalsInPool(c *cli.Context) error {
 	ctx, span := trace.StartSpan(c.Context, "withdrawal.verifyWithdrawalsInPool")
 	defer span.End()
-	beaconNodeHost := c.String(BeaconHostFlag.Name)
+	var beaconNodeHost string
+	if c.IsSet(flags.BeaconRESTApiProviderFlag.Name) {
+		beaconNodeHost = c.String(flags.BeaconRESTApiProviderFlag.Name)
+	} else {
+		beaconNodeHost = c.String(BeaconHostFlag.Name)
+	}
 	if !c.IsSet(PathFlag.Name) {
 		return fmt.Errorf("no --%s flag value was provided", PathFlag.Name)
 	}
