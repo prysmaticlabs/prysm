@@ -157,9 +157,11 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 	return w, nil
 }
 
-// Header --
+// Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.p.Value)))
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	v := bytesutil.ReverseByteOrder(b.p.Value)
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, big.NewInt(0).SetBytes(v))
 }
 
 // Version --

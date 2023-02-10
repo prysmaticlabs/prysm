@@ -53,30 +53,36 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
-			// Can only check values if block is Capella or later.
-			if blk.Version() >= version.Capella {
+			switch {
+			case blk.Version() >= version.Capella:
 				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
 					return errors.Wrap(err, "failed to get execution payload")
 				}
+				// Compare payload values between local and builder. Default to the local value if it is higher.
 				localValue, err := localPayload.Value()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
-				// Compare payload values between local and builder. Default to the local value if it is higher.
 				builderValue, err := builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-				} else if builderValue.Cmp(localValue) > 0 {
-					blk.SetBlinded(true)
-					return blk.SetExecution(builderPayload)
+				}
+				// If we can't get the builder value, just use local block.
+				if err == nil && builderValue.Cmp(localValue) > 0 { // Builder value is higher
+					if err := blk.SetExecution(builderPayload); err != nil {
+						log.WithError(err).Warn("Proposer: failed to set builder payload")
+					} else {
+						blk.SetBlinded(true)
+						return nil
+					}
 				}
 				return blk.SetExecution(localPayload)
-			} else {
-				blk.SetBlinded(true)
+			default: // Bellatrix case.
 				if err := blk.SetExecution(builderPayload); err != nil {
-					log.WithError(err).Warn("Proposer: failed to set execution payload")
+					log.WithError(err).Warn("Proposer: failed to set builder payload")
 				} else {
+					blk.SetBlinded(true)
 					return nil
 				}
 			}

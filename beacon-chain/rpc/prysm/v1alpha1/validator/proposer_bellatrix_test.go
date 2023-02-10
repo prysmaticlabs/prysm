@@ -70,13 +70,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
 	})
 	t.Run("Builder configured. Builder Block has higher value", func(t *testing.T) {
-		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
 			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		ti, err := slots.ToTime(uint64(time.Now().Unix()), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
+		require.NoError(t, err)
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
