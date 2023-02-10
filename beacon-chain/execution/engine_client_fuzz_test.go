@@ -115,7 +115,7 @@ func FuzzExchangeTransitionConfiguration(f *testing.F) {
 
 func FuzzExecutionPayload(f *testing.F) {
 	logsBloom := [256]byte{'j', 'u', 'n', 'k'}
-	execData := &beacon.ExecutableDataV1{
+	execData := &beacon.ExecutableData{
 		ParentHash:    common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
 		FeeRecipient:  common.Address([20]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}),
 		StateRoot:     common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
@@ -135,7 +135,7 @@ func FuzzExecutionPayload(f *testing.F) {
 	assert.NoError(f, err)
 	f.Add(output)
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
-		gethResp := &beacon.ExecutableDataV1{}
+		gethResp := &beacon.ExecutableData{}
 		prysmResp := &pb.ExecutionPayload{}
 		gethErr := json.Unmarshal(jsonBlob, gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
@@ -147,10 +147,10 @@ func FuzzExecutionPayload(f *testing.F) {
 		gethBlob, gethErr := json.Marshal(gethResp)
 		prysmBlob, prysmErr := json.Marshal(prysmResp)
 		assert.Equal(t, gethErr != nil, prysmErr != nil, "geth and prysm unmarshaller return inconsistent errors")
-		newGethResp := &beacon.ExecutableDataV1{}
+		newGethResp := &beacon.ExecutableData{}
 		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
 		assert.NoError(t, newGethErr)
-		newGethResp2 := &beacon.ExecutableDataV1{}
+		newGethResp2 := &beacon.ExecutableData{}
 		newGethErr = json.Unmarshal(gethBlob, newGethResp2)
 		assert.NoError(t, newGethErr)
 
