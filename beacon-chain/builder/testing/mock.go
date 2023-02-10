@@ -46,17 +46,17 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, _ interfaces.
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(context.Context, primitives.Slot, [32]byte, [48]byte) (w builder.SignedBid, err error) {
+func (s *MockBuilderService) GetHeader(context.Context, primitives.Slot, [32]byte, [48]byte) (builder.SignedBid, error) {
 	if s.Bid != nil {
-		w, err = builder.WrappedSignedBuilderBid(s.Bid)
+		w, err := builder.WrappedSignedBuilderBid(s.Bid)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not wrap bid")
 		}
-	} else {
-		w, err = builder.WrappedSignedBuilderBidCapella(s.BidCapella)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not wrap capella bid")
-		}
+		return w, s.ErrGetHeader
+	}
+	w, err := builder.WrappedSignedBuilderBidCapella(s.BidCapella)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}
 	return w, s.ErrGetHeader
 }
