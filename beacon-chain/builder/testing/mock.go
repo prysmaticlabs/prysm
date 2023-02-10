@@ -55,7 +55,7 @@ func (s *MockBuilderService) GetHeader(ctx context.Context, slot primitives.Slot
 	}
 	w, err := builder.WrappedSignedBuilderBid(s.Bid)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not wrap bid")
+		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}
 	return w, s.ErrGetHeader
 }
