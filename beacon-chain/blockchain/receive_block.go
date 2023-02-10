@@ -21,8 +21,8 @@ var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error
 	HasBlock(ctx context.Context, root [32]byte) bool
 }
 
@@ -36,7 +36,7 @@ type SlashingReceiver interface {
 //  1. Validate block, apply state transition and update checkpoints
 //  2. Apply fork choice to the processed block
 //  3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
@@ -86,7 +86,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
@@ -145,7 +145,7 @@ func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.A
 	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
-func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
+func (s *Service) handlePostBlockOperations(b interfaces.ReadOnlyBeaconBlock) error {
 	// Mark block exits as seen so we don't include same ones in future blocks.
 	for _, e := range b.Body().VoluntaryExits() {
 		s.cfg.ExitPool.MarkIncluded(e)
@@ -163,7 +163,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 	return nil
 }
 
-func (s *Service) handleBlockBLSToExecChanges(blk interfaces.BeaconBlock) error {
+func (s *Service) handleBlockBLSToExecChanges(blk interfaces.ReadOnlyBeaconBlock) error {
 	if blk.Version() < version.Capella {
 		return nil
 	}

@@ -443,7 +443,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB, doublylinkedtree.New())},
 		ctx:            ctx,
 		cancel:         cancel,
-		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
+		initSyncBlocks: make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 	}
 	bb := util.NewBeaconBlock()
 	r, err := bb.Block.HashTreeRoot()

@@ -11,7 +11,7 @@ import (
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
-func WriteBlockToDisk(block interfaces.SignedBeaconBlock, failed bool) {
+func WriteBlockToDisk(block interfaces.ReadOnlySignedBeaconBlock, failed bool) {
 	if !features.Get().WriteSSZStateTransitions {
 		return
 	}

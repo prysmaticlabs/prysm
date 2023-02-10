@@ -187,11 +187,11 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 			Committee:       committeeValidatorIndices,
 			CommitteeIndex:  committeeIndex,
 			AttesterSlot:    attesterSlot,
-			ProposerSlots:   proposerDutySlots[primitives.ValidatorIndex(validatorIndex)],
+			ProposerSlots:   proposerDutySlots[validatorIndex],
 			PublicKey:       pubkey,
 			Status:          validatorStatus.Status,
-			ValidatorIndex:  primitives.ValidatorIndex(validatorIndex),
-			IsSyncCommittee: syncDutiesMapping[primitives.ValidatorIndex(validatorIndex)],
+			ValidatorIndex:  validatorIndex,
+			IsSyncCommittee: syncDutiesMapping[validatorIndex],
 		}
 	}
 

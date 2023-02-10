@@ -40,7 +40,7 @@ func (m MockClient) RegisterValidator(_ context.Context, svr []*ethpb.SignedVali
 }
 
 // SubmitBlindedBlock --
-func (MockClient) SubmitBlindedBlock(_ context.Context, _ interfaces.SignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (MockClient) SubmitBlindedBlock(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
 	return nil, nil
 }
 
