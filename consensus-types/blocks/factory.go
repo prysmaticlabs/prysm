@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -193,7 +194,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	case *enginev1.ExecutionPayload:
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
 	case *enginev1.ExecutionPayloadCapella:
-		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p)
+		wrappedPayload, wrapErr = WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	default:
 		return nil, fmt.Errorf("%T is not a type of execution payload", p)
 	}

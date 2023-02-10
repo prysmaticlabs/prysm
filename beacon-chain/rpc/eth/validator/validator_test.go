@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"testing"
 	"time"
@@ -1197,7 +1198,7 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
 			WithdrawalsRoot:  withdrawalsRoot[:],
-		})
+		}, big.NewInt(0))
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
 
@@ -2720,10 +2721,11 @@ func TestProduceBlindedBlock(t *testing.T) {
 			Message:   bid,
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
-
+		id := &enginev1.PayloadIDBytes{0x1}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			BeaconDB:    db,
-			ForkFetcher: &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
+			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1}, BlockValue: big.NewInt(0)},
+			BeaconDB:              db,
+			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
 				Genesis: ti,
 			},
