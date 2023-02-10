@@ -34,6 +34,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 	t.Run("back-propagates boost score to ancestors after proposer boosting", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
 		f.justifiedBalances = balances
+		f.store.committeeWeight = uint64(len(balances)*10) / uint64(params.BeaconConfig().SlotsPerEpoch)
+		f.numActiveValidators = uint64(len(balances))
 
 		// The head should always start at the finalized block.
 		headRoot, err := f.Head(ctx)
@@ -154,8 +156,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Each of the nodes received one attestation accounting for 10.
 		// Node D is the only one with a proposer boost still applied:
 		//
-		// (A: 48) -> (B: 38) -> (C: 10)
-		//		    \--------------->(D: 18)
+		// (1: 48) -> (2: 38) -> (3: 10)
+		//		    \--------------->(4: 18)
 		//
 		node1 := f.store.nodeByRoot[indexToHash(1)]
 		require.Equal(t, node1.weight, uint64(48))
@@ -321,6 +323,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//	Block D received at N+3 — D is head
 		f := setup(jEpoch, fEpoch)
 		f.justifiedBalances = balances
+		f.store.committeeWeight = uint64(len(balances)*10) / uint64(params.BeaconConfig().SlotsPerEpoch)
+		f.numActiveValidators = uint64(len(balances))
 		a := zeroHash
 
 		// The head should always start at the finalized block.
@@ -459,27 +463,6 @@ func TestForkChoice_BoostProposerRoot(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		require.Equal(t, root, f.store.proposerBoostRoot)
-	})
-}
-
-func TestForkChoice_computeProposerBoostScore(t *testing.T) {
-	t.Run("nil justified balances throws error", func(t *testing.T) {
-		_, err := computeProposerBoostScore(nil)
-		require.ErrorContains(t, "no active validators", err)
-	})
-	t.Run("normal active balances computes score", func(t *testing.T) {
-		validatorBalances := make([]uint64, 64) // Num validators
-		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = 10
-		}
-		// Avg balance is 10, and the number of validators is 64.
-		// With a committee size of num validators (64) / slots per epoch (32) == 2.
-		// we then have a committee weight of avg balance * committee size = 10 * 2 = 20.
-		// The score then becomes 10 * PROPOSER_SCORE_BOOST // 100, which is
-		// 20 * 40 / 100 = 8.
-		score, err := computeProposerBoostScore(validatorBalances)
-		require.NoError(t, err)
-		require.Equal(t, uint64(8), score)
 	})
 }
 
