@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"strconv"
 	"testing"
 	"time"
@@ -1197,7 +1198,7 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
 			WithdrawalsRoot:  withdrawalsRoot[:],
-		})
+		}, big.NewInt(0))
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
 
