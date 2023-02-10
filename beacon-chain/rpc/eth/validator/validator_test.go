@@ -30,6 +30,7 @@ import (
 	v1alpha1validator "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
@@ -37,7 +38,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
@@ -1136,12 +1139,45 @@ func TestProduceBlockV2(t *testing.T) {
 		params.OverrideBeaconConfig(bc)
 
 		beaconState, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
-		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee))
 		require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee))
-		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(1, bytesutil.PadTo([]byte("prev_randao"), 32)))
+		require.NoError(t, beaconState.UpdateRandaoMixesAtIndex(2, bytesutil.PadTo([]byte("prev_randao"), 32)))
+
+		vals := beaconState.Validators()
+		creds0 := make([]byte, 32)
+		creds0[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds0[state_native.ETH1AddressOffset:], "address0")
+		vals[0].WithdrawalCredentials = creds0
+		vals[0].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		creds1 := make([]byte, 32)
+		creds1[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		copy(creds1[state_native.ETH1AddressOffset:], "address1")
+		vals[1].WithdrawalCredentials = creds1
+		vals[1].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+		require.NoError(t, beaconState.SetValidators(vals))
+		balances := beaconState.Balances()
+		balances[0] += 123
+		balances[1] += 123
+		require.NoError(t, beaconState.SetBalances(balances))
+		withdrawals := []*enginev1.Withdrawal{
+			{
+				Index:          0,
+				ValidatorIndex: 0,
+				Address:        bytesutil.PadTo([]byte("address0"), 20),
+				Amount:         123,
+			},
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        bytesutil.PadTo([]byte("address1"), 20),
+				Amount:         123,
+			},
+		}
+		withdrawalsRoot, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), withdrawals, 2)
+		require.NoError(t, err)
 
 		payloadHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
 			ParentHash:   bytesutil.PadTo([]byte("parent_hash"), 32),
@@ -1153,14 +1189,14 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockNumber:  123,
 			GasLimit:     123,
 			GasUsed:      123,
-			// State time at slot 33
-			Timestamp:     768,
+			// State time at slot 65
+			Timestamp:     780,
 			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
 			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
 			// Must be equal to payload.ParentHash
 			BlockHash:        bytesutil.PadTo([]byte("equal_hash"), 32),
 			TransactionsRoot: bytesutil.PadTo([]byte("transactions_root"), 32),
-			WithdrawalsRoot:  bytesutil.PadTo([]byte("withdrawals_root"), 32),
+			WithdrawalsRoot:  withdrawalsRoot[:],
 		})
 		require.NoError(t, err)
 		require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(payloadHeader))
@@ -1176,12 +1212,13 @@ func TestProduceBlockV2(t *testing.T) {
 			BlockNumber:  123,
 			GasLimit:     123,
 			GasUsed:      123,
-			// State time at slot 33
-			Timestamp:     768,
+			// State time at slot 65
+			Timestamp:     780,
 			ExtraData:     bytesutil.PadTo([]byte("extra_data"), 32),
 			BaseFeePerGas: bytesutil.PadTo([]byte("base_fee_per_gas"), 32),
 			BlockHash:     bytesutil.PadTo([]byte("block_hash"), 32),
 			Transactions:  [][]byte{[]byte("transaction1"), []byte("transaction2")},
+			Withdrawals:   withdrawals,
 		}
 
 		stateRoot, err := beaconState.HashTreeRoot(ctx)
@@ -1273,7 +1310,7 @@ func TestProduceBlockV2(t *testing.T) {
 		}
 		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
 		contribution := &ethpbalpha.SyncCommitteeContribution{
-			Slot:              params.BeaconConfig().SlotsPerEpoch + 1,
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
 			BlockRoot:         parentRoot[:],
 			SubcommitteeIndex: 0,
 			AggregationBits:   aggregationBits,
@@ -1285,11 +1322,11 @@ func TestProduceBlockV2(t *testing.T) {
 			V1Alpha1Server: v1Alpha1Server,
 			SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		}
-		randaoReveal, err := util.RandaoReveal(beaconState, 1, privKeys)
+		randaoReveal, err := util.RandaoReveal(beaconState, 2, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 		req := &ethpbv1.ProduceBlockRequest{
-			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
@@ -1908,7 +1945,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
 		require.NoError(t, err)
 		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
@@ -1925,10 +1962,27 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		prevRandao, err := helpers.RandaoMix(bs, 2)
+		require.NoError(t, err)
+
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
+				},
+				PayloadIDBytes: &enginev1.PayloadIDBytes{},
+				ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
 				},
 			},
 			TimeFetcher:            &mockChain.ChainService{},
@@ -2007,12 +2061,12 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			V1Alpha1Server: v1Alpha1Server,
 			SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		}
-		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
+		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
 		req := &ethpbv1.ProduceBlockRequest{
-			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
@@ -2025,16 +2079,16 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 
 		expectedBlock := &ethpbv2.BeaconBlockCapella{
-			Slot:          33,
-			ProposerIndex: 348,
-			ParentRoot:    []byte{228, 15, 208, 120, 31, 194, 202, 144, 41, 107, 98, 126, 162, 234, 190, 94, 174, 176, 69, 177, 103, 82, 69, 254, 0, 230, 192, 67, 158, 29, 141, 85},
-			StateRoot:     []byte{143, 107, 161, 135, 58, 60, 195, 107, 55, 142, 122, 111, 184, 1, 19, 233, 145, 204, 160, 226, 148, 67, 194, 102, 79, 196, 74, 242, 174, 108, 68, 82},
+			Slot:          65,
+			ProposerIndex: 372,
+			ParentRoot:    []byte{98, 110, 62, 255, 200, 27, 255, 78, 6, 11, 199, 119, 47, 57, 40, 250, 3, 255, 123, 149, 158, 235, 206, 73, 197, 53, 194, 112, 193, 78, 30, 209},
+			StateRoot:     []byte{15, 201, 220, 7, 167, 148, 124, 27, 100, 119, 219, 2, 159, 243, 76, 2, 101, 209, 32, 213, 21, 158, 75, 203, 184, 93, 189, 243, 179, 78, 150, 171},
 			Body: &ethpbv2.BeaconBlockBodyCapella{
 				RandaoReveal: randaoReveal,
 				Eth1Data: &ethpbv1.Eth1Data{
-					DepositRoot:  []byte{40, 2, 99, 184, 81, 91, 153, 196, 115, 217, 104, 93, 31, 202, 27, 153, 42, 224, 148, 156, 116, 43, 161, 28, 155, 166, 37, 217, 205, 152, 69, 6},
+					DepositRoot:  []byte{209, 112, 83, 246, 47, 50, 100, 179, 169, 154, 93, 33, 128, 212, 195, 171, 204, 14, 180, 156, 134, 217, 151, 150, 60, 190, 195, 214, 0, 7, 248, 51},
 					DepositCount: params.BeaconConfig().SyncCommitteeSize,
-					BlockHash:    []byte{226, 231, 104, 45, 7, 68, 48, 54, 228, 109, 84, 245, 125, 45, 227, 127, 135, 155, 63, 38, 241, 251, 129, 192, 248, 49, 9, 120, 146, 18, 34, 228},
+					BlockHash:    []byte{81, 55, 109, 120, 46, 24, 197, 204, 4, 239, 233, 63, 224, 130, 143, 78, 98, 6, 148, 78, 34, 173, 90, 38, 115, 7, 146, 56, 102, 19, 237, 43},
 				},
 				Graffiti: graffiti[:],
 				ProposerSlashings: []*ethpbv1.ProposerSlashing{
@@ -2101,16 +2155,18 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 				},
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					SyncCommitteeSignature: []byte{153, 51, 238, 112, 158, 23, 41, 26, 18, 53, 3, 111, 57, 180, 45, 131, 90, 249, 28, 23, 153, 188, 171, 204, 45, 180, 133, 236, 47, 203, 119, 132, 162, 17, 61, 60, 122, 161, 45, 136, 130, 174, 120, 60, 64, 144, 6, 34, 24, 87, 41, 77, 16, 223, 36, 125, 80, 185, 178, 234, 74, 184, 196, 45, 242, 47, 124, 178, 83, 65, 106, 26, 179, 178, 27, 4, 72, 79, 191, 128, 114, 51, 246, 147, 3, 55, 210, 64, 148, 78, 144, 45, 97, 182, 157, 206},
+					SyncCommitteeSignature: []byte{166, 223, 239, 55, 64, 151, 124, 78, 34, 159, 22, 51, 216, 224, 97, 5, 3, 97, 106, 183, 24, 71, 180, 209, 40, 202, 128, 169, 176, 187, 134, 85, 104, 150, 180, 125, 117, 192, 82, 189, 14, 15, 245, 196, 141, 54, 235, 23, 4, 41, 66, 171, 1, 35, 136, 193, 40, 242, 154, 63, 19, 13, 215, 141, 195, 110, 10, 201, 153, 85, 50, 0, 152, 237, 80, 68, 104, 181, 63, 237, 114, 83, 206, 252, 210, 155, 50, 136, 125, 141, 173, 158, 34, 165, 36, 95},
 				},
 				ExecutionPayload: &enginev1.ExecutionPayloadCapella{
-					ParentHash:    make([]byte, 32),
-					FeeRecipient:  make([]byte, 20),
-					StateRoot:     make([]byte, 32),
-					ReceiptsRoot:  make([]byte, 32),
-					LogsBloom:     make([]byte, 256),
-					PrevRandao:    make([]byte, 32),
-					ExtraData:     nil,
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
 					BaseFeePerGas: make([]byte, 32),
 					BlockHash:     make([]byte, 32),
 					Transactions:  nil,
@@ -3362,6 +3418,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 		assert.DeepEqual(t, expectedData, resp.Data)
 	})
+
 	t.Run("Capella", func(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
@@ -3374,7 +3431,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		params.OverrideBeaconConfig(bc)
 
 		bs, privKeys := util.DeterministicGenesisStateCapella(t, params.BeaconConfig().SyncCommitteeSize)
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
 		syncCommittee, err := altair.NextSyncCommittee(context.Background(), bs)
 		require.NoError(t, err)
 		require.NoError(t, bs.SetCurrentSyncCommittee(syncCommittee))
@@ -3391,10 +3448,27 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
+		prevRandao, err := helpers.RandaoMix(bs, 2)
+		require.NoError(t, err)
+
 		v1Alpha1Server := &v1alpha1validator.Server{
 			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
+				},
+				PayloadIDBytes: &enginev1.PayloadIDBytes{},
+				ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:     780,
+					ExtraData:     make([]byte, 32),
+					BaseFeePerGas: make([]byte, 32),
+					BlockHash:     make([]byte, 32),
 				},
 			},
 			TimeFetcher:            &mockChain.ChainService{},
@@ -3414,6 +3488,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			StateGen:               stategen.New(db, doublylinkedtree.New()),
 			SyncCommitteePool:      synccommittee.NewStore(),
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			BlockBuilder: &builderTest.MockBuilderService{
+				HasConfigured: true,
+			},
 		}
 
 		proposerSlashings := make([]*ethpbalpha.ProposerSlashing, 1)
@@ -3458,7 +3535,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		}
 		aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
 		contribution := &ethpbalpha.SyncCommitteeContribution{
-			Slot:              params.BeaconConfig().SlotsPerEpoch + 1,
+			Slot:              params.BeaconConfig().SlotsPerEpoch * 2,
 			BlockRoot:         parentRoot[:],
 			SubcommitteeIndex: 0,
 			AggregationBits:   aggregationBits,
@@ -3470,31 +3547,34 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			V1Alpha1Server: v1Alpha1Server,
 			SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		}
-		randaoReveal, err := util.RandaoReveal(bs, 1, privKeys)
+		randaoReveal, err := util.RandaoReveal(bs, 2, privKeys)
 		require.NoError(t, err)
 		graffiti := bytesutil.ToBytes32([]byte("eth2"))
 
 		req := &ethpbv1.ProduceBlockRequest{
-			Slot:         params.BeaconConfig().SlotsPerEpoch * 2,
+			Slot:         params.BeaconConfig().SlotsPerEpoch*2 + 1,
 			RandaoReveal: randaoReveal,
 			Graffiti:     graffiti[:],
 		}
 		v1Server.V1Alpha1Server.BeaconDB = db
+		require.NoError(t, v1Alpha1Server.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{348},
+			[]*ethpbalpha.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
 		resp, err := v1Server.ProduceBlindedBlockSSZ(ctx, req)
 		require.NoError(t, err)
 		assert.Equal(t, ethpbv2.Version_CAPELLA, resp.Version)
 
 		expectedBlock := &ethpbv2.BlindedBeaconBlockCapella{
-			Slot:          33,
-			ProposerIndex: 348,
-			ParentRoot:    []byte{228, 15, 208, 120, 31, 194, 202, 144, 41, 107, 98, 126, 162, 234, 190, 94, 174, 176, 69, 177, 103, 82, 69, 254, 0, 230, 192, 67, 158, 29, 141, 85},
-			StateRoot:     []byte{143, 107, 161, 135, 58, 60, 195, 107, 55, 142, 122, 111, 184, 1, 19, 233, 145, 204, 160, 226, 148, 67, 194, 102, 79, 196, 74, 242, 174, 108, 68, 82},
+			Slot:          65,
+			ProposerIndex: 372,
+			ParentRoot:    []byte{98, 110, 62, 255, 200, 27, 255, 78, 6, 11, 199, 119, 47, 57, 40, 250, 3, 255, 123, 149, 158, 235, 206, 73, 197, 53, 194, 112, 193, 78, 30, 209},
+			StateRoot:     []byte{15, 201, 220, 7, 167, 148, 124, 27, 100, 119, 219, 2, 159, 243, 76, 2, 101, 209, 32, 213, 21, 158, 75, 203, 184, 93, 189, 243, 179, 78, 150, 171},
 			Body: &ethpbv2.BlindedBeaconBlockBodyCapella{
 				RandaoReveal: randaoReveal,
 				Eth1Data: &ethpbv1.Eth1Data{
-					DepositRoot:  []byte{40, 2, 99, 184, 81, 91, 153, 196, 115, 217, 104, 93, 31, 202, 27, 153, 42, 224, 148, 156, 116, 43, 161, 28, 155, 166, 37, 217, 205, 152, 69, 6},
+					DepositRoot:  []byte{209, 112, 83, 246, 47, 50, 100, 179, 169, 154, 93, 33, 128, 212, 195, 171, 204, 14, 180, 156, 134, 217, 151, 150, 60, 190, 195, 214, 0, 7, 248, 51},
 					DepositCount: params.BeaconConfig().SyncCommitteeSize,
-					BlockHash:    []byte{226, 231, 104, 45, 7, 68, 48, 54, 228, 109, 84, 245, 125, 45, 227, 127, 135, 155, 63, 38, 241, 251, 129, 192, 248, 49, 9, 120, 146, 18, 34, 228},
+					BlockHash:    []byte{81, 55, 109, 120, 46, 24, 197, 204, 4, 239, 233, 63, 224, 130, 143, 78, 98, 6, 148, 78, 34, 173, 90, 38, 115, 7, 146, 56, 102, 19, 237, 43},
 				},
 				Graffiti: graffiti[:],
 				ProposerSlashings: []*ethpbv1.ProposerSlashing{
@@ -3561,20 +3641,22 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 				},
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits:      []byte{170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					SyncCommitteeSignature: []byte{153, 51, 238, 112, 158, 23, 41, 26, 18, 53, 3, 111, 57, 180, 45, 131, 90, 249, 28, 23, 153, 188, 171, 204, 45, 180, 133, 236, 47, 203, 119, 132, 162, 17, 61, 60, 122, 161, 45, 136, 130, 174, 120, 60, 64, 144, 6, 34, 24, 87, 41, 77, 16, 223, 36, 125, 80, 185, 178, 234, 74, 184, 196, 45, 242, 47, 124, 178, 83, 65, 106, 26, 179, 178, 27, 4, 72, 79, 191, 128, 114, 51, 246, 147, 3, 55, 210, 64, 148, 78, 144, 45, 97, 182, 157, 206},
+					SyncCommitteeSignature: []byte{166, 223, 239, 55, 64, 151, 124, 78, 34, 159, 22, 51, 216, 224, 97, 5, 3, 97, 106, 183, 24, 71, 180, 209, 40, 202, 128, 169, 176, 187, 134, 85, 104, 150, 180, 125, 117, 192, 82, 189, 14, 15, 245, 196, 141, 54, 235, 23, 4, 41, 66, 171, 1, 35, 136, 193, 40, 242, 154, 63, 19, 13, 215, 141, 195, 110, 10, 201, 153, 85, 50, 0, 152, 237, 80, 68, 104, 181, 63, 237, 114, 83, 206, 252, 210, 155, 50, 136, 125, 141, 173, 158, 34, 165, 36, 95},
 				},
 				ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderCapella{
-					ParentHash:       make([]byte, 32),
-					FeeRecipient:     make([]byte, 20),
-					StateRoot:        make([]byte, 32),
-					ReceiptsRoot:     make([]byte, 32),
-					LogsBloom:        make([]byte, 256),
-					PrevRandao:       make([]byte, 32),
-					ExtraData:        nil,
+					ParentHash:   make([]byte, 32),
+					FeeRecipient: make([]byte, 20),
+					StateRoot:    make([]byte, 32),
+					ReceiptsRoot: make([]byte, 32),
+					LogsBloom:    make([]byte, 256),
+					PrevRandao:   prevRandao,
+					// State time at slot 65
+					Timestamp:        780,
+					ExtraData:        make([]byte, 32),
 					BaseFeePerGas:    make([]byte, 32),
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: []byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24, 123, 250, 34, 222, 53, 209, 249, 190, 215, 171, 6, 29, 148, 1, 253, 71, 227, 74, 84, 251, 237, 225},
-					WithdrawalsRoot:  make([]byte, 32),
+					WithdrawalsRoot:  []byte{121, 41, 48, 187, 213, 186, 172, 67, 188, 199, 152, 238, 73, 170, 129, 133, 239, 118, 187, 59, 68, 186, 98, 185, 29, 134, 174, 86, 158, 75, 181, 53},
 				},
 			},
 		}
