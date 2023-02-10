@@ -70,19 +70,19 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 				}
 				// If we can't get the builder value, just use local block.
 				if err == nil && builderValue.Cmp(localValue) > 0 { // Builder value is higher
+					blk.SetBlinded(true)
 					if err := blk.SetExecution(builderPayload); err != nil {
 						log.WithError(err).Warn("Proposer: failed to set builder payload")
 					} else {
-						blk.SetBlinded(true)
 						return nil
 					}
 				}
 				return blk.SetExecution(localPayload)
 			default: // Bellatrix case.
+				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
 					log.WithError(err).Warn("Proposer: failed to set builder payload")
 				} else {
-					blk.SetBlinded(true)
 					return nil
 				}
 			}
@@ -109,7 +109,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {

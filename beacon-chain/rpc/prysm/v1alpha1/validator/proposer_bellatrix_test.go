@@ -37,6 +37,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	cfg.BellatrixForkEpoch = 0
 	cfg.CapellaForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
+	params.SetupTestConfigCleanup(t)
 
 	beaconDB := dbTest.SetupDB(t)
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
