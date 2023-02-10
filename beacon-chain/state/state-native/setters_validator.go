@@ -120,6 +120,25 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64
 	return nil
 }
 
+func (b *BeaconState) UpdateBalances(updateFn func([]uint64) ([]uint64, error)) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	balances, err := updateFn(b.balances)
+	if err != nil {
+		return err
+	}
+
+	b.sharedFieldReferences[nativetypes.Balances].MinusRef()
+	b.sharedFieldReferences[nativetypes.Balances] = stateutil.NewRef(1)
+
+	b.balances = balances
+	b.markFieldAsDirty(nativetypes.Balances)
+	b.rebuildTrie[nativetypes.Balances] = true
+
+	return nil
+}
+
 // SetSlashings for the beacon state. Updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {

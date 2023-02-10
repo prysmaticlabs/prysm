@@ -231,23 +231,23 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 
-	balances := beaconState.Balances().Value()
-	for i := 0; i < numOfVals; i++ {
-		vals[i].BeforeEpochTransitionBalance = balances[i]
+	if err := beaconState.UpdateBalances(func(balances []uint64) ([]uint64, error) {
+		for i := 0; i < numOfVals; i++ {
+			vals[i].BeforeEpochTransitionBalance = balances[i]
 
-		// Compute the post balance of the validator after accounting for the
-		// attester and proposer rewards and penalties.
-		balances[i], err = helpers.IncreaseBalanceWithVal(balances[i], attsRewards[i])
-		if err != nil {
-			return nil, err
+			// Compute the post balance of the validator after accounting for the
+			// attester and proposer rewards and penalties.
+			balances[i], err = helpers.IncreaseBalanceWithVal(balances[i], attsRewards[i])
+			if err != nil {
+				return nil, err
+			}
+			balances[i] = helpers.DecreaseBalanceWithVal(balances[i], attsPenalties[i])
+
+			vals[i].AfterEpochTransitionBalance = balances[i]
 		}
-		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], attsPenalties[i])
-
-		vals[i].AfterEpochTransitionBalance = balances[i]
-	}
-
-	if err := beaconState.SetBalances(balances); err != nil {
-		return nil, errors.Wrap(err, "could not set validator balances")
+		return balances, nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not update validator balances")
 	}
 
 	return beaconState, nil

@@ -127,7 +127,7 @@ type ReadOnlyValidators interface {
 
 // ReadOnlyBalances defines a struct which only has read access to balances methods.
 type ReadOnlyBalances interface {
-	Balances() *types2.ValidatorBalancesReadOnly
+	Balances() *types2.ValidatorBalances
 	BalanceAtIndex(idx types.ValidatorIndex) (uint64, error)
 	BalancesLength() int
 }
@@ -233,6 +233,7 @@ type WriteOnlyBalances interface {
 	SetBalances(val []uint64) error
 	UpdateBalancesAtIndex(idx types.ValidatorIndex, val uint64) error
 	AppendBalance(bal uint64) error
+	UpdateBalances(updateFn func([]uint64) ([]uint64, error)) error
 }
 
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.

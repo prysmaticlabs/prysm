@@ -179,7 +179,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // Balances of validators participating in consensus on the beacon chain.
-func (b *BeaconState) Balances() *types2.ValidatorBalancesReadOnly {
+func (b *BeaconState) Balances() *types2.ValidatorBalances {
 	if b.balances == nil {
 		return nil
 	}
