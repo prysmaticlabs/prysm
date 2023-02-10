@@ -88,6 +88,7 @@ go_test(
         "state_validators_test.go",
         "status_test.go",
         "stream_blocks_test.go",
+        "submit_aggregate_selection_proof_test.go",
         "submit_signed_aggregate_proof_test.go",
         "submit_signed_contribution_and_proof_test.go",
         "subscribe_committee_subnets_test.go",

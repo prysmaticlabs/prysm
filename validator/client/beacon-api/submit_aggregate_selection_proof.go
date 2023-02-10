@@ -2,6 +2,9 @@ package beacon_api
 
 import (
 	"context"
+	"net/url"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
@@ -9,8 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
-	"net/url"
-	"strconv"
 )
 
 func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
@@ -28,6 +29,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 		return nil, errors.Errorf("no attester duty for the given slot %d", in.Slot)
 	}
 
+	// First attester duty is required since we requested attester duties for one validator index.
 	attesterDuty := attesterDuties[0]
 
 	committeeLen, err := strconv.ParseUint(attesterDuty.CommitteeLength, 10, 64)
@@ -45,7 +47,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 
 	attestationData, err := c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get attestation data for slot=%d and committee_index=%d", in.Slot, in.CommitteeIndex)
 	}
 
 	attestationDataRoot, err := attestationData.HashTreeRoot()
