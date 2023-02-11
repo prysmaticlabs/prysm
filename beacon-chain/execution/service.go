@@ -417,7 +417,6 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	if requestRange == 0 {
 		return headers, nil
 	}
-	log.Infof("requesting header range from %d to %d with the range of %d", startBlock, endBlock, requestRange)
 	for i := startBlock; i <= endBlock; i++ {
 		header := &types.HeaderInfo{}
 		err := error(nil)
