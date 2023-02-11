@@ -41,7 +41,7 @@ func TestBestForSlot(t *testing.T) {
 	cases := []struct {
 		name   string
 		err    error
-		blocks []interfaces.SignedBeaconBlock
+		blocks []interfaces.ReadOnlySignedBeaconBlock
 		roots  [][32]byte
 		root   [32]byte
 		cc     CanonicalChecker
@@ -568,10 +568,10 @@ func incrFwd(n int, c chan uint32) {
 	close(c)
 }
 
-func mockBlocks(n int, iter func(int, chan uint32)) []interfaces.SignedBeaconBlock {
+func mockBlocks(n int, iter func(int, chan uint32)) []interfaces.ReadOnlySignedBeaconBlock {
 	bchan := make(chan uint32)
 	go iter(n, bchan)
-	mb := make([]interfaces.SignedBeaconBlock, 0)
+	mb := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
 	for i := range bchan {
 		var h [32]byte
 		binary.LittleEndian.PutUint32(h[:], i)

@@ -272,7 +272,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	bChannel := make(chan interfaces.SignedBeaconBlock, 1)
+	bChannel := make(chan interfaces.ReadOnlySignedBeaconBlock, 1)
 	sub := v.blockFeed.Subscribe(bChannel)
 	defer sub.Unsubscribe()
 

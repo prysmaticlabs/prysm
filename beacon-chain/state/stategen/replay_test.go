@@ -44,7 +44,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	service := New(beaconDB, doublylinkedtree.New())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
-	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -73,7 +73,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	service := New(beaconDB, doublylinkedtree.New())
 	targetSlot := beaconState.Slot()
-	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -107,7 +107,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	b.Block.Slot = beaconState.Slot() - 1
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{wsb}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{wsb}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -133,7 +133,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t), doublylinkedtree.New())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch
-	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.
@@ -165,14 +165,14 @@ func TestReplayBlocks_ThroughCapellaForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t), doublylinkedtree.New())
 	targetSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Bellatrix.
 	assert.Equal(t, version.Bellatrix, newState.Version())
 
 	targetSlot = params.BeaconConfig().SlotsPerEpoch * 3
-	newState, err = service.replayBlocks(context.Background(), newState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err = service.replayBlocks(context.Background(), newState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Capella.

@@ -25,7 +25,7 @@ type Builder struct {
 	execMock *engineMock
 }
 
-func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.SignedBeaconBlock) *Builder {
+func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.ReadOnlySignedBeaconBlock) *Builder {
 	execMock := &engineMock{
 		powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 	}
@@ -79,20 +79,20 @@ func (bb *Builder) SetPayloadStatus(resp *MockEngineResp) error {
 }
 
 // block returns the block root.
-func (bb *Builder) block(t testing.TB, b interfaces.SignedBeaconBlock) [32]byte {
+func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [32]byte {
 	r, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return r
 }
 
 // InvalidBlock receives the invalid block and notifies forkchoice.
-func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
 	require.Equal(t, true, bb.service.ReceiveBlock(context.TODO(), b, r) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
-func (bb *Builder) ValidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
 	require.NoError(t, bb.service.ReceiveBlock(context.TODO(), b, r))
 }

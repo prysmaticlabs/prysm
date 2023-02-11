@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/runtime/version"
@@ -22,5 +23,10 @@ func StartAt(v int, c *params.BeaconChainConfig) *params.BeaconChainConfig {
 	// E2E sets EL block production rate equal to SecondsPerETH1Block to keep the math simple.
 	ttd := uint64(c.BellatrixForkEpoch) * uint64(c.SlotsPerEpoch) * c.SecondsPerSlot
 	c.TerminalTotalDifficulty = fmt.Sprintf("%d", ttd)
+	// TODO: Remove this once lighthouse has released a capella
+	// compatible release.
+	if c.ConfigName == params.EndToEndMainnetName {
+		c.CapellaForkEpoch = math.MaxUint64
+	}
 	return c
 }

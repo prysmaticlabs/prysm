@@ -33,7 +33,7 @@ func RunDepositTest(t *testing.T, config string) {
 			require.NoError(t, deposit.UnmarshalSSZ(depositSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Deposits: []*ethpb.Deposit{deposit}}
-			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+			processDepositsFunc := func(ctx context.Context, s state.BeaconState, b interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
 				return blocks.ProcessDeposits(ctx, s, b.Block().Body().Deposits())
 			}
 			RunBlockOperationTest(t, folderPath, body, processDepositsFunc)
