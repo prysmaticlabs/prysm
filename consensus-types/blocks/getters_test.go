@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"math/big"
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -391,7 +392,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, e)
 
 	executionCapella := &pb.ExecutionPayloadCapella{BlockNumber: 1}
-	eCapella, err := WrappedExecutionPayloadCapella(executionCapella)
+	eCapella, err := WrappedExecutionPayloadCapella(executionCapella, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Capella}}}
 	require.NoError(t, bb.SetExecution(eCapella))
@@ -400,7 +401,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	assert.DeepEqual(t, result, eCapella)
 
 	executionCapellaHeader := &pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}
-	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader)
+	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, big.NewInt(0))
 	require.NoError(t, err)
 	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella, isBlinded: true}}}
 	require.NoError(t, bb.SetExecution(eCapellaHeader))
