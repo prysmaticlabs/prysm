@@ -417,6 +417,7 @@ func (s *Service) batchRequestHeaders(startBlock, endBlock uint64) ([]*types.Hea
 	if requestRange == 0 {
 		return headers, nil
 	}
+	log.Infof("requesting header range from %d to %d with the range of %d", startBlock, endBlock, requestRange)
 	for i := startBlock; i <= endBlock; i++ {
 		header := &types.HeaderInfo{}
 		err := error(nil)
@@ -667,6 +668,12 @@ func (s *Service) cacheBlockHeaders(start, end uint64) error {
 	for i := start; i < end; i += batchSize {
 		startReq := i
 		endReq := i + batchSize
+		if endReq > 0 {
+			// Reduce the end request by one
+			// to prevent total batch size from exceeding
+			// the allotted limit.
+			endReq -= 1
+		}
 		if endReq > end {
 			endReq = end
 		}
