@@ -155,7 +155,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		ts := hexutil.Uint64(4)
 
 		resp := &enginev1.GetPayloadV2ResponseJson{
-			BlockValue: fmt.Sprint(123),
+			BlockValue: fmt.Sprint("0x123"),
 			ExecutionPayload: &enginev1.ExecutionPayloadCapellaJSON{
 				ParentHash:    &parentHash,
 				FeeRecipient:  &feeRecipient,
@@ -181,25 +181,25 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		}
 		enc, err := json.Marshal(resp)
 		require.NoError(t, err)
-		payloadPb := &enginev1.ExecutionPayloadCapella{}
-		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, parentHash.Bytes(), payloadPb.ParentHash)
-		require.DeepEqual(t, feeRecipient.Bytes(), payloadPb.FeeRecipient)
-		require.DeepEqual(t, stateRoot.Bytes(), payloadPb.StateRoot)
-		require.DeepEqual(t, receiptsRoot.Bytes(), payloadPb.ReceiptsRoot)
-		require.DeepEqual(t, logsBloom, hexutil.Bytes(payloadPb.LogsBloom))
-		require.DeepEqual(t, random.Bytes(), payloadPb.PrevRandao)
-		require.DeepEqual(t, uint64(1), payloadPb.BlockNumber)
-		require.DeepEqual(t, uint64(2), payloadPb.GasLimit)
-		require.DeepEqual(t, uint64(3), payloadPb.GasUsed)
-		require.DeepEqual(t, uint64(4), payloadPb.Timestamp)
-		require.DeepEqual(t, extra.Bytes(), payloadPb.ExtraData)
-		feePerGas := new(big.Int).SetBytes(payloadPb.BaseFeePerGas)
+		pb := &enginev1.ExecutionPayloadCapellaWithValue{}
+		require.NoError(t, json.Unmarshal(enc, pb))
+		require.DeepEqual(t, parentHash.Bytes(), pb.Payload.ParentHash)
+		require.DeepEqual(t, feeRecipient.Bytes(), pb.Payload.FeeRecipient)
+		require.DeepEqual(t, stateRoot.Bytes(), pb.Payload.StateRoot)
+		require.DeepEqual(t, receiptsRoot.Bytes(), pb.Payload.ReceiptsRoot)
+		require.DeepEqual(t, logsBloom, hexutil.Bytes(pb.Payload.LogsBloom))
+		require.DeepEqual(t, random.Bytes(), pb.Payload.PrevRandao)
+		require.DeepEqual(t, uint64(1), pb.Payload.BlockNumber)
+		require.DeepEqual(t, uint64(2), pb.Payload.GasLimit)
+		require.DeepEqual(t, uint64(3), pb.Payload.GasUsed)
+		require.DeepEqual(t, uint64(4), pb.Payload.Timestamp)
+		require.DeepEqual(t, extra.Bytes(), pb.Payload.ExtraData)
+		feePerGas := new(big.Int).SetBytes(pb.Payload.BaseFeePerGas)
 		require.Equal(t, "15832716547479101977395928904157292820330083199902421483727713169783165812736", feePerGas.String())
-		require.DeepEqual(t, hash.Bytes(), payloadPb.BlockHash)
-		require.DeepEqual(t, [][]byte{{}}, payloadPb.Transactions)
-		require.Equal(t, 1, len(payloadPb.Withdrawals))
-		withdrawal := payloadPb.Withdrawals[0]
+		require.DeepEqual(t, hash.Bytes(), pb.Payload.BlockHash)
+		require.DeepEqual(t, [][]byte{{}}, pb.Payload.Transactions)
+		require.Equal(t, 1, len(pb.Payload.Withdrawals))
+		withdrawal := pb.Payload.Withdrawals[0]
 		require.Equal(t, uint64(1), withdrawal.Index)
 		require.Equal(t, primitives.ValidatorIndex(1), withdrawal.ValidatorIndex)
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address"), 20), withdrawal.Address)
