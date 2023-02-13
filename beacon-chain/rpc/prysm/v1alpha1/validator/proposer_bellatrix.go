@@ -53,46 +53,36 @@ func (vs *Server) setExecutionData(ctx context.Context, blk interfaces.SignedBea
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Warn("Proposer: failed to get payload header from builder")
 		} else {
-			if blk.Version() >= version.Capella {
+			switch {
+			case blk.Version() >= version.Capella:
 				localPayload, err := vs.getExecutionPayload(ctx, slot, idx, blk.Block().ParentRoot(), headState)
 				if err != nil {
 					return errors.Wrap(err, "failed to get execution payload")
 				}
+				// Compare payload values between local and builder. Default to the local value if it is higher.
 				localValue, err := localPayload.Value()
 				if err != nil {
 					return errors.Wrap(err, "failed to get local payload value")
 				}
 
-				// Compare withdrawal roots. Default to local if they don't match.
-				r1, err := localPayload.WithdrawalsRoot()
-				if err != nil {
-					return errors.Wrap(err, "failed to get local withdrawals root")
-				}
-				r2, err := builderPayload.WithdrawalsRoot()
-				if err != nil {
-					return errors.Wrap(err, "failed to get builder withdrawals root")
-				}
-				matchWithdrawalRoot := bytes.Equal(r1, r2)
-				if !matchWithdrawalRoot {
-					log.WithFields(logrus.Fields{
-						"local":  r1,
-						"remote": r2,
-					}).Warn("Proposer: withdrawal roots don't match, using local")
-				}
-
-				// Compare payload values between local and builder. Default to the local value if it is higher.
 				builderValue, err := builderPayload.Value()
 				if err != nil {
 					log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-				} else if builderValue.Cmp(localValue) > 0 && matchWithdrawalRoot {
+				}
+				// If we can't get the builder value, just use local block.
+				if err == nil && builderValue.Cmp(localValue) > 0 { // Builder value is higher
 					blk.SetBlinded(true)
-					return blk.SetExecution(builderPayload)
+					if err := blk.SetExecution(builderPayload); err != nil {
+						log.WithError(err).Warn("Proposer: failed to set builder payload")
+					} else {
+						return nil
+					}
 				}
 				return blk.SetExecution(localPayload)
-			} else {
+			default: // Bellatrix case.
 				blk.SetBlinded(true)
 				if err := blk.SetExecution(builderPayload); err != nil {
-					log.WithError(err).Warn("Proposer: failed to set execution payload")
+					log.WithError(err).Warn("Proposer: failed to set builder payload")
 				} else {
 					return nil
 				}
@@ -121,7 +111,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
@@ -155,7 +145,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
-
 	header, err := bid.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid header")

@@ -33,6 +33,7 @@ type params struct {
 	StartTime                 time.Time
 	CLGenesisTime             uint64
 	Eth1GenesisTime           uint64
+	NumberOfExecutionCreds    uint64
 }
 
 type ports struct {
@@ -118,6 +119,9 @@ var StandardLighthouseNodeCount = 2
 
 // DepositCount is the number of deposits the E2E runner should make to evaluate post-genesis deposit processing.
 var DepositCount = uint64(64)
+
+// PregenesisExecCreds is the number of withdrawal credentials of genesis validators which use an execution address.
+var PregenesisExecCreds = uint64(8)
 
 // NumOfExecEngineTxs is the number of transaction sent to the execution engine.
 var NumOfExecEngineTxs = uint64(200)
@@ -207,13 +211,14 @@ func Init(t *testing.T, beaconNodeCount int) error {
 
 	genTime := uint64(time.Now().Unix()) + StartupBufferSecs
 	TestParams = &params{
-		TestPath:        filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
-		LogPath:         logPath,
-		TestShardIndex:  testShardIndex,
-		BeaconNodeCount: beaconNodeCount,
-		Ports:           testPorts,
-		CLGenesisTime:   genTime,
-		Eth1GenesisTime: genTime,
+		TestPath:               filepath.Join(testPath, fmt.Sprintf("shard-%d", testShardIndex)),
+		LogPath:                logPath,
+		TestShardIndex:         testShardIndex,
+		BeaconNodeCount:        beaconNodeCount,
+		Ports:                  testPorts,
+		CLGenesisTime:          genTime,
+		Eth1GenesisTime:        genTime,
+		NumberOfExecutionCreds: PregenesisExecCreds,
 	}
 	return nil
 }
@@ -267,6 +272,7 @@ func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int)
 		Ports:                     testPorts,
 		CLGenesisTime:             genTime,
 		Eth1GenesisTime:           genTime,
+		NumberOfExecutionCreds:    PregenesisExecCreds,
 	}
 	return nil
 }
