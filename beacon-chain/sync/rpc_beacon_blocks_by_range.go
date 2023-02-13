@@ -142,7 +142,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		blks = append([]interfaces.SignedBeaconBlock{genBlock}, blks...)
+		blks = append([]interfaces.ReadOnlySignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
 	// Filter and sort our retrieved blocks, so that
@@ -174,18 +174,37 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			break
 		}
 	}
+
+	var reconstructedBlock []interfaces.SignedBeaconBlock
 	if blindedExists {
-		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
+		reconstructedBlock, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
 		if err != nil {
 			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
-		copy(blks[blindedIndex:], reconstructedBlks)
 	}
 
 	for _, b := range blks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
+			continue
+		}
+		if b.IsBlinded() {
+			continue
+		}
+		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
+			log.WithError(chunkErr).Debug("Could not send a chunked response")
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			tracing.AnnotateError(span, chunkErr)
+			return chunkErr
+		}
+	}
+
+	for _, b := range reconstructedBlock {
+		if err := blocks.BeaconBlockIsNil(b); err != nil {
+			continue
+		}
+		if b.IsBlinded() {
 			continue
 		}
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
@@ -233,13 +252,13 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
-func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
-	step uint64, startSlot primitives.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
+	step uint64, startSlot primitives.Slot) ([]interfaces.ReadOnlySignedBeaconBlock, error) {
 	if len(blks) != len(roots) {
 		return nil, errors.New("input blks and roots are diff lengths")
 	}
 
-	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
 		isCanonical, err := s.cfg.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
@@ -276,7 +295,7 @@ func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, s
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
 }
 
-func (s *Service) retrieveGenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, [32]byte, error) {
+func (s *Service) retrieveGenesisBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, [32]byte, error) {
 	genBlock, err := s.cfg.beaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err

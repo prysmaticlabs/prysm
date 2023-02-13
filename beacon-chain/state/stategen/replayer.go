@@ -28,7 +28,7 @@ const (
 type HistoryAccessor interface {
 	HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
-	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
 
@@ -59,7 +59,7 @@ var _ Replayer = &stateReplayer{}
 // chainer is responsible for supplying the chain components necessary to rebuild a state,
 // namely a starting BeaconState and all available blocks from the starting state up to and including the target slot
 type chainer interface {
-	chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error)
+	chainForSlot(ctx context.Context, target primitives.Slot) (state.BeaconState, []interfaces.ReadOnlySignedBeaconBlock, error)
 }
 
 type stateReplayer struct {
@@ -75,7 +75,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	defer span.End()
 
 	var s state.BeaconState
-	var descendants []interfaces.SignedBeaconBlock
+	var descendants []interfaces.ReadOnlySignedBeaconBlock
 	var err error
 	switch rs.method {
 	case forSlot:
