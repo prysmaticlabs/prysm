@@ -211,12 +211,13 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 	defer cancel()
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch {
-		result := &pb.ExecutionPayloadCapella{}
+		result := &pb.ExecutionPayloadCapellaWithValue{}
 		err := s.rpcClient.CallContext(ctx, result, GetPayloadMethodV2, pb.PayloadIDBytes(payloadId))
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-		return blocks.WrappedExecutionPayloadCapella(result)
+
+		return blocks.WrappedExecutionPayloadCapella(result.Payload, big.NewInt(0).SetBytes(result.Value))
 	}
 
 	result := &pb.ExecutionPayload{}
@@ -624,7 +625,7 @@ func fullPayloadFromExecutionBlock(
 		BlockHash:     blockHash[:],
 		Transactions:  txs,
 		Withdrawals:   block.Withdrawals,
-	})
+	}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 }
 
 // Handles errors received from the RPC server according to the specification.

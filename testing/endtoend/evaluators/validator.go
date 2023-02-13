@@ -49,7 +49,7 @@ var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluato
 // are active.
 var ValidatorSyncParticipation = types.Evaluator{
 	Name:       "validator_sync_participation_%d",
-	Policy:     policies.AfterNthEpoch(helpers.AltairE2EForkEpoch - 1),
+	Policy:     policies.OnwardsNthEpoch(helpers.AltairE2EForkEpoch),
 	Evaluation: validatorsSyncParticipation,
 }
 
@@ -177,7 +177,10 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 	}
 	currSlot := slots.CurrentSlot(uint64(genesis.GenesisTime.AsTime().Unix()))
 	currEpoch := slots.ToEpoch(currSlot)
-	lowestBound := currEpoch - 1
+	lowestBound := primitives.Epoch(0)
+	if currEpoch >= 1 {
+		lowestBound = currEpoch - 1
+	}
 
 	if lowestBound < helpers.AltairE2EForkEpoch {
 		lowestBound = helpers.AltairE2EForkEpoch
@@ -275,6 +278,12 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 	}
 	if container.GetBlindedBellatrixBlock() != nil {
 		return blocks.NewSignedBeaconBlock(container.GetBlindedBellatrixBlock())
+	}
+	if container.GetCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetCapellaBlock())
+	}
+	if container.GetBlindedCapellaBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedCapellaBlock())
 	}
 	return nil, errors.New("no supported block type in container")
 }
