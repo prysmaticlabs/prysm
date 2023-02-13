@@ -76,6 +76,7 @@ beacon_api_mocks=(
       "$beacon_api_mock_path/duties_mock.go duties.go"
       "$beacon_api_mock_path/json_rest_handler_mock.go json_rest_handler.go"
       "$beacon_api_mock_path/state_validators_mock.go state_validators.go"
+      "$beacon_api_mock_path/beacon_block_converter_mock.go beacon_block_converter.go"
 )
 
 for ((i = 0; i < ${#beacon_api_mocks[@]}; i++)); do

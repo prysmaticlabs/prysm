@@ -20,6 +20,7 @@ type beaconApiValidatorClient struct {
 	stateValidatorsProvider stateValidatorsProvider
 	jsonRestHandler         jsonRestHandler
 	fallbackClient          iface.ValidatorClient
+	beaconBlockConverter    beaconBlockConverter
 }
 
 func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration, fallbackClient iface.ValidatorClient) iface.ValidatorClient {
@@ -33,6 +34,7 @@ func NewBeaconApiValidatorClientWithFallback(host string, timeout time.Duration,
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
+		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
 		fallbackClient:          fallbackClient,
 	}
 }
@@ -108,12 +110,7 @@ func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.Si
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.StreamBlocksAltair(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.StreamBlocksAltair is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.streamBlocks(ctx, in, time.Second), nil
 }
 
 func (c *beaconApiValidatorClient) StreamDuties(ctx context.Context, in *ethpb.DutiesRequest) (ethpb.BeaconNodeValidator_StreamDutiesClient, error) {
