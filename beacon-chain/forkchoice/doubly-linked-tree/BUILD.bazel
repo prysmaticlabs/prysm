@@ -58,9 +58,6 @@ go_test(
         "vote_test.go",
     ],
     embed = [":go_default_library"],
-    visibility = [
-        "//beacon-chain:__subpackages__",
-    ],
     deps = [
         "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
