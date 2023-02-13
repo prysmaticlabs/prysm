@@ -54,7 +54,7 @@ type Service struct {
 	nextEpochBoundarySlot   primitives.Slot
 	boundaryRoots           [][32]byte
 	checkpointStateCache    *cache.CheckpointStateCache
-	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocks          map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 	initSyncBlocksLock      sync.RWMutex
 	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
@@ -94,8 +94,8 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
-		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
-		cfg:                  &config{},
+		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
+		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {

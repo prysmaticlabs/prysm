@@ -1083,7 +1083,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 	// Populate the database with blocks that would match the request.
 	var prevRoot [32]byte
 	var err error
-	blks := []interfaces.SignedBeaconBlock{}
+	blks := []interfaces.ReadOnlySignedBeaconBlock{}
 	var roots [][32]byte
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += primitives.Slot(1) {
 		blk := util.NewBeaconBlock()

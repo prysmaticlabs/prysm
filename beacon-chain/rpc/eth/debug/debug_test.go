@@ -33,6 +33,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
@@ -50,6 +51,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
@@ -67,6 +69,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
@@ -84,6 +87,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
@@ -109,6 +113,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			},
 			HeadFetcher:           &blockchainmock.ChainService{},
 			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
+			FinalizationFetcher:   &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
@@ -117,6 +122,39 @@ func TestGetBeaconStateV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &blockchainmock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, true, resp.Finalized)
 	})
 }
 

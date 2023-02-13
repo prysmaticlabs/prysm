@@ -1,8 +1,9 @@
 package params
 
 const (
-	altairE2EForkEpoch    = 6
-	bellatrixE2EForkEpoch = 8
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
+	CapellaE2EForkEpoch   = 10
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -17,6 +18,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.MinGenesisActiveValidatorCount = 256
 	e2eConfig.GenesisDelay = 10 // 10 seconds so E2E has enough time to process deposits and get started.
 	e2eConfig.ChurnLimitQuotient = 65536
+	e2eConfig.MaxValidatorsPerWithdrawalsSweep = 128
 
 	// Time parameters.
 	e2eConfig.SecondsPerSlot = 10
@@ -26,14 +28,16 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"
@@ -64,14 +68,16 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
 	e2eConfig.ShardCommitteePeriod = 4
+	e2eConfig.MinValidatorWithdrawabilityDelay = 1
 
 	// PoW parameters.
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
 	// Altair Fork Parameters.
-	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
-	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.AltairForkEpoch = AltairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = BellatrixE2EForkEpoch
+	e2eConfig.CapellaForkEpoch = CapellaE2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "480"

@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -55,12 +56,14 @@ func (f *ForkChoice) updateUnrealizedCheckpoints() {
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
 			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
-			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
+			if !features.Get().EnableDefensivePull && node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
 				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			}
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
-			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			if !features.Get().EnableDefensivePull {
+				f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			}
 			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}
