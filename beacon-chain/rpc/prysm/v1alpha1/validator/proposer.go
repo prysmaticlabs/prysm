@@ -91,9 +91,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		sBlk.SetDeposits([]*ethpb.Deposit{})
 		sBlk.SetAttestations([]*ethpb.Attestation{})
 		log.WithError(err).Error("Could not pack deposits and attestations")
+	} else {
+		sBlk.SetDeposits(deposits)
+		sBlk.SetAttestations(atts)
 	}
-	sBlk.SetDeposits(deposits)
-	sBlk.SetAttestations(atts)
 
 	// Set proposer index.
 	idx, err := helpers.BeaconProposerIndex(ctx, head)
