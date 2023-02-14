@@ -349,7 +349,7 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("eth1_deposit_index            : %d", st.Eth1DepositIndex())
 		size, count = sizeAndCountGeneric(st.Validators(), nil)
 		log.Infof("validators                    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
-		size, count = sizeAndCountOfUin64List(st.Balances().Value())
+		size, count = sizeAndCountOfUin64List(st.Balances())
 		log.Infof("balances                      : size = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountOfByteList(st.RandaoMixes())
 		log.Infof("randao_mixes                  : size = %s, count = %d", humanize.Bytes(size), count)

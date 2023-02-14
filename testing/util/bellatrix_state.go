@@ -154,7 +154,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 
 		// Validator registry fields.
 		Validators:                 preState.Validators(),
-		Balances:                   preState.Balances().Value(),
+		Balances:                   preState.Balances(),
 		PreviousEpochParticipation: prevEpochParticipation,
 		CurrentEpochParticipation:  currEpochParticipation,
 		InactivityScores:           scores,

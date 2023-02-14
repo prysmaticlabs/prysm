@@ -472,7 +472,7 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 		Eth1DataVotes:             resultEth1DataVotes,
 		Eth1DepositIndex:          state.Eth1DepositIndex(),
 		Validators:                resultValidators,
-		Balances:                  state.Balances().Value(),
+		Balances:                  state.Balances(),
 		RandaoMixes:               bytesutil.SafeCopy2dBytes(state.RandaoMixes()),
 		Slashings:                 state.Slashings(),
 		PreviousEpochAttestations: resultPrevEpochAtts,

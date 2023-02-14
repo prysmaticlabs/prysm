@@ -165,7 +165,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 		// Validator registry fields.
 		Validators: preState.Validators(),
-		Balances:   preState.Balances().Value(),
+		Balances:   preState.Balances(),
 
 		// Randomness and committees.
 		RandaoMixes: randaoMixes,

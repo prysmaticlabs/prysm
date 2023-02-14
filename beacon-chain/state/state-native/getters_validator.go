@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	types2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -179,7 +178,7 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 }
 
 // Balances of validators participating in consensus on the beacon chain.
-func (b *BeaconState) Balances() *types2.ValidatorBalances {
+func (b *BeaconState) Balances() []uint64 {
 	if b.balances == nil {
 		return nil
 	}
@@ -187,7 +186,7 @@ func (b *BeaconState) Balances() *types2.ValidatorBalances {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return types2.NewValidatorBalances(b.balances)
+	return b.balancesVal()
 }
 
 // balancesVal of validators participating in consensus on the beacon chain.
