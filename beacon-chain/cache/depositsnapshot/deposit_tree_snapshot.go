@@ -40,7 +40,7 @@ func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 		}
 		size >>= 1
 	}
-	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian(ds.depositCount)...)), nil
+	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(ds.depositCount)...)), nil
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.
