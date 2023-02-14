@@ -61,8 +61,7 @@ func (d *DepositTree) getSnapshot() (DepositTreeSnapshot, error) {
 	}
 	var finalized [][32]byte
 	depositCount, finalized := d.tree.GetFinalized(finalized)
-	tree, err := fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock)
-	return tree, err
+	return fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock)
 }
 
 // fromSnapshot returns a deposit tree from a deposit tree snapshot.

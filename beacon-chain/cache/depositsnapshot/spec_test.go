@@ -14,6 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var TestDataPath = "testdata/test_cases.yaml"
+
 type testCase struct {
 	DepositData     depositData `yaml:"deposit_data"`
 	DepositDataRoot [32]byte    `yaml:"deposit_data_root"`
@@ -172,7 +174,7 @@ func readTestCases(filename string) ([]testCase, error) {
 }
 
 func TestRead(t *testing.T) {
-	tcs, err := readTestCases("test_cases.yaml")
+	tcs, err := readTestCases(TestDataPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +248,7 @@ func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []t
 
 func TestDepositCases(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases("test_cases.yaml")
+	testCases, err := readTestCases(TestDataPath)
 	assert.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
@@ -256,7 +258,7 @@ func TestDepositCases(t *testing.T) {
 
 func TestFinalization(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases("test_cases.yaml")
+	testCases, err := readTestCases(TestDataPath)
 	assert.NoError(t, err)
 	for _, c := range testCases[:128] {
 		err = tree.pushLeaf(c.DepositDataRoot)
@@ -307,7 +309,7 @@ func TestFinalization(t *testing.T) {
 
 func TestSnapshotCases(t *testing.T) {
 	tree := New()
-	testCases, err := readTestCases("test_cases.yaml")
+	testCases, err := readTestCases(TestDataPath)
 	assert.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
