@@ -2694,6 +2694,13 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, beaconState.SetGenesisTime(uint64(ti.Unix())))
 		random, err := helpers.RandaoMix(beaconState, coreTime.CurrentEpoch(beaconState))
 		require.NoError(t, err)
+		wds := []*enginev1.Withdrawal{{
+			Index:          1,
+			ValidatorIndex: 2,
+			Amount:         3,
+		}}
+		wr, err := ssz.WithdrawalSliceRoot(hash.CustomSHA256Hasher(), wds, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
 		bid := &ethpbalpha.BuilderBidCapella{
 			Header: &enginev1.ExecutionPayloadHeaderCapella{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -2707,7 +2714,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 				TransactionsRoot: make([]byte, fieldparams.RootLength),
 				BlockNumber:      1,
 				Timestamp:        uint64(ts.Unix()),
-				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
+				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),
 			Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
@@ -2723,7 +2730,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		}
 		id := &enginev1.PayloadIDBytes{0x1}
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1}, BlockValue: big.NewInt(0)},
+			ExecutionEngineCaller: &mockExecution.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &enginev1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: wds}, BlockValue: big.NewInt(0)},
 			BeaconDB:              db,
 			ForkFetcher:           &mockChain.ChainService{ForkChoiceStore: doublylinkedtree.New()},
 			TimeFetcher: &mockChain.ChainService{
