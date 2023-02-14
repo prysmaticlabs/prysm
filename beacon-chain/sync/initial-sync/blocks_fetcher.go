@@ -396,6 +396,12 @@ func timeToWait(wanted, rem, capacity int64, timeTillEmpty time.Duration) time.D
 	if rem >= wanted {
 		return 0
 	}
+	// Handle edge case where capacity is equal to the remaining amount
+	// of blocks. This also handles the impossible case in where remaining blocks
+	// exceed the limiter's capacity.
+	if capacity <= rem {
+		return 0
+	}
 	blocksNeeded := wanted - rem
 	currentNumBlks := capacity - rem
 	expectedTime := int64(timeTillEmpty) * blocksNeeded / currentNumBlks
