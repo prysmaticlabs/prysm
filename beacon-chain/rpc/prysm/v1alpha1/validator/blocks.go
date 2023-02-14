@@ -124,7 +124,7 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	log := log.WithField("blockSlot", data.SignedBlock.Block().Slot())
-	headState, err := vs.HeadFetcher.HeadState(vs.Ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(vs.Ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get head state")
 		return nil
