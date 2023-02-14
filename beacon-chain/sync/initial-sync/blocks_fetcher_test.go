@@ -915,6 +915,14 @@ func TestTimeToWait(t *testing.T) {
 			want:          0 * time.Second,
 		},
 		{
+			name:          "Limiter has full capacity remaining",
+			wanted:        350,
+			rem:           320,
+			capacity:      320,
+			timeTillEmpty: 0 * time.Second,
+			want:          0 * time.Second,
+		},
+		{
 			name:          "Limiter has reached full capacity",
 			wanted:        64,
 			rem:           0,
