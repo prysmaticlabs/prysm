@@ -549,7 +549,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+			FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		},
 		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
 	if vpSettings.DefaultConfig.BuilderConfig == nil {
@@ -593,7 +595,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				option.BuilderConfig = builderConfig
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress(option.FeeRecipient),
+				},
 				BuilderConfig: option.BuilderConfig,
 			}
 
