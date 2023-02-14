@@ -87,7 +87,7 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 func (c *beaconApiValidatorClient) getAggregateAttestation(ctx context.Context, slot primitives.Slot, attestationDataRoot []byte) (*apimiddleware.AggregateAttestationResponseJson, error) {
 	params := url.Values{}
 	params.Add("slot", strconv.FormatUint(uint64(slot), 10))
-	params.Add("attestation_data_root", hexutil.Encode(attestationDataRoot[:]))
+	params.Add("attestation_data_root", hexutil.Encode(attestationDataRoot))
 	endpoint := buildURL("/eth/v1/validator/aggregate_attestation", params)
 
 	var aggregateAttestationResponse apimiddleware.AggregateAttestationResponseJson
