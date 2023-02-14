@@ -10,7 +10,7 @@ import (
 
 // This saves a beacon block to the initial sync blocks cache. It rate limits how many blocks
 // the cache keeps in memory (2 epochs worth of blocks) and saves them to DB when it hits this limit.
-func (s *Service) saveInitSyncBlock(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
+func (s *Service) saveInitSyncBlock(ctx context.Context, r [32]byte, b interfaces.ReadOnlySignedBeaconBlock) error {
 	s.initSyncBlocksLock.Lock()
 	s.initSyncBlocks[r] = b
 	numBlocks := len(s.initSyncBlocks)
@@ -43,7 +43,7 @@ func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
 
 // Returns block for a given root `r` from either the initial sync blocks cache or the DB.
 // Error is returned if the block is not found in either cache or DB.
-func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBeaconBlock, error) {
+func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
 
 	// Check cache first because it's faster.
@@ -64,11 +64,11 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 
 // This retrieves all the beacon blocks from the initial sync blocks cache, the returned
 // blocks are unordered.
-func (s *Service) getInitSyncBlocks() []interfaces.SignedBeaconBlock {
+func (s *Service) getInitSyncBlocks() []interfaces.ReadOnlySignedBeaconBlock {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
 
-	blks := make([]interfaces.SignedBeaconBlock, 0, len(s.initSyncBlocks))
+	blks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(s.initSyncBlocks))
 	for _, b := range s.initSyncBlocks {
 		blks = append(blks, b)
 	}
@@ -79,5 +79,5 @@ func (s *Service) getInitSyncBlocks() []interfaces.SignedBeaconBlock {
 func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
-	s.initSyncBlocks = make(map[[32]byte]interfaces.SignedBeaconBlock)
+	s.initSyncBlocks = make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock)
 }

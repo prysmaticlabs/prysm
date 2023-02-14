@@ -36,9 +36,9 @@ func PraterConfig() *BeaconChainConfig {
 	cfg.DepositNetworkID = eth1Params.GoerliChainConfig.ChainID.Uint64()
 	cfg.AltairForkEpoch = 36660
 	cfg.AltairForkVersion = []byte{0x1, 0x0, 0x10, 0x20}
-	cfg.CapellaForkVersion = []byte{0x3, 0x0, 0x10, 0x20}
 	cfg.BellatrixForkEpoch = 112260
 	cfg.BellatrixForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
+	cfg.CapellaForkVersion = []byte{0x3, 0x0, 0x10, 0x20}
 	cfg.TerminalTotalDifficulty = "10790000"
 	cfg.DepositContractAddress = "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
 	cfg.InitializeForkSchedule()

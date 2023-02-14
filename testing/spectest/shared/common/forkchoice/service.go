@@ -28,7 +28,7 @@ import (
 
 func startChainService(t testing.TB,
 	st state.BeaconState,
-	block interfaces.SignedBeaconBlock,
+	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
 ) *blockchain.Service {
 	db := testDB.SetupDB(t)

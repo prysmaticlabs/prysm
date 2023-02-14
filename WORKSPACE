@@ -124,28 +124,28 @@ load(
 
 container_pull(
     name = "cc_image_base",
-    digest = "sha256:2c4bb6b7236db0a55ec54ba8845e4031f5db2be957ac61867872bf42e56c4deb",
+    digest = "sha256:41036fc7ed8df0f6addc18484cef0c94a85867508967789f947e11ffd5ff0cc8",
     registry = "gcr.io",
     repository = "distroless/cc",
 )
 
 container_pull(
     name = "cc_debug_image_base",
-    digest = "sha256:3680c61e81f68fc00bfb5e1ec65e8e678aaafa7c5f056bc2681c29527ebbb30c",
+    digest = "sha256:6865ad48467c89c3c3524d4c426f52ad12d9ab7dec31fad31fae69da40eb6445",
     registry = "gcr.io",
     repository = "distroless/cc",
 )
 
 container_pull(
     name = "go_image_base",
-    digest = "sha256:ba7a315f86771332e76fa9c3d423ecfdbb8265879c6f1c264d6fff7d4fa460a4",
+    digest = "sha256:b9b124f955961599e72630654107a0cf04e08e6fa777fa250b8f840728abd770",
     registry = "gcr.io",
     repository = "distroless/base",
 )
 
 container_pull(
     name = "go_debug_image_base",
-    digest = "sha256:efd8711717d9e9b5d0dbb20ea10876dab0609c923bc05321b912f9239090ca80",
+    digest = "sha256:65668d2b78d25df3d8ccf5a778d017fcaba513b52078c700083eaeef212b9979",
     registry = "gcr.io",
     repository = "distroless/base",
 )

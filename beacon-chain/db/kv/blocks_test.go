@@ -21,11 +21,11 @@ import (
 
 var blockTests = []struct {
 	name     string
-	newBlock func(primitives.Slot, []byte) (interfaces.SignedBeaconBlock, error)
+	newBlock func(primitives.Slot, []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }{
 	{
 		name: "phase0",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = slot
 			if root != nil {
@@ -36,7 +36,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "altair",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = slot
 			if root != nil {
@@ -47,7 +47,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "bellatrix",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
@@ -58,7 +58,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "bellatrix blind",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBlindedBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
@@ -69,7 +69,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "capella",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBeaconBlockCapella()
 			b.Block.Slot = slot
 			if root != nil {
@@ -80,7 +80,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "capella blind",
-		newBlock: func(slot primitives.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBlindedBeaconBlockCapella()
 			b.Block.Slot = slot
 			if root != nil {
@@ -181,7 +181,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, numBlocks)
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(primitives.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, numBlocks)
 			// Save blocks from slot 1 onwards.
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(primitives.Slot(i+1), bytesutil.PadTo([]byte("parent"), 32))
@@ -381,7 +381,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			require.NoError(t, err)
 			b8, err := tt.newBlock(primitives.Slot(8), bytesutil.PadTo([]byte("parent4"), 32))
 			require.NoError(t, err)
-			blocks := []interfaces.SignedBeaconBlock{
+			blocks := []interfaces.ReadOnlySignedBeaconBlock{
 				b4,
 				b5,
 				b6,
@@ -485,7 +485,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(primitives.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -505,7 +505,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-			totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
+			totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, slots)
 			for i := primitives.Slot(0); i < slots; i++ {
 				b, err := tt.newBlock(i, bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -529,7 +529,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(primitives.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -722,7 +722,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]interfaces.SignedBeaconBlock, 500)
+			b := make([]interfaces.ReadOnlySignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(primitives.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -746,7 +746,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]interfaces.SignedBeaconBlock, 500)
+			b := make([]interfaces.ReadOnlySignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(primitives.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)

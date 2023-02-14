@@ -142,7 +142,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	ctx := context.Background()
 
-	eval := func(t testing.TB, ctx context.Context, db *Store, blks []interfaces.SignedBeaconBlock) {
+	eval := func(t testing.TB, ctx context.Context, db *Store, blks []interfaces.ReadOnlySignedBeaconBlock) {
 		require.NoError(t, db.SaveBlocks(ctx, blks))
 		root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 		require.NoError(t, err)
@@ -193,15 +193,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	})
 }
 
-func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
+func sszRootOrDie(t *testing.T, block interfaces.ReadOnlySignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.ReadOnlySignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
@@ -217,9 +217,9 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.S
 	return ifaceBlocks
 }
 
-func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
+func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []interfaces.ReadOnlySignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
-	ifaceBlocks := make([]interfaces.SignedBeaconBlock, num)
+	ifaceBlocks := make([]interfaces.ReadOnlySignedBeaconBlock, num)
 	for j := startIdx; j < num+startIdx; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])

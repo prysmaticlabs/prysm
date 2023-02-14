@@ -9,7 +9,7 @@ import (
 
 // NewSignedBeaconBlockFromGeneric creates a signed beacon block
 // from a protobuf generic signed beacon block.
-func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	if gb == nil {
 		return nil, blocks.ErrNilObject
 	}

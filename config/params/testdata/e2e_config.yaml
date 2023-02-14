@@ -40,7 +40,7 @@ BELLATRIX_FORK_VERSION: 0x020000fd
 BELLATRIX_FORK_EPOCH: 8
 # Capella
 CAPELLA_FORK_VERSION: 0x030000fd
-CAPELLA_FORK_EPOCH: 18446744073709551615
+CAPELLA_FORK_EPOCH: 10
 
 
 # Time parameters
@@ -49,8 +49,8 @@ CAPELLA_FORK_EPOCH: 18446744073709551615
 SECONDS_PER_SLOT: 10 # Override for e2e tests
 # 14 (estimate from Eth1 mainnet)
 SECONDS_PER_ETH1_BLOCK: 2 # Override for e2e tests
-# 2**8 (= 256) epochs
-MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
+# [customized] faster time for withdrawals
+MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 1
 # [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
 SHARD_COMMITTEE_PERIOD: 4 # Override for e2e tests
 # [customized] process deposits more quickly, but insecure
