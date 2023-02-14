@@ -62,7 +62,7 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 		return nil, err
 	}
 
-	hs, err := bs.HeadFetcher.HeadState(ctx)
+	hs, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "could not get head state")
 	}
