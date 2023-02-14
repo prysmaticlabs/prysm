@@ -253,7 +253,9 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
 		},
 	})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -279,7 +281,9 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 	}
 	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+			},
 		},
 	})
 	ctx, cancel := context.WithCancel(context.Background())
