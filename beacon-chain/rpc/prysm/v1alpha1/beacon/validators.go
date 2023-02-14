@@ -97,11 +97,10 @@ func (bs *Server) ListValidatorBalances(
 
 		val := vals[index]
 		st := validatorStatus(val, requestedEpoch)
-		bal := balances[index]
 		res = append(res, &ethpb.ValidatorBalances_Balance{
 			PublicKey: pubKey,
 			Index:     index,
-			Balance:   bal,
+			Balance:   balances[index],
 			Status:    st.String(),
 		})
 		balancesCount = len(res)
@@ -116,11 +115,10 @@ func (bs *Server) ListValidatorBalances(
 		if !filtered[index] {
 			val := vals[index]
 			st := validatorStatus(val, requestedEpoch)
-			bal := balances[index]
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: vals[index].PublicKey,
 				Index:     index,
-				Balance:   bal,
+				Balance:   balances[index],
 				Status:    st.String(),
 			})
 		}
@@ -157,11 +155,10 @@ func (bs *Server) ListValidatorBalances(
 			pubkey := requestedState.PubkeyAtIndex(types.ValidatorIndex(i))
 			val := vals[i]
 			st := validatorStatus(val, requestedEpoch)
-			bal := balances[i]
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: pubkey[:],
 				Index:     types.ValidatorIndex(i),
-				Balance:   bal,
+				Balance:   balances[i],
 				Status:    st.String(),
 			})
 		}
