@@ -88,3 +88,20 @@ done
 
 goimports -w "$beacon_api_mock_path/."
 gofmt -s -w "$beacon_api_mock_path/."
+
+# github.com/prysmaticlabs/prysm/v3/crypto/bls
+# --------------------------------------------
+crypto_bls_common_mock_path="crypto/bls/common/mock"
+crypto_bls_common_mocks=(
+      "$crypto_bls_common_mock_path/interface_mock.go interface.go"
+)
+
+for ((i = 0; i < ${#crypto_bls_common_mocks[@]}; i++)); do
+    file=${crypto_bls_common_mocks[i]% *};
+    source=${crypto_bls_common_mocks[i]#* };
+    echo "generating $file for file: $source";
+    GO11MODULE=on mockgen -package=mock -source="crypto/bls/common/$source" -destination="$file"
+done
+
+goimports -w "$crypto_bls_common_mock_path/."
+gofmt -s -w "$crypto_bls_common_mock_path/."
