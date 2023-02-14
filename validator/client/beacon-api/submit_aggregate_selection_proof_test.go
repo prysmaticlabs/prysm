@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,6 +24,7 @@ import (
 func TestSubmitAggregateSelectionProof(t *testing.T) {
 	const (
 		pubkeyStr                    = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
+		syncingEndpoint              = "/eth/v1/node/syncing"
 		attesterDutiesEndpoint       = "/eth/v1/validator/duties/attester"
 		validatorsEndpoint           = "/eth/v1/beacon/states/head/validators"
 		attestationDataEndpoint      = "/eth/v1/validator/attestation_data"
@@ -60,11 +62,14 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 
 	tests := []struct {
 		name                       string
+		isOptimistic               bool
+		syncingErr                 error
 		validatorsErr              error
 		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
 		duties                     []*apimiddleware.AttesterDutyJson
+		validatorsCalled           int
 		attesterDutiesCalled       int
 		attestationDataCalled      int
 		aggregateAttestationCalled int
@@ -73,18 +78,31 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		{
 			name:                       "success",
 			duties:                     attesterDuties,
+			validatorsCalled:           1,
 			attesterDutiesCalled:       1,
 			attestationDataCalled:      1,
 			aggregateAttestationCalled: 1,
 		},
 		{
+			name:             "head is optimistic",
+			isOptimistic:     true,
+			expectedErrorMsg: "the node is currently optimistic and cannot serve validators",
+		},
+		{
+			name:             "syncing error",
+			syncingErr:       errors.New("bad request"),
+			expectedErrorMsg: "failed to get syncing status",
+		},
+		{
 			name:             "validator index error",
+			validatorsCalled: 1,
 			validatorsErr:    errors.New("bad request"),
 			expectedErrorMsg: "failed to get validator index",
 		},
 		{
 			name:                 "attester duties error",
 			duties:               attesterDuties,
+			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			dutiesErr:            errors.New("bad request"),
 			expectedErrorMsg:     "failed to get attester duties",
@@ -92,6 +110,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		{
 			name:                  "attestation data error",
 			duties:                attesterDuties,
+			validatorsCalled:      1,
 			attesterDutiesCalled:  1,
 			attestationDataCalled: 1,
 			attestationDataErr:    errors.New("bad request"),
@@ -100,6 +119,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		{
 			name:                       "aggregate attestation error",
 			duties:                     attesterDuties,
+			validatorsCalled:           1,
 			attesterDutiesCalled:       1,
 			attestationDataCalled:      1,
 			aggregateAttestationCalled: 1,
@@ -117,12 +137,14 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					CommitteeLength: "64",
 				},
 			},
+			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     "validator is not an aggregator",
 		},
 		{
 			name:                 "no attester duties",
 			duties:               []*apimiddleware.AttesterDutyJson{},
+			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
 		},
@@ -132,6 +154,23 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+			// Call node syncing endpoint to check if head is optimistic.
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				syncingEndpoint,
+				&apimiddleware.SyncingResponseJson{},
+			).SetArg(
+				2,
+				apimiddleware.SyncingResponseJson{
+					Data: &helpers.SyncDetailsJson{
+						IsOptimistic: test.isOptimistic,
+					},
+				},
+			).Return(
+				nil,
+				test.syncingErr,
+			).Times(1)
 
 			// Call validators endpoint to get validator index.
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
@@ -154,7 +193,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			).Return(
 				nil,
 				test.validatorsErr,
-			).Times(1)
+			).Times(test.validatorsCalled)
 
 			// Call attester duties endpoint to get attester duties.
 			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})

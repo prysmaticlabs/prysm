@@ -15,6 +15,16 @@ import (
 )
 
 func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+	isOptimistic, err := c.isOptimistic(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
+	if isOptimistic {
+		return nil, errors.New("the node is currently optimistic and cannot serve validators")
+	}
+
 	validatorIndexResponse, err := c.validatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: in.PublicKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator index")
@@ -55,14 +65,9 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 		return nil, errors.Wrap(err, "failed to calculate attestation data root")
 	}
 
-	params := url.Values{}
-	params.Add("slot", strconv.FormatUint(uint64(in.Slot), 10))
-	params.Add("attestation_data_root", hexutil.Encode(attestationDataRoot[:]))
-	endpoint := buildURL("/eth/v1/validator/aggregate_attestation", params)
-
-	var aggregateAttestationResponse apimiddleware.AggregateAttestationResponseJson
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &aggregateAttestationResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to get aggregate attestation")
+	aggregateAttestationResponse, err := c.getAggregateAttestation(ctx, in.Slot, attestationDataRoot[:])
+	if err != nil {
+		return nil, err
 	}
 
 	aggregatedAttestation, err := convertAttestationToProto(aggregateAttestationResponse.Data)
@@ -77,4 +82,18 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 			SelectionProof:  in.SlotSignature,
 		},
 	}, nil
+}
+
+func (c *beaconApiValidatorClient) getAggregateAttestation(ctx context.Context, slot primitives.Slot, attestationDataRoot []byte) (*apimiddleware.AggregateAttestationResponseJson, error) {
+	params := url.Values{}
+	params.Add("slot", strconv.FormatUint(uint64(slot), 10))
+	params.Add("attestation_data_root", hexutil.Encode(attestationDataRoot[:]))
+	endpoint := buildURL("/eth/v1/validator/aggregate_attestation", params)
+
+	var aggregateAttestationResponse apimiddleware.AggregateAttestationResponseJson
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &aggregateAttestationResponse); err != nil {
+		return nil, errors.Wrap(err, "failed to get aggregate attestation")
+	}
+
+	return &aggregateAttestationResponse, nil
 }
