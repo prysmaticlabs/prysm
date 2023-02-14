@@ -122,6 +122,8 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
+		ev.SubmitWithdrawal,
+		ev.ValidatorsHaveWithdrawn,
 		ev.DepositedValidatorsAreActive,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
