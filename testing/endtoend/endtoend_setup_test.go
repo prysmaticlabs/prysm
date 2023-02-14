@@ -100,7 +100,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -122,6 +122,8 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.FinalizationOccurs(3),
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorsHaveExited,
+		ev.SubmitWithdrawal,
+		ev.ValidatorsHaveWithdrawn,
 		ev.DepositedValidatorsAreActive,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,

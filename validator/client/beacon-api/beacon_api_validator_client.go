@@ -123,12 +123,7 @@ func (c *beaconApiValidatorClient) StreamDuties(ctx context.Context, in *ethpb.D
 }
 
 func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.SubmitAggregateSelectionProof(ctx, in)
-	}
-
-	// TODO: Implement me
-	panic("beaconApiValidatorClient.SubmitAggregateSelectionProof is not implemented. To use a fallback client, create this validator with NewBeaconApiValidatorClientWithFallback instead.")
+	return c.submitAggregateSelectionProof(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
