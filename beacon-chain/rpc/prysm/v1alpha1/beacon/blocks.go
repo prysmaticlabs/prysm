@@ -310,7 +310,7 @@ func (bs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.Beac
 						// One nil block shouldn't stop the stream.
 						continue
 					}
-					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					headState, err := bs.HeadFetcher.HeadStateReadOnly(bs.Ctx)
 					if err != nil {
 						log.WithError(err).WithField("blockSlot", data.SignedBlock.Block().Slot()).Error("Could not get head state")
 						continue
