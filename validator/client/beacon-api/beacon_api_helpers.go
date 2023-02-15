@@ -122,3 +122,12 @@ func (c *beaconApiValidatorClient) isSyncing(ctx context.Context) (bool, error) 
 
 	return response.Data.IsSyncing, err
 }
+
+func (c *beaconApiValidatorClient) isOptimistic(ctx context.Context) (bool, error) {
+	response, err := c.getSyncing(ctx)
+	if err != nil || response == nil || response.Data == nil {
+		return true, errors.Wrapf(err, "failed to get syncing status")
+	}
+
+	return response.Data.IsOptimistic, err
+}

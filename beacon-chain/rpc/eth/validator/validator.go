@@ -834,7 +834,7 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
@@ -910,7 +910,7 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	if len(req.Data) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No subscriptions provided")
 	}
-	s, err := vs.HeadFetcher.HeadState(ctx)
+	s, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
