@@ -143,13 +143,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	s.processAttestations(ctx)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
-	justified := s.ForkChoicer().JustifiedCheckpoint()
-	balances, err := s.justifiedBalances.get(ctx, justified.Root)
-	if err != nil {
-		return err
-	}
 	start = time.Now()
-	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
 	}
