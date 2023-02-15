@@ -26,7 +26,7 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, []uint64) ([32]byte, error)
+	Head(context.Context) ([32]byte, error)
 	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
@@ -77,7 +77,7 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
-	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
+	UpdateJustifiedCheckpoint(context.Context, *forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
