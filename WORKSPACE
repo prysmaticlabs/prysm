@@ -101,7 +101,7 @@ gcc_register_toolchain(
 # GCC 11.3.0
 gcc_register_toolchain(
     name = "gcc11_x86-64",
-    sha256 = "4313a04996173bd79935ffaec48b97ba7c32332880774ec61b40ab76804b8fbb",
+    sha256 = "861c1e8ad0a66e4c28e7a1f8319d68080ab0ff8d16a765e65540f1957203a190",
     strip_prefix = "x86-64--glibc--stable-2022.08-1",
     target_arch = "x86_64",
     target_settings = ["@//:gcc11_requested"],
