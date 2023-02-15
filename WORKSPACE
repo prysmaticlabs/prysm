@@ -4,6 +4,19 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
+    name = "bazel_skylib",
+    sha256 = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz",
+    ],
+)
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
+
+http_archive(
     name = "bazel_toolchains",
     sha256 = "8e0633dfb59f704594f19ae996a35650747adc621ada5e8b9fb588f808c89cb0",
     strip_prefix = "bazel-toolchains-3.7.0",
@@ -13,11 +26,16 @@ http_archive(
     ],
 )
 
+BAZEL_TOOLCHAIN_REF = "056aeaa01900f5050a9fed9b11e2d365a684831a"
+
+BAZEL_TOOLCHAIN_SHA = "93aa940bcaa2bfdd8153d4d029bad1ccc6c0601e29ffff3a23e1d89aba5f61fa"
+
 http_archive(
     name = "com_grail_bazel_toolchain",
-    sha256 = "b210fc8e58782ef171f428bfc850ed7179bdd805543ebd1aa144b9c93489134f",
-    strip_prefix = "bazel-toolchain-83e69ba9e4b4fdad0d1d057fcb87addf77c281c9",
-    urls = ["https://github.com/grailbio/bazel-toolchain/archive/83e69ba9e4b4fdad0d1d057fcb87addf77c281c9.tar.gz"],
+    canonical_id = BAZEL_TOOLCHAIN_REF,
+    sha256 = BAZEL_TOOLCHAIN_SHA,
+    strip_prefix = "bazel-toolchain-{ref}".format(ref = BAZEL_TOOLCHAIN_REF),
+    url = "https://github.com/grailbio/bazel-toolchain/archive/{ref}.tar.gz".format(ref = BAZEL_TOOLCHAIN_REF),
 )
 
 load("@com_grail_bazel_toolchain//toolchain:deps.bzl", "bazel_toolchain_dependencies")
@@ -27,13 +45,58 @@ bazel_toolchain_dependencies()
 load("@com_grail_bazel_toolchain//toolchain:rules.bzl", "llvm_toolchain")
 
 llvm_toolchain(
-    name = "llvm_toolchain",
-    llvm_version = "13.0.1",
+    name = "llvm_11_toolchain",
+    cxx_standard = {
+        "": "c++14",
+    },
+    llvm_version = "11.1.0",
+    target_settings = {
+        "": ["@//:clang11_requested"],
+    },
 )
 
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+load("@llvm_11_toolchain//:toolchains.bzl", llvm_11_register_toolchains = "llvm_register_toolchains")
 
-llvm_register_toolchains()
+llvm_11_register_toolchains()
+
+llvm_toolchain(
+    name = "llvm_14_toolchain",
+    cxx_standard = {
+        "": "c++14",
+    },
+    llvm_version = "14.0.0",
+    target_settings = {
+        "": ["@//:clang14_requested"],
+    },
+)
+
+load("@llvm_14_toolchain//:toolchains.bzl", llvm_14_register_toolchains = "llvm_register_toolchains")
+
+llvm_14_register_toolchains()
+
+http_archive(
+    name = "aspect_gcc_toolchain",
+    patch_args = ["-p1"],
+    patches = [
+        "@//:third_party/aspect_gcc_toolchain/0001-Expose-target_settings-and-set-std-c-14.patch",
+    ],
+    sha256 = "e2e12202dd83f67d71101b24554044de25e1625d16b4b56bc453ecaa8f7c6bd0",
+    strip_prefix = "aspect-build-gcc-toolchain-ac745d4",
+    type = "tar.gz",
+    urls = [
+        "https://github.com/aspect-build/gcc-toolchain/tarball/ac745d4685e2095cc4f057862800f3f0a473c201",
+    ],
+)
+
+load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64",
+    gcc_version = "10.3.0",
+    sysroot_variant = "x86_64",
+    target_arch = ARCHS.x86_64,
+    target_settings = ["@//:gcc10_requested"],
+)
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
@@ -42,21 +105,6 @@ configure_prysm_toolchains()
 load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_config")
 
 rbe_toolchains_config()
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
-    urls = [
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.3/bazel-skylib-1.0.3.tar.gz",
-    ],
-)
-
-load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
-
-bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",

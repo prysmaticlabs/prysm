@@ -1,0 +1,56 @@
+From b26193f526de8e4ea4e1b370f3c9f104222c3d60 Mon Sep 17 00:00:00 2001
+From: Philipp Schrader <pschrader@aurora.tech>
+Date: Tue, 6 Dec 2022 00:17:31 -0800
+Subject: [PATCH] Expose target_settings and set -std=c++14
+
+---
+ toolchain/cc_toolchain_config.bzl | 2 +-
+ toolchain/defs.bzl                | 8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/toolchain/cc_toolchain_config.bzl b/toolchain/cc_toolchain_config.bzl
+index afeef35..517bb4a 100644
+--- a/toolchain/cc_toolchain_config.bzl
++++ b/toolchain/cc_toolchain_config.bzl
+@@ -299,7 +299,7 @@ def _impl(ctx):
+             ),
+             flag_set(
+                 actions = all_cpp_compile_actions + [ACTION_NAMES.lto_backend],
+-                flag_groups = [flag_group(flags = ["-std=c++0x"])],
++                flag_groups = [flag_group(flags = ["-std=c++14"])],
+             ),
+         ],
+     )
+diff --git a/toolchain/defs.bzl b/toolchain/defs.bzl
+index 1420724..2bdb4c8 100644
+--- a/toolchain/defs.bzl
++++ b/toolchain/defs.bzl
+@@ -56,6 +56,7 @@ def _gcc_toolchain_impl(rctx):
+     rctx.file("BUILD.bazel", _TOOLCHAIN_BUILD_FILE_CONTENT.format(
+         gcc_toolchain_workspace_name = rctx.attr.gcc_toolchain_workspace_name,
+         target_compatible_with = str(target_compatible_with),
++        target_settings = str(rctx.attr.target_settings),
+         toolchain_files_repository_name = rctx.attr.toolchain_files_repository_name,
+ 
+         # Sysroot
+@@ -133,6 +134,12 @@ _FEATURE_ATTRS = {
+         doc = "contraint_values passed to target_compatible_with of the toolchain. {target_arch} is rendered to the target_arch attribute value.",
+         mandatory = False,
+     ),
++    "target_settings": attr.string_list(
++        default = [],
++        doc = "A list of config_settings that must be satisfied by the " +
++            "target configuration in order for this toolchain to be " +
++            "selected during toolchain resolution.",
++    ),
+     "toolchain_files_repository_name": attr.string(
+         doc = "The name of the repository containing the toolchain files.",
+         mandatory = True,
+@@ -551,6 +558,7 @@ fortran_toolchain(
+ toolchain(
+     name = "cc_toolchain",
+     target_compatible_with = {target_compatible_with},
++    target_settings = {target_settings},
+     toolchain = ":_cc_toolchain",
+     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+ )

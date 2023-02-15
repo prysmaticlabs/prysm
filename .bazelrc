@@ -22,6 +22,20 @@ build --sandbox_default_allow_network=false
 # Stamp binaries with git information
 build --workspace_status_command=./hack/workspace_status.sh
 
+# Required to use the C/C++ toolchain managed by gcc-toolchain
+build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+build --incompatible_enable_cc_toolchain_resolution
+# optional, but preferred for performance as per https://github.com/aspect-build/gcc-toolchain/issues/85
+build --experimental_reuse_sandbox_directories
+
+build:clang11 --platform_suffix=clang11
+build:clang11 --//:requested_compiler_flag=clang11
+build:clang14 --platform_suffix=clang14
+build:clang14 --//:requested_compiler_flag=clang14
+build:gcc10 --platform_suffix=gcc10
+build:gcc10 --//:requested_compiler_flag=gcc10
+build:gcc10 --features=static_libstdcxx
+
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
 run --incompatible_strict_action_env

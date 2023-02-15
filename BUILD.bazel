@@ -155,3 +155,41 @@ sh_binary(
     srcs = ["prysm.sh"],
     visibility = ["//visibility:public"],
 )
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+# Copied from https://github.com/aurora-opensource/au/blob/7d0fc05ff381c52785fceb8b8e616a31ffce71c8/build/BUILD
+# Apache 2.0 License
+string_flag(
+    name = "requested_compiler_flag",
+    build_setting_default = "",
+    values = [
+        "gcc10",
+        "clang11",
+        "clang14",
+    ],
+)
+
+# Copied from https://github.com/aurora-opensource/au/blob/7d0fc05ff381c52785fceb8b8e616a31ffce71c8/build/BUILD
+# Apache 2.0 License
+config_setting(
+    name = "clang11_requested",
+    flag_values = {"requested_compiler_flag": "clang11"},
+    visibility = ["//visibility:public"],
+)
+
+# Copied from https://github.com/aurora-opensource/au/blob/7d0fc05ff381c52785fceb8b8e616a31ffce71c8/build/BUILD
+# Apache 2.0 License
+config_setting(
+    name = "clang14_requested",
+    flag_values = {"requested_compiler_flag": "clang14"},
+    visibility = ["//visibility:public"],
+)
+
+# Copied from https://github.com/aurora-opensource/au/blob/7d0fc05ff381c52785fceb8b8e616a31ffce71c8/build/BUILD
+# Apache 2.0 License
+config_setting(
+    name = "gcc10_requested",
+    flag_values = {"requested_compiler_flag": "gcc10"},
+    visibility = ["//visibility:public"],
+)
