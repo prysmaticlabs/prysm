@@ -177,7 +177,6 @@ func (node *ValidatorNode) saveConfig() (string, error) {
 
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
-	fmt.Println("trying to start a validator node")
 	validatorHexPubKeys := make([]string, 0)
 	var pkg, target string
 	if v.config.UsePrysmShValidator {
