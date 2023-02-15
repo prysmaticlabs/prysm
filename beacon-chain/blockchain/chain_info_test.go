@@ -96,7 +96,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	cp = service.CurrentJustifiedCheckpt()
 	assert.DeepEqual(t, [32]byte{}, bytesutil.ToBytes32(cp.Root))
 	// check that forkchoice has the right genesis root as the node root
-	root, err := fcs.Head(ctx, []uint64{})
+	root, err := fcs.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, service.originBlockRoot, root)
 
@@ -114,8 +114,12 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}
-	require.NoError(t, fcs.UpdateJustifiedCheckpoint(cp))
+	jroot := [32]byte{'j'}
+	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
+	bState, _ := util.DeterministicGenesisState(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, bState, jroot))
+
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, cp))
 	jp := service.CurrentJustifiedCheckpt()
 	assert.Equal(t, cp.Epoch, jp.Epoch, "Unexpected justified epoch")
 	require.Equal(t, cp.Root, bytesutil.ToBytes32(jp.Root))

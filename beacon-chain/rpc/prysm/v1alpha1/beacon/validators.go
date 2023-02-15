@@ -359,7 +359,7 @@ func (bs *Server) GetValidator(
 			"Need to specify either validator index or public key in request",
 		)
 	}
-	headState, err := bs.HeadFetcher.HeadState(ctx)
+	headState, err := bs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}

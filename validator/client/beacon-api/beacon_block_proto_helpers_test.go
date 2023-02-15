@@ -414,7 +414,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationToProto(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := convertAttestationToProto(testCase.generateInput())
+			result, err := convertIndexedAttestationToProto(testCase.generateInput())
 
 			if testCase.expectedResult != nil {
 				require.NoError(t, err)
