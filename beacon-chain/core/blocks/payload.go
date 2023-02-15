@@ -267,22 +267,22 @@ func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData
 
 // ProcessPayloadHeader processes the payload header.
 func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
+	if st.Version() >= version.Capella {
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, err
+		}
+		st, err = ProcessWithdrawals(st, withdrawals)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process withdrawals")
+		}
+	}
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}
 	if err := ValidatePayloadHeader(st, header); err != nil {
 		return nil, err
 	}
-	
-	withdrawals, err := st.ExpectedWithdrawals()
-	if err != nil {
-		return nil, err
-	}
-	st, err = ProcessWithdrawals(st, withdrawals)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process withdrawals")
-	}
-
 	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
 		return nil, err
 	}
