@@ -175,9 +175,7 @@ func readTestCases(filename string) ([]testCase, error) {
 
 func TestRead(t *testing.T) {
 	tcs, err := readTestCases(TestDataPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for _, tc := range tcs {
 		t.Log(tc)
 	}
