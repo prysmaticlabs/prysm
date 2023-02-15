@@ -1992,10 +1992,12 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
 	require.NoError(t, err)
 	newfc := doublylinkedtree.New()
+	newStateGen := stategen.New(beaconDB, newfc)
+	newfc.SetBalancesByRooter(newStateGen.ActiveNonSlashedBalancesByRoot)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
-		WithStateGen(stategen.New(beaconDB, newfc)),
+		WithStateGen(newStateGen),
 		WithForkChoiceStore(newfc),
 		WithStateNotifier(&mock.MockStateNotifier{}),
 		WithExecutionEngineCaller(mockEngine),
@@ -2105,6 +2107,12 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.Equal(t, blk, nil)
 
 	service.cfg.ForkChoiceStore = doublylinkedtree.New()
+	justified, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+
+	jroot := bytesutil.ToBytes32(justified.Root)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, genesisState, jroot))
+	service.cfg.ForkChoiceStore.SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
 	// Forkchoice has the genesisRoot loaded at startup
@@ -2182,6 +2190,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	service.ForkChoicer().SetBalancesByRooter(service.cfg.StateGen.ActiveNonSlashedBalancesByRoot)
 	err = service.onBlock(ctx, wsb, root)
 	require.NoError(t, err)
 	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
