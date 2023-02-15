@@ -36,6 +36,13 @@ build:gcc10 --platform_suffix=gcc10
 build:gcc10 --//:requested_compiler_flag=gcc10
 build:gcc10 --features=static_libstdcxx
 
+# Add a generic alias if the user doesn't care about the exact version.
+build:clang --config=clang14
+build:gcc --config=gcc10
+
+# Compile with gcc by default
+build --config=gcc
+
 # Prevent PATH changes from rebuilding when switching from IDE to command line.
 build --incompatible_strict_action_env
 run --incompatible_strict_action_env
@@ -53,13 +60,6 @@ build:minimal --@io_bazel_rules_go//go/config:tags=minimal
 build:release --compilation_mode=opt
 build:release --stamp
 
-# LLVM compiler for building C/C++ dependencies.
-build:llvm --define compiler=llvm
-build:llvm --copt -fno-sanitize=vptr,function
-build:llvm --linkopt -fno-sanitize=vptr,function
-# --incompatible_enable_cc_toolchain_resolution not needed after this issue is closed https://github.com/bazelbuild/bazel/issues/7260
-build:llvm --incompatible_enable_cc_toolchain_resolution
-
 build:asan --copt -fsanitize=address,undefined
 build:asan --copt -fno-omit-frame-pointer
 build:asan --linkopt -fsanitize=address,undefined
@@ -69,14 +69,10 @@ build:asan --copt -DADDRESS_SANITIZER=1
 build:asan --copt -D__SANITIZE_ADDRESS__
 build:asan --linkopt -ldl
 
-build:llvm-asan --config=llvm
-build:llvm-asan --config=asan
-build:llvm-asan --linkopt -fuse-ld=ld.lld
-
 build:fuzz --@io_bazel_rules_go//go/config:tags=fuzz
 
 # Build binary with cgo symbolizer for debugging / profiling.
-build:cgo_symbolizer --config=llvm
+build:cgo_symbolizer --config=clang
 build:cgo_symbolizer --copt=-g
 build:cgo_symbolizer --define=USE_CGO_SYMBOLIZER=true
 build:cgo_symbolizer -c dbg
