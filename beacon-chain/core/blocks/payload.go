@@ -202,7 +202,13 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
 	if st.Version() >= version.Capella {
 		withdrawals, err := payload.Withdrawals()
-		if err != nil {
+		switch {
+		case errors.Is(err, blocks.ErrUnsupportedGetter): // TODO: Using `ErrUnsupportedGetter` to indicate that payload is blinded is not good. We should have a `IsBlinded` method.
+			withdrawals, err = st.ExpectedWithdrawals()
+			if err != nil {
+				return nil, err
+			}
+		case err != nil:
 			return nil, errors.Wrap(err, "could not get payload withdrawals")
 		}
 		st, err = ProcessWithdrawals(st, withdrawals)
@@ -210,6 +216,7 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 			return nil, errors.Wrap(err, "could not process withdrawals")
 		}
 	}
+
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
