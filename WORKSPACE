@@ -78,7 +78,7 @@ http_archive(
     name = "aspect_gcc_toolchain",
     patch_args = ["-p1"],
     patches = [
-        "@//:third_party/aspect_gcc_toolchain/0001-Expose-target_settings-and-set-std-c-14.patch",
+        "@//:third_party/aspect_gcc_toolchain/0001-Expose-target_settings-and-set-std-c-20.patch",
     ],
     sha256 = "e2e12202dd83f67d71101b24554044de25e1625d16b4b56bc453ecaa8f7c6bd0",
     strip_prefix = "aspect-build-gcc-toolchain-ac745d4",
@@ -91,12 +91,40 @@ http_archive(
 load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
 
 gcc_register_toolchain(
-    name = "gcc_toolchain_x86_64",
+    name = "gcc10_toolchain_x86_64",
     gcc_version = "10.3.0",
     sysroot_variant = "x86_64",
     target_arch = ARCHS.x86_64,
     target_settings = ["@//:gcc10_requested"],
 )
+
+# GCC 11.3.0
+gcc_register_toolchain(
+    name = "gcc11_x86-64",
+    sha256 = "4313a04996173bd79935ffaec48b97ba7c32332880774ec61b40ab76804b8fbb",
+    strip_prefix = "x86-64--glibc--stable-2022.08-1",
+    target_arch = "x86_64",
+    target_settings = ["@//:gcc11_requested"],
+    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/x86-64--glibc--stable-2022.08-1.tar.bz2",
+)
+
+# GCC 12.2.0
+gcc_register_toolchain(
+    name = "gcc12_x86-64",
+    sha256 = "9a09ac03001ef2a6cab391cc658fc2a32730b6a8f25614e97a91b9a79537fe33",
+    strip_prefix = "x86-64--glibc--bleeding-edge-2022.08-1",
+    target_arch = "x86_64",
+    target_settings = ["@//:gcc12_requested"],
+    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/x86-64--glibc--bleeding-edge-2022.08-1.tar.bz2",
+)
+
+# gcc_register_toolchain(
+#     name = "gcc12_toolchain_x86_64",
+#     gcc_version = "12.2.1",
+#     sysroot_variant = "x86_64",
+#     target_arch = ARCHS.x86_64,
+#     target_settings = ["@//:gcc12_requested"],
+# )
 
 load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 

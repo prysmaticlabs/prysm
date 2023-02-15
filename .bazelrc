@@ -35,10 +35,16 @@ build:clang14 --//:requested_compiler_flag=clang14
 build:gcc10 --platform_suffix=gcc10
 build:gcc10 --//:requested_compiler_flag=gcc10
 build:gcc10 --features=static_libstdcxx
+build:gcc11 --platform_suffix=gcc11
+build:gcc11 --//:requested_compiler_flag=gcc11
+build:gcc11 --features=static_libstdcxx
+build:gcc12 --platform_suffix=gcc12
+build:gcc12 --//:requested_compiler_flag=gcc12
+build:gcc12 --features=static_libstdcxx
 
 # Add a generic alias if the user doesn't care about the exact version.
 build:clang --config=clang14
-build:gcc --config=gcc10
+build:gcc --config=gcc11
 
 # Compile with gcc by default
 build --config=gcc

@@ -165,6 +165,8 @@ string_flag(
     build_setting_default = "",
     values = [
         "gcc10",
+        "gcc11",
+        "gcc12",
         "clang11",
         "clang14",
     ],
@@ -191,5 +193,17 @@ config_setting(
 config_setting(
     name = "gcc10_requested",
     flag_values = {"requested_compiler_flag": "gcc10"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "gcc11_requested",
+    flag_values = {"requested_compiler_flag": "gcc11"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "gcc12_requested",
+    flag_values = {"requested_compiler_flag": "gcc12"},
     visibility = ["//visibility:public"],
 )
