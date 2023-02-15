@@ -8,4 +8,5 @@ filegroup(
         "web3signer_keystore.p12",
     ],
     visibility = ["//visibility:public"],
+    testonly = True,
 )
