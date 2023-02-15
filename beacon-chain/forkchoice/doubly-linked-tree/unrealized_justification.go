@@ -1,6 +1,8 @@
 package doublylinkedtree
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
@@ -45,7 +47,7 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch primitives.Epoc
 
 // updateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
 // epochs stored within nodes. It should be called at the beginning of each epoch.
-func (f *ForkChoice) updateUnrealizedCheckpoints() {
+func (f *ForkChoice) updateUnrealizedCheckpoints(ctx context.Context) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	f.store.checkpointsLock.Lock()
@@ -56,17 +58,26 @@ func (f *ForkChoice) updateUnrealizedCheckpoints() {
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
 			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			if err := f.updateJustifiedBalances(ctx, f.store.justifiedCheckpoint.Root); err != nil {
+				return errors.Wrap(err, "could not update justified balances")
+			}
 			if !features.Get().EnableDefensivePull && node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
 				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			}
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
 			if !features.Get().EnableDefensivePull {
-				f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+				if f.store.unrealizedJustifiedCheckpoint.Epoch != f.store.justifiedCheckpoint.Epoch {
+					if err := f.updateJustifiedBalances(ctx, f.store.unrealizedJustifiedCheckpoint.Root); err != nil {
+						return errors.Wrap(err, "could not update justified balances")
+					}
+					f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+				}
 			}
 			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}
+	return nil
 }
 
 func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
