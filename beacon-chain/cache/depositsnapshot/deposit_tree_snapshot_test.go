@@ -47,7 +47,7 @@ func TestDepositTreeSnapshot_CalculateRoot(t *testing.T) {
 			root, err := ds.CalculateRoot()
 			require.NoError(t, err)
 			if got := root; !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CalculateRoot() = %v, want %v", got, tt.want)
+				require.DeepEqual(t, tt.want, got)
 			}
 		})
 	}

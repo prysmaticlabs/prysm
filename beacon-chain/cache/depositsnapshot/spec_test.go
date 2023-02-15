@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -225,23 +225,23 @@ func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]by
 
 func checkProof(t *testing.T, tree *DepositTree, index uint64) {
 	leaf, proof, err := tree.getProof(index)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	calcRoot := merkleRootFromBranch(leaf, proof, index)
-	assert.Equal(t, tree.getRoot(), calcRoot)
+	require.Equal(t, tree.getRoot(), calcRoot)
 }
 
 func compareProof(t *testing.T, tree1, tree2 *DepositTree, index uint64) {
-	assert.Equal(t, tree1.getRoot(), tree2.getRoot())
+	require.Equal(t, tree1.getRoot(), tree2.getRoot())
 	checkProof(t, tree1, index)
 	checkProof(t, tree2, index)
 }
 
 func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []testCase) *DepositTree {
 	cp, err := fromSnapshot(snapshot)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, c := range testCases {
 		err = cp.pushLeaf(c.DepositDataRoot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	return &cp
 }
@@ -249,57 +249,57 @@ func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []t
 func TestDepositCases(t *testing.T) {
 	tree := New()
 	testCases, err := readTestCases(TestDataPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 }
 
 func TestFinalization(t *testing.T) {
 	tree := New()
 	testCases, err := readTestCases(TestDataPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, c := range testCases[:128] {
 		err = tree.pushLeaf(c.DepositDataRoot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	originalRoot := tree.getRoot()
-	assert.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
+	require.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
 	err = tree.finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[100].Eth1Data.DepositCount,
 		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
 	}, testCases[100].BlockHeight)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// ensure finalization doesn't change root
-	assert.Equal(t, tree.getRoot(), originalRoot)
+	require.Equal(t, tree.getRoot(), originalRoot)
 	snapshotData, err := tree.getSnapshot()
-	assert.NoError(t, err)
-	assert.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
+	require.NoError(t, err)
+	require.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
 	// create a copy of the tree from a snapshot by replaying
 	// the deposits after the finalized deposit
 	cp := cloneFromSnapshot(t, snapshotData, testCases[101:128])
 	// ensure original and copy have the same root
-	assert.Equal(t, tree.getRoot(), cp.getRoot())
+	require.Equal(t, tree.getRoot(), cp.getRoot())
 	//	finalize original again to check double finalization
 	err = tree.finalize(&eth.Eth1Data{
 		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
 		DepositCount: testCases[105].Eth1Data.DepositCount,
 		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
 	}, testCases[105].BlockHeight)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	//	root should still be the same
-	assert.Equal(t, originalRoot, tree.getRoot())
+	require.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
 	snapshotData, err = tree.getSnapshot()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
 	fullTreeCopy := New()
 	for _, c := range testCases[:128] {
 		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	for i := 106; i < 128; i++ {
 		compareProof(t, tree, cp, uint64(i))
@@ -310,10 +310,10 @@ func TestFinalization(t *testing.T) {
 func TestSnapshotCases(t *testing.T) {
 	tree := New()
 	testCases, err := readTestCases(TestDataPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, c := range testCases {
 		err = tree.pushLeaf(c.DepositDataRoot)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	for _, c := range testCases {
 		err = tree.finalize(&eth.Eth1Data{
@@ -321,16 +321,16 @@ func TestSnapshotCases(t *testing.T) {
 			DepositCount: c.Eth1Data.DepositCount,
 			BlockHash:    c.Eth1Data.BlockHash[:],
 		}, c.BlockHeight)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		s, err := tree.getSnapshot()
-		assert.NoError(t, err)
-		assert.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
+		require.NoError(t, err)
+		require.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
 	}
 }
 
 func TestEmptyTreeSnapshot(t *testing.T) {
 	_, err := New().getSnapshot()
-	assert.ErrorContains(t, "empty execution block", err)
+	require.ErrorContains(t, "empty execution block", err)
 }
 
 func TestInvalidSnapshot(t *testing.T) {
@@ -344,5 +344,5 @@ func TestInvalidSnapshot(t *testing.T) {
 		},
 	}
 	_, err := fromSnapshot(invalidSnapshot)
-	assert.ErrorContains(t, "snapshot root is invalid", err)
+	require.ErrorContains(t, "snapshot root is invalid", err)
 }

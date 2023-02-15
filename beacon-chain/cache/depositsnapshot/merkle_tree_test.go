@@ -6,17 +6,16 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func hexString(t *testing.T, hexStr string) [32]byte {
 	t.Helper()
 	b, err := hex.DecodeString(hexStr)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	if len(b) != 32 {
-		t.Fatalf("bad hash length, expected 32, got %d", len(b))
+		assert.Equal(t, 32, len(b), "bad hash length, expected 32")
 	}
 	x := (*[32]byte)(b)
 	return *x
@@ -51,7 +50,7 @@ func Test_create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := create(tt.leaves, tt.depth); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("create() = %T, want %v", got, tt.want)
+				require.DeepEqual(t, tt.want, got)
 			}
 		})
 	}
@@ -98,9 +97,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 			tree, err := fromSnapshotParts(tt.finalized, tt.deposits, tt.level)
 			require.NoError(t, err)
 			if got := tree; !reflect.DeepEqual(got, tt.want) {
-				tmp := got
-				fmt.Println(tmp)
-				t.Errorf("fromSnapshotParts() = %v, want %v", got, tt.want)
+				require.DeepEqual(t, tt.want, got)
 			}
 		})
 	}
