@@ -97,12 +97,12 @@ func convertAttesterSlashingsToProto(jsonAttesterSlashings []*apimiddleware.Atte
 			return nil, errors.Errorf("attester slashing at index `%d` is nil", index)
 		}
 
-		attestation1, err := convertAttestationToProto(jsonAttesterSlashing.Attestation_1)
+		attestation1, err := convertIndexedAttestationToProto(jsonAttesterSlashing.Attestation_1)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get attestation 1")
 		}
 
-		attestation2, err := convertAttestationToProto(jsonAttesterSlashing.Attestation_2)
+		attestation2, err := convertIndexedAttestationToProto(jsonAttesterSlashing.Attestation_2)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get attestation 2")
 		}
@@ -116,7 +116,7 @@ func convertAttesterSlashingsToProto(jsonAttesterSlashings []*apimiddleware.Atte
 	return attesterSlashings, nil
 }
 
-func convertAttestationToProto(jsonAttestation *apimiddleware.IndexedAttestationJson) (*ethpb.IndexedAttestation, error) {
+func convertIndexedAttestationToProto(jsonAttestation *apimiddleware.IndexedAttestationJson) (*ethpb.IndexedAttestation, error) {
 	if jsonAttestation == nil {
 		return nil, errors.New("indexed attestation is nil")
 	}
@@ -170,34 +170,46 @@ func convertCheckpointToProto(jsonCheckpoint *apimiddleware.CheckpointJson) (*et
 	}, nil
 }
 
-func convertAttestationsToProto(jsonAttestations []*apimiddleware.AttestationJson) ([]*ethpb.Attestation, error) {
-	attestations := make([]*ethpb.Attestation, len(jsonAttestations))
+func convertAttestationToProto(jsonAttestation *apimiddleware.AttestationJson) (*ethpb.Attestation, error) {
+	if jsonAttestation == nil {
+		return nil, errors.New("json attestation is nil")
+	}
 
+	aggregationBits, err := hexutil.Decode(jsonAttestation.AggregationBits)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode aggregation bits `%s`", jsonAttestation.AggregationBits)
+	}
+
+	attestationData, err := convertAttestationDataToProto(jsonAttestation.Data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get attestation data")
+	}
+
+	signature, err := hexutil.Decode(jsonAttestation.Signature)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode attestation signature `%s`", jsonAttestation.Signature)
+	}
+
+	return &ethpb.Attestation{
+		AggregationBits: aggregationBits,
+		Data:            attestationData,
+		Signature:       signature,
+	}, nil
+}
+
+func convertAttestationsToProto(jsonAttestations []*apimiddleware.AttestationJson) ([]*ethpb.Attestation, error) {
+	var attestations []*ethpb.Attestation
 	for index, jsonAttestation := range jsonAttestations {
 		if jsonAttestation == nil {
 			return nil, errors.Errorf("attestation at index `%d` is nil", index)
 		}
 
-		aggregationBits, err := hexutil.Decode(jsonAttestation.AggregationBits)
+		attestation, err := convertAttestationToProto(jsonAttestation)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode aggregation bits `%s`", jsonAttestation.AggregationBits)
+			return nil, errors.Wrapf(err, "failed to convert json attestation to proto at index %d", index)
 		}
 
-		attestationData, err := convertAttestationDataToProto(jsonAttestation.Data)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get attestation data")
-		}
-
-		signature, err := hexutil.Decode(jsonAttestation.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode attestation signature `%s`", jsonAttestation.Signature)
-		}
-
-		attestations[index] = &ethpb.Attestation{
-			AggregationBits: aggregationBits,
-			Data:            attestationData,
-			Signature:       signature,
-		}
+		attestations = append(attestations, attestation)
 	}
 
 	return attestations, nil

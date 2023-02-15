@@ -141,7 +141,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	slotInVotingPeriod := slot.ModSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}

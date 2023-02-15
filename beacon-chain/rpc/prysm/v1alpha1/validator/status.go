@@ -42,7 +42,7 @@ func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *ethpb.ValidatorStatusRequest,
 ) (*ethpb.ValidatorStatusResponse, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
@@ -59,7 +59,7 @@ func (vs *Server) MultipleValidatorStatus(
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
@@ -107,7 +107,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
 		}, nil
 	}
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
@@ -217,7 +217,7 @@ func (vs *Server) activationStatus(
 	ctx context.Context,
 	pubKeys [][]byte,
 ) (bool, []*ethpb.ValidatorActivationResponse_Status, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return false, nil, err
 	}
