@@ -47,6 +47,10 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
+		log.WithError(err).Error("Could not process attestations and update head")
+	}
+
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		if err := vs.optimisticStatus(ctx); err != nil {
@@ -57,9 +61,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
-	}
-	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
-		log.WithError(err).Error("Could not process attestations and update head")
 	}
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
